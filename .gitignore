@@ -1,3 +1,7 @@
 */target
 */src/*.rs
 */src/**/*.rs
+venv
+svd/*.patched
+svd/*.formatted
+.deps
