@@ -1,9 +1,4 @@
 _svd: "../svd/imxrt1011.svd"
 
-SNVS:
-  HPSR:
-    SECURITY_CONFIG:
-      FAB_CONFIG: [0, "FAB Configuration"]
-      OPEN_CONFIG: [1, "OPEN Configuration"]  
-      CLOSED_CONFIG: [9, "CLOSED Configuration"]
-
+_include: 
+  - "common.yaml"

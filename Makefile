@@ -1,4 +1,3 @@
-all: patch svd2rust
 
 .PHONY: patch svd2rust form check clean-rs clean-patch clean-html clean
 .PRECIOUS: svd/%.svd .deps/%.d
@@ -6,6 +5,8 @@ all: patch svd2rust
 SHELL := /usr/bin/env bash
 
 CRATES ?= imxrt1011 imxrt1015 imxrt1021 imxrt1051 imxrt1052 imxrt1061 imxrt1062 imxrt1064 
+
+all: patch svd2rust $(CRATES)
 
 # All yaml files in devices/ will be used to patch an SVD
 YAMLS := $(foreach crate, $(CRATES), \
@@ -41,21 +42,18 @@ svd/%.svd.formatted: svd/%.svd.patched
 	xmllint $< --format -o $@
 
 define crate_template
-$(1)/src/lib.rs: svd/$(1).svd.patched
+$(1)/lib.rs: svd/$(1).svd.patched
 	cd $(1); svd2rust -i ../$$<
-	cd $(1); mv lib.rs src/
+
+$(1)/src/lib.rs: $(1)/lib.rs
+	cd $(1); form -i lib.rs -o src/
 	rustfmt --config-path="rustfmt.toml" $$(@D)/lib.rs
-	
-$(1)/src/.form: $(1)/src/lib.rs
-	form -i $$< -o $$(@D)
-	rm $$<
-	mv $$(@D)/lib.rs $$<
-	rustfmt --config-path="rustfmt.toml" $$<
-	touch $$@
 
 $(1)/src/.check: $(1)/src/lib.rs
 	cd $(1) && cargo check --target-dir ../target/check/ --features rt
 	touch $$@
+
+$(1): $(1)/src/lib.rs $(1)/src/.check
 
 endef
 

@@ -1,7 +1,11 @@
 */target
+*/lib.rs
 */src/*.rs
+*/src/.check
+*/src/.form
 */src/**/*.rs
 venv
 svd/*.patched
 svd/*.formatted
+target/
 .deps

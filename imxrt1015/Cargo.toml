@@ -2,7 +2,7 @@
 authors = ["Tom Burdick <tom.burdick@electromatic.us>"]
 edition = "2018"
 readme = "README.md"
-name = "imxrt1062"
+name = "imxrt1015"
 version = "0.1.0"
 
 [dependencies]

@@ -80,7 +80,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "imxrt1062"
+name = "imxrt1051"
 version = "0.1.0"
 dependencies = [
  "bare-metal",
