@@ -1,4 +1,0 @@
-_svd: "../svd/imxrt1011.svd"
-
-_include: 
-  - "common.yaml"
