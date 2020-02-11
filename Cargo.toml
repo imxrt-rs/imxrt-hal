@@ -2,4 +2,5 @@
 
 members = [
     "imxrt-ral",
+    "imxrt-hal"
 ]
