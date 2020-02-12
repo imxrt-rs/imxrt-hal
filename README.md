@@ -1,9 +1,18 @@
-# i.MX RT Peripheral Access Crates
+# i.MX RT Crates
 
-i.MX RT peripheral access crates and patches
+i.MX RT register access layer, hardware abstraction layer, and svd patches.
 
-This is very much modeled on the great stm32-rs crate which does much the same
-for ST's fantastic STM32 family. 
+This is very much modeled on the great stm32ral and stm32-rs crates which do 
+much the same for ST's fantastic STM32 family.
+
+## Goals
+
+* Create *the* collaborative group to support using Rust on NXP's i.MX RT series.
+* Fast compilation
+* Embedded HAL support.
+* RTFM support.
+* EVK board support
+* Popular boards such as the Teensy 4.
 
 ## Supported Devices
 
