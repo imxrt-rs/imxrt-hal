@@ -41,7 +41,7 @@ pub mod usbphy;
 pub mod csu;
 
 #[cfg(any(feature = "doc", feature = "imxrt1011", feature = "imxrt1015"))]
-pub mod usb;
+pub mod usb1;
 
 #[cfg(any(feature = "doc", feature = "imxrt1011", feature = "imxrt1015"))]
 pub mod usbnc;
