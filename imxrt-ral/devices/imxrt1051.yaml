@@ -2,4 +2,4 @@ _svd: "../svd/imxrt1051.svd"
 
 _include: 
   - "common.yaml"
-
+  - "common_patches/pwm1/submodule_cluster.yaml"
