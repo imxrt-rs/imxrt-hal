@@ -3134,7 +3134,7 @@ pub mod DCHPRI12 {
 }
 
 /// TCD Source Address
-pub mod TCD0_SADDR {
+pub mod TCD_SADDR0 {
 
     /// Source Address
     pub mod SADDR {
@@ -3152,7 +3152,7 @@ pub mod TCD0_SADDR {
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD0_SOFF {
+pub mod TCD_SOFF0 {
 
     /// Source address signed offset
     pub mod SOFF {
@@ -3170,7 +3170,7 @@ pub mod TCD0_SOFF {
 }
 
 /// TCD Transfer Attributes
-pub mod TCD0_ATTR {
+pub mod TCD_ATTR0 {
 
     /// Destination data transfer size
     pub mod DSIZE {
@@ -3276,12 +3276,12 @@ pub mod TCD0_ATTR {
     }
 }
 
-/// TCD0_NBYTES_ML and TCD0_NBYTES_MLOFFYES
-/// TCD0_NBYTES_ML: TCD0_NBYTES_MLNO and TCD0_NBYTES_MLOFFNO
-/// TCD0_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD0_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD0_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD0_NBYTES_ML {
+/// TCD_NBYTES_ML and TCD_NBYTES_MLOFFYES0
+/// TCD_NBYTES_ML: TCD_NBYTES_MLNO0 and TCD_NBYTES_MLOFFNO0
+/// TCD_NBYTES_MLNO0: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO0: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES0: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_ML {
 
     /// Minor Byte Transfer Count
     pub mod NBYTES {
@@ -3355,7 +3355,7 @@ pub mod TCD0_NBYTES_ML {
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD0_SLAST {
+pub mod TCD_SLAST0 {
 
     /// Last Source Address Adjustment
     pub mod SLAST {
@@ -3373,7 +3373,7 @@ pub mod TCD0_SLAST {
 }
 
 /// TCD Destination Address
-pub mod TCD0_DADDR {
+pub mod TCD_DADDR0 {
 
     /// Destination Address
     pub mod DADDR {
@@ -3391,7 +3391,7 @@ pub mod TCD0_DADDR {
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD0_DOFF {
+pub mod TCD_DOFF0 {
 
     /// Destination Address Signed Offset
     pub mod DOFF {
@@ -3408,10 +3408,10 @@ pub mod TCD0_DOFF {
     }
 }
 
-/// TCD0_CITER_ELINKNO and TCD0_CITER_ELINKYES
-/// TCD0_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD0_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD0_CITER_ELINK {
+/// TCD_CITER_ELINKNO0 and TCD_CITER_ELINKYES0
+/// TCD_CITER_ELINKNO0: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES0: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINK {
 
     /// Current Major Iteration Count
     pub mod CITER {
@@ -3464,7 +3464,7 @@ pub mod TCD0_CITER_ELINK {
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD0_DLASTSGA {
+pub mod TCD_DLASTSGA0 {
 
     /// DLASTSGA
     pub mod DLASTSGA {
@@ -3482,7 +3482,7 @@ pub mod TCD0_DLASTSGA {
 }
 
 /// TCD Control and Status
-pub mod TCD0_CSR {
+pub mod TCD_CSR0 {
 
     /// Channel Start
     pub mod START {
@@ -3677,10 +3677,10 @@ pub mod TCD0_CSR {
     }
 }
 
-/// TCD0_BITER_ELINKNO and TCD0_BITER_ELINKYES
-/// TCD0_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD0_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD0_BITER_ELINK {
+/// TCD_BITER_ELINKNO0 and TCD_BITER_ELINKYES0
+/// TCD_BITER_ELINKNO0: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES0: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINK {
 
     /// Starting Major Iteration Count
     pub mod BITER {
@@ -3733,1233 +3733,1233 @@ pub mod TCD0_BITER_ELINK {
 }
 
 /// TCD Source Address
-pub mod TCD1_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR1 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD1_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF1 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD1_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR1 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD1_NBYTES_ML and TCD1_NBYTES_MLOFFYES
-/// TCD1_NBYTES_ML: TCD1_NBYTES_MLNO and TCD1_NBYTES_MLOFFNO
-/// TCD1_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD1_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD1_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD1_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO1 and TCD_NBYTES_MLOFFYES1
+/// TCD_NBYTES_MLNO1: TCD_NBYTES_MLNO1 and TCD_NBYTES_MLOFFNO1
+/// TCD_NBYTES_MLNO1: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO1: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES1: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO1 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD1_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST1 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD1_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR1 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD1_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF1 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD1_CITER_ELINKNO and TCD1_CITER_ELINKYES
-/// TCD1_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD1_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD1_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO1 and TCD_CITER_ELINKYES1
+/// TCD_CITER_ELINKNO1: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES1: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO1 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD1_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA1 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD1_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR1 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD1_BITER_ELINKNO and TCD1_BITER_ELINKYES
-/// TCD1_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD1_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD1_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO1 and TCD_BITER_ELINKYES1
+/// TCD_BITER_ELINKNO1: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES1: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO1 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD2_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR2 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD2_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF2 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD2_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR2 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD2_NBYTES_ML and TCD2_NBYTES_MLOFFYES
-/// TCD2_NBYTES_ML: TCD2_NBYTES_MLNO and TCD2_NBYTES_MLOFFNO
-/// TCD2_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD2_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD2_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD2_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO2 and TCD_NBYTES_MLOFFYES2
+/// TCD_NBYTES_MLNO2: TCD_NBYTES_MLNO2 and TCD_NBYTES_MLOFFNO2
+/// TCD_NBYTES_MLNO2: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO2: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES2: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO2 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD2_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST2 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD2_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR2 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD2_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF2 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD2_CITER_ELINKNO and TCD2_CITER_ELINKYES
-/// TCD2_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD2_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD2_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO2 and TCD_CITER_ELINKYES2
+/// TCD_CITER_ELINKNO2: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES2: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO2 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD2_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA2 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD2_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR2 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD2_BITER_ELINKNO and TCD2_BITER_ELINKYES
-/// TCD2_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD2_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD2_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO2 and TCD_BITER_ELINKYES2
+/// TCD_BITER_ELINKNO2: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES2: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO2 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD3_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR3 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD3_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF3 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD3_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR3 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD3_NBYTES_ML and TCD3_NBYTES_MLOFFYES
-/// TCD3_NBYTES_ML: TCD3_NBYTES_MLNO and TCD3_NBYTES_MLOFFNO
-/// TCD3_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD3_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD3_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD3_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO3 and TCD_NBYTES_MLOFFYES3
+/// TCD_NBYTES_MLNO3: TCD_NBYTES_MLNO3 and TCD_NBYTES_MLOFFNO3
+/// TCD_NBYTES_MLNO3: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO3: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES3: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO3 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD3_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST3 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD3_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR3 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD3_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF3 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD3_CITER_ELINKNO and TCD3_CITER_ELINKYES
-/// TCD3_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD3_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD3_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO3 and TCD_CITER_ELINKYES3
+/// TCD_CITER_ELINKNO3: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES3: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO3 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD3_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA3 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD3_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR3 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD3_BITER_ELINKNO and TCD3_BITER_ELINKYES
-/// TCD3_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD3_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD3_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO3 and TCD_BITER_ELINKYES3
+/// TCD_BITER_ELINKNO3: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES3: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO3 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD4_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR4 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD4_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF4 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD4_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR4 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD4_NBYTES_ML and TCD4_NBYTES_MLOFFYES
-/// TCD4_NBYTES_ML: TCD4_NBYTES_MLNO and TCD4_NBYTES_MLOFFNO
-/// TCD4_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD4_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD4_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD4_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO4 and TCD_NBYTES_MLOFFYES4
+/// TCD_NBYTES_MLNO4: TCD_NBYTES_MLNO4 and TCD_NBYTES_MLOFFNO4
+/// TCD_NBYTES_MLNO4: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO4: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES4: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO4 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD4_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST4 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD4_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR4 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD4_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF4 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD4_CITER_ELINKNO and TCD4_CITER_ELINKYES
-/// TCD4_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD4_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD4_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO4 and TCD_CITER_ELINKYES4
+/// TCD_CITER_ELINKNO4: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES4: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO4 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD4_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA4 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD4_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR4 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD4_BITER_ELINKNO and TCD4_BITER_ELINKYES
-/// TCD4_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD4_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD4_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO4 and TCD_BITER_ELINKYES4
+/// TCD_BITER_ELINKNO4: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES4: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO4 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD5_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR5 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD5_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF5 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD5_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR5 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD5_NBYTES_ML and TCD5_NBYTES_MLOFFYES
-/// TCD5_NBYTES_ML: TCD5_NBYTES_MLNO and TCD5_NBYTES_MLOFFNO
-/// TCD5_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD5_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD5_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD5_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO5 and TCD_NBYTES_MLOFFYES5
+/// TCD_NBYTES_MLNO5: TCD_NBYTES_MLNO5 and TCD_NBYTES_MLOFFNO5
+/// TCD_NBYTES_MLNO5: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO5: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES5: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO5 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD5_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST5 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD5_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR5 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD5_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF5 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD5_CITER_ELINKNO and TCD5_CITER_ELINKYES
-/// TCD5_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD5_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD5_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO5 and TCD_CITER_ELINKYES5
+/// TCD_CITER_ELINKNO5: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES5: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO5 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD5_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA5 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD5_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR5 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD5_BITER_ELINKNO and TCD5_BITER_ELINKYES
-/// TCD5_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD5_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD5_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO5 and TCD_BITER_ELINKYES5
+/// TCD_BITER_ELINKNO5: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES5: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO5 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD6_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR6 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD6_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF6 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD6_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR6 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD6_NBYTES_ML and TCD6_NBYTES_MLOFFYES
-/// TCD6_NBYTES_ML: TCD6_NBYTES_MLNO and TCD6_NBYTES_MLOFFNO
-/// TCD6_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD6_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD6_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD6_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO6 and TCD_NBYTES_MLOFFYES6
+/// TCD_NBYTES_MLNO6: TCD_NBYTES_MLNO6 and TCD_NBYTES_MLOFFNO6
+/// TCD_NBYTES_MLNO6: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO6: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES6: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO6 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD6_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST6 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD6_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR6 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD6_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF6 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD6_CITER_ELINKNO and TCD6_CITER_ELINKYES
-/// TCD6_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD6_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD6_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO6 and TCD_CITER_ELINKYES6
+/// TCD_CITER_ELINKNO6: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES6: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO6 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD6_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA6 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD6_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR6 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD6_BITER_ELINKNO and TCD6_BITER_ELINKYES
-/// TCD6_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD6_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD6_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO6 and TCD_BITER_ELINKYES6
+/// TCD_BITER_ELINKNO6: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES6: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO6 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD7_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR7 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD7_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF7 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD7_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR7 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD7_NBYTES_ML and TCD7_NBYTES_MLOFFYES
-/// TCD7_NBYTES_ML: TCD7_NBYTES_MLNO and TCD7_NBYTES_MLOFFNO
-/// TCD7_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD7_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD7_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD7_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO7 and TCD_NBYTES_MLOFFYES7
+/// TCD_NBYTES_MLNO7: TCD_NBYTES_MLNO7 and TCD_NBYTES_MLOFFNO7
+/// TCD_NBYTES_MLNO7: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO7: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES7: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO7 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD7_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST7 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD7_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR7 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD7_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF7 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD7_CITER_ELINKNO and TCD7_CITER_ELINKYES
-/// TCD7_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD7_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD7_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO7 and TCD_CITER_ELINKYES7
+/// TCD_CITER_ELINKNO7: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES7: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO7 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD7_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA7 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD7_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR7 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD7_BITER_ELINKNO and TCD7_BITER_ELINKYES
-/// TCD7_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD7_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD7_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO7 and TCD_BITER_ELINKYES7
+/// TCD_BITER_ELINKNO7: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES7: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO7 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD8_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR8 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD8_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF8 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD8_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR8 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD8_NBYTES_ML and TCD8_NBYTES_MLOFFYES
-/// TCD8_NBYTES_ML: TCD8_NBYTES_MLNO and TCD8_NBYTES_MLOFFNO
-/// TCD8_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD8_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD8_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD8_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO8 and TCD_NBYTES_MLOFFYES8
+/// TCD_NBYTES_MLNO8: TCD_NBYTES_MLNO8 and TCD_NBYTES_MLOFFNO8
+/// TCD_NBYTES_MLNO8: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO8: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES8: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO8 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD8_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST8 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD8_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR8 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD8_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF8 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD8_CITER_ELINKNO and TCD8_CITER_ELINKYES
-/// TCD8_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD8_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD8_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO8 and TCD_CITER_ELINKYES8
+/// TCD_CITER_ELINKNO8: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES8: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO8 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD8_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA8 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD8_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR8 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD8_BITER_ELINKNO and TCD8_BITER_ELINKYES
-/// TCD8_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD8_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD8_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO8 and TCD_BITER_ELINKYES8
+/// TCD_BITER_ELINKNO8: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES8: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO8 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD9_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR9 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD9_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF9 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD9_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR9 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD9_NBYTES_ML and TCD9_NBYTES_MLOFFYES
-/// TCD9_NBYTES_ML: TCD9_NBYTES_MLNO and TCD9_NBYTES_MLOFFNO
-/// TCD9_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD9_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD9_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD9_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO9 and TCD_NBYTES_MLOFFYES9
+/// TCD_NBYTES_MLNO9: TCD_NBYTES_MLNO9 and TCD_NBYTES_MLOFFNO9
+/// TCD_NBYTES_MLNO9: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO9: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES9: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO9 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD9_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST9 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD9_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR9 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD9_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF9 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD9_CITER_ELINKNO and TCD9_CITER_ELINKYES
-/// TCD9_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD9_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD9_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO9 and TCD_CITER_ELINKYES9
+/// TCD_CITER_ELINKNO9: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES9: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO9 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD9_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA9 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD9_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR9 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD9_BITER_ELINKNO and TCD9_BITER_ELINKYES
-/// TCD9_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD9_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD9_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO9 and TCD_BITER_ELINKYES9
+/// TCD_BITER_ELINKNO9: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES9: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO9 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD10_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR10 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD10_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF10 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD10_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR10 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD10_NBYTES_ML and TCD10_NBYTES_MLOFFYES
-/// TCD10_NBYTES_ML: TCD10_NBYTES_MLNO and TCD10_NBYTES_MLOFFNO
-/// TCD10_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD10_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD10_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD10_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO10 and TCD_NBYTES_MLOFFYES10
+/// TCD_NBYTES_MLNO10: TCD_NBYTES_MLNO10 and TCD_NBYTES_MLOFFNO10
+/// TCD_NBYTES_MLNO10: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO10: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES10: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO10 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD10_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST10 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD10_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR10 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD10_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF10 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD10_CITER_ELINKNO and TCD10_CITER_ELINKYES
-/// TCD10_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD10_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD10_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO10 and TCD_CITER_ELINKYES10
+/// TCD_CITER_ELINKNO10: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES10: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO10 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD10_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA10 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD10_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR10 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD10_BITER_ELINKNO and TCD10_BITER_ELINKYES
-/// TCD10_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD10_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD10_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO10 and TCD_BITER_ELINKYES10
+/// TCD_BITER_ELINKNO10: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES10: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO10 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD11_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR11 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD11_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF11 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD11_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR11 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD11_NBYTES_ML and TCD11_NBYTES_MLOFFYES
-/// TCD11_NBYTES_ML: TCD11_NBYTES_MLNO and TCD11_NBYTES_MLOFFNO
-/// TCD11_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD11_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD11_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD11_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO11 and TCD_NBYTES_MLOFFYES11
+/// TCD_NBYTES_MLNO11: TCD_NBYTES_MLNO11 and TCD_NBYTES_MLOFFNO11
+/// TCD_NBYTES_MLNO11: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO11: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES11: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO11 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD11_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST11 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD11_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR11 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD11_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF11 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD11_CITER_ELINKNO and TCD11_CITER_ELINKYES
-/// TCD11_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD11_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD11_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO11 and TCD_CITER_ELINKYES11
+/// TCD_CITER_ELINKNO11: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES11: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO11 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD11_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA11 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD11_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR11 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD11_BITER_ELINKNO and TCD11_BITER_ELINKYES
-/// TCD11_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD11_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD11_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO11 and TCD_BITER_ELINKYES11
+/// TCD_BITER_ELINKNO11: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES11: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO11 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD12_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR12 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD12_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF12 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD12_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR12 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD12_NBYTES_ML and TCD12_NBYTES_MLOFFYES
-/// TCD12_NBYTES_ML: TCD12_NBYTES_MLNO and TCD12_NBYTES_MLOFFNO
-/// TCD12_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD12_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD12_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD12_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO12 and TCD_NBYTES_MLOFFYES12
+/// TCD_NBYTES_MLNO12: TCD_NBYTES_MLNO12 and TCD_NBYTES_MLOFFNO12
+/// TCD_NBYTES_MLNO12: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO12: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES12: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO12 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD12_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST12 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD12_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR12 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD12_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF12 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD12_CITER_ELINKNO and TCD12_CITER_ELINKYES
-/// TCD12_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD12_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD12_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO12 and TCD_CITER_ELINKYES12
+/// TCD_CITER_ELINKNO12: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES12: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO12 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD12_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA12 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD12_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR12 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD12_BITER_ELINKNO and TCD12_BITER_ELINKYES
-/// TCD12_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD12_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD12_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO12 and TCD_BITER_ELINKYES12
+/// TCD_BITER_ELINKNO12: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES12: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO12 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD13_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR13 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD13_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF13 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD13_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR13 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD13_NBYTES_ML and TCD13_NBYTES_MLOFFYES
-/// TCD13_NBYTES_ML: TCD13_NBYTES_MLNO and TCD13_NBYTES_MLOFFNO
-/// TCD13_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD13_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD13_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD13_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO13 and TCD_NBYTES_MLOFFYES13
+/// TCD_NBYTES_MLNO13: TCD_NBYTES_MLNO13 and TCD_NBYTES_MLOFFNO13
+/// TCD_NBYTES_MLNO13: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO13: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES13: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO13 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD13_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST13 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD13_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR13 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD13_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF13 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD13_CITER_ELINKNO and TCD13_CITER_ELINKYES
-/// TCD13_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD13_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD13_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO13 and TCD_CITER_ELINKYES13
+/// TCD_CITER_ELINKNO13: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES13: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO13 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD13_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA13 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD13_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR13 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD13_BITER_ELINKNO and TCD13_BITER_ELINKYES
-/// TCD13_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD13_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD13_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO13 and TCD_BITER_ELINKYES13
+/// TCD_BITER_ELINKNO13: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES13: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO13 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD14_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR14 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD14_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF14 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD14_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR14 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD14_NBYTES_ML and TCD14_NBYTES_MLOFFYES
-/// TCD14_NBYTES_ML: TCD14_NBYTES_MLNO and TCD14_NBYTES_MLOFFNO
-/// TCD14_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD14_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD14_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD14_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO14 and TCD_NBYTES_MLOFFYES14
+/// TCD_NBYTES_MLNO14: TCD_NBYTES_MLNO14 and TCD_NBYTES_MLOFFNO14
+/// TCD_NBYTES_MLNO14: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO14: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES14: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO14 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD14_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST14 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD14_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR14 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD14_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF14 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD14_CITER_ELINKNO and TCD14_CITER_ELINKYES
-/// TCD14_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD14_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD14_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO14 and TCD_CITER_ELINKYES14
+/// TCD_CITER_ELINKNO14: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES14: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO14 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD14_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA14 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD14_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR14 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD14_BITER_ELINKNO and TCD14_BITER_ELINKYES
-/// TCD14_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD14_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD14_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO14 and TCD_BITER_ELINKYES14
+/// TCD_BITER_ELINKNO14: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES14: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO14 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 
 /// TCD Source Address
-pub mod TCD15_SADDR {
-    pub use super::TCD0_SADDR::SADDR;
+pub mod TCD_SADDR15 {
+    pub use super::TCD_SADDR0::SADDR;
 }
 
 /// TCD Signed Source Address Offset
-pub mod TCD15_SOFF {
-    pub use super::TCD0_SOFF::SOFF;
+pub mod TCD_SOFF15 {
+    pub use super::TCD_SOFF0::SOFF;
 }
 
 /// TCD Transfer Attributes
-pub mod TCD15_ATTR {
-    pub use super::TCD0_ATTR::DMOD;
-    pub use super::TCD0_ATTR::DSIZE;
-    pub use super::TCD0_ATTR::SMOD;
-    pub use super::TCD0_ATTR::SSIZE;
+pub mod TCD_ATTR15 {
+    pub use super::TCD_ATTR0::DMOD;
+    pub use super::TCD_ATTR0::DSIZE;
+    pub use super::TCD_ATTR0::SMOD;
+    pub use super::TCD_ATTR0::SSIZE;
 }
 
-/// TCD15_NBYTES_ML and TCD15_NBYTES_MLOFFYES
-/// TCD15_NBYTES_ML: TCD15_NBYTES_MLNO and TCD15_NBYTES_MLOFFNO
-/// TCD15_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-/// TCD15_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-/// TCD15_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-pub mod TCD15_NBYTES_ML {
-    pub use super::TCD0_NBYTES_ML::DMLOE;
-    pub use super::TCD0_NBYTES_ML::MLOFF;
-    pub use super::TCD0_NBYTES_ML::NBYTES;
-    pub use super::TCD0_NBYTES_ML::SMLOE;
+/// TCD_NBYTES_MLNO15 and TCD_NBYTES_MLOFFYES15
+/// TCD_NBYTES_MLNO15: TCD_NBYTES_MLNO15 and TCD_NBYTES_MLOFFNO15
+/// TCD_NBYTES_MLNO15: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+/// TCD_NBYTES_MLOFFNO15: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+/// TCD_NBYTES_MLOFFYES15: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+pub mod TCD_NBYTES_MLNO15 {
+    pub use super::TCD_NBYTES_ML::DMLOE;
+    pub use super::TCD_NBYTES_ML::MLOFF;
+    pub use super::TCD_NBYTES_ML::NBYTES;
+    pub use super::TCD_NBYTES_ML::SMLOE;
 }
 
 /// TCD Last Source Address Adjustment
-pub mod TCD15_SLAST {
-    pub use super::TCD0_SLAST::SLAST;
+pub mod TCD_SLAST15 {
+    pub use super::TCD_SLAST0::SLAST;
 }
 
 /// TCD Destination Address
-pub mod TCD15_DADDR {
-    pub use super::TCD0_DADDR::DADDR;
+pub mod TCD_DADDR15 {
+    pub use super::TCD_DADDR0::DADDR;
 }
 
 /// TCD Signed Destination Address Offset
-pub mod TCD15_DOFF {
-    pub use super::TCD0_DOFF::DOFF;
+pub mod TCD_DOFF15 {
+    pub use super::TCD_DOFF0::DOFF;
 }
 
-/// TCD15_CITER_ELINKNO and TCD15_CITER_ELINKYES
-/// TCD15_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD15_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD15_CITER_ELINK {
-    pub use super::TCD0_CITER_ELINK::CITER;
-    pub use super::TCD0_CITER_ELINK::ELINK;
-    pub use super::TCD0_CITER_ELINK::LINKCH;
+/// TCD_CITER_ELINKNO15 and TCD_CITER_ELINKYES15
+/// TCD_CITER_ELINKNO15: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_CITER_ELINKYES15: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_CITER_ELINKNO15 {
+    pub use super::TCD_CITER_ELINK::CITER;
+    pub use super::TCD_CITER_ELINK::ELINK;
+    pub use super::TCD_CITER_ELINK::LINKCH;
 }
 
 /// TCD Last Destination Address Adjustment/Scatter Gather Address
-pub mod TCD15_DLASTSGA {
-    pub use super::TCD0_DLASTSGA::DLASTSGA;
+pub mod TCD_DLASTSGA15 {
+    pub use super::TCD_DLASTSGA0::DLASTSGA;
 }
 
 /// TCD Control and Status
-pub mod TCD15_CSR {
-    pub use super::TCD0_CSR::ACTIVE;
-    pub use super::TCD0_CSR::BWC;
-    pub use super::TCD0_CSR::DONE;
-    pub use super::TCD0_CSR::DREQ;
-    pub use super::TCD0_CSR::ESG;
-    pub use super::TCD0_CSR::INTHALF;
-    pub use super::TCD0_CSR::INTMAJOR;
-    pub use super::TCD0_CSR::MAJORELINK;
-    pub use super::TCD0_CSR::MAJORLINKCH;
-    pub use super::TCD0_CSR::START;
+pub mod TCD_CSR15 {
+    pub use super::TCD_CSR0::ACTIVE;
+    pub use super::TCD_CSR0::BWC;
+    pub use super::TCD_CSR0::DONE;
+    pub use super::TCD_CSR0::DREQ;
+    pub use super::TCD_CSR0::ESG;
+    pub use super::TCD_CSR0::INTHALF;
+    pub use super::TCD_CSR0::INTMAJOR;
+    pub use super::TCD_CSR0::MAJORELINK;
+    pub use super::TCD_CSR0::MAJORLINKCH;
+    pub use super::TCD_CSR0::START;
 }
 
-/// TCD15_BITER_ELINKNO and TCD15_BITER_ELINKYES
-/// TCD15_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-/// TCD15_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-pub mod TCD15_BITER_ELINK {
-    pub use super::TCD0_BITER_ELINK::BITER;
-    pub use super::TCD0_BITER_ELINK::ELINK;
-    pub use super::TCD0_BITER_ELINK::LINKCH;
+/// TCD_BITER_ELINKNO15 and TCD_BITER_ELINKYES15
+/// TCD_BITER_ELINKNO15: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+/// TCD_BITER_ELINKYES15: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+pub mod TCD_BITER_ELINKNO15 {
+    pub use super::TCD_BITER_ELINK::BITER;
+    pub use super::TCD_BITER_ELINK::ELINK;
+    pub use super::TCD_BITER_ELINK::LINKCH;
 }
 pub struct RegisterBlock {
     /// Control Register
@@ -5075,660 +5075,660 @@ pub struct RegisterBlock {
     _reserved8: [u32; 956],
 
     /// TCD Source Address
-    pub TCD0_SADDR: RWRegister<u32>,
+    pub TCD_SADDR0: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD0_SOFF: RWRegister<u16>,
+    pub TCD_SOFF0: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD0_ATTR: RWRegister<u16>,
+    pub TCD_ATTR0: RWRegister<u16>,
 
-    /// TCD0_NBYTES_ML and TCD0_NBYTES_MLOFFYES
-    /// TCD0_NBYTES_ML: TCD0_NBYTES_MLNO and TCD0_NBYTES_MLOFFNO
-    /// TCD0_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD0_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD0_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD0_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_ML and TCD_NBYTES_MLOFFYES0
+    /// TCD_NBYTES_ML: TCD_NBYTES_MLNO0 and TCD_NBYTES_MLOFFNO0
+    /// TCD_NBYTES_MLNO0: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO0: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES0: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_ML: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD0_SLAST: RWRegister<u32>,
+    pub TCD_SLAST0: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD0_DADDR: RWRegister<u32>,
+    pub TCD_DADDR0: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD0_DOFF: RWRegister<u16>,
+    pub TCD_DOFF0: RWRegister<u16>,
 
-    /// TCD0_CITER_ELINKNO and TCD0_CITER_ELINKYES
-    /// TCD0_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD0_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD0_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO0 and TCD_CITER_ELINKYES0
+    /// TCD_CITER_ELINKNO0: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES0: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINK: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD0_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA0: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD0_CSR: RWRegister<u16>,
+    pub TCD_CSR0: RWRegister<u16>,
 
-    /// TCD0_BITER_ELINKNO and TCD0_BITER_ELINKYES
-    /// TCD0_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD0_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD0_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO0 and TCD_BITER_ELINKYES0
+    /// TCD_BITER_ELINKNO0: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES0: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINK: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD1_SADDR: RWRegister<u32>,
+    pub TCD_SADDR1: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD1_SOFF: RWRegister<u16>,
+    pub TCD_SOFF1: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD1_ATTR: RWRegister<u16>,
+    pub TCD_ATTR1: RWRegister<u16>,
 
-    /// TCD1_NBYTES_ML and TCD1_NBYTES_MLOFFYES
-    /// TCD1_NBYTES_ML: TCD1_NBYTES_MLNO and TCD1_NBYTES_MLOFFNO
-    /// TCD1_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD1_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD1_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD1_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO1 and TCD_NBYTES_MLOFFYES1
+    /// TCD_NBYTES_MLNO1: TCD_NBYTES_MLNO1 and TCD_NBYTES_MLOFFNO1
+    /// TCD_NBYTES_MLNO1: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO1: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES1: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO1: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD1_SLAST: RWRegister<u32>,
+    pub TCD_SLAST1: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD1_DADDR: RWRegister<u32>,
+    pub TCD_DADDR1: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD1_DOFF: RWRegister<u16>,
+    pub TCD_DOFF1: RWRegister<u16>,
 
-    /// TCD1_CITER_ELINKNO and TCD1_CITER_ELINKYES
-    /// TCD1_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD1_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD1_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO1 and TCD_CITER_ELINKYES1
+    /// TCD_CITER_ELINKNO1: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES1: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO1: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD1_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA1: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD1_CSR: RWRegister<u16>,
+    pub TCD_CSR1: RWRegister<u16>,
 
-    /// TCD1_BITER_ELINKNO and TCD1_BITER_ELINKYES
-    /// TCD1_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD1_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD1_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO1 and TCD_BITER_ELINKYES1
+    /// TCD_BITER_ELINKNO1: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES1: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO1: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD2_SADDR: RWRegister<u32>,
+    pub TCD_SADDR2: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD2_SOFF: RWRegister<u16>,
+    pub TCD_SOFF2: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD2_ATTR: RWRegister<u16>,
+    pub TCD_ATTR2: RWRegister<u16>,
 
-    /// TCD2_NBYTES_ML and TCD2_NBYTES_MLOFFYES
-    /// TCD2_NBYTES_ML: TCD2_NBYTES_MLNO and TCD2_NBYTES_MLOFFNO
-    /// TCD2_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD2_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD2_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD2_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO2 and TCD_NBYTES_MLOFFYES2
+    /// TCD_NBYTES_MLNO2: TCD_NBYTES_MLNO2 and TCD_NBYTES_MLOFFNO2
+    /// TCD_NBYTES_MLNO2: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO2: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES2: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO2: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD2_SLAST: RWRegister<u32>,
+    pub TCD_SLAST2: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD2_DADDR: RWRegister<u32>,
+    pub TCD_DADDR2: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD2_DOFF: RWRegister<u16>,
+    pub TCD_DOFF2: RWRegister<u16>,
 
-    /// TCD2_CITER_ELINKNO and TCD2_CITER_ELINKYES
-    /// TCD2_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD2_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD2_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO2 and TCD_CITER_ELINKYES2
+    /// TCD_CITER_ELINKNO2: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES2: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO2: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD2_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA2: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD2_CSR: RWRegister<u16>,
+    pub TCD_CSR2: RWRegister<u16>,
 
-    /// TCD2_BITER_ELINKNO and TCD2_BITER_ELINKYES
-    /// TCD2_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD2_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD2_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO2 and TCD_BITER_ELINKYES2
+    /// TCD_BITER_ELINKNO2: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES2: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO2: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD3_SADDR: RWRegister<u32>,
+    pub TCD_SADDR3: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD3_SOFF: RWRegister<u16>,
+    pub TCD_SOFF3: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD3_ATTR: RWRegister<u16>,
+    pub TCD_ATTR3: RWRegister<u16>,
 
-    /// TCD3_NBYTES_ML and TCD3_NBYTES_MLOFFYES
-    /// TCD3_NBYTES_ML: TCD3_NBYTES_MLNO and TCD3_NBYTES_MLOFFNO
-    /// TCD3_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD3_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD3_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD3_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO3 and TCD_NBYTES_MLOFFYES3
+    /// TCD_NBYTES_MLNO3: TCD_NBYTES_MLNO3 and TCD_NBYTES_MLOFFNO3
+    /// TCD_NBYTES_MLNO3: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO3: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES3: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO3: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD3_SLAST: RWRegister<u32>,
+    pub TCD_SLAST3: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD3_DADDR: RWRegister<u32>,
+    pub TCD_DADDR3: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD3_DOFF: RWRegister<u16>,
+    pub TCD_DOFF3: RWRegister<u16>,
 
-    /// TCD3_CITER_ELINKNO and TCD3_CITER_ELINKYES
-    /// TCD3_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD3_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD3_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO3 and TCD_CITER_ELINKYES3
+    /// TCD_CITER_ELINKNO3: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES3: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO3: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD3_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA3: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD3_CSR: RWRegister<u16>,
+    pub TCD_CSR3: RWRegister<u16>,
 
-    /// TCD3_BITER_ELINKNO and TCD3_BITER_ELINKYES
-    /// TCD3_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD3_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD3_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO3 and TCD_BITER_ELINKYES3
+    /// TCD_BITER_ELINKNO3: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES3: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO3: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD4_SADDR: RWRegister<u32>,
+    pub TCD_SADDR4: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD4_SOFF: RWRegister<u16>,
+    pub TCD_SOFF4: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD4_ATTR: RWRegister<u16>,
+    pub TCD_ATTR4: RWRegister<u16>,
 
-    /// TCD4_NBYTES_ML and TCD4_NBYTES_MLOFFYES
-    /// TCD4_NBYTES_ML: TCD4_NBYTES_MLNO and TCD4_NBYTES_MLOFFNO
-    /// TCD4_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD4_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD4_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD4_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO4 and TCD_NBYTES_MLOFFYES4
+    /// TCD_NBYTES_MLNO4: TCD_NBYTES_MLNO4 and TCD_NBYTES_MLOFFNO4
+    /// TCD_NBYTES_MLNO4: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO4: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES4: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO4: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD4_SLAST: RWRegister<u32>,
+    pub TCD_SLAST4: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD4_DADDR: RWRegister<u32>,
+    pub TCD_DADDR4: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD4_DOFF: RWRegister<u16>,
+    pub TCD_DOFF4: RWRegister<u16>,
 
-    /// TCD4_CITER_ELINKNO and TCD4_CITER_ELINKYES
-    /// TCD4_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD4_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD4_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO4 and TCD_CITER_ELINKYES4
+    /// TCD_CITER_ELINKNO4: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES4: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO4: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD4_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA4: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD4_CSR: RWRegister<u16>,
+    pub TCD_CSR4: RWRegister<u16>,
 
-    /// TCD4_BITER_ELINKNO and TCD4_BITER_ELINKYES
-    /// TCD4_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD4_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD4_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO4 and TCD_BITER_ELINKYES4
+    /// TCD_BITER_ELINKNO4: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES4: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO4: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD5_SADDR: RWRegister<u32>,
+    pub TCD_SADDR5: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD5_SOFF: RWRegister<u16>,
+    pub TCD_SOFF5: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD5_ATTR: RWRegister<u16>,
+    pub TCD_ATTR5: RWRegister<u16>,
 
-    /// TCD5_NBYTES_ML and TCD5_NBYTES_MLOFFYES
-    /// TCD5_NBYTES_ML: TCD5_NBYTES_MLNO and TCD5_NBYTES_MLOFFNO
-    /// TCD5_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD5_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD5_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD5_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO5 and TCD_NBYTES_MLOFFYES5
+    /// TCD_NBYTES_MLNO5: TCD_NBYTES_MLNO5 and TCD_NBYTES_MLOFFNO5
+    /// TCD_NBYTES_MLNO5: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO5: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES5: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO5: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD5_SLAST: RWRegister<u32>,
+    pub TCD_SLAST5: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD5_DADDR: RWRegister<u32>,
+    pub TCD_DADDR5: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD5_DOFF: RWRegister<u16>,
+    pub TCD_DOFF5: RWRegister<u16>,
 
-    /// TCD5_CITER_ELINKNO and TCD5_CITER_ELINKYES
-    /// TCD5_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD5_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD5_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO5 and TCD_CITER_ELINKYES5
+    /// TCD_CITER_ELINKNO5: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES5: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO5: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD5_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA5: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD5_CSR: RWRegister<u16>,
+    pub TCD_CSR5: RWRegister<u16>,
 
-    /// TCD5_BITER_ELINKNO and TCD5_BITER_ELINKYES
-    /// TCD5_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD5_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD5_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO5 and TCD_BITER_ELINKYES5
+    /// TCD_BITER_ELINKNO5: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES5: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO5: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD6_SADDR: RWRegister<u32>,
+    pub TCD_SADDR6: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD6_SOFF: RWRegister<u16>,
+    pub TCD_SOFF6: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD6_ATTR: RWRegister<u16>,
+    pub TCD_ATTR6: RWRegister<u16>,
 
-    /// TCD6_NBYTES_ML and TCD6_NBYTES_MLOFFYES
-    /// TCD6_NBYTES_ML: TCD6_NBYTES_MLNO and TCD6_NBYTES_MLOFFNO
-    /// TCD6_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD6_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD6_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD6_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO6 and TCD_NBYTES_MLOFFYES6
+    /// TCD_NBYTES_MLNO6: TCD_NBYTES_MLNO6 and TCD_NBYTES_MLOFFNO6
+    /// TCD_NBYTES_MLNO6: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO6: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES6: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO6: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD6_SLAST: RWRegister<u32>,
+    pub TCD_SLAST6: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD6_DADDR: RWRegister<u32>,
+    pub TCD_DADDR6: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD6_DOFF: RWRegister<u16>,
+    pub TCD_DOFF6: RWRegister<u16>,
 
-    /// TCD6_CITER_ELINKNO and TCD6_CITER_ELINKYES
-    /// TCD6_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD6_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD6_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO6 and TCD_CITER_ELINKYES6
+    /// TCD_CITER_ELINKNO6: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES6: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO6: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD6_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA6: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD6_CSR: RWRegister<u16>,
+    pub TCD_CSR6: RWRegister<u16>,
 
-    /// TCD6_BITER_ELINKNO and TCD6_BITER_ELINKYES
-    /// TCD6_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD6_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD6_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO6 and TCD_BITER_ELINKYES6
+    /// TCD_BITER_ELINKNO6: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES6: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO6: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD7_SADDR: RWRegister<u32>,
+    pub TCD_SADDR7: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD7_SOFF: RWRegister<u16>,
+    pub TCD_SOFF7: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD7_ATTR: RWRegister<u16>,
+    pub TCD_ATTR7: RWRegister<u16>,
 
-    /// TCD7_NBYTES_ML and TCD7_NBYTES_MLOFFYES
-    /// TCD7_NBYTES_ML: TCD7_NBYTES_MLNO and TCD7_NBYTES_MLOFFNO
-    /// TCD7_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD7_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD7_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD7_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO7 and TCD_NBYTES_MLOFFYES7
+    /// TCD_NBYTES_MLNO7: TCD_NBYTES_MLNO7 and TCD_NBYTES_MLOFFNO7
+    /// TCD_NBYTES_MLNO7: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO7: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES7: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO7: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD7_SLAST: RWRegister<u32>,
+    pub TCD_SLAST7: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD7_DADDR: RWRegister<u32>,
+    pub TCD_DADDR7: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD7_DOFF: RWRegister<u16>,
+    pub TCD_DOFF7: RWRegister<u16>,
 
-    /// TCD7_CITER_ELINKNO and TCD7_CITER_ELINKYES
-    /// TCD7_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD7_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD7_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO7 and TCD_CITER_ELINKYES7
+    /// TCD_CITER_ELINKNO7: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES7: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO7: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD7_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA7: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD7_CSR: RWRegister<u16>,
+    pub TCD_CSR7: RWRegister<u16>,
 
-    /// TCD7_BITER_ELINKNO and TCD7_BITER_ELINKYES
-    /// TCD7_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD7_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD7_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO7 and TCD_BITER_ELINKYES7
+    /// TCD_BITER_ELINKNO7: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES7: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO7: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD8_SADDR: RWRegister<u32>,
+    pub TCD_SADDR8: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD8_SOFF: RWRegister<u16>,
+    pub TCD_SOFF8: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD8_ATTR: RWRegister<u16>,
+    pub TCD_ATTR8: RWRegister<u16>,
 
-    /// TCD8_NBYTES_ML and TCD8_NBYTES_MLOFFYES
-    /// TCD8_NBYTES_ML: TCD8_NBYTES_MLNO and TCD8_NBYTES_MLOFFNO
-    /// TCD8_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD8_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD8_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD8_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO8 and TCD_NBYTES_MLOFFYES8
+    /// TCD_NBYTES_MLNO8: TCD_NBYTES_MLNO8 and TCD_NBYTES_MLOFFNO8
+    /// TCD_NBYTES_MLNO8: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO8: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES8: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO8: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD8_SLAST: RWRegister<u32>,
+    pub TCD_SLAST8: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD8_DADDR: RWRegister<u32>,
+    pub TCD_DADDR8: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD8_DOFF: RWRegister<u16>,
+    pub TCD_DOFF8: RWRegister<u16>,
 
-    /// TCD8_CITER_ELINKNO and TCD8_CITER_ELINKYES
-    /// TCD8_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD8_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD8_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO8 and TCD_CITER_ELINKYES8
+    /// TCD_CITER_ELINKNO8: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES8: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO8: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD8_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA8: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD8_CSR: RWRegister<u16>,
+    pub TCD_CSR8: RWRegister<u16>,
 
-    /// TCD8_BITER_ELINKNO and TCD8_BITER_ELINKYES
-    /// TCD8_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD8_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD8_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO8 and TCD_BITER_ELINKYES8
+    /// TCD_BITER_ELINKNO8: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES8: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO8: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD9_SADDR: RWRegister<u32>,
+    pub TCD_SADDR9: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD9_SOFF: RWRegister<u16>,
+    pub TCD_SOFF9: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD9_ATTR: RWRegister<u16>,
+    pub TCD_ATTR9: RWRegister<u16>,
 
-    /// TCD9_NBYTES_ML and TCD9_NBYTES_MLOFFYES
-    /// TCD9_NBYTES_ML: TCD9_NBYTES_MLNO and TCD9_NBYTES_MLOFFNO
-    /// TCD9_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD9_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD9_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD9_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO9 and TCD_NBYTES_MLOFFYES9
+    /// TCD_NBYTES_MLNO9: TCD_NBYTES_MLNO9 and TCD_NBYTES_MLOFFNO9
+    /// TCD_NBYTES_MLNO9: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO9: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES9: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO9: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD9_SLAST: RWRegister<u32>,
+    pub TCD_SLAST9: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD9_DADDR: RWRegister<u32>,
+    pub TCD_DADDR9: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD9_DOFF: RWRegister<u16>,
+    pub TCD_DOFF9: RWRegister<u16>,
 
-    /// TCD9_CITER_ELINKNO and TCD9_CITER_ELINKYES
-    /// TCD9_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD9_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD9_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO9 and TCD_CITER_ELINKYES9
+    /// TCD_CITER_ELINKNO9: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES9: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO9: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD9_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA9: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD9_CSR: RWRegister<u16>,
+    pub TCD_CSR9: RWRegister<u16>,
 
-    /// TCD9_BITER_ELINKNO and TCD9_BITER_ELINKYES
-    /// TCD9_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD9_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD9_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO9 and TCD_BITER_ELINKYES9
+    /// TCD_BITER_ELINKNO9: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES9: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO9: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD10_SADDR: RWRegister<u32>,
+    pub TCD_SADDR10: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD10_SOFF: RWRegister<u16>,
+    pub TCD_SOFF10: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD10_ATTR: RWRegister<u16>,
+    pub TCD_ATTR10: RWRegister<u16>,
 
-    /// TCD10_NBYTES_ML and TCD10_NBYTES_MLOFFYES
-    /// TCD10_NBYTES_ML: TCD10_NBYTES_MLNO and TCD10_NBYTES_MLOFFNO
-    /// TCD10_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD10_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD10_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD10_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO10 and TCD_NBYTES_MLOFFYES10
+    /// TCD_NBYTES_MLNO10: TCD_NBYTES_MLNO10 and TCD_NBYTES_MLOFFNO10
+    /// TCD_NBYTES_MLNO10: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO10: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES10: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO10: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD10_SLAST: RWRegister<u32>,
+    pub TCD_SLAST10: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD10_DADDR: RWRegister<u32>,
+    pub TCD_DADDR10: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD10_DOFF: RWRegister<u16>,
+    pub TCD_DOFF10: RWRegister<u16>,
 
-    /// TCD10_CITER_ELINKNO and TCD10_CITER_ELINKYES
-    /// TCD10_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD10_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD10_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO10 and TCD_CITER_ELINKYES10
+    /// TCD_CITER_ELINKNO10: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES10: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO10: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD10_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA10: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD10_CSR: RWRegister<u16>,
+    pub TCD_CSR10: RWRegister<u16>,
 
-    /// TCD10_BITER_ELINKNO and TCD10_BITER_ELINKYES
-    /// TCD10_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD10_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD10_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO10 and TCD_BITER_ELINKYES10
+    /// TCD_BITER_ELINKNO10: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES10: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO10: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD11_SADDR: RWRegister<u32>,
+    pub TCD_SADDR11: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD11_SOFF: RWRegister<u16>,
+    pub TCD_SOFF11: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD11_ATTR: RWRegister<u16>,
+    pub TCD_ATTR11: RWRegister<u16>,
 
-    /// TCD11_NBYTES_ML and TCD11_NBYTES_MLOFFYES
-    /// TCD11_NBYTES_ML: TCD11_NBYTES_MLNO and TCD11_NBYTES_MLOFFNO
-    /// TCD11_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD11_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD11_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD11_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO11 and TCD_NBYTES_MLOFFYES11
+    /// TCD_NBYTES_MLNO11: TCD_NBYTES_MLNO11 and TCD_NBYTES_MLOFFNO11
+    /// TCD_NBYTES_MLNO11: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO11: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES11: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO11: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD11_SLAST: RWRegister<u32>,
+    pub TCD_SLAST11: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD11_DADDR: RWRegister<u32>,
+    pub TCD_DADDR11: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD11_DOFF: RWRegister<u16>,
+    pub TCD_DOFF11: RWRegister<u16>,
 
-    /// TCD11_CITER_ELINKNO and TCD11_CITER_ELINKYES
-    /// TCD11_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD11_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD11_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO11 and TCD_CITER_ELINKYES11
+    /// TCD_CITER_ELINKNO11: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES11: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO11: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD11_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA11: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD11_CSR: RWRegister<u16>,
+    pub TCD_CSR11: RWRegister<u16>,
 
-    /// TCD11_BITER_ELINKNO and TCD11_BITER_ELINKYES
-    /// TCD11_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD11_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD11_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO11 and TCD_BITER_ELINKYES11
+    /// TCD_BITER_ELINKNO11: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES11: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO11: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD12_SADDR: RWRegister<u32>,
+    pub TCD_SADDR12: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD12_SOFF: RWRegister<u16>,
+    pub TCD_SOFF12: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD12_ATTR: RWRegister<u16>,
+    pub TCD_ATTR12: RWRegister<u16>,
 
-    /// TCD12_NBYTES_ML and TCD12_NBYTES_MLOFFYES
-    /// TCD12_NBYTES_ML: TCD12_NBYTES_MLNO and TCD12_NBYTES_MLOFFNO
-    /// TCD12_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD12_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD12_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD12_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO12 and TCD_NBYTES_MLOFFYES12
+    /// TCD_NBYTES_MLNO12: TCD_NBYTES_MLNO12 and TCD_NBYTES_MLOFFNO12
+    /// TCD_NBYTES_MLNO12: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO12: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES12: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO12: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD12_SLAST: RWRegister<u32>,
+    pub TCD_SLAST12: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD12_DADDR: RWRegister<u32>,
+    pub TCD_DADDR12: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD12_DOFF: RWRegister<u16>,
+    pub TCD_DOFF12: RWRegister<u16>,
 
-    /// TCD12_CITER_ELINKNO and TCD12_CITER_ELINKYES
-    /// TCD12_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD12_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD12_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO12 and TCD_CITER_ELINKYES12
+    /// TCD_CITER_ELINKNO12: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES12: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO12: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD12_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA12: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD12_CSR: RWRegister<u16>,
+    pub TCD_CSR12: RWRegister<u16>,
 
-    /// TCD12_BITER_ELINKNO and TCD12_BITER_ELINKYES
-    /// TCD12_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD12_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD12_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO12 and TCD_BITER_ELINKYES12
+    /// TCD_BITER_ELINKNO12: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES12: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO12: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD13_SADDR: RWRegister<u32>,
+    pub TCD_SADDR13: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD13_SOFF: RWRegister<u16>,
+    pub TCD_SOFF13: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD13_ATTR: RWRegister<u16>,
+    pub TCD_ATTR13: RWRegister<u16>,
 
-    /// TCD13_NBYTES_ML and TCD13_NBYTES_MLOFFYES
-    /// TCD13_NBYTES_ML: TCD13_NBYTES_MLNO and TCD13_NBYTES_MLOFFNO
-    /// TCD13_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD13_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD13_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD13_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO13 and TCD_NBYTES_MLOFFYES13
+    /// TCD_NBYTES_MLNO13: TCD_NBYTES_MLNO13 and TCD_NBYTES_MLOFFNO13
+    /// TCD_NBYTES_MLNO13: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO13: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES13: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO13: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD13_SLAST: RWRegister<u32>,
+    pub TCD_SLAST13: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD13_DADDR: RWRegister<u32>,
+    pub TCD_DADDR13: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD13_DOFF: RWRegister<u16>,
+    pub TCD_DOFF13: RWRegister<u16>,
 
-    /// TCD13_CITER_ELINKNO and TCD13_CITER_ELINKYES
-    /// TCD13_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD13_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD13_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO13 and TCD_CITER_ELINKYES13
+    /// TCD_CITER_ELINKNO13: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES13: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO13: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD13_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA13: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD13_CSR: RWRegister<u16>,
+    pub TCD_CSR13: RWRegister<u16>,
 
-    /// TCD13_BITER_ELINKNO and TCD13_BITER_ELINKYES
-    /// TCD13_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD13_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD13_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO13 and TCD_BITER_ELINKYES13
+    /// TCD_BITER_ELINKNO13: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES13: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO13: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD14_SADDR: RWRegister<u32>,
+    pub TCD_SADDR14: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD14_SOFF: RWRegister<u16>,
+    pub TCD_SOFF14: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD14_ATTR: RWRegister<u16>,
+    pub TCD_ATTR14: RWRegister<u16>,
 
-    /// TCD14_NBYTES_ML and TCD14_NBYTES_MLOFFYES
-    /// TCD14_NBYTES_ML: TCD14_NBYTES_MLNO and TCD14_NBYTES_MLOFFNO
-    /// TCD14_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD14_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD14_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD14_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO14 and TCD_NBYTES_MLOFFYES14
+    /// TCD_NBYTES_MLNO14: TCD_NBYTES_MLNO14 and TCD_NBYTES_MLOFFNO14
+    /// TCD_NBYTES_MLNO14: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO14: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES14: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO14: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD14_SLAST: RWRegister<u32>,
+    pub TCD_SLAST14: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD14_DADDR: RWRegister<u32>,
+    pub TCD_DADDR14: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD14_DOFF: RWRegister<u16>,
+    pub TCD_DOFF14: RWRegister<u16>,
 
-    /// TCD14_CITER_ELINKNO and TCD14_CITER_ELINKYES
-    /// TCD14_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD14_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD14_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO14 and TCD_CITER_ELINKYES14
+    /// TCD_CITER_ELINKNO14: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES14: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO14: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD14_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA14: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD14_CSR: RWRegister<u16>,
+    pub TCD_CSR14: RWRegister<u16>,
 
-    /// TCD14_BITER_ELINKNO and TCD14_BITER_ELINKYES
-    /// TCD14_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD14_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD14_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO14 and TCD_BITER_ELINKYES14
+    /// TCD_BITER_ELINKNO14: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES14: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO14: RWRegister<u16>,
 
     /// TCD Source Address
-    pub TCD15_SADDR: RWRegister<u32>,
+    pub TCD_SADDR15: RWRegister<u32>,
 
     /// TCD Signed Source Address Offset
-    pub TCD15_SOFF: RWRegister<u16>,
+    pub TCD_SOFF15: RWRegister<u16>,
 
     /// TCD Transfer Attributes
-    pub TCD15_ATTR: RWRegister<u16>,
+    pub TCD_ATTR15: RWRegister<u16>,
 
-    /// TCD15_NBYTES_ML and TCD15_NBYTES_MLOFFYES
-    /// TCD15_NBYTES_ML: TCD15_NBYTES_MLNO and TCD15_NBYTES_MLOFFNO
-    /// TCD15_NBYTES_MLNO: TCD Minor Byte Count (Minor Loop Mapping Disabled)
-    /// TCD15_NBYTES_MLOFFNO: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
-    /// TCD15_NBYTES_MLOFFYES: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
-    pub TCD15_NBYTES_ML: RWRegister<u32>,
+    /// TCD_NBYTES_MLNO15 and TCD_NBYTES_MLOFFYES15
+    /// TCD_NBYTES_MLNO15: TCD_NBYTES_MLNO15 and TCD_NBYTES_MLOFFNO15
+    /// TCD_NBYTES_MLNO15: TCD Minor Byte Count (Minor Loop Mapping Disabled)
+    /// TCD_NBYTES_MLOFFNO15: TCD Signed Minor Loop Offset (Minor Loop Mapping Enabled and Offset Disabled)
+    /// TCD_NBYTES_MLOFFYES15: TCD Signed Minor Loop Offset (Minor Loop Mapping and Offset Enabled)
+    pub TCD_NBYTES_MLNO15: RWRegister<u32>,
 
     /// TCD Last Source Address Adjustment
-    pub TCD15_SLAST: RWRegister<u32>,
+    pub TCD_SLAST15: RWRegister<u32>,
 
     /// TCD Destination Address
-    pub TCD15_DADDR: RWRegister<u32>,
+    pub TCD_DADDR15: RWRegister<u32>,
 
     /// TCD Signed Destination Address Offset
-    pub TCD15_DOFF: RWRegister<u16>,
+    pub TCD_DOFF15: RWRegister<u16>,
 
-    /// TCD15_CITER_ELINKNO and TCD15_CITER_ELINKYES
-    /// TCD15_CITER_ELINKNO: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD15_CITER_ELINKYES: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD15_CITER_ELINK: RWRegister<u16>,
+    /// TCD_CITER_ELINKNO15 and TCD_CITER_ELINKYES15
+    /// TCD_CITER_ELINKNO15: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_CITER_ELINKYES15: TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_CITER_ELINKNO15: RWRegister<u16>,
 
     /// TCD Last Destination Address Adjustment/Scatter Gather Address
-    pub TCD15_DLASTSGA: RWRegister<u32>,
+    pub TCD_DLASTSGA15: RWRegister<u32>,
 
     /// TCD Control and Status
-    pub TCD15_CSR: RWRegister<u16>,
+    pub TCD_CSR15: RWRegister<u16>,
 
-    /// TCD15_BITER_ELINKNO and TCD15_BITER_ELINKYES
-    /// TCD15_BITER_ELINKNO: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
-    /// TCD15_BITER_ELINKYES: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
-    pub TCD15_BITER_ELINK: RWRegister<u16>,
+    /// TCD_BITER_ELINKNO15 and TCD_BITER_ELINKYES15
+    /// TCD_BITER_ELINKNO15: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)
+    /// TCD_BITER_ELINKYES15: TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)
+    pub TCD_BITER_ELINKNO15: RWRegister<u16>,
 }
 pub struct ResetValues {
     pub CR: u32,
@@ -5763,182 +5763,182 @@ pub struct ResetValues {
     pub DCHPRI14: u8,
     pub DCHPRI13: u8,
     pub DCHPRI12: u8,
-    pub TCD0_SADDR: u32,
-    pub TCD0_SOFF: u16,
-    pub TCD0_ATTR: u16,
-    pub TCD0_NBYTES_ML: u32,
-    pub TCD0_SLAST: u32,
-    pub TCD0_DADDR: u32,
-    pub TCD0_DOFF: u16,
-    pub TCD0_CITER_ELINK: u16,
-    pub TCD0_DLASTSGA: u32,
-    pub TCD0_CSR: u16,
-    pub TCD0_BITER_ELINK: u16,
-    pub TCD1_SADDR: u32,
-    pub TCD1_SOFF: u16,
-    pub TCD1_ATTR: u16,
-    pub TCD1_NBYTES_ML: u32,
-    pub TCD1_SLAST: u32,
-    pub TCD1_DADDR: u32,
-    pub TCD1_DOFF: u16,
-    pub TCD1_CITER_ELINK: u16,
-    pub TCD1_DLASTSGA: u32,
-    pub TCD1_CSR: u16,
-    pub TCD1_BITER_ELINK: u16,
-    pub TCD2_SADDR: u32,
-    pub TCD2_SOFF: u16,
-    pub TCD2_ATTR: u16,
-    pub TCD2_NBYTES_ML: u32,
-    pub TCD2_SLAST: u32,
-    pub TCD2_DADDR: u32,
-    pub TCD2_DOFF: u16,
-    pub TCD2_CITER_ELINK: u16,
-    pub TCD2_DLASTSGA: u32,
-    pub TCD2_CSR: u16,
-    pub TCD2_BITER_ELINK: u16,
-    pub TCD3_SADDR: u32,
-    pub TCD3_SOFF: u16,
-    pub TCD3_ATTR: u16,
-    pub TCD3_NBYTES_ML: u32,
-    pub TCD3_SLAST: u32,
-    pub TCD3_DADDR: u32,
-    pub TCD3_DOFF: u16,
-    pub TCD3_CITER_ELINK: u16,
-    pub TCD3_DLASTSGA: u32,
-    pub TCD3_CSR: u16,
-    pub TCD3_BITER_ELINK: u16,
-    pub TCD4_SADDR: u32,
-    pub TCD4_SOFF: u16,
-    pub TCD4_ATTR: u16,
-    pub TCD4_NBYTES_ML: u32,
-    pub TCD4_SLAST: u32,
-    pub TCD4_DADDR: u32,
-    pub TCD4_DOFF: u16,
-    pub TCD4_CITER_ELINK: u16,
-    pub TCD4_DLASTSGA: u32,
-    pub TCD4_CSR: u16,
-    pub TCD4_BITER_ELINK: u16,
-    pub TCD5_SADDR: u32,
-    pub TCD5_SOFF: u16,
-    pub TCD5_ATTR: u16,
-    pub TCD5_NBYTES_ML: u32,
-    pub TCD5_SLAST: u32,
-    pub TCD5_DADDR: u32,
-    pub TCD5_DOFF: u16,
-    pub TCD5_CITER_ELINK: u16,
-    pub TCD5_DLASTSGA: u32,
-    pub TCD5_CSR: u16,
-    pub TCD5_BITER_ELINK: u16,
-    pub TCD6_SADDR: u32,
-    pub TCD6_SOFF: u16,
-    pub TCD6_ATTR: u16,
-    pub TCD6_NBYTES_ML: u32,
-    pub TCD6_SLAST: u32,
-    pub TCD6_DADDR: u32,
-    pub TCD6_DOFF: u16,
-    pub TCD6_CITER_ELINK: u16,
-    pub TCD6_DLASTSGA: u32,
-    pub TCD6_CSR: u16,
-    pub TCD6_BITER_ELINK: u16,
-    pub TCD7_SADDR: u32,
-    pub TCD7_SOFF: u16,
-    pub TCD7_ATTR: u16,
-    pub TCD7_NBYTES_ML: u32,
-    pub TCD7_SLAST: u32,
-    pub TCD7_DADDR: u32,
-    pub TCD7_DOFF: u16,
-    pub TCD7_CITER_ELINK: u16,
-    pub TCD7_DLASTSGA: u32,
-    pub TCD7_CSR: u16,
-    pub TCD7_BITER_ELINK: u16,
-    pub TCD8_SADDR: u32,
-    pub TCD8_SOFF: u16,
-    pub TCD8_ATTR: u16,
-    pub TCD8_NBYTES_ML: u32,
-    pub TCD8_SLAST: u32,
-    pub TCD8_DADDR: u32,
-    pub TCD8_DOFF: u16,
-    pub TCD8_CITER_ELINK: u16,
-    pub TCD8_DLASTSGA: u32,
-    pub TCD8_CSR: u16,
-    pub TCD8_BITER_ELINK: u16,
-    pub TCD9_SADDR: u32,
-    pub TCD9_SOFF: u16,
-    pub TCD9_ATTR: u16,
-    pub TCD9_NBYTES_ML: u32,
-    pub TCD9_SLAST: u32,
-    pub TCD9_DADDR: u32,
-    pub TCD9_DOFF: u16,
-    pub TCD9_CITER_ELINK: u16,
-    pub TCD9_DLASTSGA: u32,
-    pub TCD9_CSR: u16,
-    pub TCD9_BITER_ELINK: u16,
-    pub TCD10_SADDR: u32,
-    pub TCD10_SOFF: u16,
-    pub TCD10_ATTR: u16,
-    pub TCD10_NBYTES_ML: u32,
-    pub TCD10_SLAST: u32,
-    pub TCD10_DADDR: u32,
-    pub TCD10_DOFF: u16,
-    pub TCD10_CITER_ELINK: u16,
-    pub TCD10_DLASTSGA: u32,
-    pub TCD10_CSR: u16,
-    pub TCD10_BITER_ELINK: u16,
-    pub TCD11_SADDR: u32,
-    pub TCD11_SOFF: u16,
-    pub TCD11_ATTR: u16,
-    pub TCD11_NBYTES_ML: u32,
-    pub TCD11_SLAST: u32,
-    pub TCD11_DADDR: u32,
-    pub TCD11_DOFF: u16,
-    pub TCD11_CITER_ELINK: u16,
-    pub TCD11_DLASTSGA: u32,
-    pub TCD11_CSR: u16,
-    pub TCD11_BITER_ELINK: u16,
-    pub TCD12_SADDR: u32,
-    pub TCD12_SOFF: u16,
-    pub TCD12_ATTR: u16,
-    pub TCD12_NBYTES_ML: u32,
-    pub TCD12_SLAST: u32,
-    pub TCD12_DADDR: u32,
-    pub TCD12_DOFF: u16,
-    pub TCD12_CITER_ELINK: u16,
-    pub TCD12_DLASTSGA: u32,
-    pub TCD12_CSR: u16,
-    pub TCD12_BITER_ELINK: u16,
-    pub TCD13_SADDR: u32,
-    pub TCD13_SOFF: u16,
-    pub TCD13_ATTR: u16,
-    pub TCD13_NBYTES_ML: u32,
-    pub TCD13_SLAST: u32,
-    pub TCD13_DADDR: u32,
-    pub TCD13_DOFF: u16,
-    pub TCD13_CITER_ELINK: u16,
-    pub TCD13_DLASTSGA: u32,
-    pub TCD13_CSR: u16,
-    pub TCD13_BITER_ELINK: u16,
-    pub TCD14_SADDR: u32,
-    pub TCD14_SOFF: u16,
-    pub TCD14_ATTR: u16,
-    pub TCD14_NBYTES_ML: u32,
-    pub TCD14_SLAST: u32,
-    pub TCD14_DADDR: u32,
-    pub TCD14_DOFF: u16,
-    pub TCD14_CITER_ELINK: u16,
-    pub TCD14_DLASTSGA: u32,
-    pub TCD14_CSR: u16,
-    pub TCD14_BITER_ELINK: u16,
-    pub TCD15_SADDR: u32,
-    pub TCD15_SOFF: u16,
-    pub TCD15_ATTR: u16,
-    pub TCD15_NBYTES_ML: u32,
-    pub TCD15_SLAST: u32,
-    pub TCD15_DADDR: u32,
-    pub TCD15_DOFF: u16,
-    pub TCD15_CITER_ELINK: u16,
-    pub TCD15_DLASTSGA: u32,
-    pub TCD15_CSR: u16,
-    pub TCD15_BITER_ELINK: u16,
+    pub TCD_SADDR0: u32,
+    pub TCD_SOFF0: u16,
+    pub TCD_ATTR0: u16,
+    pub TCD_NBYTES_ML: u32,
+    pub TCD_SLAST0: u32,
+    pub TCD_DADDR0: u32,
+    pub TCD_DOFF0: u16,
+    pub TCD_CITER_ELINK: u16,
+    pub TCD_DLASTSGA0: u32,
+    pub TCD_CSR0: u16,
+    pub TCD_BITER_ELINK: u16,
+    pub TCD_SADDR1: u32,
+    pub TCD_SOFF1: u16,
+    pub TCD_ATTR1: u16,
+    pub TCD_NBYTES_MLNO1: u32,
+    pub TCD_SLAST1: u32,
+    pub TCD_DADDR1: u32,
+    pub TCD_DOFF1: u16,
+    pub TCD_CITER_ELINKNO1: u16,
+    pub TCD_DLASTSGA1: u32,
+    pub TCD_CSR1: u16,
+    pub TCD_BITER_ELINKNO1: u16,
+    pub TCD_SADDR2: u32,
+    pub TCD_SOFF2: u16,
+    pub TCD_ATTR2: u16,
+    pub TCD_NBYTES_MLNO2: u32,
+    pub TCD_SLAST2: u32,
+    pub TCD_DADDR2: u32,
+    pub TCD_DOFF2: u16,
+    pub TCD_CITER_ELINKNO2: u16,
+    pub TCD_DLASTSGA2: u32,
+    pub TCD_CSR2: u16,
+    pub TCD_BITER_ELINKNO2: u16,
+    pub TCD_SADDR3: u32,
+    pub TCD_SOFF3: u16,
+    pub TCD_ATTR3: u16,
+    pub TCD_NBYTES_MLNO3: u32,
+    pub TCD_SLAST3: u32,
+    pub TCD_DADDR3: u32,
+    pub TCD_DOFF3: u16,
+    pub TCD_CITER_ELINKNO3: u16,
+    pub TCD_DLASTSGA3: u32,
+    pub TCD_CSR3: u16,
+    pub TCD_BITER_ELINKNO3: u16,
+    pub TCD_SADDR4: u32,
+    pub TCD_SOFF4: u16,
+    pub TCD_ATTR4: u16,
+    pub TCD_NBYTES_MLNO4: u32,
+    pub TCD_SLAST4: u32,
+    pub TCD_DADDR4: u32,
+    pub TCD_DOFF4: u16,
+    pub TCD_CITER_ELINKNO4: u16,
+    pub TCD_DLASTSGA4: u32,
+    pub TCD_CSR4: u16,
+    pub TCD_BITER_ELINKNO4: u16,
+    pub TCD_SADDR5: u32,
+    pub TCD_SOFF5: u16,
+    pub TCD_ATTR5: u16,
+    pub TCD_NBYTES_MLNO5: u32,
+    pub TCD_SLAST5: u32,
+    pub TCD_DADDR5: u32,
+    pub TCD_DOFF5: u16,
+    pub TCD_CITER_ELINKNO5: u16,
+    pub TCD_DLASTSGA5: u32,
+    pub TCD_CSR5: u16,
+    pub TCD_BITER_ELINKNO5: u16,
+    pub TCD_SADDR6: u32,
+    pub TCD_SOFF6: u16,
+    pub TCD_ATTR6: u16,
+    pub TCD_NBYTES_MLNO6: u32,
+    pub TCD_SLAST6: u32,
+    pub TCD_DADDR6: u32,
+    pub TCD_DOFF6: u16,
+    pub TCD_CITER_ELINKNO6: u16,
+    pub TCD_DLASTSGA6: u32,
+    pub TCD_CSR6: u16,
+    pub TCD_BITER_ELINKNO6: u16,
+    pub TCD_SADDR7: u32,
+    pub TCD_SOFF7: u16,
+    pub TCD_ATTR7: u16,
+    pub TCD_NBYTES_MLNO7: u32,
+    pub TCD_SLAST7: u32,
+    pub TCD_DADDR7: u32,
+    pub TCD_DOFF7: u16,
+    pub TCD_CITER_ELINKNO7: u16,
+    pub TCD_DLASTSGA7: u32,
+    pub TCD_CSR7: u16,
+    pub TCD_BITER_ELINKNO7: u16,
+    pub TCD_SADDR8: u32,
+    pub TCD_SOFF8: u16,
+    pub TCD_ATTR8: u16,
+    pub TCD_NBYTES_MLNO8: u32,
+    pub TCD_SLAST8: u32,
+    pub TCD_DADDR8: u32,
+    pub TCD_DOFF8: u16,
+    pub TCD_CITER_ELINKNO8: u16,
+    pub TCD_DLASTSGA8: u32,
+    pub TCD_CSR8: u16,
+    pub TCD_BITER_ELINKNO8: u16,
+    pub TCD_SADDR9: u32,
+    pub TCD_SOFF9: u16,
+    pub TCD_ATTR9: u16,
+    pub TCD_NBYTES_MLNO9: u32,
+    pub TCD_SLAST9: u32,
+    pub TCD_DADDR9: u32,
+    pub TCD_DOFF9: u16,
+    pub TCD_CITER_ELINKNO9: u16,
+    pub TCD_DLASTSGA9: u32,
+    pub TCD_CSR9: u16,
+    pub TCD_BITER_ELINKNO9: u16,
+    pub TCD_SADDR10: u32,
+    pub TCD_SOFF10: u16,
+    pub TCD_ATTR10: u16,
+    pub TCD_NBYTES_MLNO10: u32,
+    pub TCD_SLAST10: u32,
+    pub TCD_DADDR10: u32,
+    pub TCD_DOFF10: u16,
+    pub TCD_CITER_ELINKNO10: u16,
+    pub TCD_DLASTSGA10: u32,
+    pub TCD_CSR10: u16,
+    pub TCD_BITER_ELINKNO10: u16,
+    pub TCD_SADDR11: u32,
+    pub TCD_SOFF11: u16,
+    pub TCD_ATTR11: u16,
+    pub TCD_NBYTES_MLNO11: u32,
+    pub TCD_SLAST11: u32,
+    pub TCD_DADDR11: u32,
+    pub TCD_DOFF11: u16,
+    pub TCD_CITER_ELINKNO11: u16,
+    pub TCD_DLASTSGA11: u32,
+    pub TCD_CSR11: u16,
+    pub TCD_BITER_ELINKNO11: u16,
+    pub TCD_SADDR12: u32,
+    pub TCD_SOFF12: u16,
+    pub TCD_ATTR12: u16,
+    pub TCD_NBYTES_MLNO12: u32,
+    pub TCD_SLAST12: u32,
+    pub TCD_DADDR12: u32,
+    pub TCD_DOFF12: u16,
+    pub TCD_CITER_ELINKNO12: u16,
+    pub TCD_DLASTSGA12: u32,
+    pub TCD_CSR12: u16,
+    pub TCD_BITER_ELINKNO12: u16,
+    pub TCD_SADDR13: u32,
+    pub TCD_SOFF13: u16,
+    pub TCD_ATTR13: u16,
+    pub TCD_NBYTES_MLNO13: u32,
+    pub TCD_SLAST13: u32,
+    pub TCD_DADDR13: u32,
+    pub TCD_DOFF13: u16,
+    pub TCD_CITER_ELINKNO13: u16,
+    pub TCD_DLASTSGA13: u32,
+    pub TCD_CSR13: u16,
+    pub TCD_BITER_ELINKNO13: u16,
+    pub TCD_SADDR14: u32,
+    pub TCD_SOFF14: u16,
+    pub TCD_ATTR14: u16,
+    pub TCD_NBYTES_MLNO14: u32,
+    pub TCD_SLAST14: u32,
+    pub TCD_DADDR14: u32,
+    pub TCD_DOFF14: u16,
+    pub TCD_CITER_ELINKNO14: u16,
+    pub TCD_DLASTSGA14: u32,
+    pub TCD_CSR14: u16,
+    pub TCD_BITER_ELINKNO14: u16,
+    pub TCD_SADDR15: u32,
+    pub TCD_SOFF15: u16,
+    pub TCD_ATTR15: u16,
+    pub TCD_NBYTES_MLNO15: u32,
+    pub TCD_SLAST15: u32,
+    pub TCD_DADDR15: u32,
+    pub TCD_DOFF15: u16,
+    pub TCD_CITER_ELINKNO15: u16,
+    pub TCD_DLASTSGA15: u32,
+    pub TCD_CSR15: u16,
+    pub TCD_BITER_ELINKNO15: u16,
 }
 #[cfg(not(feature = "nosync"))]
 pub struct Instance {
@@ -6003,182 +6003,182 @@ pub mod DMA0 {
         DCHPRI14: 0x0000000E,
         DCHPRI13: 0x0000000D,
         DCHPRI12: 0x0000000C,
-        TCD0_SADDR: 0x00000000,
-        TCD0_SOFF: 0x00000000,
-        TCD0_ATTR: 0x00000000,
-        TCD0_NBYTES_ML: 0x00000000,
-        TCD0_SLAST: 0x00000000,
-        TCD0_DADDR: 0x00000000,
-        TCD0_DOFF: 0x00000000,
-        TCD0_CITER_ELINK: 0x00000000,
-        TCD0_DLASTSGA: 0x00000000,
-        TCD0_CSR: 0x00000000,
-        TCD0_BITER_ELINK: 0x00000000,
-        TCD1_SADDR: 0x00000000,
-        TCD1_SOFF: 0x00000000,
-        TCD1_ATTR: 0x00000000,
-        TCD1_NBYTES_ML: 0x00000000,
-        TCD1_SLAST: 0x00000000,
-        TCD1_DADDR: 0x00000000,
-        TCD1_DOFF: 0x00000000,
-        TCD1_CITER_ELINK: 0x00000000,
-        TCD1_DLASTSGA: 0x00000000,
-        TCD1_CSR: 0x00000000,
-        TCD1_BITER_ELINK: 0x00000000,
-        TCD2_SADDR: 0x00000000,
-        TCD2_SOFF: 0x00000000,
-        TCD2_ATTR: 0x00000000,
-        TCD2_NBYTES_ML: 0x00000000,
-        TCD2_SLAST: 0x00000000,
-        TCD2_DADDR: 0x00000000,
-        TCD2_DOFF: 0x00000000,
-        TCD2_CITER_ELINK: 0x00000000,
-        TCD2_DLASTSGA: 0x00000000,
-        TCD2_CSR: 0x00000000,
-        TCD2_BITER_ELINK: 0x00000000,
-        TCD3_SADDR: 0x00000000,
-        TCD3_SOFF: 0x00000000,
-        TCD3_ATTR: 0x00000000,
-        TCD3_NBYTES_ML: 0x00000000,
-        TCD3_SLAST: 0x00000000,
-        TCD3_DADDR: 0x00000000,
-        TCD3_DOFF: 0x00000000,
-        TCD3_CITER_ELINK: 0x00000000,
-        TCD3_DLASTSGA: 0x00000000,
-        TCD3_CSR: 0x00000000,
-        TCD3_BITER_ELINK: 0x00000000,
-        TCD4_SADDR: 0x00000000,
-        TCD4_SOFF: 0x00000000,
-        TCD4_ATTR: 0x00000000,
-        TCD4_NBYTES_ML: 0x00000000,
-        TCD4_SLAST: 0x00000000,
-        TCD4_DADDR: 0x00000000,
-        TCD4_DOFF: 0x00000000,
-        TCD4_CITER_ELINK: 0x00000000,
-        TCD4_DLASTSGA: 0x00000000,
-        TCD4_CSR: 0x00000000,
-        TCD4_BITER_ELINK: 0x00000000,
-        TCD5_SADDR: 0x00000000,
-        TCD5_SOFF: 0x00000000,
-        TCD5_ATTR: 0x00000000,
-        TCD5_NBYTES_ML: 0x00000000,
-        TCD5_SLAST: 0x00000000,
-        TCD5_DADDR: 0x00000000,
-        TCD5_DOFF: 0x00000000,
-        TCD5_CITER_ELINK: 0x00000000,
-        TCD5_DLASTSGA: 0x00000000,
-        TCD5_CSR: 0x00000000,
-        TCD5_BITER_ELINK: 0x00000000,
-        TCD6_SADDR: 0x00000000,
-        TCD6_SOFF: 0x00000000,
-        TCD6_ATTR: 0x00000000,
-        TCD6_NBYTES_ML: 0x00000000,
-        TCD6_SLAST: 0x00000000,
-        TCD6_DADDR: 0x00000000,
-        TCD6_DOFF: 0x00000000,
-        TCD6_CITER_ELINK: 0x00000000,
-        TCD6_DLASTSGA: 0x00000000,
-        TCD6_CSR: 0x00000000,
-        TCD6_BITER_ELINK: 0x00000000,
-        TCD7_SADDR: 0x00000000,
-        TCD7_SOFF: 0x00000000,
-        TCD7_ATTR: 0x00000000,
-        TCD7_NBYTES_ML: 0x00000000,
-        TCD7_SLAST: 0x00000000,
-        TCD7_DADDR: 0x00000000,
-        TCD7_DOFF: 0x00000000,
-        TCD7_CITER_ELINK: 0x00000000,
-        TCD7_DLASTSGA: 0x00000000,
-        TCD7_CSR: 0x00000000,
-        TCD7_BITER_ELINK: 0x00000000,
-        TCD8_SADDR: 0x00000000,
-        TCD8_SOFF: 0x00000000,
-        TCD8_ATTR: 0x00000000,
-        TCD8_NBYTES_ML: 0x00000000,
-        TCD8_SLAST: 0x00000000,
-        TCD8_DADDR: 0x00000000,
-        TCD8_DOFF: 0x00000000,
-        TCD8_CITER_ELINK: 0x00000000,
-        TCD8_DLASTSGA: 0x00000000,
-        TCD8_CSR: 0x00000000,
-        TCD8_BITER_ELINK: 0x00000000,
-        TCD9_SADDR: 0x00000000,
-        TCD9_SOFF: 0x00000000,
-        TCD9_ATTR: 0x00000000,
-        TCD9_NBYTES_ML: 0x00000000,
-        TCD9_SLAST: 0x00000000,
-        TCD9_DADDR: 0x00000000,
-        TCD9_DOFF: 0x00000000,
-        TCD9_CITER_ELINK: 0x00000000,
-        TCD9_DLASTSGA: 0x00000000,
-        TCD9_CSR: 0x00000000,
-        TCD9_BITER_ELINK: 0x00000000,
-        TCD10_SADDR: 0x00000000,
-        TCD10_SOFF: 0x00000000,
-        TCD10_ATTR: 0x00000000,
-        TCD10_NBYTES_ML: 0x00000000,
-        TCD10_SLAST: 0x00000000,
-        TCD10_DADDR: 0x00000000,
-        TCD10_DOFF: 0x00000000,
-        TCD10_CITER_ELINK: 0x00000000,
-        TCD10_DLASTSGA: 0x00000000,
-        TCD10_CSR: 0x00000000,
-        TCD10_BITER_ELINK: 0x00000000,
-        TCD11_SADDR: 0x00000000,
-        TCD11_SOFF: 0x00000000,
-        TCD11_ATTR: 0x00000000,
-        TCD11_NBYTES_ML: 0x00000000,
-        TCD11_SLAST: 0x00000000,
-        TCD11_DADDR: 0x00000000,
-        TCD11_DOFF: 0x00000000,
-        TCD11_CITER_ELINK: 0x00000000,
-        TCD11_DLASTSGA: 0x00000000,
-        TCD11_CSR: 0x00000000,
-        TCD11_BITER_ELINK: 0x00000000,
-        TCD12_SADDR: 0x00000000,
-        TCD12_SOFF: 0x00000000,
-        TCD12_ATTR: 0x00000000,
-        TCD12_NBYTES_ML: 0x00000000,
-        TCD12_SLAST: 0x00000000,
-        TCD12_DADDR: 0x00000000,
-        TCD12_DOFF: 0x00000000,
-        TCD12_CITER_ELINK: 0x00000000,
-        TCD12_DLASTSGA: 0x00000000,
-        TCD12_CSR: 0x00000000,
-        TCD12_BITER_ELINK: 0x00000000,
-        TCD13_SADDR: 0x00000000,
-        TCD13_SOFF: 0x00000000,
-        TCD13_ATTR: 0x00000000,
-        TCD13_NBYTES_ML: 0x00000000,
-        TCD13_SLAST: 0x00000000,
-        TCD13_DADDR: 0x00000000,
-        TCD13_DOFF: 0x00000000,
-        TCD13_CITER_ELINK: 0x00000000,
-        TCD13_DLASTSGA: 0x00000000,
-        TCD13_CSR: 0x00000000,
-        TCD13_BITER_ELINK: 0x00000000,
-        TCD14_SADDR: 0x00000000,
-        TCD14_SOFF: 0x00000000,
-        TCD14_ATTR: 0x00000000,
-        TCD14_NBYTES_ML: 0x00000000,
-        TCD14_SLAST: 0x00000000,
-        TCD14_DADDR: 0x00000000,
-        TCD14_DOFF: 0x00000000,
-        TCD14_CITER_ELINK: 0x00000000,
-        TCD14_DLASTSGA: 0x00000000,
-        TCD14_CSR: 0x00000000,
-        TCD14_BITER_ELINK: 0x00000000,
-        TCD15_SADDR: 0x00000000,
-        TCD15_SOFF: 0x00000000,
-        TCD15_ATTR: 0x00000000,
-        TCD15_NBYTES_ML: 0x00000000,
-        TCD15_SLAST: 0x00000000,
-        TCD15_DADDR: 0x00000000,
-        TCD15_DOFF: 0x00000000,
-        TCD15_CITER_ELINK: 0x00000000,
-        TCD15_DLASTSGA: 0x00000000,
-        TCD15_CSR: 0x00000000,
-        TCD15_BITER_ELINK: 0x00000000,
+        TCD_SADDR0: 0x00000000,
+        TCD_SOFF0: 0x00000000,
+        TCD_ATTR0: 0x00000000,
+        TCD_NBYTES_ML: 0x00000000,
+        TCD_SLAST0: 0x00000000,
+        TCD_DADDR0: 0x00000000,
+        TCD_DOFF0: 0x00000000,
+        TCD_CITER_ELINK: 0x00000000,
+        TCD_DLASTSGA0: 0x00000000,
+        TCD_CSR0: 0x00000000,
+        TCD_BITER_ELINK: 0x00000000,
+        TCD_SADDR1: 0x00000000,
+        TCD_SOFF1: 0x00000000,
+        TCD_ATTR1: 0x00000000,
+        TCD_NBYTES_MLNO1: 0x00000000,
+        TCD_SLAST1: 0x00000000,
+        TCD_DADDR1: 0x00000000,
+        TCD_DOFF1: 0x00000000,
+        TCD_CITER_ELINKNO1: 0x00000000,
+        TCD_DLASTSGA1: 0x00000000,
+        TCD_CSR1: 0x00000000,
+        TCD_BITER_ELINKNO1: 0x00000000,
+        TCD_SADDR2: 0x00000000,
+        TCD_SOFF2: 0x00000000,
+        TCD_ATTR2: 0x00000000,
+        TCD_NBYTES_MLNO2: 0x00000000,
+        TCD_SLAST2: 0x00000000,
+        TCD_DADDR2: 0x00000000,
+        TCD_DOFF2: 0x00000000,
+        TCD_CITER_ELINKNO2: 0x00000000,
+        TCD_DLASTSGA2: 0x00000000,
+        TCD_CSR2: 0x00000000,
+        TCD_BITER_ELINKNO2: 0x00000000,
+        TCD_SADDR3: 0x00000000,
+        TCD_SOFF3: 0x00000000,
+        TCD_ATTR3: 0x00000000,
+        TCD_NBYTES_MLNO3: 0x00000000,
+        TCD_SLAST3: 0x00000000,
+        TCD_DADDR3: 0x00000000,
+        TCD_DOFF3: 0x00000000,
+        TCD_CITER_ELINKNO3: 0x00000000,
+        TCD_DLASTSGA3: 0x00000000,
+        TCD_CSR3: 0x00000000,
+        TCD_BITER_ELINKNO3: 0x00000000,
+        TCD_SADDR4: 0x00000000,
+        TCD_SOFF4: 0x00000000,
+        TCD_ATTR4: 0x00000000,
+        TCD_NBYTES_MLNO4: 0x00000000,
+        TCD_SLAST4: 0x00000000,
+        TCD_DADDR4: 0x00000000,
+        TCD_DOFF4: 0x00000000,
+        TCD_CITER_ELINKNO4: 0x00000000,
+        TCD_DLASTSGA4: 0x00000000,
+        TCD_CSR4: 0x00000000,
+        TCD_BITER_ELINKNO4: 0x00000000,
+        TCD_SADDR5: 0x00000000,
+        TCD_SOFF5: 0x00000000,
+        TCD_ATTR5: 0x00000000,
+        TCD_NBYTES_MLNO5: 0x00000000,
+        TCD_SLAST5: 0x00000000,
+        TCD_DADDR5: 0x00000000,
+        TCD_DOFF5: 0x00000000,
+        TCD_CITER_ELINKNO5: 0x00000000,
+        TCD_DLASTSGA5: 0x00000000,
+        TCD_CSR5: 0x00000000,
+        TCD_BITER_ELINKNO5: 0x00000000,
+        TCD_SADDR6: 0x00000000,
+        TCD_SOFF6: 0x00000000,
+        TCD_ATTR6: 0x00000000,
+        TCD_NBYTES_MLNO6: 0x00000000,
+        TCD_SLAST6: 0x00000000,
+        TCD_DADDR6: 0x00000000,
+        TCD_DOFF6: 0x00000000,
+        TCD_CITER_ELINKNO6: 0x00000000,
+        TCD_DLASTSGA6: 0x00000000,
+        TCD_CSR6: 0x00000000,
+        TCD_BITER_ELINKNO6: 0x00000000,
+        TCD_SADDR7: 0x00000000,
+        TCD_SOFF7: 0x00000000,
+        TCD_ATTR7: 0x00000000,
+        TCD_NBYTES_MLNO7: 0x00000000,
+        TCD_SLAST7: 0x00000000,
+        TCD_DADDR7: 0x00000000,
+        TCD_DOFF7: 0x00000000,
+        TCD_CITER_ELINKNO7: 0x00000000,
+        TCD_DLASTSGA7: 0x00000000,
+        TCD_CSR7: 0x00000000,
+        TCD_BITER_ELINKNO7: 0x00000000,
+        TCD_SADDR8: 0x00000000,
+        TCD_SOFF8: 0x00000000,
+        TCD_ATTR8: 0x00000000,
+        TCD_NBYTES_MLNO8: 0x00000000,
+        TCD_SLAST8: 0x00000000,
+        TCD_DADDR8: 0x00000000,
+        TCD_DOFF8: 0x00000000,
+        TCD_CITER_ELINKNO8: 0x00000000,
+        TCD_DLASTSGA8: 0x00000000,
+        TCD_CSR8: 0x00000000,
+        TCD_BITER_ELINKNO8: 0x00000000,
+        TCD_SADDR9: 0x00000000,
+        TCD_SOFF9: 0x00000000,
+        TCD_ATTR9: 0x00000000,
+        TCD_NBYTES_MLNO9: 0x00000000,
+        TCD_SLAST9: 0x00000000,
+        TCD_DADDR9: 0x00000000,
+        TCD_DOFF9: 0x00000000,
+        TCD_CITER_ELINKNO9: 0x00000000,
+        TCD_DLASTSGA9: 0x00000000,
+        TCD_CSR9: 0x00000000,
+        TCD_BITER_ELINKNO9: 0x00000000,
+        TCD_SADDR10: 0x00000000,
+        TCD_SOFF10: 0x00000000,
+        TCD_ATTR10: 0x00000000,
+        TCD_NBYTES_MLNO10: 0x00000000,
+        TCD_SLAST10: 0x00000000,
+        TCD_DADDR10: 0x00000000,
+        TCD_DOFF10: 0x00000000,
+        TCD_CITER_ELINKNO10: 0x00000000,
+        TCD_DLASTSGA10: 0x00000000,
+        TCD_CSR10: 0x00000000,
+        TCD_BITER_ELINKNO10: 0x00000000,
+        TCD_SADDR11: 0x00000000,
+        TCD_SOFF11: 0x00000000,
+        TCD_ATTR11: 0x00000000,
+        TCD_NBYTES_MLNO11: 0x00000000,
+        TCD_SLAST11: 0x00000000,
+        TCD_DADDR11: 0x00000000,
+        TCD_DOFF11: 0x00000000,
+        TCD_CITER_ELINKNO11: 0x00000000,
+        TCD_DLASTSGA11: 0x00000000,
+        TCD_CSR11: 0x00000000,
+        TCD_BITER_ELINKNO11: 0x00000000,
+        TCD_SADDR12: 0x00000000,
+        TCD_SOFF12: 0x00000000,
+        TCD_ATTR12: 0x00000000,
+        TCD_NBYTES_MLNO12: 0x00000000,
+        TCD_SLAST12: 0x00000000,
+        TCD_DADDR12: 0x00000000,
+        TCD_DOFF12: 0x00000000,
+        TCD_CITER_ELINKNO12: 0x00000000,
+        TCD_DLASTSGA12: 0x00000000,
+        TCD_CSR12: 0x00000000,
+        TCD_BITER_ELINKNO12: 0x00000000,
+        TCD_SADDR13: 0x00000000,
+        TCD_SOFF13: 0x00000000,
+        TCD_ATTR13: 0x00000000,
+        TCD_NBYTES_MLNO13: 0x00000000,
+        TCD_SLAST13: 0x00000000,
+        TCD_DADDR13: 0x00000000,
+        TCD_DOFF13: 0x00000000,
+        TCD_CITER_ELINKNO13: 0x00000000,
+        TCD_DLASTSGA13: 0x00000000,
+        TCD_CSR13: 0x00000000,
+        TCD_BITER_ELINKNO13: 0x00000000,
+        TCD_SADDR14: 0x00000000,
+        TCD_SOFF14: 0x00000000,
+        TCD_ATTR14: 0x00000000,
+        TCD_NBYTES_MLNO14: 0x00000000,
+        TCD_SLAST14: 0x00000000,
+        TCD_DADDR14: 0x00000000,
+        TCD_DOFF14: 0x00000000,
+        TCD_CITER_ELINKNO14: 0x00000000,
+        TCD_DLASTSGA14: 0x00000000,
+        TCD_CSR14: 0x00000000,
+        TCD_BITER_ELINKNO14: 0x00000000,
+        TCD_SADDR15: 0x00000000,
+        TCD_SOFF15: 0x00000000,
+        TCD_ATTR15: 0x00000000,
+        TCD_NBYTES_MLNO15: 0x00000000,
+        TCD_SLAST15: 0x00000000,
+        TCD_DADDR15: 0x00000000,
+        TCD_DOFF15: 0x00000000,
+        TCD_CITER_ELINKNO15: 0x00000000,
+        TCD_DLASTSGA15: 0x00000000,
+        TCD_CSR15: 0x00000000,
+        TCD_BITER_ELINKNO15: 0x00000000,
     };
 
     #[cfg(not(feature = "nosync"))]

@@ -4,3 +4,4 @@ _include:
   - "common.yaml"
   - "common_patches/pwm1/submodule_cluster.yaml"
   - "common_patches/usb1/endptctrl_array.yaml"
+  - "common_patches/dma0/tcd_cluster.yaml"
