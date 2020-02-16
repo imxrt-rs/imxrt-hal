@@ -54,7 +54,7 @@ pub mod lpspi;
 pub mod pwm1;
 pub mod sai;
 pub mod spdif;
-pub mod usb;
+pub mod usb1;
 pub mod usbnc;
 pub mod xbara;
 pub mod xbarb;
@@ -111,7 +111,7 @@ pub struct Peripherals {
     pub IOMUXC: iomuxc::Instance,
     pub KPP: kpp::Instance,
     pub FLEXSPI: flexspi::Instance,
-    pub USB: usb::Instance,
+    pub USB1: usb1::Instance,
     pub USBNC: usbnc::Instance,
     pub DCP: dcp::Instance,
     pub SPDIF: spdif::Instance,
@@ -188,7 +188,7 @@ impl Peripherals {
             IOMUXC: iomuxc::IOMUXC::steal(),
             KPP: kpp::KPP::steal(),
             FLEXSPI: flexspi::FLEXSPI::steal(),
-            USB: usb::USB::steal(),
+            USB1: usb1::USB1::steal(),
             USBNC: usbnc::USBNC::steal(),
             DCP: dcp::DCP::steal(),
             SPDIF: spdif::SPDIF::steal(),

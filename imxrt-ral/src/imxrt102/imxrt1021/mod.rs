@@ -56,7 +56,7 @@ pub mod systemcontrol;
 pub mod tempmon;
 pub mod tmr;
 pub mod trng;
-pub mod usb;
+pub mod usb1;
 pub mod usb_analog;
 pub mod usbnc;
 pub mod usbphy;
@@ -131,7 +131,7 @@ pub struct Peripherals {
     pub USDHC1: usdhc::Instance,
     pub USDHC2: usdhc::Instance,
     pub ENET: enet::Instance,
-    pub USB: usb::Instance,
+    pub USB1: usb1::Instance,
     pub USBNC: usbnc::Instance,
     pub SEMC: semc::Instance,
     pub DCP: dcp::Instance,
@@ -230,7 +230,7 @@ impl Peripherals {
             USDHC1: usdhc::USDHC1::steal(),
             USDHC2: usdhc::USDHC2::steal(),
             ENET: enet::ENET::steal(),
-            USB: usb::USB::steal(),
+            USB1: usb1::USB1::steal(),
             USBNC: usbnc::USBNC::steal(),
             SEMC: semc::SEMC::steal(),
             DCP: dcp::DCP::steal(),

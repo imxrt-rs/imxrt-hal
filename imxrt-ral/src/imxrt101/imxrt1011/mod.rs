@@ -37,7 +37,7 @@ pub mod dcp;
 pub mod dma0;
 pub mod dmamux;
 pub mod gpc;
-pub mod usb;
+pub mod usb1;
 pub mod usbnc;
 pub use super::instances::pgc;
 pub mod ccm;
@@ -88,7 +88,7 @@ pub struct Peripherals {
     pub XTALOSC24M: xtalosc24m::Instance,
     pub USBPHY: usbphy::Instance,
     pub CSU: csu::Instance,
-    pub USB: usb::Instance,
+    pub USB1: usb1::Instance,
     pub USBNC: usbnc::Instance,
     pub DMA0: dma0::Instance,
     pub DMAMUX: dmamux::Instance,
@@ -158,7 +158,7 @@ impl Peripherals {
             XTALOSC24M: xtalosc24m::XTALOSC24M::steal(),
             USBPHY: usbphy::USBPHY::steal(),
             CSU: csu::CSU::steal(),
-            USB: usb::USB::steal(),
+            USB1: usb1::USB1::steal(),
             USBNC: usbnc::USBNC::steal(),
             DMA0: dma0::DMA0::steal(),
             DMAMUX: dmamux::DMAMUX::steal(),

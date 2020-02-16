@@ -1,4 +1,4 @@
-.PHONY: patch svd2rust form check clean-rs clean-patch clean-html clean
+.PHONY: patch svd2rust form check clean-rs clean-patch clean-html clean rustfmt
 .PRECIOUS: svd/%.svd .deps/%.d
 
 SHELL := /usr/bin/env bash
@@ -6,7 +6,7 @@ SHELL := /usr/bin/env bash
 
 DEVICES ?= imxrt1011 imxrt1015 imxrt1021 imxrt1051 imxrt1052 imxrt1061 imxrt1062 imxrt1064 
 
-all: patch crate check
+all: patch crate check rustfmt
 
 # All yaml files in devices/ will be used to patch an SVD
 DEVICE_YAMLS := $(foreach device, $(DEVICES), \
@@ -76,5 +76,7 @@ update-venv:
 crate: patch
 	python3 imxrtral.py . svd/imxrt*.svd.patched cortex_m/armv*.svd.patched
 
-
+rustfmt:
+	cargo fmt
+	
 -include .deps/*

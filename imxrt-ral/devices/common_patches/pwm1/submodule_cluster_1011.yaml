@@ -1,0 +1,62 @@
+# The PWM submodules may be represented as a cluster, rather that
+# individually named registers. This patch uses the default submodule
+# clustering directives, and adds the phase delay register that's specific
+# to the iMXRT1011 variant.
+#
+# Everything in this is the same as the normal submodule_cluster patch,
+# except for the final phase delay register.
+
+PWM1:
+  _cluster:
+    "SM%s":
+      "SM?CNT": {}
+      "SM?INIT": {}
+      "SM?CTRL2": {}
+      "SM?CTRL": {}
+      # Values and fractional values
+      "SM?VAL0": {}
+      "SM?FRACVAL1": {}
+      "SM?VAL1": {}
+      "SM?FRACVAL2": {}
+      "SM?VAL2": {}
+      "SM?FRACVAL3": {}
+      "SM?VAL3": {}
+      "SM?FRACVAL4": {}
+      "SM?VAL4": {}
+      "SM?FRACVAL5": {}
+      "SM?VAL5": {}
+      # Some more control registers
+      "SM?FRCTRL": {}
+      "SM?OCTRL": {}
+      "SM?STS": {}
+      "SM?INTEN": {}
+      "SM?DMAEN": {}
+      "SM?TCTRL": {}
+      # Fault disable mapping
+      "SM?DISMAP0": {}
+      "SM?DISMAP1": {}
+      # Deadtime counts
+      "SM?DTCNT0": {}
+      "SM?DTCNT1": {}
+      # Capture control and compares
+      "SM?CAPTCTRLA": {}
+      "SM?CAPTCOMPA": {}
+      "SM?CAPTCTRLB": {}
+      "SM?CAPTCOMPB": {}
+      "SM?CAPTCTRLX": {}
+      "SM?CAPTCOMPX": {}
+      # Values and cycles
+      "SM?CVAL0": {}
+      "SM?CVAL0CYC": {}
+      "SM?CVAL1": {}
+      "SM?CVAL1CYC": {}
+      "SM?CVAL2": {}
+      "SM?CVAL2CYC": {}
+      "SM?CVAL3": {}
+      "SM?CVAL3CYC": {}
+      "SM?CVAL4": {}
+      "SM?CVAL4CYC": {}
+      "SM?CVAL5": {}
+      "SM?CVAL5CYC": {}
+      # The special phase delay register
+      "SM?PHASEDLY": {}

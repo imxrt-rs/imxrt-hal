@@ -1,4 +1,12 @@
 _svd: "../svd/imxrt1011.svd"
 
+_modify:
+  USB:
+    name: USB1
+
 _include: 
   - "common.yaml"
+  - "common_patches/pwm1/submodule_cluster_1011.yaml"
+  - "common_patches/usb1/endptctrl_array.yaml"
+  - "common_patches/dma0/tcd_cluster.yaml"
+
