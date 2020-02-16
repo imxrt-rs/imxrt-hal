@@ -39,8 +39,14 @@ impl PLL1 {
     fn new() -> Self {
         PLL1(())
     }
+    
+    #[cfg(any(feature = "imxrt1011", feature = "imxrt1015"))]
+    pub const ARM_HZ: u32 = 500_000_000;
 
+    #[cfg(any(feature = "imxrt1064", feature = "imxrt1062", feature = "imxrt1061"))]
     pub const ARM_HZ: u32 = 600_000_000;
+
+
 
     /// Set the clock speed for the ARM core. This represents the base processor frequency.
     /// Consider using the 600MHz recommended frequency `PLL1::ARM_HZ`.

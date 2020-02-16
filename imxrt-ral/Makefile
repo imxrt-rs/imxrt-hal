@@ -1,12 +1,12 @@
-.PHONY: patch svd2rust form check clean-rs clean-patch clean-html clean rustfmt
+
+
+.PHONY: patch svd2rust form clean-rs clean-patch clean-check clean-html clean rustfmt check
 .PRECIOUS: svd/%.svd .deps/%.d
 
 SHELL := /usr/bin/env bash
-
-
 DEVICES ?= imxrt1011 imxrt1015 imxrt1021 imxrt1051 imxrt1052 imxrt1061 imxrt1062 imxrt1064 
 
-all: patch crate check rustfmt
+all: patch crate rustfmt check 
 
 # All yaml files in devices/ will be used to patch an SVD
 DEVICE_YAMLS := $(foreach device, $(DEVICES), \
@@ -38,8 +38,20 @@ patch: $(DEVICE_PATCHED_SVDS) $(ARCH_PATCHED_SVDS)
 
 format: $(DEVICE_FORMATTED_SVDS) $(ARCH_FORMATTED_SVDS)
 
-check:
-	cargo check
+# Check vairous feature set combinations here for each SoC in the family
+define check_template
+.check/$(1).ok:
+	@mkdir -p .check
+	cargo check --features=$(1) && touch $$@
+
+endef
+
+$(foreach device,$(DEVICES),$(eval $(call check_template,$(device))))
+
+check: $(patsubst %, .check/%.ok, $(DEVICES))
+
+clean-check:
+	rm -rf .check
 
 html/index.html: $(PATCHED_SVDS)
 	@mkdir -p html
