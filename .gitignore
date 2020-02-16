@@ -1,9 +1,1 @@
 target
-*/target
-imxrt-ral/venv
-imxrt-ral/cortex_m/*.patched
-imxrt-ral/cortex_m/*.formatted
-imxrt-ral/svd/*.patched
-imxrt-ral/svd/*.formatted
-imxrt-ral/target/
-imxrt-ral/.deps

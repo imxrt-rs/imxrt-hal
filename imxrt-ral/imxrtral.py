@@ -85,7 +85,7 @@ cortex-m-rt = { version = "0.6.12", optional = true }
 rt = ["cortex-m-rt/device"]
 inline-asm = ["external_cortex_m/inline-asm"]
 rtfm = []
-default = ["imxrt1062"]
+default = []
 nosync = []
 doc = []
 """
