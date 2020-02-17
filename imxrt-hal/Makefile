@@ -1,4 +1,4 @@
-DEVICES ?= imxrt1061 imxrt1062 imxrt1064 
+DEVICES ?= imxrt1051 imxrt1052 imxrt1061 imxrt1062 imxrt1064 
 
 # Check vairous feature set combinations here for each SoC in the family
 define check_template
