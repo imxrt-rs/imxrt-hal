@@ -15,13 +15,13 @@ pub trait IntoRegister {
 
 impl IntoRegister for GPIO2 {
     fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
-        crate::ral::GPIO2
+        crate::ral::gpio::GPIO2
     }
 }
 
 impl IntoRegister for GPIO7 {
     fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
-        crate::ral::GPIO7
+        crate::ral::gpio::GPIO7
     }
 }
 
@@ -36,7 +36,13 @@ macro_rules! _ios_impl {
 
             impl<GPIO: IntoRegister> $io<GPIO, Input> {
                 pub fn output(self) -> $io<GPIO, Output> {
-                    unsafe { (*GPIO::into_reg()).GDIR.modify(|r, w| w.bits(self.offset | r.bits()))};
+                    //TODO critical section, not interrupt safe currently
+                    unsafe {
+                        let regs = &(*GPIO::into_reg());
+                        let gdir = regs.GDIR.read();
+                        let gdir0 = gdir | self.offset;
+                        regs.GDIR.write(gdir0);
+                    };
                     $io{ _gpio: core::marker::PhantomData, _dir: core::marker::PhantomData, offset: self.offset }
                 }
             }
@@ -45,19 +51,28 @@ macro_rules! _ios_impl {
                 type Error = core::convert::Infallible; // '!' Not available on stable
 
                 fn set_low(&mut self) -> Result<(), Self::Error> {
-                    unsafe { (*GPIO::into_reg()).dr_clear.write(|reg| reg.bits(self.offset)) };
+                    unsafe {
+                        let regs = &(*GPIO::into_reg());
+                        regs.DR_CLEAR.write(self.offset);
+                    };
                     Ok(())
                 }
 
                 fn set_high(&mut self) -> Result<(), Self::Error> {
-                    unsafe { (*GPIO::into_reg()).dr_set.write(|reg| reg.bits(self.offset)) };
+                    unsafe {
+                        let regs = &(*GPIO::into_reg());
+                        regs.DR_SET.write(self.offset);
+                    };
                     Ok(())
                 }
             }
 
             impl<GPIO: IntoRegister> StatefulOutputPin for $io<GPIO, Output> {
                 fn is_set_high(&self) -> Result<bool, Self::Error> {
-                    Ok(unsafe { (*GPIO::into_reg()).psr.read().bits() & self.offset > 0 })
+                    Ok(unsafe {
+                        let regs = &(*GPIO::into_reg());
+                        (regs.PSR.read() & self.offset) > 0
+                    })
                 }
 
                 fn is_set_low(&self) -> Result<bool, Self::Error> {
@@ -68,7 +83,10 @@ macro_rules! _ios_impl {
             impl<GPIO: IntoRegister> ToggleableOutputPin for $io<GPIO, Output> {
                 type Error = core::convert::Infallible;
                 fn toggle(&mut self) -> Result<(), Self::Error> {
-                    unsafe { (*GPIO::into_reg()).dr_toggle.write(|reg| reg.bits(self.offset)) };
+                    unsafe {
+                        let regs = &(*GPIO::into_reg());
+                        regs.DR_TOGGLE.write(self.offset);
+                    };
                     Ok(())
                 }
             }
@@ -99,7 +117,12 @@ macro_rules! _ios_fast {
             impl $io<$slow, Input> {
                 pub fn fast(self, gpr: &mut $crate::iomuxc::GPR) -> $io<$fast, Input> {
                     let reg = gpr.$gprfn();
-                    reg.modify(|r, w| unsafe { w.bits(self.offset | r.bits()) });
+                    //TODO wrap in interrupt disable or CAS loop, not interrupt safe
+                    unsafe {
+                        let gprv = reg.read();
+                        let gprv0 = gprv | self.offset;
+                        reg.write(gprv0);
+                    };
                     $io {
                         _gpio: core::marker::PhantomData,
                         _dir: core::marker::PhantomData,

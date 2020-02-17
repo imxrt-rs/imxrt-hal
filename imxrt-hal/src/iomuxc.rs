@@ -148,7 +148,7 @@ impl IOMUXC {
 pub struct GPR(());
 
 impl GPR {
-    pub(crate) fn gpr27(&mut self) -> &crate::ral::RWRegister<u32> {
+    pub(crate) fn GPR27(&mut self) -> &crate::ral::RWRegister<u32> {
         unsafe { &(*crate::ral::iomuxc_gpr::IOMUXC_GPR).GPR27 }
     }
 }
