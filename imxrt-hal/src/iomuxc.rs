@@ -37,6 +37,9 @@ pub struct Alt8;
 pub struct Alt9;
 
 pub struct IOMUXC {
+    // private keep this instance so it is taken
+    iomuxc: crate::ral::iomuxc::Instance,
+
     //
     // GPIO_B0
     //
@@ -81,59 +84,61 @@ pub struct IOMUXC {
     pub gpio_emc_08: gpio::GPIO_EMC_08<Alt5>,
     pub gpio_emc_31: gpio::GPIO_EMC_31<Alt5>,
     pub gpio_emc_32: gpio::GPIO_EMC_32<Alt5>,
-    //
+
     // GPRs
-    //
     pub gpr: GPR,
 }
 
 impl IOMUXC {
-    pub(crate) fn new(iomuxc: crate::ral::iomuxc::IOMUXC) -> Self {
+    pub(crate) fn new(iomuxc: crate::ral::iomuxc::Instance) -> Self {
         Self {
+            // Take the instance so no other code may
+            iomuxc: iomuxc,
+
             //
             // GPIO_B0
             //
-            gpio_b0_03: gpio::GPIO_B0_03::new(&iomuxc),
-            gpio_b0_10: gpio::GPIO_B0_10::new(&iomuxc),
-            gpio_b0_11: gpio::GPIO_B0_11::new(&iomuxc),
+            gpio_b0_03: gpio::GPIO_B0_03::new(),
+            gpio_b0_10: gpio::GPIO_B0_10::new(),
+            gpio_b0_11: gpio::GPIO_B0_11::new(),
             //
             // GPIO_B1
             //
-            gpio_b1_00: gpio::GPIO_B1_00::new(&iomuxc),
-            gpio_b1_01: gpio::GPIO_B1_01::new(&iomuxc),
+            gpio_b1_00: gpio::GPIO_B1_00::new(),
+            gpio_b1_01: gpio::GPIO_B1_01::new(),
             //
             // GPIO_AD_B0
             //
-            gpio_ad_b0_02: gpio::GPIO_AD_B0_02::new(&iomuxc),
-            gpio_ad_b0_03: gpio::GPIO_AD_B0_03::new(&iomuxc),
-            gpio_ad_b0_12: gpio::GPIO_AD_B0_12::new(&iomuxc),
-            gpio_ad_b0_13: gpio::GPIO_AD_B0_13::new(&iomuxc),
+            gpio_ad_b0_02: gpio::GPIO_AD_B0_02::new(),
+            gpio_ad_b0_03: gpio::GPIO_AD_B0_03::new(),
+            gpio_ad_b0_12: gpio::GPIO_AD_B0_12::new(),
+            gpio_ad_b0_13: gpio::GPIO_AD_B0_13::new(),
             //
             // GPIO_AD_B1
             //
-            gpio_ad_b1_00: gpio::GPIO_AD_B1_00::new(&iomuxc),
-            gpio_ad_b1_01: gpio::GPIO_AD_B1_01::new(&iomuxc),
-            gpio_ad_b1_02: gpio::GPIO_AD_B1_02::new(&iomuxc),
-            gpio_ad_b1_03: gpio::GPIO_AD_B1_03::new(&iomuxc),
-            gpio_ad_b1_06: gpio::GPIO_AD_B1_06::new(&iomuxc),
-            gpio_ad_b1_07: gpio::GPIO_AD_B1_07::new(&iomuxc),
-            gpio_ad_b1_10: gpio::GPIO_AD_B1_10::new(&iomuxc),
-            gpio_ad_b1_11: gpio::GPIO_AD_B1_11::new(&iomuxc),
+            gpio_ad_b1_00: gpio::GPIO_AD_B1_00::new(),
+            gpio_ad_b1_01: gpio::GPIO_AD_B1_01::new(),
+            gpio_ad_b1_02: gpio::GPIO_AD_B1_02::new(),
+            gpio_ad_b1_03: gpio::GPIO_AD_B1_03::new(),
+            gpio_ad_b1_06: gpio::GPIO_AD_B1_06::new(),
+            gpio_ad_b1_07: gpio::GPIO_AD_B1_07::new(),
+            gpio_ad_b1_10: gpio::GPIO_AD_B1_10::new(),
+            gpio_ad_b1_11: gpio::GPIO_AD_B1_11::new(),
             //
             // GPIO_SD_B0
             //
-            gpio_sd_b0_00: gpio::GPIO_SD_B0_00::new(&iomuxc),
-            gpio_sd_b0_01: gpio::GPIO_SD_B0_01::new(&iomuxc),
+            gpio_sd_b0_00: gpio::GPIO_SD_B0_00::new(),
+            gpio_sd_b0_01: gpio::GPIO_SD_B0_01::new(),
             //
             // GPIO_EMC
             //
-            gpio_emc_04: gpio::GPIO_EMC_04::new(&iomuxc),
-            gpio_emc_05: gpio::GPIO_EMC_05::new(&iomuxc),
-            gpio_emc_06: gpio::GPIO_EMC_06::new(&iomuxc),
-            gpio_emc_07: gpio::GPIO_EMC_07::new(&iomuxc),
-            gpio_emc_08: gpio::GPIO_EMC_08::new(&iomuxc),
-            gpio_emc_31: gpio::GPIO_EMC_31::new(&iomuxc),
-            gpio_emc_32: gpio::GPIO_EMC_32::new(&iomuxc),
+            gpio_emc_04: gpio::GPIO_EMC_04::new(),
+            gpio_emc_05: gpio::GPIO_EMC_05::new(),
+            gpio_emc_06: gpio::GPIO_EMC_06::new(),
+            gpio_emc_07: gpio::GPIO_EMC_07::new(),
+            gpio_emc_08: gpio::GPIO_EMC_08::new(),
+            gpio_emc_31: gpio::GPIO_EMC_31::new(),
+            gpio_emc_32: gpio::GPIO_EMC_32::new(),
 
             // GPRs
             gpr: GPR(()),
@@ -144,7 +149,7 @@ impl IOMUXC {
 pub struct GPR(());
 
 impl GPR {
-    pub(crate) fn gpr27(&mut self) -> &crate::ral::iomuxc_gpr::GPR27 {
-        unsafe { &(*crate::ral::IOMUXC_GPR::ptr()).gpr27 }
+    pub(crate) fn gpr27(&mut self) -> &crate::ral::RWRegister<u32> {
+        unsafe { &(*crate::ral::iomuxc_gpr::IOMUXC_GPR).GPR27 }
     }
 }

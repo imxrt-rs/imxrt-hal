@@ -6,7 +6,6 @@ use arm_clock::set_arm_clock;
 use core::time::Duration;
 use imxrt_ral as ral;
 
-
 pub struct Handle {
     pub(crate) base: ral::ccm::Instance,
     pub(crate) analog: ral::ccm_analog::Instance,
@@ -39,14 +38,12 @@ impl PLL1 {
     fn new() -> Self {
         PLL1(())
     }
-    
+
     #[cfg(any(feature = "imxrt1011", feature = "imxrt1015"))]
     pub const ARM_HZ: u32 = 500_000_000;
 
     #[cfg(any(feature = "imxrt1064", feature = "imxrt1062", feature = "imxrt1061"))]
     pub const ARM_HZ: u32 = 600_000_000;
-
-
 
     /// Set the clock speed for the ARM core. This represents the base processor frequency.
     /// Consider using the 600MHz recommended frequency `PLL1::ARM_HZ`.
@@ -81,8 +78,7 @@ impl CCM {
 pub mod perclk {
     use super::{ral, Divider, Frequency, Handle, OSCILLATOR_FREQUENCY};
 
-    use ral::{modify_reg, ccm::CSCMR1::PERCLK_CLK_SEL};
-
+    use ral::{ccm::CSCMR1::PERCLK_CLK_SEL, modify_reg};
 
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum CLKSEL {
@@ -147,8 +143,6 @@ pub mod perclk {
     }
 }
 
-
-
 macro_rules! pfd {
     ($setter:ident, $value:ident) => {
         use super::Handle;
@@ -168,27 +162,32 @@ macro_rules! pfd {
             }
 
             pub fn set(&mut self, handle: &mut Handle, pfds: [Option<Frequency>; 4]) {
-
                 let (pfd0_clkgate, pfd0_frac) = pfd_gate_frac(&pfds[0]);
                 let (pfd1_clkgate, pfd1_frac) = pfd_gate_frac(&pfds[1]);
                 let (pfd2_clkgate, pfd2_frac) = pfd_gate_frac(&pfds[2]);
                 let (pfd3_clkgate, pfd3_frac) = pfd_gate_frac(&pfds[3]);
 
-                write_reg!(ral::ccm_analog, handle.analog, $setter,
-                           PFD0_CLKGATE: pfd0_clkgate,
-                           PFD1_CLKGATE: pfd1_clkgate,
-                           PFD2_CLKGATE: pfd2_clkgate,
-                           PFD3_CLKGATE: pfd3_clkgate
+                write_reg!(
+                    ral::ccm_analog,
+                    handle.analog,
+                    $setter,
+                    PFD0_CLKGATE: pfd0_clkgate,
+                    PFD1_CLKGATE: pfd1_clkgate,
+                    PFD2_CLKGATE: pfd2_clkgate,
+                    PFD3_CLKGATE: pfd3_clkgate
                 );
 
                 // Safety: PDFx_FRAC is 6 bits wide. By the implementations
                 // of the `Frequency(..)` newtypes, the wrapped values will
                 // never exceed a 6 bit value.
-                write_reg!(ral::ccm_analog, handle.analog, $value,
-                           PFD0_FRAC: pfd0_frac,
-                           PFD1_FRAC: pfd1_frac,
-                           PFD2_FRAC: pfd2_frac,
-                           PFD3_FRAC: pfd3_frac
+                write_reg!(
+                    ral::ccm_analog,
+                    handle.analog,
+                    $value,
+                    PFD0_FRAC: pfd0_frac,
+                    PFD1_FRAC: pfd1_frac,
+                    PFD2_FRAC: pfd2_frac,
+                    PFD3_FRAC: pfd3_frac
                 );
             }
         }

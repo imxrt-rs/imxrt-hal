@@ -26,15 +26,17 @@ test = false
 
 [features]
 default = ["embedded-hal/unproven"] # Allows us to access the new digital pin traits
+
+# Device specific feature flags
 # these need fixes and conditional sections in CCM
 #imxrt1011 = ["imxrt-ral/imxrt1011"]
 #imxrt1015 = ["imxrt-ral/imxrt1015"]
 #imxrt1021 = ["imxrt-ral/imxrt1021"]
-imxrt1051 = ["imxrt-ral/imxrt1051"]
-imxrt1052 = ["imxrt-ral/imxrt1052"]
-imxrt1061 = ["imxrt-ral/imxrt1061"]
+#imxrt1051 = ["imxrt-ral/imxrt1051"]
+#imxrt1052 = ["imxrt-ral/imxrt1052"]
+#imxrt1061 = ["imxrt-ral/imxrt1061"]
 imxrt1062 = ["imxrt-ral/imxrt1062"]
-imxrt1064 = ["imxrt-ral/imxrt1064"]
+#imxrt1064 = ["imxrt-ral/imxrt1064"]
 rtfm = ["imxrt-ral/rtfm"]
 rt = ["imxrt-ral/rt"]
 nosync = ["imxrt-ral/nosync"]
