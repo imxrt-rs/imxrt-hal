@@ -93,14 +93,3 @@ a more complete example that should build out of the box.
 * Still experimental, might have breaking changes to API design
 * Won't keep you warm burning CPU time
 * A bit like what you're used to from C header files
-
-## Supported Devices
-
-* imxrt1011
-* imxrt1015
-* imxrt1021
-* imxrt1051
-* imxrt1052
-* imxrt1061
-* imxrt1062
-* imxrt1064

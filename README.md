@@ -9,18 +9,31 @@ much the same for ST's fantastic STM32 family.
 
 * Create *the* collaborative group to support using Rust on NXP's i.MX RT series.
 * Fast compilation
+* Simple but useful register level access, may not be as complete as svd2rust
+  in ease of use but won't take very long to build.
 * Embedded HAL support.
 * RTFM support.
 * EVK board support
 * Popular boards such as the Teensy 4.
 
-## Supported Devices
+## imxrt-ral Supported Devices
 
-* imxrt1011
-* imxrt1015
-* imxrt1021
-* imxrt1051
-* imxrt1052
-* imxrt1061
-* imxrt1062
-* imxrt1064
+- [x] imxrt1011
+- [x] imxrt1015
+- [x] imxrt1021
+- [x] imxrt1051
+- [x] imxrt1052
+- [x] imxrt1061
+- [x] imxrt1062
+- [x] imxrt1064
+
+## imxrt-hal Supported Devices
+
+- [ ] imxrt1011
+- [ ] imxrt1015
+- [ ] imxrt1021
+- [ ] imxrt1051
+- [ ] imxrt1052
+- [ ] imxrt1061
+- [x] imxrt1062
+- [ ] imxrt1064

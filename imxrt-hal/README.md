@@ -20,9 +20,3 @@ Please consider trying it out and contributing or leaving feedback!
 * Simple to use and hard to use incorrectly
 * All peripherals and busses supported
 * Support the entire i.MX RT Series with a single crate to maximize code reuse
-
-## Supported Devices
-
-* imxrt1061
-* imxrt1062
-* imxrt1064
