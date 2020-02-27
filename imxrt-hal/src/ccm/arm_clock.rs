@@ -6,7 +6,7 @@
 //! [`set_arm_clock` routine]: https://github.com/PaulStoffregen/cores/blob/master/teensy4/clockspeed.c
 
 use imxrt_ral as ral;
-use ral::{read_reg, modify_reg, write_reg};
+use ral::{modify_reg, read_reg, write_reg};
 
 /// Note that while the value is limited to u8 the return
 /// is u32 to easily compare against register read values which are always u32
@@ -95,7 +95,10 @@ pub fn set_arm_clock(
     while read_reg!(ral::ccm_analog, ccm_analog, PLL_ARM, LOCK) == 0 {
         core::sync::atomic::spin_loop_hint();
     }
-    log::debug!("ARM PLL = 0x{:x}", read_reg!(ral::ccm_analog, ccm_analog, PLL_ARM));
+    log::debug!(
+        "ARM PLL = 0x{:x}",
+        read_reg!(ral::ccm_analog, ccm_analog, PLL_ARM)
+    );
 
     write_reg!(ral::ccm, ccm, CACRR, ARM_PODF: (div_arm - 1));
     while read_reg!(ral::ccm, ccm, CDHIPR, ARM_PODF_BUSY) > 0 {
@@ -137,7 +140,15 @@ fn select_alt_clock(ccm: &ral::ccm::Instance, ccm_analog: &ral::ccm_analog::Inst
         log::debug!("Choosing alternative clock before reconfiguring ARM PLL...");
         use ral::ccm::{CBCDR::PERIPH_CLK2_PODF, CBCMR::PERIPH_CLK2_SEL};
 
-        let (usb_pll_enable, usb_pll_en_usb_clks, usb_pll_power, usb_pll_lock) = read_reg!(ral::ccm_analog, ccm_analog, PLL_USB1, ENABLE, EN_USB_CLKS, POWER, LOCK);
+        let (usb_pll_enable, usb_pll_en_usb_clks, usb_pll_power, usb_pll_lock) = read_reg!(
+            ral::ccm_analog,
+            ccm_analog,
+            PLL_USB1,
+            ENABLE,
+            EN_USB_CLKS,
+            POWER,
+            LOCK
+        );
         let (sel, div) = if usb_pll_enable > 0
             && usb_pll_en_usb_clks > 0
             && usb_pll_power > 0

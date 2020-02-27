@@ -10,18 +10,18 @@ pub struct GPIO7;
 
 #[doc(hidden)]
 pub trait IntoRegister {
-    fn into_reg() -> *const crate::ral::gpio1::RegisterBlock;
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock;
 }
 
 impl IntoRegister for GPIO2 {
-    fn into_reg() -> *const crate::ral::gpio1::RegisterBlock {
-        crate::ral::GPIO2::ptr()
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+        crate::ral::GPIO2
     }
 }
 
 impl IntoRegister for GPIO7 {
-    fn into_reg() -> *const crate::ral::gpio1::RegisterBlock {
-        crate::ral::GPIO7::ptr()
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+        crate::ral::GPIO7
     }
 }
 
@@ -36,7 +36,7 @@ macro_rules! _ios_impl {
 
             impl<GPIO: IntoRegister> $io<GPIO, Input> {
                 pub fn output(self) -> $io<GPIO, Output> {
-                    unsafe { (*GPIO::into_reg()).gdir.modify(|r, w| w.bits(self.offset | r.bits()))};
+                    unsafe { (*GPIO::into_reg()).GDIR.modify(|r, w| w.bits(self.offset | r.bits()))};
                     $io{ _gpio: core::marker::PhantomData, _dir: core::marker::PhantomData, offset: self.offset }
                 }
             }
@@ -124,5 +124,5 @@ macro_rules! ios {
 }
 
 ios! {
-    3, IO03: [GPIO2, gpio2, crate::iomuxc::gpio::GPIO_B0_03<crate::iomuxc::Alt5>, FAST: (GPIO7, gpr27)],
+    3, IO03: [GPIO2, gpio2, crate::iomuxc::gpio::GPIO_B0_03<crate::iomuxc::Alt5>, FAST: (GPIO7, GPR27)],
 }

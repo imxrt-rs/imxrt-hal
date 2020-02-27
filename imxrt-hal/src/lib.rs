@@ -21,7 +21,7 @@ pub use imxrt_ral as ral;
 pub mod ccm;
 //pub mod gpio;
 //pub mod i2c;
-//pub mod iomuxc;
+pub mod iomuxc;
 //pub mod pit;
 //pub mod pwm;
 //pub mod uart;
@@ -37,7 +37,7 @@ pub mod dcdc {
 }
 
 pub struct Peripherals {
-    //pub iomuxc: iomuxc::IOMUXC,
+    pub iomuxc: iomuxc::IOMUXC,
     //pub systick: ral::SYST,
     pub ccm: ccm::CCM,
     //pub pit: pit::UnclockedPIT,
@@ -53,7 +53,7 @@ pub struct Peripherals {
 impl Peripherals {
     pub fn take() -> Option<Self> {
         let p = Peripherals {
-            //iomuxc: iomuxc::IOMUXC::new(p.IOMUXC),
+            iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::take()?),
             //systick: cp.SYST,
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
             //pit: pit::UnclockedPIT::new(p.PIT),
