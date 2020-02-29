@@ -119,7 +119,7 @@ macro_rules! alt9 {
 }
 
 macro_rules! pad {
-    ($Pad:ident, $mux_mod:ident, $pad_mod:ident, [$($alt_macro:ident),+]) => {
+    ($Pad:ident, $mux_mod:ident, [$($alt_macro:ident),+]) => {
         pub struct $Pad<Alt> {
             _alt: core::marker::PhantomData<Alt>,
         }
@@ -139,11 +139,6 @@ macro_rules! pad {
             pub(crate) fn iomuxc(&self) -> &$crate::ral::iomuxc::RegisterBlock {
                 // Safety: register block is always valid
                 unsafe { &*$crate::ral::iomuxc::IOMUXC }
-            }
-
-            #[allow(dead_code)] // Method may not be used on a pin
-            pub(crate) fn pad(&self) -> &$crate::ral::RWRegister<u32> {
-                &self.iomuxc().$pad_mod
             }
 
             /// Enables software input on (SION) for the pin, which forces
