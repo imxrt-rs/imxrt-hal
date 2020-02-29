@@ -6,9 +6,8 @@
 #[macro_use]
 mod macros;
 
-pub mod daisy;
 pub mod gpio;
-//pub mod i2c;
+pub mod i2c;
 //pub mod pwm;
 //pub mod uart;
 
