@@ -34,7 +34,7 @@ impl Unclocked {
     ) {
         let (ccm, _) = handle.raw();
         // First, disable clocks
-        ral::modify_reg!(ral::ccm, ccm, CCGR2,CG3: 0, CG4: 0, CG5: 0);
+        ral::modify_reg!(ral::ccm, ccm, CCGR2, CG3: 0, CG4: 0, CG5: 0);
         ral::modify_reg!(ral::ccm, ccm, CCGR6, CG12: 0);
         // Select clock, and commit prescalar
         ral::modify_reg!(ral::ccm, ccm, CSCDR2, LPI2C_CLK_PODF: (divider as u32), LPI2C_CLK_SEL: (clock_select as u32));
@@ -374,13 +374,13 @@ where
     fn check_errors(&mut self) -> Result<u32, Error> {
         use ral::lpi2c::MSR::*;
         let status = ral::read_reg!(ral::lpi2c, self.reg, MSR);
-        if (status & PLTF::mask) > 0 {
+        if (status & PLTF::mask) != 0 {
             Err(Error::PinLowTimeout)
-        } else if (status & ALF::mask) > 0 {
+        } else if (status & ALF::mask) != 0 {
             Err(Error::LostBusArbitration)
-        } else if (status & NDF::mask) > 0 {
+        } else if (status & NDF::mask) != 0 {
             Err(Error::UnexpectedNACK)
-        } else if (status & FEF::mask) > 0 {
+        } else if (status & FEF::mask) != 0 {
             Err(Error::FIFO)
         } else {
             Ok(status)
@@ -421,7 +421,7 @@ where
         self.clear_fifo();
         self.clear_status();
         log::trace!(target: target_fn!("write"), "WAIT MBF & TDF");
-        self.wait(|msr| (msr & MBF::mask) == 0 && (msr & TDF::mask) > 0)?;
+        self.wait(|msr| (msr & MBF::mask) == 0 && (msr & TDF::mask) != 0)?;
 
         log::trace!(target: target_fn!("write"), "START");
         ral::write_reg!(
@@ -434,17 +434,17 @@ where
 
         log::trace!(target: target_fn!("write"), "'{:?}' -> 0x{:X}", bytes, addr);
         for byte in bytes {
-            self.wait(|msr| (msr & TDF::mask) > 0)?;
+            self.wait(|msr| (msr & TDF::mask) != 0)?;
             ral::write_reg!(ral::lpi2c, self.reg, MTDR, DATA: *byte as u32);
         }
 
         log::trace!(target: target_fn!("write"), "WAIT TDF");
-        self.wait(|msr| (msr & TDF::mask) > 0)?;
+        self.wait(|msr| (msr & TDF::mask) != 0)?;
         log::trace!(target: target_fn!("write"), "STOP");
         ral::write_reg!(ral::lpi2c, self.reg, MTDR, CMD: CMD_2);
 
         log::trace!(target: target_fn!("write"), "WAIT EPF");
-        self.wait(|msr| (msr & EPF::mask) > 0)?;
+        self.wait(|msr| (msr & EPF::mask) != 0)?;
 
         Ok(())
     }
@@ -469,7 +469,7 @@ where
         self.clear_fifo();
         self.clear_status();
         log::trace!(target: target_fn!("write_read"), "WAIT MBF & TDF");
-        self.wait(|msr| (msr & MBF::mask) == 0 && (msr & TDF::mask) > 0)?;
+        self.wait(|msr| (msr & MBF::mask) == 0 && (msr & TDF::mask) != 0)?;
 
         log::trace!(target: target_fn!("write_read"), "START");
         ral::write_reg!(
@@ -487,7 +487,7 @@ where
             address
         );
         for byte in output {
-            self.wait(|msr| (msr & TDF::mask) > 0)?;
+            self.wait(|msr| (msr & TDF::mask) != 0)?;
             ral::write_reg!(ral::lpi2c, self.reg, MTDR, DATA: *byte as u32);
         }
 
@@ -501,12 +501,12 @@ where
         );
 
         log::trace!(target: target_fn!("write_read"), "WAIT EPF");
-        self.wait(|msr| (msr & EPF::mask) > 0)?;
+        self.wait(|msr| (msr & EPF::mask) != 0)?;
         ral::write_reg!(ral::lpi2c, self.reg, MSR, EPF: EPF_1);
 
         if !input.is_empty() {
             log::trace!(target: target_fn!("write_read"), "WAIT TDF");
-            self.wait(|msr| (msr & TDF::mask) > 0)?;
+            self.wait(|msr| (msr & TDF::mask) != 0)?;
 
             log::trace!(
                 target: target_fn!("write_read"),
@@ -542,12 +542,12 @@ where
         }
 
         log::trace!(target: target_fn!("write_read"), "WAIT TDF");
-        self.wait(|msr| (msr & TDF::mask) > 0)?;
+        self.wait(|msr| (msr & TDF::mask) != 0)?;
         log::trace!(target: target_fn!("write_read"), "STOP");
         ral::write_reg!(ral::lpi2c, self.reg, MTDR, CMD: CMD_2);
 
         log::trace!(target: target_fn!("write_read"), "WAIT EPF");
-        self.wait(|msr| (msr & EPF::mask) > 0)?;
+        self.wait(|msr| (msr & EPF::mask) != 0)?;
 
         Ok(())
     }
@@ -572,7 +572,7 @@ where
         self.clear_fifo();
         self.clear_status();
         log::trace!(target: target_fn!("read"), "WAIT MBF & TDF");
-        self.wait(|msr| (msr & MBF::mask) == 0 && (msr & TDF::mask) > 0)?;
+        self.wait(|msr| (msr & MBF::mask) == 0 && (msr & TDF::mask) != 0)?;
 
         log::trace!(target: target_fn!("read"), "START");
         ral::write_reg!(
@@ -584,7 +584,7 @@ where
         );
 
         log::trace!(target: target_fn!("read"), "WAIT TDF");
-        self.wait(|msr| (msr & TDF::mask) > 0)?;
+        self.wait(|msr| (msr & TDF::mask) != 0)?;
 
         log::trace!(
             target: target_fn!("read"),
@@ -622,7 +622,7 @@ where
         ral::write_reg!(ral::lpi2c, self.reg, MTDR, CMD: CMD_2);
 
         log::trace!(target: target_fn!("read"), "WAIT EPF");
-        self.wait(|msr| (msr & EPF::mask) > 0)?;
+        self.wait(|msr| (msr & EPF::mask) != 0)?;
 
         Ok(())
     }
