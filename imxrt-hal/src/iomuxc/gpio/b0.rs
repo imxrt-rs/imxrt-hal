@@ -11,7 +11,7 @@ pad!(
     [alt0, alt1, alt2, alt3, alt4, alt5, alt6, alt8]
 );
 
-#[cfg(feature = "imxrt106x")]
+#[cfg(feature = "imxrt1062")]
 pad!(
     GPIO_B0_03,
     SW_MUX_CTL_PAD_GPIO_B0_03,
