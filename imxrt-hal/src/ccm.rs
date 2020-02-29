@@ -424,29 +424,92 @@ pub mod pwm {
         }
     }
 }
+*/
 
 /// Timing configurations for I2C peripherals
 pub mod i2c {
-    use super::{
-        pac::{ccm, lpi2c1},
-        Divider, Frequency, OSCILLATOR_FREQUENCY,
-    };
-    #[derive(Clone, Copy)]
+    use super::{Divider, Frequency, OSCILLATOR_FREQUENCY};
+    use crate::ral;
+
+    /// Clock selection for all I2C peripherals
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(u32)]
     #[non_exhaustive] // Not all variants added
     pub enum ClockSelect {
         /// Derive clock from oscillator
-        OSC,
+        OSC = ral::ccm::CSCDR2::LPI2C_CLK_SEL::RW::LPI2C_CLK_SEL_1,
     }
 
-    impl From<ClockSelect> for ccm::cscdr2::LPI2C_CLK_SEL_A {
-        fn from(clock_select: ClockSelect) -> Self {
-            match clock_select {
-                ClockSelect::OSC => ccm::cscdr2::LPI2C_CLK_SEL_A::LPI2C_CLK_SEL_1,
-            }
-        }
+    /// Prescalar selection for all I2C input clocks
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(u32)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    pub enum PrescalarSelect {
+        DIVIDE_1 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_1,
+        DIVIDE_2 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_2,
+        DIVIDE_3 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_3,
+        DIVIDE_4 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_4,
+        DIVIDE_5 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_5,
+        DIVIDE_6 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_6,
+        DIVIDE_7 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_7,
+        DIVIDE_8 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_8,
+        DIVIDE_9 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_9,
+        DIVIDE_10 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_10,
+        DIVIDE_11 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_11,
+        DIVIDE_12 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_12,
+        DIVIDE_13 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_13,
+        DIVIDE_14 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_14,
+        DIVIDE_15 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_15,
+        DIVIDE_16 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_16,
+        DIVIDE_17 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_17,
+        DIVIDE_18 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_18,
+        DIVIDE_19 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_19,
+        DIVIDE_20 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_20,
+        DIVIDE_21 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_21,
+        DIVIDE_22 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_22,
+        DIVIDE_23 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_23,
+        DIVIDE_24 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_24,
+        DIVIDE_25 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_25,
+        DIVIDE_26 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_26,
+        DIVIDE_27 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_27,
+        DIVIDE_28 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_28,
+        DIVIDE_29 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_29,
+        DIVIDE_30 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_30,
+        DIVIDE_31 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_31,
+        DIVIDE_32 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_32,
+        DIVIDE_33 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_33,
+        DIVIDE_34 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_34,
+        DIVIDE_35 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_35,
+        DIVIDE_36 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_36,
+        DIVIDE_37 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_37,
+        DIVIDE_38 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_38,
+        DIVIDE_39 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_39,
+        DIVIDE_40 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_40,
+        DIVIDE_41 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_41,
+        DIVIDE_42 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_42,
+        DIVIDE_43 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_43,
+        DIVIDE_44 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_44,
+        DIVIDE_45 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_45,
+        DIVIDE_46 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_46,
+        DIVIDE_47 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_47,
+        DIVIDE_48 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_48,
+        DIVIDE_49 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_49,
+        DIVIDE_50 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_50,
+        DIVIDE_51 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_51,
+        DIVIDE_52 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_52,
+        DIVIDE_53 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_53,
+        DIVIDE_54 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_54,
+        DIVIDE_55 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_55,
+        DIVIDE_56 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_56,
+        DIVIDE_57 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_57,
+        DIVIDE_58 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_58,
+        DIVIDE_59 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_59,
+        DIVIDE_60 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_60,
+        DIVIDE_61 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_61,
+        DIVIDE_62 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_62,
+        DIVIDE_63 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_63,
+        DIVIDE_64 = ral::ccm::CSCDR2::LPI2C_CLK_PODF::RW::DIVIDE_64,
     }
-
-    pub type PrescalarSelect = ccm::cscdr2::LPI2C_CLK_PODF_A;
 
     impl From<ClockSelect> for Frequency {
         fn from(clock_select: ClockSelect) -> Self {
@@ -458,35 +521,12 @@ pub mod i2c {
 
     impl From<PrescalarSelect> for Divider {
         fn from(prescalar_select: PrescalarSelect) -> Self {
-            Divider((u8::from(prescalar_select) as u32) + 1)
-        }
-    }
-
-    impl From<lpi2c1::mcfgr1::PRESCALE_A> for Divider {
-        fn from(prescale: lpi2c1::mcfgr1::PRESCALE_A) -> Self {
-            Divider(1u32 << u8::from(prescale))
-        }
-    }
-
-    impl From<Divider> for lpi2c1::mcfgr1::PRESCALE_A {
-        fn from(div: Divider) -> Self {
-            use lpi2c1::mcfgr1::PRESCALE_A::*;
-            // Dividers are always powers of two, bound from [0, 8)
-            match (div.0 - 1).count_ones() {
-                0 => PRESCALE_0,
-                1 => PRESCALE_1,
-                2 => PRESCALE_2,
-                3 => PRESCALE_3,
-                4 => PRESCALE_4,
-                5 => PRESCALE_5,
-                6 => PRESCALE_6,
-                7 => PRESCALE_7,
-                _ => unreachable!(),
-            }
+            Divider((prescalar_select as u32) + 1)
         }
     }
 }
 
+/*
 pub mod uart {
     use super::{pac::ccm, Divider, Frequency, OSCILLATOR_FREQUENCY};
 
