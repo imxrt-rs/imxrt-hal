@@ -266,12 +266,6 @@ impl TicksRepr for u16 {}
 impl TicksRepr for u32 {}
 impl TicksRepr for u64 {}
 
-/// An opaque duration representing the number of clock ticks
-///
-/// See the `ticks` function to derive a `Ticks` value.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Ticks<R: TicksRepr>(pub(crate) R);
-
 /// Possible errors that could result during a computation of `ticks`
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TicksError {
@@ -287,21 +281,14 @@ pub enum TicksError {
 /// the clock frequency and clock divider. If there is no divider, use `Divider::default()`
 /// to specify an unused divider. Returns `Ok(ticks)` when the computation of
 /// clock ticks succeeds, or an error.
-pub fn ticks<R: TicksRepr>(
-    dur: Duration,
-    freq: Frequency,
-    div: Divider,
-) -> Result<Ticks<R>, TicksError> {
+pub fn ticks<R: TicksRepr>(dur: Duration, freq: u32, div: u32) -> Result<R, TicksError> {
     // Ticks computed as
     //
     //  ticks = (duration / clock_period) - 1
     //
     // where `clock_period` is the effective clock period: `freq / div`
     let delay_ns = u64::try_from(dur.as_nanos()).map_err(|_| TicksError::DurationOverflow)?;
-    let effective_freq = freq
-        .0
-        .checked_div(div.0)
-        .ok_or(TicksError::DurationOverflow)?;
+    let effective_freq = freq.checked_div(div).ok_or(TicksError::DurationOverflow)?;
     let clock_period_ns = 1_000_000_000u32
         .checked_div(effective_freq)
         .map(u64::from)
@@ -310,13 +297,12 @@ pub fn ticks<R: TicksRepr>(
         .checked_div(clock_period_ns)
         .and_then(|ticks| ticks.checked_sub(1))
         .and_then(|ticks| R::try_from(ticks).ok())
-        .map(Ticks)
         .ok_or(TicksError::TicksOverflow)
 }
 
 /// An opaque value representing a clock frequency
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Frequency(u32);
+pub struct Frequency(pub(crate) u32);
 
 impl From<Frequency> for core::time::Duration {
     fn from(hz: Frequency) -> core::time::Duration {
@@ -324,44 +310,9 @@ impl From<Frequency> for core::time::Duration {
     }
 }
 
-impl From<Frequency> for Ticks<u32> {
-    fn from(hz: Frequency) -> Ticks<u32> {
-        Ticks(hz.0)
-    }
-}
-
-impl core::ops::Add for Ticks<u32> {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self {
-        Ticks(self.0 + rhs.0)
-    }
-}
-
-impl core::ops::Div<Divider> for Ticks<u32> {
-    type Output = Self;
-    fn div(self, rhs: Divider) -> Self {
-        Ticks(self.0 / rhs.0)
-    }
-}
-
-impl core::ops::Div for Ticks<u32> {
-    type Output = Self;
-    fn div(self, rhs: Self) -> Self {
-        Ticks(self.0 / rhs.0)
-    }
-}
-
-impl core::ops::Sub for Ticks<u32> {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self {
-        Ticks(self.0 - rhs.0)
-    }
-}
-
 /// An opaque value representing a clock phase divider
 #[derive(Debug, Clone, Copy)]
-pub struct Divider(u32);
+pub struct Divider(pub(crate) u32);
 
 impl Default for Divider {
     fn default() -> Divider {
