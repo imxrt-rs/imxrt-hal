@@ -22,7 +22,7 @@ pub mod ccm;
 //pub mod gpio;
 pub mod i2c;
 pub mod iomuxc;
-//pub mod pit;
+pub mod pit;
 //pub mod pwm;
 //pub mod uart;
 
@@ -40,7 +40,7 @@ pub struct Peripherals {
     pub iomuxc: iomuxc::IOMUXC,
     //pub systick: ral::SYST,
     pub ccm: ccm::CCM,
-    //pub pit: pit::UnclockedPIT,
+    pub pit: pit::UnclockedPIT,
     pub dcdc: dcdc::DCDC,
     //pub pwm1: pwm::UnclockedController<pwm::module::_1>,
     //pub pwm2: pwm::UnclockedController<pwm::module::_2>,
@@ -56,7 +56,7 @@ impl Peripherals {
             iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::take()?),
             //systick: cp.SYST,
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
-            //pit: pit::UnclockedPIT::new(p.PIT),
+            pit: pit::UnclockedPIT::new(ral::pit::PIT::take()?),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::take()?),
             //pwm1: pwm::UnclockedController::new(),
             //pwm2: pwm::UnclockedController::new(),
