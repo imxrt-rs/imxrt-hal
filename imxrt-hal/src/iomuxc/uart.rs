@@ -1,50 +1,42 @@
 //! UART pin multiplexing
 
+use crate::ral;
+
 pub mod module {
-    use crate::pac;
     pub trait Module {
         const IDX: usize;
-        type Reg: core::ops::Deref<Target = pac::lpuart1::RegisterBlock>;
     }
     pub struct _1;
     impl Module for _1 {
         const IDX: usize = 1;
-        type Reg = pac::LPUART1;
     }
     pub struct _2;
     impl Module for _2 {
         const IDX: usize = 2;
-        type Reg = pac::LPUART2;
     }
     pub struct _3;
     impl Module for _3 {
         const IDX: usize = 3;
-        type Reg = pac::LPUART3;
     }
     pub struct _4;
     impl Module for _4 {
         const IDX: usize = 4;
-        type Reg = pac::LPUART4;
     }
     pub struct _5;
     impl Module for _5 {
         const IDX: usize = 5;
-        type Reg = pac::LPUART5;
     }
     pub struct _6;
     impl Module for _6 {
         const IDX: usize = 6;
-        type Reg = pac::LPUART6;
     }
     pub struct _7;
     impl Module for _7 {
         const IDX: usize = 7;
-        type Reg = pac::LPUART7;
     }
     pub struct _8;
     impl Module for _8 {
         const IDX: usize = 8;
-        type Reg = pac::LPUART8;
     }
 }
 
@@ -64,72 +56,86 @@ pub trait Pin {
 
 macro_rules! _rx_config {
     // Pad RX configuration and daisy selection
-    ($daisy_reg:ident, $daisy_value:ident) => {
+    ($pad_reg:ident, $daisy_reg:ident, $daisy_value:ident) => {
         #[inline(always)]
         fn configure(&mut self) {
-            self.iomuxc().$daisy_reg.write(|w| w.daisy().$daisy_value());
-            self.pad().write(|w| {
-                w.dse()
-                .dse_7_r0_7()
-                .pke()
-                .pke_1_pull_keeper_enabled()
-                .pue()
-                .pue_1_pull()
-                .pus()
-                .pus_3_22k_ohm_pull_up()
-                .hys()
-                .hys_1_hysteresis_enabled()
-            })
+            unsafe {
+                ral::write_reg!(
+                    ral::iomuxc,
+                    ral::iomuxc::IOMUXC,
+                    $daisy_reg,
+                    DAISY: $daisy_value
+                );
+                ral::write_reg!(
+                    ral::iomuxc,
+                    ral::iomuxc::IOMUXC,
+                    $pad_reg,
+                    DSE: DSE_7_R0_7,
+                    PKE: PKE_1_Pull_Keeper_Enabled,
+                    PUE: PUE_1_Pull,
+                    PUS: PUS_3_22K_Ohm_Pull_Up,
+                    HYS: HYS_1_Hysteresis_Enabled
+                );
+            }
         }
     };
     // Only RX pad configuration
-    () => {
+    ($pad_reg:ident) => {
         #[inline(always)]
         fn configure(&mut self) {
-            self.pad().write(|w| {
-                w.dse()
-                .dse_7_r0_7()
-                .pke()
-                .pke_1_pull_keeper_enabled()
-                .pue()
-                .pue_1_pull()
-                .pus()
-                .pus_3_22k_ohm_pull_up()
-                .hys()
-                .hys_1_hysteresis_enabled()
-            })
+            unsafe {
+                ral::write_reg!(
+                    ral::iomuxc,
+                    ral::iomuxc::IOMUXC,
+                    $pad_reg,
+                    DSE: DSE_7_R0_7,
+                    PKE: PKE_1_Pull_Keeper_Enabled,
+                    PUE: PUE_1_Pull,
+                    PUS: PUS_3_22K_Ohm_Pull_Up,
+                    HYS: HYS_1_Hysteresis_Enabled
+                );
+            }
         }
     };
 }
 
 macro_rules! _tx_config {
     // TX Pad configuration and daisy selection
-    ($daisy_reg:ident, $daisy_value:ident) => {
+    ($pad_reg:ident, $daisy_reg:ident, $daisy_value:ident) => {
         #[inline(always)]
         fn configure(&mut self) {
-            self.iomuxc().$daisy_reg.write(|w| w.daisy().$daisy_value());
-            self.pad().write(|w| {
-                w.sre()
-                    .sre_1_fast_slew_rate()
-                    .dse()
-                    .dse_3_r0_3()
-                    .speed()
-                    .speed_3_max_200mhz()
-            });
+            unsafe {
+                ral::write_reg!(
+                    ral::iomuxc,
+                    ral::iomuxc::IOMUXC,
+                    $daisy_reg,
+                    DAISY: $daisy_value
+                );
+                ral::write_reg!(
+                    ral::iomuxc,
+                    ral::iomuxc::IOMUXC,
+                    $pad_reg,
+                    SRE: SRE_1_Fast_Slew_Rate,
+                    DSE: DSE_3_R0_3,
+                    SPEED: SPEED_3_max_200MHz
+                );
+            }
         }
     };
     // Only TX pad configuration
-    () => {
+    ($pad_reg:ident) => {
         #[inline(always)]
         fn configure(&mut self) {
-            self.pad().write(|w| {
-                w.sre()
-                    .sre_1_fast_slew_rate()
-                    .dse()
-                    .dse_3_r0_3()
-                    .speed()
-                    .speed_3_max_200mhz()
-            });
+            unsafe {
+                ral::write_reg!(
+                    ral::iomuxc,
+                    ral::iomuxc::IOMUXC,
+                    $pad_reg,
+                    SRE: SRE_1_Fast_Slew_Rate,
+                    DSE: DSE_3_R0_3,
+                    SPEED: SPEED_3_max_200MHz
+                );
+            }
         }
     };
 }
@@ -145,97 +151,99 @@ use crate::iomuxc::{
 
 macro_rules! _impl_rx {
     // Implement a RX pad that needs daisy selection
-    ($pad:ty, $module:ty, $daisy_reg:ident, $daisy_val:ident) => {
+    ($pad:ty, $pad_reg:ident, $module:ty, $daisy_reg:ident, $daisy_val:ident) => {
         impl Pin for $pad {
             type Direction = RX;
             type Module = $module;
 
-            _rx_config!($daisy_reg, $daisy_val);
+            _rx_config!($pad_reg, $daisy_reg, $daisy_val);
         }
     };
     // Implement a RX pad
-    ($pad:ty, $module:ty) => {
+    ($pad:ty, $pad_reg:ident, $module:ty) => {
         impl Pin for $pad {
             type Direction = RX;
             type Module = $module;
 
-            _rx_config!();
+            _rx_config!($pad_reg);
         }
     };
 }
 
 macro_rules! _impl_tx {
     // Implement a TX pad that needs daisy configuration
-    ($pad:ty, $module:ty, $daisy_reg:ident, $daisy_val:ident) => {
+    ($pad:ty, $pad_reg:ident, $module:ty, $daisy_reg:ident, $daisy_val:ident) => {
         impl Pin for $pad {
             type Direction = TX;
             type Module = $module;
 
-            _tx_config!($daisy_reg, $daisy_val);
+            _tx_config!($pad_reg, $daisy_reg, $daisy_val);
         }
     };
     // Implement a TX pad
-    ($pad:ty, $module:ty) => {
+    ($pad:ty, $pad_reg:ident, $module:ty) => {
         impl Pin for $pad {
             type Direction = TX;
             type Module = $module;
 
-            _tx_config!();
+            _tx_config!($pad_reg);
         }
     };
 }
 
 macro_rules! uart {
     // UART TX and RX pins, both which need a daisy selection
-    ($module:ty, tx: $tx_pad:ty, $tx_daisy_reg:ident, $tx_daisy_val:ident, rx: $rx_pad:ty, $rx_daisy_reg:ident, $rx_daisy_val:ident,) => {
-        _impl_tx!($tx_pad, $module, $tx_daisy_reg, $tx_daisy_val);
-        _impl_rx!($rx_pad, $module, $rx_daisy_reg, $rx_daisy_val);
+    ($module:ty,
+        tx: $tx_pad:ty, $tx_pad_reg:ident, $tx_daisy_reg:ident, $tx_daisy_val:ident,
+        rx: $rx_pad:ty, $rx_pad_reg:ident, $rx_daisy_reg:ident, $rx_daisy_val:ident,) => {
+        _impl_tx!($tx_pad, $tx_pad_reg, $module, $tx_daisy_reg, $tx_daisy_val);
+        _impl_rx!($rx_pad, $rx_pad_reg, $module, $rx_daisy_reg, $rx_daisy_val);
     };
     // UART TX and RX pins
-    ($module:ty, tx: $tx_pad:ty, rx: $rx_pad:ty,) => {
-        _impl_tx!($tx_pad, $module);
-        _impl_rx!($rx_pad, $module);
+    ($module:ty, tx: $tx_pad:ty, $tx_pad_reg:ident, rx: $rx_pad:ty, $rx_pad_reg:ident,) => {
+        _impl_tx!($tx_pad, $tx_pad_reg, $module);
+        _impl_rx!($rx_pad, $rx_pad_reg, $module);
     };
 }
 
 uart! {
     module::_6,
-    tx: GPIO_AD_B0_02<Alt2>, lpuart6_tx_select_input, gpio_ad_b0_02_alt2,
-    rx: GPIO_AD_B0_03<Alt2>, lpuart6_rx_select_input, gpio_ad_b0_03_alt2,
+    tx: GPIO_AD_B0_02<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B0_02, LPUART6_TX_SELECT_INPUT, GPIO_AD_B0_02_ALT2,
+    rx: GPIO_AD_B0_03<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B0_03, LPUART6_RX_SELECT_INPUT, GPIO_AD_B0_03_ALT2,
 }
 
 uart! {
     module::_1,
-    tx: GPIO_AD_B0_12<Alt2>,
-    rx: GPIO_AD_B0_13<Alt2>,
+    tx: GPIO_AD_B0_12<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B0_12,
+    rx: GPIO_AD_B0_13<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B0_13,
 }
 
 uart! {
     module::_3,
-    tx: GPIO_AD_B1_06<Alt2>, lpuart3_tx_select_input, gpio_ad_b1_06_alt2,
-    rx: GPIO_AD_B1_07<Alt2>, lpuart3_rx_select_input, gpio_ad_b1_07_alt2,
+    tx: GPIO_AD_B1_06<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B1_06, LPUART3_TX_SELECT_INPUT, GPIO_AD_B1_06_ALT2,
+    rx: GPIO_AD_B1_07<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B1_07, LPUART3_RX_SELECT_INPUT, GPIO_AD_B1_07_ALT2,
 }
 
 uart! {
     module::_4,
-    tx: GPIO_B1_00<Alt2>, lpuart4_tx_select_input, gpio_b1_00_alt2,
-    rx: GPIO_B1_01<Alt2>, lpuart4_rx_select_input, gpio_b1_01_alt2,
+    tx: GPIO_B1_00<Alt2>, SW_PAD_CTL_PAD_GPIO_B1_00, LPUART4_TX_SELECT_INPUT, GPIO_B1_00_ALT2,
+    rx: GPIO_B1_01<Alt2>, SW_PAD_CTL_PAD_GPIO_B1_01, LPUART4_RX_SELECT_INPUT, GPIO_B1_01_ALT2,
 }
 
 uart! {
     module::_2,
-    tx: GPIO_AD_B1_02<Alt2>, lpuart2_tx_select_input, gpio_ad_b1_02_alt2,
-    rx: GPIO_AD_B1_03<Alt2>, lpuart2_rx_select_input, gpio_ad_b1_03_alt2,
+    tx: GPIO_AD_B1_02<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B1_02, LPUART2_TX_SELECT_INPUT, GPIO_AD_B1_02_ALT2,
+    rx: GPIO_AD_B1_03<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B1_03, LPUART2_RX_SELECT_INPUT, GPIO_AD_B1_03_ALT2,
 }
 
 uart! {
     module::_7,
-    tx: GPIO_EMC_31<Alt2>, lpuart7_tx_select_input, gpio_emc_31_alt2,
-    rx: GPIO_EMC_32<Alt2>, lpuart7_rx_select_input, gpio_emc_32_alt2,
+    tx: GPIO_EMC_31<Alt2>, SW_PAD_CTL_PAD_GPIO_EMC_31, LPUART7_TX_SELECT_INPUT, GPIO_EMC_31_ALT2,
+    rx: GPIO_EMC_32<Alt2>, SW_PAD_CTL_PAD_GPIO_EMC_32, LPUART7_RX_SELECT_INPUT, GPIO_EMC_32_ALT2,
 }
 
 uart! {
     module::_8,
-    tx: GPIO_AD_B1_10<Alt2>, lpuart8_tx_select_input, gpio_ad_b1_10_alt2,
-    rx: GPIO_AD_B1_11<Alt2>, lpuart8_rx_select_input, gpio_ad_b1_11_alt2,
+    tx: GPIO_AD_B1_10<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B1_10, LPUART8_TX_SELECT_INPUT, GPIO_AD_B1_10_ALT2,
+    rx: GPIO_AD_B1_11<Alt2>, SW_PAD_CTL_PAD_GPIO_AD_B1_11, LPUART8_RX_SELECT_INPUT, GPIO_AD_B1_11_ALT2,
 }
