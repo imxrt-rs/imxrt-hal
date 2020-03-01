@@ -20,7 +20,7 @@ pub use imxrt_ral as ral;
 
 pub mod ccm;
 //pub mod gpio;
-//pub mod i2c;
+pub mod i2c;
 pub mod iomuxc;
 //pub mod pit;
 //pub mod pwm;
@@ -46,7 +46,7 @@ pub struct Peripherals {
     //pub pwm2: pwm::UnclockedController<pwm::module::_2>,
     //pub pwm3: pwm::UnclockedController<pwm::module::_3>,
     //pub pwm4: pwm::UnclockedController<pwm::module::_4>,
-    //pub i2c: i2c::Unclocked,
+    pub i2c: i2c::Unclocked,
     //pub uart: uart::Unclocked,
 }
 
@@ -62,7 +62,12 @@ impl Peripherals {
             //pwm2: pwm::UnclockedController::new(),
             //pwm3: pwm::UnclockedController::new(),
             //pwm4: pwm::UnclockedController::new(),
-            //i2c: i2c::Unclocked::new(),
+            i2c: i2c::Unclocked {
+                i2c1: ral::lpi2c::LPI2C1::take()?,
+                i2c2: ral::lpi2c::LPI2C2::take()?,
+                i2c3: ral::lpi2c::LPI2C3::take()?,
+                i2c4: ral::lpi2c::LPI2C4::take()?,
+            },
             //uart: uart::Unclocked {
             //uart1: p.LPUART1,
             //uart2: p.LPUART2,
