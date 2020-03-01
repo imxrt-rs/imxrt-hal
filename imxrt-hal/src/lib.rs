@@ -24,7 +24,7 @@ pub mod i2c;
 pub mod iomuxc;
 //pub mod pit;
 //pub mod pwm;
-//pub mod uart;
+pub mod uart;
 
 pub mod dcdc {
     use imxrt_ral as ral;
@@ -47,7 +47,7 @@ pub struct Peripherals {
     //pub pwm3: pwm::UnclockedController<pwm::module::_3>,
     //pub pwm4: pwm::UnclockedController<pwm::module::_4>,
     pub i2c: i2c::Unclocked,
-    //pub uart: uart::Unclocked,
+    pub uart: uart::Unclocked,
 }
 
 impl Peripherals {
@@ -68,15 +68,16 @@ impl Peripherals {
                 i2c3: ral::lpi2c::LPI2C3::take()?,
                 i2c4: ral::lpi2c::LPI2C4::take()?,
             },
-            //uart: uart::Unclocked {
-            //uart1: p.LPUART1,
-            //uart2: p.LPUART2,
-            //uart3: p.LPUART3,
-            //uart4: p.LPUART4,
-            //uart5: p.LPUART5,
-            //uart6: p.LPUART6,
-            //uart7: p.LPUART7,
-            //uart8: p.LPUART8,
+            uart: uart::Unclocked {
+                uart1: ral::lpuart::LPUART1::take()?,
+                uart2: ral::lpuart::LPUART2::take()?,
+                uart3: ral::lpuart::LPUART3::take()?,
+                uart4: ral::lpuart::LPUART4::take()?,
+                uart5: ral::lpuart::LPUART5::take()?,
+                uart6: ral::lpuart::LPUART6::take()?,
+                uart7: ral::lpuart::LPUART7::take()?,
+                uart8: ral::lpuart::LPUART8::take()?,
+            },
         };
         Some(p)
     }
