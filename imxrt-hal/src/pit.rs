@@ -1,18 +1,18 @@
 //! Periodic Interrupt Timer (PIT)
 
-use crate::ccm::{perclk, ticks, Divider, Frequency, Ticks, TicksError};
+use crate::ccm::{perclk, ticks, Divider, Frequency, TicksError};
+use crate::ral;
 use core::marker::PhantomData;
 use embedded_hal::timer::{CountDown, Periodic};
-use imxrt_ral as ral;
 
 /// An unclocked periodic interrupt timer module
 ///
 /// In order to activate the PIT, we must pass in the
 /// configured object returned from the CCM's perclk module.
-pub struct UnclockedPIT(ral::PIT);
+pub struct UnclockedPIT(ral::pit::Instance);
 
 impl UnclockedPIT {
-    pub(crate) fn new(base: ral::PIT) -> Self {
+    pub(crate) fn new(base: ral::pit::Instance) -> Self {
         UnclockedPIT(base)
     }
 
@@ -28,7 +28,9 @@ impl UnclockedPIT {
         PIT<channel::_3>,
     ) {
         let (clock_hz, divider) = configured.enable();
-        self.0.mcr.write(|w| w.mdis().mdis_0());
+        ral::write_reg!(ral::pit, self.0, MCR, MDIS: MDIS_0);
+        // Intentionally dropping the ral::pit::Instance. We will give consumers
+        // the appearance that we own it so that they cannot subsequently take it.
         (
             PIT::new(clock_hz, divider),
             PIT::new(clock_hz, divider),
@@ -39,10 +41,13 @@ impl UnclockedPIT {
 }
 
 pub mod channel {
+    use crate::ral;
+
     /// Dummy channel for describing channel chaining.
     ///
     /// Timer 0 cannot be chained. This is the only "valid" chainable
     /// channel, but it does not exist.
+    #[doc(hidden)]
     pub struct _X;
     /// PIT channel 0
     pub struct _0;
@@ -53,37 +58,143 @@ pub mod channel {
     /// PIT channel 3
     pub struct _3;
 
+    #[doc(hidden)]
     pub trait Channel {
-        const IDX: usize;
         type ChainedTo: Channel;
+
+        fn enabled() -> bool;
+        fn set_enabled(enable: bool);
+        fn set_ldval(val: u32);
+        fn ldval() -> u32;
+        fn cval() -> u32;
+        fn tif() -> bool;
+        fn clear_tif();
+        fn set_interrupt_enable(interrupt: bool);
+        fn interrupt_enable() -> bool;
+        fn enable_chain();
     }
 
+    macro_rules! _impl_channel {
+        ($chan:ty, $chain:ty, $tctrl:ident, $ldval:ident, $tflg:ident, $cval:ident) => {
+            impl Channel for $chan {
+                type ChainedTo = $chain;
+
+                #[inline(always)]
+                fn enabled() -> bool {
+                    unsafe { ral::read_reg!(ral::pit, ral::pit::PIT, $tctrl, TEN == TEN_1) }
+                }
+
+                #[inline(always)]
+                fn set_enabled(enable: bool) {
+                    unsafe {
+                        ral::modify_reg!(ral::pit, ral::pit::PIT, $tctrl, TEN: u32::from(enable));
+                    }
+                }
+
+                #[inline(always)]
+                fn set_ldval(val: u32) {
+                    unsafe {
+                        ral::write_reg!(ral::pit, ral::pit::PIT, $ldval, TSV: val);
+                    }
+                }
+
+                #[inline(always)]
+                fn ldval() -> u32 {
+                    unsafe { ral::read_reg!(ral::pit, ral::pit::PIT, $ldval, TSV) }
+                }
+
+                #[inline(always)]
+                fn cval() -> u32 {
+                    unsafe { ral::read_reg!(ral::pit, ral::pit::PIT, $cval, TVL) }
+                }
+
+                #[inline(always)]
+                fn tif() -> bool {
+                    unsafe { ral::read_reg!(ral::pit, ral::pit::PIT, $tflg, TIF == TIF_1) }
+                }
+
+                #[inline(always)]
+                fn clear_tif() {
+                    unsafe {
+                        ral::write_reg!(ral::pit, ral::pit::PIT, $tflg, TIF: TIF_1);
+                    }
+                }
+
+                #[inline(always)]
+                fn set_interrupt_enable(interrupt: bool) {
+                    unsafe {
+                        ral::modify_reg!(
+                            ral::pit,
+                            ral::pit::PIT,
+                            $tctrl,
+                            TIE: u32::from(interrupt)
+                        );
+                    }
+                }
+
+                #[inline(always)]
+                fn interrupt_enable() -> bool {
+                    unsafe { ral::read_reg!(ral::pit, ral::pit::PIT, $tctrl, TIE == TIE_1) }
+                }
+
+                #[inline(always)]
+                fn enable_chain() {
+                    unsafe {
+                        ral::modify_reg!(ral::pit, ral::pit::PIT, $tctrl, CHN: CHN_1);
+                    }
+                }
+            }
+        };
+    }
+
+    /// Dummy channel for describing channel chaining.
+    ///
+    /// Timer 0 cannot be chained. This is the only "valid" chainable
+    /// channel, but it does not exist.
+    ///
+    /// All methods are unreachable, because we cannot call them.
     impl Channel for _X {
-        const IDX: usize = core::usize::MAX;
         type ChainedTo = _X;
+        fn enabled() -> bool {
+            unreachable!()
+        }
+        fn set_enabled(_: bool) {
+            unreachable!()
+        }
+        fn set_ldval(_: u32) {
+            unreachable!()
+        }
+        fn ldval() -> u32 {
+            unreachable!()
+        }
+        fn cval() -> u32 {
+            unreachable!()
+        }
+        fn tif() -> bool {
+            unreachable!()
+        }
+        fn clear_tif() {
+            unreachable!()
+        }
+        fn set_interrupt_enable(_: bool) {
+            unreachable!()
+        }
+        fn interrupt_enable() -> bool {
+            unreachable!()
+        }
+        fn enable_chain() {
+            unreachable!()
+        }
     }
 
-    impl Channel for _0 {
-        const IDX: usize = 0;
-        type ChainedTo = _X;
-    }
-    impl Channel for _1 {
-        const IDX: usize = 1;
-        type ChainedTo = _0;
-    }
-    impl Channel for _2 {
-        const IDX: usize = 2;
-        type ChainedTo = _1;
-    }
-    impl Channel for _3 {
-        const IDX: usize = 3;
-        type ChainedTo = _2;
-    }
+    _impl_channel!(_0, _X, TCTRL0, LDVAL0, TFLG0, CVAL0);
+    _impl_channel!(_1, _0, TCTRL1, LDVAL1, TFLG1, CVAL1);
+    _impl_channel!(_2, _1, TCTRL2, LDVAL2, TFLG2, CVAL2);
+    _impl_channel!(_3, _2, TCTRL3, LDVAL3, TFLG3, CVAL3);
 }
 
 /// A periodic interrupt timer (PIT)
 pub struct PIT<Chan> {
-    timer: &'static ral::pit::TIMER,
     clock_hz: Frequency,
     divider: Divider,
     _chan: PhantomData<Chan>,
@@ -92,9 +203,6 @@ pub struct PIT<Chan> {
 impl<Chan: channel::Channel> PIT<Chan> {
     fn new(clock_hz: Frequency, divider: Divider) -> PIT<Chan> {
         PIT {
-            // Safety: register is static; index is within half-closed range [0,4)
-            // in `UnclockedPIT::clock()`
-            timer: unsafe { &(*ral::PIT::ptr()).timer[Chan::IDX] },
             clock_hz,
             divider,
             _chan: PhantomData,
@@ -103,27 +211,25 @@ impl<Chan: channel::Channel> PIT<Chan> {
 
     #[inline(always)]
     fn disabled<F: FnMut(&Self) -> R, R>(&self, mut act: F) -> R {
-        let enabled = self.timer.tctrl.read().ten().bit_is_set();
-        self.timer.tctrl.modify(|_, w| w.ten().clear_bit());
-        let tsv = self.timer.ldval.read().tsv().bits();
+        let enabled = Chan::enabled();
+        Chan::set_enabled(false);
+        let tsv = Chan::ldval();
         let res = act(self);
         self.ldval(tsv);
-        self.timer.tctrl.modify(|_, w| w.ten().bit(enabled));
+        Chan::set_enabled(enabled);
         res
     }
 
     fn ldval(&self, val: u32) {
-        // Safety: TSV register is 32 bits wide
-        self.timer.ldval.write(|w| unsafe { w.tsv().bits(val) });
+        Chan::set_ldval(val);
     }
 
     fn tif(&self) -> bool {
-        self.timer.tflg.read().tif().bit_is_set()
+        Chan::tif()
     }
 
     fn clear_tif(&self) {
-        // W1C
-        self.timer.tflg.write(|w| w.tif().set_bit());
+        Chan::clear_tif();
     }
 
     /// Returns the period of the clock ticks. This is the inverse
@@ -152,9 +258,9 @@ impl<Chan: channel::Channel> PIT<Chan> {
             this.disabled(|this| {
                 this.clear_tif();
                 this.ldval(STARTING_LDVAL);
-                self.timer.tctrl.modify(|_, w| w.ten().set_bit());
+                Chan::set_enabled(true);
                 let res = act();
-                let counter = this.timer.cval.read().tvl().bits();
+                let counter = Chan::cval();
                 if this.tif() {
                     // Action took too long and the timer expired.
                     // The counter value is meaningless
@@ -170,23 +276,21 @@ impl<Chan: channel::Channel> PIT<Chan> {
 
     /// Enable the timer to trigger an interrupt when the timer expires
     pub fn set_interrupt_enable(&mut self, interrupt: bool) {
-        self.timer.tctrl.modify(|_, w| w.tie().bit(interrupt));
+        Chan::set_interrupt_enable(interrupt);
     }
 
     /// Returns `true` if the timer will trigger an interrupt when
     /// it expires.
     pub fn interrupt_enable(&self) -> bool {
-        self.timer.tctrl.read().tie().bit_is_set()
+        Chan::interrupt_enable()
     }
 
     #[inline(always)]
     fn with_interrupts_disabled<F: FnMut(&Self) -> R, R>(&self, mut act: F) -> R {
         let interrupt_enabled = self.interrupt_enable();
-        self.timer.tctrl.modify(|_, w| w.tie().clear_bit());
+        Chan::set_interrupt_enable(false);
         let res = act(self);
-        self.timer
-            .tctrl
-            .modify(|_, w| w.tie().bit(interrupt_enabled));
+        Chan::set_interrupt_enable(interrupt_enabled);
         res
     }
 }
@@ -194,19 +298,17 @@ impl<Chan: channel::Channel> PIT<Chan> {
 impl<Chan: channel::Channel> CountDown for PIT<Chan> {
     type Time = core::time::Duration;
     fn start<T: Into<Self::Time>>(&mut self, ms: T) {
-        let ticks: Ticks<u32> = match ticks(ms.into(), self.clock_hz, self.divider) {
+        let ticks: u32 = match ticks(ms.into(), self.clock_hz.0, self.divider.0) {
             Ok(ticks) => ticks,
             // Saturate the load value
-            Err(TicksError::TicksOverflow) | Err(TicksError::DurationOverflow) => {
-                Ticks(u32::max_value())
-            }
+            Err(TicksError::TicksOverflow) | Err(TicksError::DurationOverflow) => u32::max_value(),
             // Ratio of freq / div was zero, or divider was zero
-            Err(TicksError::DivideByZero) => Ticks(0),
+            Err(TicksError::DivideByZero) => 0,
         };
-        self.timer.tctrl.modify(|_, w| w.ten().clear_bit());
+        Chan::set_enabled(false);
         self.clear_tif();
-        self.ldval(ticks.0);
-        self.timer.tctrl.modify(|_, w| w.ten().set_bit());
+        self.ldval(ticks);
+        Chan::set_enabled(true);
     }
 
     fn wait(&mut self) -> nb::Result<(), void::Void> {
@@ -269,25 +371,23 @@ where
     type Time = core::time::Duration;
     fn start<T: Into<Self::Time>>(&mut self, time: T) {
         // clock_hz and divider are equal across all PITs
-        let ticks: Ticks<u64> = match ticks(time.into(), self.lower.clock_hz, self.lower.divider) {
+        let ticks: u64 = match ticks(time.into(), self.lower.clock_hz.0, self.lower.divider.0) {
             Ok(ticks) => ticks,
             // Saturate the load value
-            Err(TicksError::TicksOverflow) | Err(TicksError::DurationOverflow) => {
-                Ticks(u64::max_value())
-            }
+            Err(TicksError::TicksOverflow) | Err(TicksError::DurationOverflow) => u64::max_value(),
             // Ratio of freq / div was zero, or divider was zero
-            Err(TicksError::DivideByZero) => Ticks(0),
+            Err(TicksError::DivideByZero) => 0,
         };
-        self.lower.timer.tctrl.modify(|_, w| w.ten().clear_bit());
-        self.upper.timer.tctrl.modify(|_, w| w.ten().clear_bit());
+        C0::set_enabled(false);
+        C1::set_enabled(false);
 
         self.upper.clear_tif();
-        self.upper.timer.tctrl.modify(|_, w| w.chn().set_bit());
-        self.upper.ldval((ticks.0 >> 32) as u32);
-        self.lower.ldval((ticks.0 & 0xFFFF_FFFF) as u32);
+        C1::enable_chain();
+        self.upper.ldval((ticks >> 32) as u32);
+        self.lower.ldval((ticks & 0xFFFF_FFFF) as u32);
 
-        self.lower.timer.tctrl.modify(|_, w| w.ten().set_bit());
-        self.upper.timer.tctrl.modify(|_, w| w.ten().set_bit());
+        C0::set_enabled(true);
+        C1::set_enabled(true);
     }
 
     fn wait(&mut self) -> nb::Result<(), void::Void> {
@@ -322,16 +422,17 @@ impl ChainedPIT<channel::_0, channel::_1> {
                     upper.ldval(STARTING_LDVAL);
                     lower.ldval(STARTING_LDVAL);
 
-                    upper.timer.tctrl.modify(|_, w| w.chn().set_bit());
-                    upper.timer.tctrl.modify(|_, w| w.ten().set_bit());
-                    lower.timer.tctrl.modify(|_, w| w.ten().set_bit());
+                    use channel::Channel;
+
+                    channel::_1::enable_chain();
+                    channel::_1::set_enabled(true);
+                    channel::_0::set_enabled(true);
 
                     let res = act();
-                    let lifetime = {
-                        let pit = unsafe { &*ral::PIT::ptr() };
-
-                        let lifetime: u64 = (pit.ltmr64h.read().bits() as u64) << 32;
-                        lifetime | (pit.ltmr64l.read().bits() as u64)
+                    let lifetime = unsafe {
+                        let lifetime =
+                            u64::from(ral::read_reg!(ral::pit, ral::pit::PIT, LTMR64H)) << 32;
+                        lifetime | u64::from(ral::read_reg!(ral::pit, ral::pit::PIT, LTMR64L))
                     };
                     if upper.tif() {
                         (res, None)
