@@ -6,7 +6,7 @@
 
 use crate::ccm;
 pub use crate::iomuxc::uart::{self, module};
-use crate::pac;
+use crate::ral;
 use core::marker::PhantomData;
 
 /// An uninitialized UART peripheral
@@ -15,11 +15,11 @@ use core::marker::PhantomData;
 pub struct Uninit<M: module::Module> {
     effective_clock: ccm::Frequency,
     _module: PhantomData<M>,
-    reg: M::Reg,
+    reg: ral::lpuart::Instance,
 }
 
 impl<M: module::Module> Uninit<M> {
-    fn new(effective_clock: ccm::Frequency, reg: M::Reg) -> Self {
+    fn new(effective_clock: ccm::Frequency, reg: ral::lpuart::Instance) -> Self {
         Uninit {
             effective_clock,
             _module: PhantomData,
@@ -50,14 +50,14 @@ pub struct UARTs {
 /// any UART peripheral, the `Unclocked` type must be clocked.
 #[allow(dead_code)] // Remove once all UARTs peripherals are implemented
 pub struct Unclocked {
-    pub(crate) uart1: pac::LPUART1,
-    pub(crate) uart2: pac::LPUART2,
-    pub(crate) uart3: pac::LPUART3,
-    pub(crate) uart4: pac::LPUART4,
-    pub(crate) uart5: pac::LPUART5,
-    pub(crate) uart6: pac::LPUART6,
-    pub(crate) uart7: pac::LPUART7,
-    pub(crate) uart8: pac::LPUART8,
+    pub(crate) uart1: ral::lpuart::Instance,
+    pub(crate) uart2: ral::lpuart::Instance,
+    pub(crate) uart3: ral::lpuart::Instance,
+    pub(crate) uart4: ral::lpuart::Instance,
+    pub(crate) uart5: ral::lpuart::Instance,
+    pub(crate) uart6: ral::lpuart::Instance,
+    pub(crate) uart7: ral::lpuart::Instance,
+    pub(crate) uart8: ral::lpuart::Instance,
 }
 impl Unclocked {
     /// Enable all clocks for the UART peripherals. Returns a collection
@@ -76,61 +76,87 @@ impl Unclocked {
 
         // -----------------------------------------
         // Disable clocks before modifying selection
-        ccm.ccgr5.modify(|_, w| unsafe {
-            w.cg12()
-                .bits(0b00) // UART1
-                .cg13()
-                .bits(0b00) // UART7
-        });
-        ccm.ccgr0.modify(|_, w| unsafe {
-            w.cg14()
-                .bits(0b00) // UART2
-                .cg6()
-                .bits(0b00) // UART3
-        });
-        ccm.ccgr1.modify(|_, w| unsafe { w.cg12().bits(0b00) }); // UART4
-        ccm.ccgr3.modify(|_, w| unsafe {
-            w.cg1()
-                .bits(0b00) // UART5
-                .cg3()
-                .bits(0b00) // UART6
-        });
-        ccm.ccgr6.modify(|_, w| unsafe { w.cg7().bits(0b00) }); // UART8
-
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR5,
+            CG12: 0,    // UART1
+            CG13: 0     // UART7
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR0,
+            CG14: 0,    // UART2
+            CG6: 0      // UART3
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR1,
+            CG12: 0     // UART4
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR3,
+            CG1: 0,     // UART5
+            CG3: 0      // UART6
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR6,
+            CG7: 0      // UART8
+        );
         // -----------------------------------------
 
         // -------------------------
         // Select clocks & prescalar
-        ccm.cscdr1.write(|w| {
-            w.uart_clk_sel()
-                .variant(clock_select.into())
-                .uart_clk_podf()
-                .variant(prescalar)
-        });
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CSCDR1,
+            UART_CLK_SEL: (clock_select as u32),
+            UART_CLK_PODF: (prescalar as u32)
+        );
         // -------------------------
 
         // -------------
         // Enable clocks
-        ccm.ccgr5.modify(|_, w| unsafe {
-            w.cg12()
-                .bits(0b11) // UART1
-                .cg13()
-                .bits(0b11) // UART7
-        });
-        ccm.ccgr0.modify(|_, w| unsafe {
-            w.cg14()
-                .bits(0b11) // UART2
-                .cg6()
-                .bits(0b11) // UART3
-        });
-        ccm.ccgr1.modify(|_, w| unsafe { w.cg12().bits(0b11) }); // UART4
-        ccm.ccgr3.modify(|_, w| unsafe {
-            w.cg1()
-                .bits(0b11) // UART5
-                .cg3()
-                .bits(0b11) // UART6
-        });
-        ccm.ccgr6.modify(|_, w| unsafe { w.cg7().bits(0b11) }); // UART8
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR5,
+            CG12: 0b11,    // UART1
+            CG13: 0b11     // UART7
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR0,
+            CG14: 0b11,    // UART2
+            CG6: 0b11      // UART3
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR1,
+            CG12: 0b11     // UART4
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR3,
+            CG1: 0b11,     // UART5
+            CG3: 0b11      // UART6
+        );
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR6,
+            CG7: 0b11      // UART8
+        );
 
         // -------------
 
@@ -176,7 +202,7 @@ where
 ///
 /// Call `read()` or `write()` to transmit bytes.
 pub struct UART<M: module::Module> {
-    reg: M::Reg,
+    reg: ral::lpuart::Instance,
     effective_clock: ccm::Frequency,
     _module: PhantomData<M>,
 }
@@ -201,7 +227,7 @@ where
     M: module::Module,
 {
     fn start(
-        reg: M::Reg,
+        reg: ral::lpuart::Instance,
         effective_clock: ccm::Frequency,
         baud: u32,
     ) -> Result<Self, ccm::uart::TimingsError> {
@@ -211,9 +237,7 @@ where
             _module: PhantomData,
         };
         uart.set_baud(baud)?;
-        // Compiler can't infer type...?
-        let reg: &M::Reg = &uart.reg;
-        reg.ctrl.modify(|_, w| w.te().set_bit().re().set_bit());
+        ral::modify_reg!(ral::lpuart, uart.reg, CTRL, TE: TE_1, RE: RE_1);
         Ok(uart)
     }
 
@@ -223,14 +247,14 @@ where
     /// flusing all data from all FIFOs.
     pub fn set_parity(&mut self, parity: Option<Parity>) {
         self.while_disabled(|this| {
-            this.reg.ctrl.modify(|_, w| {
-                w.pe()
-                    .bit(parity.is_some())
-                    .m()
-                    .bit(parity.is_some())
-                    .pt()
-                    .bit(parity.map(|p| p.bit()).unwrap_or(false))
-            });
+            ral::modify_reg!(
+                ral::lpuart,
+                this.reg,
+                CTRL,
+                PE: u32::from(parity.is_some()),
+                M: u32::from(parity.is_some()),
+                PT: u32::from(parity.map(|p| p.bit()).unwrap_or(false))
+            );
         });
     }
 
@@ -241,7 +265,7 @@ where
     /// will temporarily disable the peripheral, flusing all data from all FIFOs.
     pub fn set_rx_inversion(&mut self, inverted: bool) {
         self.while_disabled(|this| {
-            this.reg.stat.modify(|_, w| w.rxinv().bit(inverted));
+            ral::modify_reg!(ral::lpuart, this.reg, STAT, RXINV: u32::from(inverted));
         });
     }
 
@@ -252,7 +276,7 @@ where
     /// will temporarily disable the peripheral, flusing all data from all FIFOs.
     pub fn set_tx_inversion(&mut self, inverted: bool) {
         self.while_disabled(|this| {
-            this.reg.ctrl.modify(|_, w| w.txinv().bit(inverted));
+            ral::modify_reg!(ral::lpuart, this.reg, CTRL, TXINV: u32::from(inverted));
         });
     }
 
@@ -271,21 +295,24 @@ where
         self.while_disabled(|this| {
             if let Some(requested_size) = size {
                 // Maximum TX FIFO size supported by this device
-                let max_size = 1 << this.reg.param.read().txfifo().bits();
+                let max_size = 1 << ral::read_reg!(ral::lpuart, this.reg, PARAM, TXFIFO);
                 let tx_fifo_size = max_size.min(requested_size.get());
-                this.reg.water.modify(|_, w| unsafe {
-                    // Safety: max size is one less than PARAM[TXFIFO].
-                    // Assume an iMXRT1062. PARAM[TXFIFO] = 4, so
-                    // WATER[TXWATER] = 3. 3 == 0b11, which fits into
-                    // the two bit range of the field. We're assuming
-                    // that this scales for chips that might have a larger
-                    // PARAM[TXFIFO] size.
-                    w.txwater().bits(tx_fifo_size - 1)
-                });
-                this.reg.fifo.modify(|_, w| w.txfe().set_bit());
+                // Safety: max size is one less than PARAM[TXFIFO].
+                // Assume an iMXRT1062. PARAM[TXFIFO] = 4, so
+                // WATER[TXWATER] = 3. 3 == 0b11, which fits into
+                // the two bit range of the field. We're assuming
+                // that this scales for chips that might have a larger
+                // PARAM[TXFIFO] size.
+                ral::modify_reg!(
+                    ral::lpuart,
+                    this.reg,
+                    WATER,
+                    TXWATER: (tx_fifo_size.saturating_sub(1) as u32)
+                );
+                ral::modify_reg!(ral::lpuart, this.reg, FIFO, TXFE: TXFE_1);
                 tx_fifo_size
             } else {
-                this.reg.fifo.modify(|_, w| w.txfe().clear_bit());
+                ral::modify_reg!(ral::lpuart, this.reg, FIFO, TXFE: TXFE_0);
                 0
             }
         })
@@ -298,23 +325,23 @@ where
     /// from *both* TX and RX FIFOs.
     pub fn set_rx_fifo(&mut self, enable: bool) {
         self.while_disabled(|this| {
-            this.reg.fifo.modify(|_, w| w.rxfe().bit(enable));
+            ral::modify_reg!(ral::lpuart, this.reg, FIFO, RXFE: u32::from(enable));
         })
     }
 
     fn while_disabled<F: FnMut(&mut Self) -> R, R>(&mut self, mut act: F) -> R {
         let mut was_enabled = false;
-        self.reg
-            .fifo
-            .modify(|_, w| w.txflush().set_bit().rxflush().set_bit());
-        self.reg.ctrl.modify(|r, w| {
-            was_enabled = r.te().bit_is_set() && r.re().bit_is_set();
-            w.te().clear_bit().re().clear_bit()
-        });
+        ral::modify_reg!(
+            ral::lpuart,
+            self.reg,
+            FIFO,
+            TXFLUSH: TXFLUSH_1,
+            RXFLUSH: RXFLUSH_1
+        );
+        let (te, re) = ral::read_reg!(ral::lpuart, self.reg, CTRL, TE, RE);
+        ral::modify_reg!(ral::lpuart, self.reg, CTRL, TE: TE_0, RE: RE_0);
         let res = act(self);
-        self.reg
-            .ctrl
-            .modify(|_, w| w.te().bit(was_enabled).re().bit(was_enabled));
+        ral::modify_reg!(ral::lpuart, self.reg, CTRL, TE: te, RE: re);
         res
     }
 
@@ -326,34 +353,29 @@ where
     pub fn set_baud(&mut self, baud: u32) -> Result<(), ccm::uart::TimingsError> {
         let timings = ccm::uart::timings(self.effective_clock, baud)?;
         self.while_disabled(|this| {
-            this.reg.baud.modify(|_, w| unsafe {
-                // Safety: correctness of the values depends on the return of
-                // ccm::uart::timings
-                w.osr()
-                    .bits(timings.osr)
-                    .sbr()
-                    .bits(timings.sbr)
-                    .bothedge()
-                    .bit(timings.both_edge)
-            });
-            this.reg.ctrl.modify(|_, w| w.te().set_bit().re().set_bit());
+            ral::modify_reg!(
+                ral::lpuart,
+                this.reg,
+                BAUD,
+                OSR: u32::from(timings.osr),
+                SBR: u32::from(timings.sbr),
+                BOTHEDGE: u32::from(timings.both_edge)
+            );
         });
         Ok(())
     }
 
     fn clear_status(&mut self) {
-        self.reg.stat.modify(|_, w| {
-            w.idle()
-                .set_bit()
-                .or()
-                .set_bit()
-                .nf()
-                .set_bit()
-                .fe()
-                .set_bit()
-                .pf()
-                .set_bit()
-        });
+        ral::modify_reg!(
+            ral::lpuart,
+            self.reg,
+            STAT,
+            IDLE: IDLE_1,
+            OR: OR_1,
+            NF: NF_1,
+            FE: FE_1,
+            PF: PF_1
+        );
     }
 
     /// Enable the receiver interrupt associated with this UART
@@ -371,23 +393,23 @@ where
     pub fn set_receiver_interrupt(&mut self, watermark: Option<u8>) -> u8 {
         self.while_disabled(|this| {
             if let Some(watermark) = watermark {
-                let rx_fifo_size = if this.reg.fifo.read().rxfe().bit_is_set() && watermark > 0 {
+                let rx_fifo_size = if ral::read_reg!(ral::lpuart, this.reg, FIFO, RXFE == RXFE_1)
+                    && watermark > 0
+                {
                     // Use the FIFO watermark to define interrupt frequency.
-                    let max_size = 1 << this.reg.param.read().rxfifo().bits();
+                    let max_size = 1 << ral::read_reg!(ral::lpuart, this.reg, PARAM, RXFIFO);
                     let fifo_size = max_size.min(watermark);
-                    this.reg.water.modify(|_, w| unsafe {
-                        // Safety: see justification in set_tx_fifo
-                        w.rxwater().bits(fifo_size)
-                    });
+                    // Safety: see justification in set_tx_fifo
+                    ral::modify_reg!(ral::lpuart, this.reg, WATER, RXWATER: fifo_size as u32);
                     fifo_size
                 } else {
                     // User has not enable the RX FIFO, or the watermark is zero.
                     0
                 };
-                this.reg.ctrl.modify(|_, w| w.rie().set_bit());
+                ral::modify_reg!(ral::lpuart, this.reg, CTRL, RIE: RIE_1);
                 rx_fifo_size
             } else {
-                this.reg.ctrl.modify(|_, w| w.rie().clear_bit());
+                ral::modify_reg!(ral::lpuart, this.reg, CTRL, RIE: RIE_0);
                 0
             }
         })
@@ -404,12 +426,12 @@ where
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         self.flush()?;
-        self.reg.data.write(|w| unsafe { w.bits(word as u32) });
+        ral::write_reg!(ral::lpuart, self.reg, DATA, word as u32);
         Ok(())
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        if self.reg.stat.read().tdre().is_tdre_0() {
+        if ral::read_reg!(ral::lpuart, self.reg, STAT, TDRE == TDRE_0) {
             Err(nb::Error::WouldBlock)
         } else {
             Ok(())
@@ -446,17 +468,21 @@ where
     type Error = ReadError;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
-        let data = self.reg.data.read();
-        if data.rxempt().bit_is_set() {
+        use ral::lpuart::DATA::*;
+        let data = ral::read_reg!(ral::lpuart, self.reg, DATA);
+        if data & RXEMPT::mask != 0 {
             Err(nb::Error::WouldBlock)
         } else {
             let mut flags = ReadErrorFlags::empty();
-            flags.set(ReadErrorFlags::OVERRUN, self.reg.stat.read().or().bit());
-            flags.set(ReadErrorFlags::PARITY, data.paritye().bit());
-            flags.set(ReadErrorFlags::FRAME_ERROR, data.fretsc().bit());
-            flags.set(ReadErrorFlags::NOISY, data.noisy().bit());
+            flags.set(
+                ReadErrorFlags::OVERRUN,
+                ral::read_reg!(ral::lpuart, self.reg, STAT, OR == OR_1),
+            );
+            flags.set(ReadErrorFlags::PARITY, data & PARITYE::mask != 0);
+            flags.set(ReadErrorFlags::FRAME_ERROR, data & FRETSC::mask != 0);
+            flags.set(ReadErrorFlags::NOISY, data & NOISY::mask != 0);
 
-            let raw = (data.bits() & 0xFF) as u8;
+            let raw = (data & 0xFF) as u8;
             self.clear_status();
 
             if flags.is_empty() {
