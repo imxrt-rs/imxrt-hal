@@ -1,0 +1,31 @@
+name: All Checks
+
+on: [push, pull_request]
+
+jobs:
+  build-ral:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature: ["imxrt1011", "imxrt1015", "imxrt1021", "imxrt1051", "imxrt1052", "imxrt1061", "imxrt1062", "imxrt1064"]
+    steps:
+    - uses: actions/checkout@v2
+    - name: install virtualenv
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install python dependencies
+      run: cd imxrt-ral && pip install -U -r requirements.txt
+    - name: Cache generated code
+      uses: actions/cache@v1
+      id: ral-cache
+      with:
+        path: imxrt-ral/src
+        key: ${{ runner.OS }}-ral-cache-${{ hashFiles('imxrt-ral/imxrtral.py') }}
+    - name: Generate code
+      if: steps.ral-cache.outputs.cache-hit != 'true'
+      run: cd imxrt-ral && make
+    - name: Build imxrt-ral for (${{ matrix.feature }})
+      run: cd imxrt-ral && cargo build --verbose --features ${{ matrix.feature }}
+    - name: Run tests (${{ matrix.feature }})
+      run: cd imxrt-ral && cargo test --verbose --features ${{ matrix.feature }}
