@@ -29,6 +29,12 @@ pad!(
 );
 
 pad!(
+    GPIO_EMC_30,
+    SW_MUX_CTL_PAD_GPIO_EMC_30,
+    [alt0, alt1, alt2, alt3, alt4, alt5, alt8]
+);
+
+pad!(
     GPIO_EMC_31,
     SW_MUX_CTL_PAD_GPIO_EMC_31,
     [alt0, alt1, alt2, alt3, alt4, alt5, alt8]
