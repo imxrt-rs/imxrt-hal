@@ -42,6 +42,9 @@ pub struct IOMUXC {
     //
     // GPIO_B0
     //
+    pub gpio_b0_00: gpio::GPIO_B0_00<Alt5>,
+    pub gpio_b0_01: gpio::GPIO_B0_01<Alt5>,
+    pub gpio_b0_02: gpio::GPIO_B0_02<Alt5>,
     pub gpio_b0_03: gpio::GPIO_B0_03<Alt5>,
     pub gpio_b0_10: gpio::GPIO_B0_10<Alt5>,
     pub gpio_b0_11: gpio::GPIO_B0_11<Alt5>,
@@ -53,6 +56,8 @@ pub struct IOMUXC {
     //
     // GPIO_AD_B0
     //
+    pub gpio_ad_b0_00: gpio::GPIO_AD_B0_00<Alt5>,
+    pub gpio_ad_b0_01: gpio::GPIO_AD_B0_01<Alt5>,
     pub gpio_ad_b0_02: gpio::GPIO_AD_B0_02<Alt5>,
     pub gpio_ad_b0_03: gpio::GPIO_AD_B0_03<Alt5>,
     pub gpio_ad_b0_12: gpio::GPIO_AD_B0_12<Alt5>,
@@ -66,6 +71,8 @@ pub struct IOMUXC {
     pub gpio_ad_b1_03: gpio::GPIO_AD_B1_03<Alt5>,
     pub gpio_ad_b1_06: gpio::GPIO_AD_B1_06<Alt5>,
     pub gpio_ad_b1_07: gpio::GPIO_AD_B1_07<Alt5>,
+    pub gpio_ad_b1_08: gpio::GPIO_AD_B1_08<Alt5>,
+    pub gpio_ad_b1_09: gpio::GPIO_AD_B1_09<Alt5>,
     pub gpio_ad_b1_10: gpio::GPIO_AD_B1_10<Alt5>,
     pub gpio_ad_b1_11: gpio::GPIO_AD_B1_11<Alt5>,
     //
@@ -97,6 +104,9 @@ impl IOMUXC {
             //
             // GPIO_B0
             //
+            gpio_b0_00: gpio::GPIO_B0_00::new(),
+            gpio_b0_01: gpio::GPIO_B0_01::new(),
+            gpio_b0_02: gpio::GPIO_B0_02::new(),
             gpio_b0_03: gpio::GPIO_B0_03::new(),
             gpio_b0_10: gpio::GPIO_B0_10::new(),
             gpio_b0_11: gpio::GPIO_B0_11::new(),
@@ -108,6 +118,8 @@ impl IOMUXC {
             //
             // GPIO_AD_B0
             //
+            gpio_ad_b0_00: gpio::GPIO_AD_B0_00::new(),
+            gpio_ad_b0_01: gpio::GPIO_AD_B0_01::new(),
             gpio_ad_b0_02: gpio::GPIO_AD_B0_02::new(),
             gpio_ad_b0_03: gpio::GPIO_AD_B0_03::new(),
             gpio_ad_b0_12: gpio::GPIO_AD_B0_12::new(),
@@ -121,6 +133,8 @@ impl IOMUXC {
             gpio_ad_b1_03: gpio::GPIO_AD_B1_03::new(),
             gpio_ad_b1_06: gpio::GPIO_AD_B1_06::new(),
             gpio_ad_b1_07: gpio::GPIO_AD_B1_07::new(),
+            gpio_ad_b1_08: gpio::GPIO_AD_B1_08::new(),
+            gpio_ad_b1_09: gpio::GPIO_AD_B1_09::new(),
             gpio_ad_b1_10: gpio::GPIO_AD_B1_10::new(),
             gpio_ad_b1_11: gpio::GPIO_AD_B1_11::new(),
             //
@@ -148,7 +162,10 @@ impl IOMUXC {
 pub struct GPR(());
 
 impl GPR {
-    pub(crate) fn GPR27(&mut self) -> &crate::ral::RWRegister<u32> {
+    pub(crate) fn gpr26(&mut self) -> &crate::ral::RWRegister<u32> {
+        unsafe { &(*crate::ral::iomuxc_gpr::IOMUXC_GPR).GPR26 }
+    }
+    pub(crate) fn gpr27(&mut self) -> &crate::ral::RWRegister<u32> {
         unsafe { &(*crate::ral::iomuxc_gpr::IOMUXC_GPR).GPR27 }
     }
 }

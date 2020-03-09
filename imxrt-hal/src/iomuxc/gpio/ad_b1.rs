@@ -35,6 +35,18 @@ pad!(
 );
 
 pad!(
+    GPIO_AD_B1_08,
+    SW_MUX_CTL_PAD_GPIO_AD_B1_08,
+    [alt0, alt1, alt2, alt3, alt4, alt5, alt6, alt7, alt9]
+);
+
+pad!(
+    GPIO_AD_B1_09,
+    SW_MUX_CTL_PAD_GPIO_AD_B1_09,
+    [alt0, alt1, alt2, alt3, alt4, alt5, alt6, alt7, alt9]
+);
+
+pad!(
     GPIO_AD_B1_10,
     SW_MUX_CTL_PAD_GPIO_AD_B1_10,
     [alt0, alt1, alt2, alt3, alt4, alt5, alt6, alt7, alt8, alt9]
