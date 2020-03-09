@@ -20,47 +20,47 @@ pub trait IntoGpio {
 
 #[doc(hidden)]
 pub trait IntoRegister {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock;
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock;
 }
 
 impl IntoRegister for GPIO1 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO1
     }
 }
 
 impl IntoRegister for GPIO2 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO2
     }
 }
 
 impl IntoRegister for GPIO3 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO3
     }
 }
 
 impl IntoRegister for GPIO4 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO4
     }
 }
 
 impl IntoRegister for GPIO5 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO5
     }
 }
 
 impl IntoRegister for GPIO6 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO6
     }
 }
 
 impl IntoRegister for GPIO7 {
-    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO7
     }
 }
@@ -76,13 +76,15 @@ macro_rules! _ios_impl {
 
             impl<GPIO: IntoRegister> $io<GPIO, Input> {
                 pub fn output(self) -> $io<GPIO, Output> {
-                    //TODO critical section, not interrupt safe currently
-                    unsafe {
-                        let regs = &(*GPIO::into_reg());
-                        let gdir = regs.GDIR.read();
-                        let gdir0 = gdir | self.offset;
-                        regs.GDIR.write(gdir0);
-                    };
+                    //TODO determine a way to avoid this by using borrow checker
+                    cortex_m::interrupt::free(|_critical| {
+                        unsafe {
+                            let regs = &(*GPIO::into_reg());
+                            let gdir = regs.GDIR.read();
+                            let gdir0 = gdir | self.offset;
+                            regs.GDIR.write(gdir0);
+                        }
+                    });
                     $io{ _gpio: core::marker::PhantomData, _dir: core::marker::PhantomData, offset: self.offset }
                 }
             }
@@ -180,13 +182,15 @@ macro_rules! _ios_fast {
         $(
             impl $io<$slow, Input> {
                 pub fn fast(self, gpr: &mut $crate::iomuxc::GPR) -> $io<$fast, Input> {
-                    let reg = gpr.$gprfn();
-                    //TODO wrap in interrupt disable or CAS loop, not interrupt safe
-                    unsafe {
-                        let gprv = reg.read();
-                        let gprv0 = gprv | self.offset;
-                        reg.write(gprv0);
-                    };
+                    //TODO determine a way to avoid this by using borrow checker
+                    cortex_m::interrupt::free(|_critical| {
+                        unsafe {
+                            let reg = gpr.$gprfn();
+                            let gprv = reg.read();
+                            let gprv0 = gprv | self.offset;
+                            reg.write(gprv0);
+                        };
+                    });
                     $io {
                         _gpio: core::marker::PhantomData,
                         _dir: core::marker::PhantomData,
