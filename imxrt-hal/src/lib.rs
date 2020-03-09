@@ -19,7 +19,7 @@
 pub use imxrt_ral as ral;
 
 pub mod ccm;
-//pub mod gpio;
+pub mod gpio;
 pub mod i2c;
 pub mod iomuxc;
 pub mod pit;

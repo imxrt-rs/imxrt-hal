@@ -136,6 +136,8 @@ macro_rules! pad {
                 }
             }
 
+            // TODO needs review if this is used
+            #[allow(dead_code)]
             pub(crate) fn iomuxc(&self) -> &$crate::ral::iomuxc::RegisterBlock {
                 // Safety: register block is always valid
                 unsafe { &*$crate::ral::iomuxc::IOMUXC }
