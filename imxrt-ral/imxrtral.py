@@ -39,13 +39,7 @@ CRATE_LIB_PREAMBLE = """\
 
 #![no_std]
 
-#[cfg(feature="rt")]
-extern crate cortex_m_rt;
-
 mod register;
-
-#[cfg(feature="rt")]
-pub use cortex_m_rt::interrupt;
 
 pub use crate::register::{RORegister, UnsafeRORegister};
 pub use crate::register::{WORegister, UnsafeWORegister};
@@ -82,7 +76,6 @@ external_cortex_m = { package = "cortex-m", version = "0.6.2" }
 # TODO use imxrt-rt here in place cortex-m-rt = { version = "0.6.12", optional = true }
 
 [features]
-#TODO rt = ["cortex-m-rt/device"]
 rt = []
 inline-asm = ["external_cortex_m/inline-asm"]
 rtfm = []
