@@ -8,3 +8,4 @@ svd/*.formatted
 target
 src/**/*.rs
 src/**/*.x
+Cargo.toml
