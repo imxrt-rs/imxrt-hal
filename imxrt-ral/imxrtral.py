@@ -137,10 +137,11 @@ class EnumeratedValue(Node):
     Has a name, description, and value.
     Belongs to one or more parent Fields.
     """
-    def __init__(self, name, desc, value):
+    def __init__(self, name, desc, value, register_size):
         self.name = name
         self.desc = desc
         self.value = value
+        self.register_size = register_size
         if self.name[0] in "0123456789":
             self.name = "_" + self.name
             print("Name started with a number:", self.name)
@@ -151,14 +152,14 @@ class EnumeratedValue(Node):
     def to_rust(self, field_width):
         return f"""
         /// 0b{self.value:0{field_width}b}: {escape_desc(self.desc)}
-        pub const {self.name}: u32 = 0b{self.value:0{field_width}b};"""
+        pub const {self.name}: u{self.register_size} = 0b{self.value:0{field_width}b};"""
 
     @classmethod
-    def from_svd(cls, svd, node):
+    def from_svd(cls, svd, node, register_size):
         name = get_string(node, 'name')
         desc = get_string(node, 'description')
         value = get_int(node, 'value')
-        return cls(name, desc, value)
+        return cls(name, desc, value, register_size)
 
     def __eq__(self, other):
         return (
@@ -201,7 +202,7 @@ class EnumeratedValues(Node):
         }}"""
 
     @classmethod
-    def from_svd(cls, svd, node):
+    def from_svd(cls, svd, node, register_size):
         usage = get_string(node, 'usage')
         if usage == "read":
             name = "R"
@@ -211,7 +212,7 @@ class EnumeratedValues(Node):
             name = "RW"
         evs = cls(name)
         for ev in node.findall('enumeratedValue'):
-            evs.values.append(EnumeratedValue.from_svd(svd, ev))
+            evs.values.append(EnumeratedValue.from_svd(svd, ev, register_size))
         return evs
 
     @classmethod
@@ -260,8 +261,9 @@ class Field(Node):
     EnumeratedValues: R, W, and RW.
     Belongs to a parent Register.
     May contain one or more child EnumeratedValues.
+    register_size is the size of the register containing this field
     """
-    def __init__(self, name, desc, width, offset, access, r, w, rw):
+    def __init__(self, name, desc, register_size, width, offset, access, r, w, rw):
         self.name = name
         self.desc = desc
         self.width = width
@@ -270,6 +272,7 @@ class Field(Node):
         self.r = r
         self.w = w
         self.rw = rw
+        self.register_size = register_size
         if self.name[0] in "0123456789":
             self.name = "_" + self.name
             print("Name started with a number:", self.name)
@@ -289,13 +292,14 @@ class Field(Node):
         else:
             mask = f"0x{mask:x}"
         bits = f"bit{'s' if self.width>1 else ''}"
+        ty = f"u{self.register_size}"
         return f"""
         /// {escape_desc(self.desc)}
         pub mod {self.name} {{
             /// Offset ({self.offset} bits)
-            pub const offset: u32 = {self.offset};
+            pub const offset: {ty} = {self.offset};
             /// Mask ({self.width} {bits}: {mask} << {self.offset})
-            pub const mask: u32 = {mask} << offset;
+            pub const mask: {ty} = {mask} << offset;
             {self.r.to_rust(self.width)}
             {self.w.to_rust(self.width)}
             {self.rw.to_rust(self.width)}
@@ -309,6 +313,13 @@ class Field(Node):
         width = get_int(node, 'bitWidth')
         offset = get_int(node, 'bitOffset')
         access = ctx.access
+        # Round up register_size to a size that's representable as a Rust
+        # unsigned integer. We probably will never see a register that's
+        # not a multiple of 8, so this might be overkill.
+        register_size = (ctx.size + 7) & (~7)
+        if register_size != register_size:
+            print(f"Field {name} will be represented using u{register_size}s, "
+                  f"although the register size is {ctx.size} bits")
         r = EnumeratedValues.empty("R")
         w = EnumeratedValues.empty("W")
         rw = EnumeratedValues.empty("RW")
@@ -318,7 +329,7 @@ class Field(Node):
                 evs = svd.find(f".//enumeratedValues[name='{df}']")
                 if evs is None:
                     raise ValueError(f"Can't find derivedFrom {df}")
-            evs = EnumeratedValues.from_svd(svd, evs)
+            evs = EnumeratedValues.from_svd(svd, evs, register_size)
             evsname = evs.name
             if evsname == "R":
                 r = evs
@@ -326,7 +337,7 @@ class Field(Node):
                 w = evs
             else:
                 rw = evs
-        field = cls(name, desc, width, offset, access, r, w, rw)
+        field = cls(name, desc, register_size, width, offset, access, r, w, rw)
         return field
 
     def __eq__(self, other):
