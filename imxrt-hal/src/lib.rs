@@ -23,7 +23,7 @@ pub mod gpio;
 pub mod i2c;
 pub mod iomuxc;
 pub mod pit;
-//pub mod pwm;
+pub mod pwm;
 pub mod uart;
 
 pub mod dcdc {
@@ -38,14 +38,13 @@ pub mod dcdc {
 
 pub struct Peripherals {
     pub iomuxc: iomuxc::IOMUXC,
-    //pub systick: ral::SYST,
     pub ccm: ccm::CCM,
     pub pit: pit::UnclockedPIT,
     pub dcdc: dcdc::DCDC,
-    //pub pwm1: pwm::UnclockedController<pwm::module::_1>,
-    //pub pwm2: pwm::UnclockedController<pwm::module::_2>,
-    //pub pwm3: pwm::UnclockedController<pwm::module::_3>,
-    //pub pwm4: pwm::UnclockedController<pwm::module::_4>,
+    pub pwm1: pwm::Unclocked<pwm::module::_1>,
+    pub pwm2: pwm::Unclocked<pwm::module::_2>,
+    pub pwm3: pwm::Unclocked<pwm::module::_3>,
+    pub pwm4: pwm::Unclocked<pwm::module::_4>,
     pub i2c: i2c::Unclocked,
     pub uart: uart::Unclocked,
 }
@@ -54,14 +53,13 @@ impl Peripherals {
     pub fn take() -> Option<Self> {
         let p = Peripherals {
             iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::take()?),
-            //systick: cp.SYST,
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::take()?),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::take()?),
-            //pwm1: pwm::UnclockedController::new(),
-            //pwm2: pwm::UnclockedController::new(),
-            //pwm3: pwm::UnclockedController::new(),
-            //pwm4: pwm::UnclockedController::new(),
+            pwm1: pwm::Unclocked::new(ral::pwm::PWM1::take()?),
+            pwm2: pwm::Unclocked::new(ral::pwm::PWM2::take()?),
+            pwm3: pwm::Unclocked::new(ral::pwm::PWM3::take()?),
+            pwm4: pwm::Unclocked::new(ral::pwm::PWM4::take()?),
             i2c: i2c::Unclocked {
                 i2c1: ral::lpi2c::LPI2C1::take()?,
                 i2c2: ral::lpi2c::LPI2C2::take()?,

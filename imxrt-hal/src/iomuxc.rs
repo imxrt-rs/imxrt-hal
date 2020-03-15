@@ -8,7 +8,7 @@ mod macros;
 
 pub mod gpio;
 pub mod i2c;
-//pub mod pwm;
+pub mod pwm;
 pub mod uart;
 
 // IOMUXC section of docs originally state that there are up to 8
@@ -36,7 +36,6 @@ pub struct Alt8;
 pub struct Alt9;
 
 pub struct IOMUXC {
-
     //
     // GPIO_B0
     //
@@ -102,7 +101,6 @@ impl IOMUXC {
         //
         // (Instances never implement Drop)
         Self {
-
             //
             // GPIO_B0
             //

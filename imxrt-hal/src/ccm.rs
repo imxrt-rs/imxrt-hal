@@ -337,13 +337,12 @@ impl core::ops::DivAssign<Divider> for Frequency {
     }
 }
 
-/*
 /// Timing configurations for PWM
 pub mod pwm {
-    use super::{pac::pwm1, Divider, Frequency, IPGFrequency};
+    use super::{ral::pwm, Divider, Frequency, IPGFrequency};
 
     /// PWM submodule clock selection
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     #[non_exhaustive] // not all variants are added
     pub enum ClockSelect {
         /// IPG clock frequency, available via `set_arm_clock`
@@ -351,11 +350,31 @@ pub mod pwm {
     }
 
     /// PWM prescalar
-    pub type Prescalar = pwm1::sm::smctrl::PRSC_A;
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(u16)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    pub enum Prescalar {
+        /// 0b000: PWM clock frequency = fclk
+        PRSC_0 = pwm::SMCTRL0::PRSC::RW::PRSC_0,
+        /// 0b001: PWM clock frequency = fclk/2
+        PRSC_1 = pwm::SMCTRL0::PRSC::RW::PRSC_1,
+        /// 0b010: PWM clock frequency = fclk/4
+        PRSC_2 = pwm::SMCTRL0::PRSC::RW::PRSC_2,
+        /// 0b011: PWM clock frequency = fclk/8
+        PRSC_3 = pwm::SMCTRL0::PRSC::RW::PRSC_3,
+        /// 0b100: PWM clock frequency = fclk/16
+        PRSC_4 = pwm::SMCTRL0::PRSC::RW::PRSC_4,
+        /// 0b101: PWM clock frequency = fclk/32
+        PRSC_5 = pwm::SMCTRL0::PRSC::RW::PRSC_5,
+        /// 0b110: PWM clock frequency = fclk/64
+        PRSC_6 = pwm::SMCTRL0::PRSC::RW::PRSC_6,
+        /// 0b111: PWM clock frequency = fclk/128
+        PRSC_7 = pwm::SMCTRL0::PRSC::RW::PRSC_7,
+    }
 
     impl From<Prescalar> for Divider {
         fn from(pre: Prescalar) -> Divider {
-            Divider(1u32 << u8::from(pre))
+            Divider(1u32 << (pre as u16))
         }
     }
 
@@ -366,16 +385,7 @@ pub mod pwm {
             }
         }
     }
-
-    impl From<ClockSelect> for pwm1::sm::smctrl2::CLK_SEL_A {
-        fn from(clksel: ClockSelect) -> Self {
-            match clksel {
-                ClockSelect::IPG(_) => pwm1::sm::smctrl2::CLK_SEL_A::CLK_SEL_0,
-            }
-        }
-    }
 }
-*/
 
 /// Timing configurations for I2C peripherals
 pub mod i2c {
