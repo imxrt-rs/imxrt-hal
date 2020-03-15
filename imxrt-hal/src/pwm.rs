@@ -1,4 +1,17 @@
 //! Pulse Width Modulation (PWM)
+//!
+//! Provides an implementation of `embedded_hal::Pwm` for iMXRT PWM
+//! submodules. The flow follows
+//!
+//! - Enable clocks to the selected PWM peripheral by calling `clock()` on
+//!   an `Unclocked` struct. The return is a `PWM` type that provides a register
+//!   handle and PWM submodules
+//! - Turn submodules into `Pins` by supplying two processor pins to `output`. The
+//!   return is a `Pins` struct that wraps the two pins. The `Pins` struct are inert;
+//!   they're simply a handle that can provide PWM control. Call `control()` and pass
+//!   in a `Handle`, to acquire a `Controller`.
+//! - `Controller` implements `embedded_hal::Pwm`. It lets you set PWM duty cycles.
+//!   Once you're done setting duty cycles, drop the `Controller`.
 
 use crate::ccm;
 use crate::iomuxc::pwm::Pin;
@@ -25,7 +38,16 @@ pub struct Submodule<M, S> {
     _marker: PhantomData<(M, S)>,
 }
 
-/// A PWM peripherals
+/// A PWM peripheral
+///
+/// The PWM peripheral is broken into
+///
+/// - the PWM master handle, `handle`,
+/// - four submodules, numbered `0` through `3`.
+///
+/// The submodules are taken when you want to turn pins into
+/// PWM outputs. The handle provides access to registers that
+/// are shared across PWM submodules.
 pub struct PWM<M> {
     /// The peripheral handle
     ///
@@ -93,6 +115,14 @@ macro_rules! submodule_outputs {
         where
             M: module::Module,
         {
+            /// Converts two pins into PWM outputs. Returns a `Pins` type that wraps the
+            /// underlying pins.
+            ///
+            /// The input pins must support PWM functionality. They must match the module
+            /// that they're associated, and they must have the same submodule.
+            ///
+            /// Requires a mutable reference to a `Handle` in order to modify registers
+            /// that are shared across all PWM submodules.s
             pub fn outputs<A, B>(
                 self,
                 handle: &mut Handle<M>,
@@ -367,6 +397,8 @@ controller!(submodule::_2, SMVAL12, SMVAL32, SMVAL52);
 controller!(submodule::_3, SMVAL13, SMVAL33, SMVAL53);
 
 /// A PWM peripheral that is not receiving a clock input
+///
+/// You may access the PWM components by using the `clock()` method.
 pub struct Unclocked<M> {
     reg: Instance,
     _module: PhantomData<M>,
