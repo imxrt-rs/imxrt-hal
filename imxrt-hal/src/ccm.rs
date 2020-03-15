@@ -80,6 +80,140 @@ pub mod perclk {
 
     use ral::{ccm::CSCMR1::PERCLK_CLK_SEL, modify_reg};
 
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(u32)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    pub enum PODF {
+        /// 0b000000: Divide by 1
+        DIVIDE_1 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_1,
+        /// 0b000001: Divide by 2
+        DIVIDE_2 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_2,
+        /// 0b000010: Divide by 3
+        DIVIDE_3 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_3,
+        /// 0b000011: Divide by 4
+        DIVIDE_4 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_4,
+        /// 0b000100: Divide by 5
+        DIVIDE_5 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_5,
+        /// 0b000101: Divide by 6
+        DIVIDE_6 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_6,
+        /// 0b000110: Divide by 7
+        DIVIDE_7 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_7,
+        /// 0b000111: Divide by 8
+        DIVIDE_8 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_8,
+        /// 0b001000: Divide by 9
+        DIVIDE_9 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_9,
+        /// 0b001001: Divide by 10
+        DIVIDE_10 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_10,
+        /// 0b001010: Divide by 11
+        DIVIDE_11 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_11,
+        /// 0b001011: Divide by 12
+        DIVIDE_12 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_12,
+        /// 0b001100: Divide by 13
+        DIVIDE_13 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_13,
+        /// 0b001101: Divide by 14
+        DIVIDE_14 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_14,
+        /// 0b001110: Divide by 15
+        DIVIDE_15 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_15,
+        /// 0b001111: Divide by 16
+        DIVIDE_16 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_16,
+        /// 0b010000: Divide by 17
+        DIVIDE_17 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_17,
+        /// 0b010001: Divide by 18
+        DIVIDE_18 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_18,
+        /// 0b010010: Divide by 19
+        DIVIDE_19 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_19,
+        /// 0b010011: Divide by 20
+        DIVIDE_20 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_20,
+        /// 0b010100: Divide by 21
+        DIVIDE_21 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_21,
+        /// 0b010101: Divide by 22
+        DIVIDE_22 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_22,
+        /// 0b010110: Divide by 23
+        DIVIDE_23 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_23,
+        /// 0b010111: Divide by 24
+        DIVIDE_24 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_24,
+        /// 0b011000: Divide by 25
+        DIVIDE_25 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_25,
+        /// 0b011001: Divide by 26
+        DIVIDE_26 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_26,
+        /// 0b011010: Divide by 27
+        DIVIDE_27 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_27,
+        /// 0b011011: Divide by 28
+        DIVIDE_28 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_28,
+        /// 0b011100: Divide by 29
+        DIVIDE_29 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_29,
+        /// 0b011101: Divide by 30
+        DIVIDE_30 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_30,
+        /// 0b011110: Divide by 31
+        DIVIDE_31 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_31,
+        /// 0b011111: Divide by 32
+        DIVIDE_32 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_32,
+        /// 0b100000: Divide by 33
+        DIVIDE_33 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_33,
+        /// 0b100001: Divide by 34
+        DIVIDE_34 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_34,
+        /// 0b100010: Divide by 35
+        DIVIDE_35 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_35,
+        /// 0b100011: Divide by 36
+        DIVIDE_36 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_36,
+        /// 0b100100: Divide by 37
+        DIVIDE_37 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_37,
+        /// 0b100101: Divide by 38
+        DIVIDE_38 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_38,
+        /// 0b100110: Divide by 39
+        DIVIDE_39 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_39,
+        /// 0b100111: Divide by 40
+        DIVIDE_40 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_40,
+        /// 0b101000: Divide by 41
+        DIVIDE_41 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_41,
+        /// 0b101001: Divide by 42
+        DIVIDE_42 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_42,
+        /// 0b101010: Divide by 43
+        DIVIDE_43 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_43,
+        /// 0b101011: Divide by 44
+        DIVIDE_44 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_44,
+        /// 0b101100: Divide by 45
+        DIVIDE_45 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_45,
+        /// 0b101101: Divide by 46
+        DIVIDE_46 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_46,
+        /// 0b101110: Divide by 47
+        DIVIDE_47 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_47,
+        /// 0b101111: Divide by 48
+        DIVIDE_48 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_48,
+        /// 0b110000: Divide by 49
+        DIVIDE_49 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_49,
+        /// 0b110001: Divide by 50
+        DIVIDE_50 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_50,
+        /// 0b110010: Divide by 51
+        DIVIDE_51 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_51,
+        /// 0b110011: Divide by 52
+        DIVIDE_52 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_52,
+        /// 0b110100: Divide by 53
+        DIVIDE_53 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_53,
+        /// 0b110101: Divide by 54
+        DIVIDE_54 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_54,
+        /// 0b110110: Divide by 55
+        DIVIDE_55 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_55,
+        /// 0b110111: Divide by 56
+        DIVIDE_56 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_56,
+        /// 0b111000: Divide by 57
+        DIVIDE_57 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_57,
+        /// 0b111001: Divide by 58
+        DIVIDE_58 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_58,
+        /// 0b111010: Divide by 59
+        DIVIDE_59 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_59,
+        /// 0b111011: Divide by 60
+        DIVIDE_60 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_60,
+        /// 0b111100: Divide by 61
+        DIVIDE_61 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_61,
+        /// 0b111101: Divide by 62
+        DIVIDE_62 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_62,
+        /// 0b111110: Divide by 63
+        DIVIDE_63 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_63,
+        /// 0b111111: Divide by 64
+        DIVIDE_64 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_64,
+    }
+
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum CLKSEL {
         /// 24MHz oscillator
@@ -104,12 +238,18 @@ pub mod perclk {
         clock_hz: Frequency,
     }
 
+    impl From<PODF> for Divider {
+        fn from(podf: PODF) -> Self {
+            Divider((podf as u32) + 1)
+        }
+    }
+
     impl Multiplexer {
         pub(super) fn new() -> Self {
             Multiplexer
         }
 
-        pub fn configure(self, handle: &mut Handle, podf: u8, clksel: CLKSEL) -> Configured {
+        pub fn configure(self, handle: &mut Handle, podf: PODF, clksel: CLKSEL) -> Configured {
             modify_reg!(ral::ccm, handle.base, CSCMR1, PERCLK_CLK_SEL: clksel.to_perclk_clk_sel());
             Configured {
                 handle,
