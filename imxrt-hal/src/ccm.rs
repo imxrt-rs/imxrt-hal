@@ -853,3 +853,74 @@ pub mod uart {
         })
     }
 }
+
+/// Timing configurations for SPI peripherals
+pub mod spi {
+    use super::{ral::ccm, Divider, Frequency};
+
+    #[derive(Clone, Copy)]
+    #[non_exhaustive] // Not all variants added
+    pub enum ClockSelect {
+        Pll2,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    #[repr(u32)]
+    pub enum PrescalarSelect {
+        /// 0b0000: divide by 1
+        LPSPI_PODF_0 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_0,
+        /// 0b0001: divide by 2
+        LPSPI_PODF_1 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_1,
+        /// 0b0010: divide by 3
+        LPSPI_PODF_2 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_2,
+        /// 0b0011: divide by 4
+        LPSPI_PODF_3 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_3,
+        /// 0b0100: divide by 5
+        LPSPI_PODF_4 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_4,
+        /// 0b0101: divide by 6
+        LPSPI_PODF_5 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_5,
+        /// 0b0110: divide by 7
+        LPSPI_PODF_6 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_6,
+        /// 0b0111: divide by 8
+        LPSPI_PODF_7 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_7,
+        /// 0b1000: divide by 9
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_8 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_8,
+        /// 0b1001: divide by 10
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_9 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_9,
+        /// 0b1010: divide by 11
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_10 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_10,
+        /// 0b1011: divide by 12
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_11 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_11,
+        /// 0b1100: divide by 13
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_12 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_12,
+        /// 0b1101: divide by 14
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_13 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_13,
+        /// 0b1110: divide by 15
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_14 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_14,
+        /// 0b1111: divide by 16
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_15 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_15,
+    }
+
+    impl From<ClockSelect> for Frequency {
+        fn from(clock_select: ClockSelect) -> Self {
+            match clock_select {
+                ClockSelect::Pll2 => Frequency(528_000_000),
+            }
+        }
+    }
+
+    impl From<PrescalarSelect> for Divider {
+        fn from(prescalar_select: PrescalarSelect) -> Self {
+            Divider((prescalar_select as u32) + 1)
+        }
+    }
+}
