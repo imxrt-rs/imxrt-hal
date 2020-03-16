@@ -80,6 +80,140 @@ pub mod perclk {
 
     use ral::{ccm::CSCMR1::PERCLK_CLK_SEL, modify_reg};
 
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(u32)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    pub enum PODF {
+        /// 0b000000: Divide by 1
+        DIVIDE_1 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_1,
+        /// 0b000001: Divide by 2
+        DIVIDE_2 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_2,
+        /// 0b000010: Divide by 3
+        DIVIDE_3 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_3,
+        /// 0b000011: Divide by 4
+        DIVIDE_4 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_4,
+        /// 0b000100: Divide by 5
+        DIVIDE_5 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_5,
+        /// 0b000101: Divide by 6
+        DIVIDE_6 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_6,
+        /// 0b000110: Divide by 7
+        DIVIDE_7 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_7,
+        /// 0b000111: Divide by 8
+        DIVIDE_8 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_8,
+        /// 0b001000: Divide by 9
+        DIVIDE_9 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_9,
+        /// 0b001001: Divide by 10
+        DIVIDE_10 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_10,
+        /// 0b001010: Divide by 11
+        DIVIDE_11 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_11,
+        /// 0b001011: Divide by 12
+        DIVIDE_12 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_12,
+        /// 0b001100: Divide by 13
+        DIVIDE_13 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_13,
+        /// 0b001101: Divide by 14
+        DIVIDE_14 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_14,
+        /// 0b001110: Divide by 15
+        DIVIDE_15 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_15,
+        /// 0b001111: Divide by 16
+        DIVIDE_16 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_16,
+        /// 0b010000: Divide by 17
+        DIVIDE_17 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_17,
+        /// 0b010001: Divide by 18
+        DIVIDE_18 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_18,
+        /// 0b010010: Divide by 19
+        DIVIDE_19 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_19,
+        /// 0b010011: Divide by 20
+        DIVIDE_20 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_20,
+        /// 0b010100: Divide by 21
+        DIVIDE_21 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_21,
+        /// 0b010101: Divide by 22
+        DIVIDE_22 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_22,
+        /// 0b010110: Divide by 23
+        DIVIDE_23 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_23,
+        /// 0b010111: Divide by 24
+        DIVIDE_24 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_24,
+        /// 0b011000: Divide by 25
+        DIVIDE_25 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_25,
+        /// 0b011001: Divide by 26
+        DIVIDE_26 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_26,
+        /// 0b011010: Divide by 27
+        DIVIDE_27 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_27,
+        /// 0b011011: Divide by 28
+        DIVIDE_28 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_28,
+        /// 0b011100: Divide by 29
+        DIVIDE_29 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_29,
+        /// 0b011101: Divide by 30
+        DIVIDE_30 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_30,
+        /// 0b011110: Divide by 31
+        DIVIDE_31 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_31,
+        /// 0b011111: Divide by 32
+        DIVIDE_32 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_32,
+        /// 0b100000: Divide by 33
+        DIVIDE_33 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_33,
+        /// 0b100001: Divide by 34
+        DIVIDE_34 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_34,
+        /// 0b100010: Divide by 35
+        DIVIDE_35 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_35,
+        /// 0b100011: Divide by 36
+        DIVIDE_36 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_36,
+        /// 0b100100: Divide by 37
+        DIVIDE_37 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_37,
+        /// 0b100101: Divide by 38
+        DIVIDE_38 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_38,
+        /// 0b100110: Divide by 39
+        DIVIDE_39 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_39,
+        /// 0b100111: Divide by 40
+        DIVIDE_40 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_40,
+        /// 0b101000: Divide by 41
+        DIVIDE_41 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_41,
+        /// 0b101001: Divide by 42
+        DIVIDE_42 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_42,
+        /// 0b101010: Divide by 43
+        DIVIDE_43 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_43,
+        /// 0b101011: Divide by 44
+        DIVIDE_44 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_44,
+        /// 0b101100: Divide by 45
+        DIVIDE_45 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_45,
+        /// 0b101101: Divide by 46
+        DIVIDE_46 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_46,
+        /// 0b101110: Divide by 47
+        DIVIDE_47 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_47,
+        /// 0b101111: Divide by 48
+        DIVIDE_48 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_48,
+        /// 0b110000: Divide by 49
+        DIVIDE_49 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_49,
+        /// 0b110001: Divide by 50
+        DIVIDE_50 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_50,
+        /// 0b110010: Divide by 51
+        DIVIDE_51 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_51,
+        /// 0b110011: Divide by 52
+        DIVIDE_52 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_52,
+        /// 0b110100: Divide by 53
+        DIVIDE_53 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_53,
+        /// 0b110101: Divide by 54
+        DIVIDE_54 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_54,
+        /// 0b110110: Divide by 55
+        DIVIDE_55 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_55,
+        /// 0b110111: Divide by 56
+        DIVIDE_56 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_56,
+        /// 0b111000: Divide by 57
+        DIVIDE_57 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_57,
+        /// 0b111001: Divide by 58
+        DIVIDE_58 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_58,
+        /// 0b111010: Divide by 59
+        DIVIDE_59 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_59,
+        /// 0b111011: Divide by 60
+        DIVIDE_60 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_60,
+        /// 0b111100: Divide by 61
+        DIVIDE_61 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_61,
+        /// 0b111101: Divide by 62
+        DIVIDE_62 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_62,
+        /// 0b111110: Divide by 63
+        DIVIDE_63 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_63,
+        /// 0b111111: Divide by 64
+        DIVIDE_64 = ral::ccm::CSCMR1::PERCLK_PODF::RW::DIVIDE_64,
+    }
+
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum CLKSEL {
         /// 24MHz oscillator
@@ -104,12 +238,18 @@ pub mod perclk {
         clock_hz: Frequency,
     }
 
+    impl From<PODF> for Divider {
+        fn from(podf: PODF) -> Self {
+            Divider((podf as u32) + 1)
+        }
+    }
+
     impl Multiplexer {
         pub(super) fn new() -> Self {
             Multiplexer
         }
 
-        pub fn configure(self, handle: &mut Handle, podf: u8, clksel: CLKSEL) -> Configured {
+        pub fn configure(self, handle: &mut Handle, podf: PODF, clksel: CLKSEL) -> Configured {
             modify_reg!(ral::ccm, handle.base, CSCMR1, PERCLK_CLK_SEL: clksel.to_perclk_clk_sel());
             Configured {
                 handle,
@@ -337,13 +477,12 @@ impl core::ops::DivAssign<Divider> for Frequency {
     }
 }
 
-/*
 /// Timing configurations for PWM
 pub mod pwm {
-    use super::{pac::pwm1, Divider, Frequency, IPGFrequency};
+    use super::{ral::pwm, Divider, Frequency, IPGFrequency};
 
     /// PWM submodule clock selection
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     #[non_exhaustive] // not all variants are added
     pub enum ClockSelect {
         /// IPG clock frequency, available via `set_arm_clock`
@@ -351,11 +490,31 @@ pub mod pwm {
     }
 
     /// PWM prescalar
-    pub type Prescalar = pwm1::sm::smctrl::PRSC_A;
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(u16)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    pub enum Prescalar {
+        /// 0b000: PWM clock frequency = fclk
+        PRSC_0 = pwm::SMCTRL0::PRSC::RW::PRSC_0,
+        /// 0b001: PWM clock frequency = fclk/2
+        PRSC_1 = pwm::SMCTRL0::PRSC::RW::PRSC_1,
+        /// 0b010: PWM clock frequency = fclk/4
+        PRSC_2 = pwm::SMCTRL0::PRSC::RW::PRSC_2,
+        /// 0b011: PWM clock frequency = fclk/8
+        PRSC_3 = pwm::SMCTRL0::PRSC::RW::PRSC_3,
+        /// 0b100: PWM clock frequency = fclk/16
+        PRSC_4 = pwm::SMCTRL0::PRSC::RW::PRSC_4,
+        /// 0b101: PWM clock frequency = fclk/32
+        PRSC_5 = pwm::SMCTRL0::PRSC::RW::PRSC_5,
+        /// 0b110: PWM clock frequency = fclk/64
+        PRSC_6 = pwm::SMCTRL0::PRSC::RW::PRSC_6,
+        /// 0b111: PWM clock frequency = fclk/128
+        PRSC_7 = pwm::SMCTRL0::PRSC::RW::PRSC_7,
+    }
 
     impl From<Prescalar> for Divider {
         fn from(pre: Prescalar) -> Divider {
-            Divider(1u32 << u8::from(pre))
+            Divider(1u32 << (pre as u16))
         }
     }
 
@@ -366,16 +525,7 @@ pub mod pwm {
             }
         }
     }
-
-    impl From<ClockSelect> for pwm1::sm::smctrl2::CLK_SEL_A {
-        fn from(clksel: ClockSelect) -> Self {
-            match clksel {
-                ClockSelect::IPG(_) => pwm1::sm::smctrl2::CLK_SEL_A::CLK_SEL_0,
-            }
-        }
-    }
 }
-*/
 
 /// Timing configurations for I2C peripherals
 pub mod i2c {
@@ -701,5 +851,76 @@ pub mod uart {
             sbr: u16::try_from(best_sbr).map_err(|_| TimingsError::OutOfRange)?,
             both_edge: best_osr < 8,
         })
+    }
+}
+
+/// Timing configurations for SPI peripherals
+pub mod spi {
+    use super::{ral::ccm, Divider, Frequency};
+
+    #[derive(Clone, Copy)]
+    #[non_exhaustive] // Not all variants added
+    pub enum ClockSelect {
+        Pll2,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[allow(non_camel_case_types)] // Easier mapping if the names are consistent
+    #[repr(u32)]
+    pub enum PrescalarSelect {
+        /// 0b0000: divide by 1
+        LPSPI_PODF_0 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_0,
+        /// 0b0001: divide by 2
+        LPSPI_PODF_1 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_1,
+        /// 0b0010: divide by 3
+        LPSPI_PODF_2 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_2,
+        /// 0b0011: divide by 4
+        LPSPI_PODF_3 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_3,
+        /// 0b0100: divide by 5
+        LPSPI_PODF_4 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_4,
+        /// 0b0101: divide by 6
+        LPSPI_PODF_5 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_5,
+        /// 0b0110: divide by 7
+        LPSPI_PODF_6 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_6,
+        /// 0b0111: divide by 8
+        LPSPI_PODF_7 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_7,
+        /// 0b1000: divide by 9
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_8 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_8,
+        /// 0b1001: divide by 10
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_9 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_9,
+        /// 0b1010: divide by 11
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_10 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_10,
+        /// 0b1011: divide by 12
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_11 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_11,
+        /// 0b1100: divide by 13
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_12 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_12,
+        /// 0b1101: divide by 14
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_13 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_13,
+        /// 0b1110: divide by 15
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_14 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_14,
+        /// 0b1111: divide by 16
+        #[cfg(features = "imxrt1011")]
+        LPSPI_PODF_15 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_15,
+    }
+
+    impl From<ClockSelect> for Frequency {
+        fn from(clock_select: ClockSelect) -> Self {
+            match clock_select {
+                ClockSelect::Pll2 => Frequency(528_000_000),
+            }
+        }
+    }
+
+    impl From<PrescalarSelect> for Divider {
+        fn from(prescalar_select: PrescalarSelect) -> Self {
+            Divider((prescalar_select as u32) + 1)
+        }
     }
 }

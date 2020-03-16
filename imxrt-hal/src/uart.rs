@@ -330,7 +330,6 @@ where
     }
 
     fn while_disabled<F: FnMut(&mut Self) -> R, R>(&mut self, mut act: F) -> R {
-        let mut was_enabled = false;
         ral::modify_reg!(
             ral::lpuart,
             self.reg,

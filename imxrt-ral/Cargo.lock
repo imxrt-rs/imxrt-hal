@@ -80,6 +80,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "imxrt-hal"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "cortex-m",
+ "embedded-hal",
+ "imxrt-ral",
+ "log",
+ "nb",
+ "void",
+]
+
+[[package]]
 name = "imxrt-ral"
 version = "0.1.0"
 dependencies = [

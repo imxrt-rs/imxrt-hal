@@ -1,114 +1,439 @@
 //! Pulse Width Modulation (PWM)
 //!
-//! The PWM module provides abstractions for using
-//! the iMXRT1062's PWM capabilities. It relies on
-//! a user mutliplexing appropriate pins from.
-//! IOMUXC. It also relies on some of the timing
-//! functionality available in the CCM. See those
-//! modules for details.
+//! Provides an implementation of `embedded_hal::Pwm` for iMXRT PWM
+//! submodules. The flow follows
 //!
-//! # Usage
-//!
-//! In the list below, we describe the typical usage of
-//! the PWM abstractions. For example code, please consult
-//! the examples in the `teensy4-examples` crate.
-//!
-//! 1. The system starts up with unclocked PWM controllers,
-//! represented as `UnclockedController`. Enable clocking
-//! to the controller by providing the CCM's handle. This
-//! returns a `Controller` type that can be used to allocate
-//! PWM pins. The example below shows how to enable clocks for the PWM2
-//! module.
-//!
-//! 2. Obtain PWM pin pairs by providing processor pads to
-//! the PWM controller. As of this writing, we only provide output
-//! PWM pins, and complementary PWM pins (PWM23 and PWM45 in processor
-//! parlance) are not implemented. Use `output()` to transform PWM pins
-//! into output PWM pairs, then use `split()` to make the pins independent
-//! instances. It's at this stage that we specify the PWM driving period
-//! (frequency), the prescalar, and the clock selection. We may only
-//! select the IPG clock; new variants will be added as necessary.
-//!
-//! 3. The two `PWM` instances returned from `split()` implement the
-//! `embedded_hal::PwmPin` trait, and they may be used to control
-//! duty cycles.
-
-use core::marker::PhantomData;
+//! - Enable clocks to the selected PWM peripheral by calling `clock()` on
+//!   an `Unclocked` struct. The return is a `PWM` type that provides a register
+//!   handle and PWM submodules
+//! - Turn submodules into `Pins` by supplying two processor pins to `output`. The
+//!   return is a `Pins` struct that wraps the two pins. The `Pins` struct are inert;
+//!   they're simply a handle that can provide PWM control. Call `control()` and pass
+//!   in a `Handle`, to acquire a `Controller`.
+//! - `Controller` implements `embedded_hal::Pwm`. It lets you set PWM duty cycles.
+//!   Once you're done setting duty cycles, drop the `Controller`.
 
 use crate::ccm;
 use crate::iomuxc::pwm::Pin;
 pub use crate::iomuxc::pwm::{module, output, submodule};
-use embedded_hal::PwmPin;
-use imxrt1062_pac as pac;
+use crate::ral::{self, pwm::Instance};
+use core::marker::PhantomData;
+use core::ops::DerefMut;
 
-/// A PWM module that is not receiving a clock input
+use embedded_hal::Pwm;
+
+/// PWM peripheral handle
 ///
-/// An `UnclockedController` transitions to a `Controller`
-/// by calling `clock()`.
-pub struct UnclockedController<M> {
-    _module: PhantomData<M>,
+/// Most operations that could affect multiple submodules require
+/// access to this handle.
+pub struct Handle<M> {
+    reg: Instance,
+    _marker: PhantomData<M>,
 }
 
-impl<M> UnclockedController<M>
+/// A PWM submodule
+///
+/// A submodule may be consumed to create PWM pin instances
+pub struct Submodule<M, S> {
+    _marker: PhantomData<(M, S)>,
+}
+
+/// A PWM peripheral
+///
+/// The PWM peripheral is broken into
+///
+/// - the PWM master handle, `handle`,
+/// - four submodules, numbered `0` through `3`.
+///
+/// The submodules are taken when you want to turn pins into
+/// PWM outputs. The handle provides access to registers that
+/// are shared across PWM submodules.
+pub struct PWM<M> {
+    /// The peripheral handle
+    ///
+    /// Methods that need access to peripheral-level registers, rather than
+    /// just submodule-level registers, must have a mutable reference to
+    /// the handle.
+    pub handle: Handle<M>,
+    /// Submodule 0
+    pub sm0: Submodule<M, submodule::_0>,
+    /// Submodule 1
+    pub sm1: Submodule<M, submodule::_1>,
+    /// Submodule 2
+    pub sm2: Submodule<M, submodule::_2>,
+    /// Submodule 3
+    pub sm3: Submodule<M, submodule::_3>,
+}
+
+impl<M> PWM<M>
 where
     M: module::Module,
 {
-    pub(crate) fn new() -> Self {
-        UnclockedController {
+    fn new(reg: Instance) -> Self {
+        // Clear any fault levels
+        ral::write_reg!(ral::pwm, reg, FCTRL0, FLVL: 0xF);
+        // Clear fault flags
+        ral::write_reg!(ral::pwm, reg, FSTS0, FFLAG: 0xF);
+        PWM {
+            handle: Handle {
+                reg,
+                _marker: PhantomData,
+            },
+            sm0: Submodule {
+                _marker: PhantomData::<(M, submodule::_0)>,
+            },
+            sm1: Submodule {
+                _marker: PhantomData::<(M, submodule::_1)>,
+            },
+            sm2: Submodule {
+                _marker: PhantomData::<(M, submodule::_2)>,
+            },
+            sm3: Submodule {
+                _marker: PhantomData::<(M, submodule::_3)>,
+            },
+        }
+    }
+}
+
+/// Executes `act` while the PWM peripheral is not loaded. Once the action completes, load any changes
+/// incured by the action. Useful for setting VAL registers.
+fn while_reset<M, S, F, R>(handle: &mut Handle<M>, act: F) -> R
+where
+    M: module::Module,
+    S: submodule::Submodule,
+    F: FnOnce(&mut Handle<M>) -> R,
+{
+    ral::modify_reg!(ral::pwm, handle.reg, MCTRL, CLDOK: 1 << <S as submodule::Submodule>::IDX);
+    let result = act(handle);
+    ral::modify_reg!(ral::pwm, handle.reg, MCTRL, LDOK: 1 << <S as submodule::Submodule>::IDX);
+    result
+}
+
+macro_rules! submodule_outputs {
+    ($SUBMODULE:path, $SMCTRL2:ident, $SMCTRL:ident, $SMOCTRL:ident, $SMDTCNT0:ident, $SMINIT: ident, $SMVAL0:ident, $SMVAL1:ident, $SMVAL2:ident, $SMVAL3:ident, $SMVAL4:ident, $SMVAL5:ident) => {
+        impl<M> Submodule<M, $SUBMODULE>
+        where
+            M: module::Module,
+        {
+            /// Converts two pins into PWM outputs. Returns a `Pins` type that wraps the
+            /// underlying pins.
+            ///
+            /// The input pins must support PWM functionality. They must match the module
+            /// that they're associated, and they must have the same submodule.
+            ///
+            /// Requires a mutable reference to a `Handle` in order to modify registers
+            /// that are shared across all PWM submodules.s
+            pub fn outputs<A, B>(
+                self,
+                handle: &mut Handle<M>,
+                pin_a: A,
+                pin_b: B,
+                timing: Timing,
+            ) -> Option<Pins<A, B>>
+            where
+                A: Pin<Module = M, Submodule = $SUBMODULE, Output = output::A>,
+                B: Pin<Module = M, Submodule = $SUBMODULE, Output = output::B>,
+            {
+                let clk_sel: u16 = match timing.clock_select {
+                    ccm::pwm::ClockSelect::IPG(_) => ral::pwm::SMCTRL20::CLK_SEL::RW::CLK_SEL_0 as u16,
+                };
+                while_reset::<M, $SUBMODULE, _, _>(handle, |handle| {
+                    // TODO some of these don't have flags in the SVD. May consider adding them.
+                    ral::write_reg!(ral::pwm, handle.reg, $SMCTRL2,
+                        WAITEN: 1u16,       // Run while in wait mode
+                        DBGEN: 1u16,        // Run while in debug mode
+                        INDEP: INDEP_1,     // Independent output, as opposed to complementary output
+                        CLK_SEL: clk_sel);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMCTRL, FULL: FULL_1, PRSC: (timing.prescalar as u16));
+                    ral::write_reg!(ral::pwm, handle.reg, $SMOCTRL, 0);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMDTCNT0, 0);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMINIT, 0);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMVAL0, 0);
+
+                    let ticks: u16 = ccm::ticks(
+                        timing.switching_period,
+                        ccm::Frequency::from(timing.clock_select).0,
+                        ccm::Divider::from(timing.prescalar).0,
+                    ).ok()?;
+
+                    ral::write_reg!(ral::pwm, handle.reg, $SMVAL1, ticks);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMVAL2, 0);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMVAL3, 0);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMVAL4, 0);
+                    ral::write_reg!(ral::pwm, handle.reg, $SMVAL5, 0);
+
+                    Some(())
+                })?;
+                ral::modify_reg!(ral::pwm, handle.reg, MCTRL, RUN: 1 << <$SUBMODULE as submodule::Submodule>::IDX);
+                Some(Pins::new(pin_a, pin_b, timing))
+            }
+        }
+    };
+}
+
+submodule_outputs!(
+    submodule::_0,
+    SMCTRL20,
+    SMCTRL0,
+    SMOCTRL0,
+    SMDTCNT00,
+    SMINIT0,
+    SMVAL00,
+    SMVAL10,
+    SMVAL20,
+    SMVAL30,
+    SMVAL40,
+    SMVAL50
+);
+submodule_outputs!(
+    submodule::_1,
+    SMCTRL21,
+    SMCTRL1,
+    SMOCTRL1,
+    SMDTCNT01,
+    SMINIT1,
+    SMVAL01,
+    SMVAL11,
+    SMVAL21,
+    SMVAL31,
+    SMVAL41,
+    SMVAL51
+);
+submodule_outputs!(
+    submodule::_2,
+    SMCTRL22,
+    SMCTRL2,
+    SMOCTRL2,
+    SMDTCNT02,
+    SMINIT2,
+    SMVAL02,
+    SMVAL12,
+    SMVAL22,
+    SMVAL32,
+    SMVAL42,
+    SMVAL52
+);
+submodule_outputs!(
+    submodule::_3,
+    SMCTRL23,
+    SMCTRL3,
+    SMOCTRL3,
+    SMDTCNT03,
+    SMINIT3,
+    SMVAL03,
+    SMVAL13,
+    SMVAL23,
+    SMVAL33,
+    SMVAL43,
+    SMVAL53
+);
+
+/// A pair of submodule PWM pins
+///
+/// When taken in a `Controller`, you may configure the PWM outputs
+pub struct Pins<A, B> {
+    _pin_a: A,
+    _pin_b: B,
+    timing: Timing,
+}
+
+impl<A, B> Pins<A, B>
+where
+    A: Pin<Output = output::A>,
+    B: Pin<Output = output::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
+{
+    fn new(pin_a: A, pin_b: B, timing: Timing) -> Self {
+        Pins {
+            _pin_a: pin_a,
+            _pin_b: pin_b,
+            timing,
+        }
+    }
+    /// Provides control of PWM pins
+    ///
+    /// Supply a type that provides mutable access to the PWM handle. The handle is required
+    /// to modify peripheral-wide registers for safe manipulation.
+    pub fn control<'a, D>(&'a mut self, handle: D) -> Controller<A, B, D, <A as Pin>::Submodule>
+    where
+        D: 'a + DerefMut<Target = Handle<<A as Pin>::Module>>,
+    {
+        Controller::new(self, handle)
+    }
+}
+
+/// A PWM pin channel
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Channel {
+    /// Channel A
+    A,
+    /// Channel B
+    B,
+}
+
+/// A PWM controller, which implements
+///
+/// The `Controller` enables you to set PWM duty cycles and switching periods.
+/// It requires mutable access to both the PWM handle and the PWM pins that you
+/// want to control. Once you've set your values, drop the controller. Pair the
+/// handle with another `Pair` to set those values.
+pub struct Controller<'a, A, B, D, S> {
+    pins: &'a mut Pins<A, B>,
+    handle: D,
+    _submodule: PhantomData<S>,
+}
+
+impl<'a, A, B, D, S> Controller<'a, A, B, D, S>
+where
+    A: Pin<Output = output::A>,
+    B: Pin<Output = output::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
+    D: 'a + DerefMut<Target = Handle<<A as Pin>::Module>>,
+    S: submodule::Submodule,
+{
+    const IDX: u16 = <<A as Pin>::Submodule as submodule::Submodule>::IDX as u16;
+    fn new(pins: &'a mut Pins<A, B>, handle: D) -> Self {
+        Self {
+            pins,
+            handle,
+            _submodule: PhantomData,
+        }
+    }
+}
+
+macro_rules! controller {
+    ($SUBMODULE: path, $SMVAL1: ident, $SMVAL3: ident, $SMVAL5: ident) => {
+        impl<'a, A, B, D> Pwm for Controller<'a, A, B, D, $SUBMODULE>
+        where
+            A: Pin<Output = output::A, Submodule = $SUBMODULE>,
+            B: Pin<
+                Output = output::B,
+                Module = <A as Pin>::Module,
+                Submodule = <A as Pin>::Submodule,
+            >,
+            D: 'a + DerefMut<Target = Handle<<A as Pin>::Module>>,
+        {
+            type Channel = Channel;
+            type Time = core::time::Duration;
+            type Duty = u16;
+
+            fn disable(&mut self, channel: Self::Channel) {
+                let channel_offset = match channel {
+                    Channel::A => 8,
+                    Channel::B => 4,
+                };
+                let offset = channel_offset + Self::IDX;
+                let outen: u16 = ral::read_reg!(ral::pwm, self.handle.reg, OUTEN);
+                ral::write_reg!(ral::pwm, self.handle.reg, OUTEN, outen & !(1u16 << offset));
+            }
+
+            fn enable(&mut self, channel: Self::Channel) {
+                let channel_offset = match channel {
+                    Channel::A => 8,
+                    Channel::B => 4,
+                };
+                let offset = channel_offset + Self::IDX;
+                let outen: u16 = ral::read_reg!(ral::pwm, self.handle.reg, OUTEN);
+                ral::write_reg!(ral::pwm, self.handle.reg, OUTEN, outen | (1u16 << offset));
+            }
+
+            fn get_duty(&self, channel: Self::Channel) -> Self::Duty {
+                let modulo: u32 = ral::read_reg!(ral::pwm, self.handle.reg, $SMVAL1) as u32;
+                let cval: u32 = match channel {
+                    Channel::A => ral::read_reg!(ral::pwm, self.handle.reg, $SMVAL3) as u32,
+                    Channel::B => ral::read_reg!(ral::pwm, self.handle.reg, $SMVAL5) as u32,
+                };
+                ((cval << 16) / (modulo + 1)) as u16
+            }
+
+            fn get_period(&self) -> Self::Time {
+                self.pins.timing.switching_period
+            }
+
+            fn get_max_duty(&self) -> Self::Duty {
+                u16::max_value()
+            }
+
+            fn set_duty(&mut self, channel: Self::Channel, duty: Self::Duty) {
+                while_reset::<<A as Pin>::Module, <A as Pin>::Submodule, _, _>(
+                    &mut self.handle,
+                    |handle| {
+                        let modulo: u32 = ral::read_reg!(ral::pwm, handle.reg, $SMVAL1) as u32;
+                        let cval: u32 = ((duty as u32) * (modulo + 1)) >> 16;
+                        let cval = if cval > modulo {
+                            modulo as u16
+                        } else {
+                            cval as u16
+                        };
+                        match channel {
+                            Channel::A => ral::write_reg!(ral::pwm, handle.reg, $SMVAL3, cval),
+                            Channel::B => ral::write_reg!(ral::pwm, handle.reg, $SMVAL5, cval),
+                        }
+                    },
+                );
+            }
+
+            fn set_period<P: Into<Self::Time>>(&mut self, period: P) {
+                let period = period.into();
+                if let Ok(ticks) = ccm::ticks(
+                    period,
+                    ccm::Frequency::from(self.pins.timing.clock_select).0,
+                    ccm::Divider::from(self.pins.timing.prescalar).0,
+                ) {
+                    self.pins.timing.switching_period = period;
+                    while_reset::<<A as Pin>::Module, <A as Pin>::Submodule, _, _>(
+                        &mut self.handle,
+                        |handle| {
+                            ral::write_reg!(ral::pwm, handle.reg, $SMVAL1, ticks);
+                        },
+                    );
+                }
+            }
+        }
+    };
+}
+
+controller!(submodule::_0, SMVAL10, SMVAL30, SMVAL50);
+controller!(submodule::_1, SMVAL11, SMVAL31, SMVAL51);
+controller!(submodule::_2, SMVAL12, SMVAL32, SMVAL52);
+controller!(submodule::_3, SMVAL13, SMVAL33, SMVAL53);
+
+/// A PWM peripheral that is not receiving a clock input
+///
+/// You may access the PWM components by using the `clock()` method.
+pub struct Unclocked<M> {
+    reg: Instance,
+    _module: PhantomData<M>,
+}
+
+impl<M> Unclocked<M>
+where
+    M: module::Module,
+{
+    pub(crate) fn new(reg: Instance) -> Self {
+        Unclocked {
+            reg,
             _module: PhantomData,
         }
     }
 }
 
 macro_rules! clock_impl {
-    ($module:path, $cg:ident, $pwm:ty) => {
-        impl UnclockedController<$module> {
-            /// Enable the input clock for this PWM module. Returns a PWM `Controller`
+    ($module:path, $cg:ident) => {
+        impl Unclocked<$module> {
+            /// Enable the input clock for this PWM module. Returns a `PWM` instance
             /// that can allocated PWM outputs.
-            pub fn clock(self, handle: &mut ccm::Handle) -> Controller<$module> {
+            pub fn clock(self, handle: &mut ccm::Handle) -> PWM<$module> {
                 let (ccm, _) = handle.raw();
-                // Safety: field is 2 bits
-                ccm.ccgr4.modify(|_, w| unsafe { w.$cg().bits(0x3) });
-                Controller::new(<$pwm>::ptr())
+                ral::modify_reg!(ral::ccm, ccm, CCGR4, $cg: 0x3);
+                PWM::new(self.reg)
             }
         }
     };
 }
 
-clock_impl!(module::_1, cg8, pac::PWM1);
-clock_impl!(module::_2, cg9, pac::PWM2);
-clock_impl!(module::_3, cg10, pac::PWM3);
-clock_impl!(module::_4, cg11, pac::PWM4);
-
-#[derive(Clone, Copy)]
-struct Reg(&'static pac::pwm1::RegisterBlock);
-impl core::ops::Deref for Reg {
-    type Target = pac::pwm1::RegisterBlock;
-
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
-}
-
-impl Reg {
-    fn reset_ok<S, F, R>(&mut self, mut act: F) -> R
-    where
-        F: FnMut(&pac::pwm1::SM) -> R,
-        S: submodule::Submodule,
-    {
-        let idx: usize = <S as submodule::Submodule>::IDX;
-        self.0.mctrl.modify(|_, w| unsafe {
-            // Safety, cldok is 4 bits, idx is bound [0, 4)
-            w.cldok().bits(1 << idx)
-        });
-        let ret = act(<S as submodule::Submodule>::submodule(self.0));
-        self.0.mctrl.modify(|_, w| unsafe {
-            // Safety: ldok is 4 bits, idx is bound [0, 4)
-            w.ldok().bits(1 << idx)
-        });
-        ret
-    }
-}
+clock_impl!(module::_1, CG8);
+clock_impl!(module::_2, CG9);
+clock_impl!(module::_3, CG10);
+clock_impl!(module::_4, CG11);
 
 /// Specifies the timing-related parameters for a PWM submodule
 #[derive(Clone, Copy)]
@@ -119,269 +444,4 @@ pub struct Timing {
     pub prescalar: ccm::pwm::Prescalar,
     /// The driving (switching) frequency, expressed as a period
     pub switching_period: core::time::Duration,
-}
-
-/// A PWM controller
-///
-/// There's one PWM controller per module. The controller allows a user
-/// to allocated PWM outputs. It allows a user to perform module-level
-/// configurations.
-pub struct Controller<M> {
-    reg: Reg,
-    _module: PhantomData<M>,
-}
-
-impl<M> Controller<M>
-where
-    M: module::Module,
-{
-    fn new(reg: *const pac::pwm1::RegisterBlock) -> Self {
-        let pwm = Controller {
-            // Safety: pointer points to static memory
-            reg: unsafe { Reg(&(*reg)) },
-            _module: PhantomData,
-        };
-
-        pwm.reg.fctrl0.write_with_zero(|w| unsafe {
-            // Safety: flvl is four bits
-            w.flvl().bits(0xF)
-        });
-        pwm.reg.fsts0.write_with_zero(|w| unsafe {
-            // Safety: fflag is four bits
-            w.fflag().bits(0xF)
-        });
-
-        pwm
-    }
-
-    /// Allocates a `Pair` of complementary PWM output pins containing pins `A` and `B`.
-    ///
-    /// `pin_a` and `pin_b` may be obtained from the IOMUXC. Pins may need
-    /// to be set to a certain alternative in order to be passed into the
-    /// `outputs` method. The two pins must be associated with this controller's
-    /// module, and the submodules of each pin must match.
-    ///
-    /// Specify the timings for the PWM module / submodule with the `Timing`
-    /// parameter. If the provided timings cannot define a representable
-    /// driving frequency, `outputs` returns an error.
-    pub fn outputs<A, B>(
-        &mut self,
-        pin_a: A,
-        pin_b: B,
-        timing: Timing,
-    ) -> Result<Pairs<M, <A as Pin>::Submodule>, ccm::TicksError>
-    where
-        A: Pin<Module = M, Output = output::A>,
-        B: Pin<Module = M, Output = output::B, Submodule = <A as Pin>::Submodule>,
-    {
-        let idx = <<A as Pin>::Submodule as submodule::Submodule>::IDX;
-        self.reg.reset_ok::<<A as Pin>::Submodule, _, _>(|sm| {
-            sm.smctrl2.write(|w| {
-                w.waiten()
-                    .set_bit()
-                    .dbgen()
-                    .set_bit()
-                    .clk_sel()
-                    .variant(timing.clock_select.into())
-            });
-            sm.smctrl
-                .write(|w| w.full().set_bit().prsc().variant(timing.prescalar));
-
-            sm.smoctrl.write_with_zero(|w| w);
-            sm.smdtcnt0.write_with_zero(|w| w);
-
-            sm.sminit.write_with_zero(|w| w);
-            sm.smval0.reset();
-            let ticks: ccm::Ticks<u16> = ccm::ticks(
-                timing.switching_period,
-                timing.clock_select.into(),
-                timing.prescalar.into(),
-            )?;
-            sm.smval1.write(|w| unsafe {
-                // Safety: val1 is 16 bits
-                w.val1().bits(ticks.0)
-            });
-            sm.smval2.reset();
-            sm.smval3.reset();
-            sm.smval4.reset();
-            sm.smval5.reset();
-            Ok(())
-        })?;
-        self.reg.mctrl.modify(|r, w| unsafe {
-            let mask = (1 << idx) & 0xF;
-            // Safety: four bits
-            w.run().bits(mask | r.run().bits())
-        });
-        Ok(Pairs::new(self.reg, pin_a, pin_b))
-    }
-}
-
-/// PWM complementary pairs
-///
-/// The struct doesn't have value right now. Use `split()` to turn
-/// the two pins into independent PWM outputs.
-pub struct Pairs<M, S> {
-    pin_a: PWM<M, S, output::A>,
-    pin_b: PWM<M, S, output::B>,
-}
-
-impl<M, S> Pairs<M, S>
-where
-    M: module::Module,
-    S: submodule::Submodule,
-{
-    fn new<A, B>(reg: Reg, pin_a: A, pin_b: B) -> Self
-    where
-        A: Pin<Module = M, Submodule = S, Output = output::A>,
-        B: Pin<Module = M, Submodule = S, Output = output::B>,
-    {
-        Pairs {
-            pin_a: PWM::new(reg, pin_a),
-            pin_b: PWM::new(reg, pin_b),
-        }
-    }
-
-    /// Consumes the complementary pairs, and sets the two PWM outputs for
-    /// use as independent outputs.
-    pub fn split(mut self) -> (PWM<M, S, output::A>, PWM<M, S, output::B>) {
-        self.pin_a.reg.reset_ok::<S, _, ()>(|sm| {
-            sm.smctrl2.modify(|_, w| w.indep().set_bit());
-        });
-        (self.pin_a, self.pin_b)
-    }
-}
-
-/// A PWM output instance. It has a module, submodule, and output type.
-///
-/// Implements the `embedded_hal::PwmPin` interface.
-pub struct PWM<M, S, O> {
-    reg: Reg,
-    _module: PhantomData<M>,
-    _submodule: PhantomData<S>,
-    _output: PhantomData<O>,
-}
-
-impl<M, S, O> PWM<M, S, O>
-where
-    M: module::Module,
-    S: submodule::Submodule,
-    O: output::Output,
-{
-    fn new<P>(reg: Reg, _pin: P) -> Self
-    where
-        P: Pin<Module = M, Submodule = S, Output = O>,
-    {
-        PWM {
-            reg,
-            _module: PhantomData,
-            _submodule: PhantomData,
-            _output: PhantomData,
-        }
-    }
-}
-
-impl<M, S> PwmPin for PWM<M, S, output::A>
-where
-    M: module::Module,
-    S: submodule::Submodule,
-{
-    type Duty = u16;
-
-    fn disable(&mut self) {
-        self.reg.outen.modify(|r, w| unsafe {
-            let idx = <S as submodule::Submodule>::IDX;
-            let mask = !(1 << idx) & 0xF;
-            // Safety: each bits() is 4 bits
-            w.pwma_en().bits(mask & r.pwma_en().bits())
-        });
-    }
-
-    fn enable(&mut self) {
-        self.reg.outen.modify(|r, w| unsafe {
-            let idx = <S as submodule::Submodule>::IDX;
-            let mask = (1 << idx) & 0xF;
-            // Safety: each bits() is 4 bits
-            w.pwma_en().bits(mask | r.pwma_en().bits())
-        });
-    }
-
-    fn get_duty(&self) -> Self::Duty {
-        let sm = <S as submodule::Submodule>::submodule(self.reg.0);
-        let modulo: u32 = sm.smval1.read().bits() as u32;
-        let cval: u32 = sm.smval3.read().bits() as u32;
-        ((cval << 16) / (modulo + 1)) as u16
-    }
-
-    fn get_max_duty(&self) -> Self::Duty {
-        core::u16::MAX
-    }
-
-    fn set_duty(&mut self, duty: Self::Duty) {
-        self.reg.reset_ok::<S, _, ()>(|sm| {
-            let modulo: u32 = sm.smval1.read().bits() as u32;
-            let cval = ((duty as u32) * (modulo + 1)) >> 16;
-            let cval = if cval > modulo {
-                modulo as u16
-            } else {
-                cval as u16
-            };
-            sm.smval3.write(|w| unsafe {
-                // Safety: val3 is 16 bits
-                w.val3().bits(cval)
-            });
-        });
-    }
-}
-
-impl<M, S> PwmPin for PWM<M, S, output::B>
-where
-    M: module::Module,
-    S: submodule::Submodule,
-{
-    type Duty = u16;
-
-    fn disable(&mut self) {
-        self.reg.outen.modify(|r, w| unsafe {
-            let idx = <S as submodule::Submodule>::IDX;
-            let mask = !(1 << idx) & 0xF;
-            // Safety: each bits() is 4 bits
-            w.pwmb_en().bits(mask & r.pwmb_en().bits())
-        });
-    }
-
-    fn enable(&mut self) {
-        self.reg.outen.modify(|r, w| unsafe {
-            let idx = <S as submodule::Submodule>::IDX;
-            let mask = (1 << idx) & 0xF;
-            // Safety: each bits() is 4 bits
-            w.pwmb_en().bits(mask | r.pwmb_en().bits())
-        });
-    }
-
-    fn get_duty(&self) -> Self::Duty {
-        let sm = <S as submodule::Submodule>::submodule(self.reg.0);
-        let modulo: u32 = sm.smval1.read().bits() as u32;
-        let cval: u32 = sm.smval5.read().bits() as u32;
-        ((cval << 16) / (modulo + 1)) as u16
-    }
-
-    fn get_max_duty(&self) -> Self::Duty {
-        core::u16::MAX
-    }
-
-    fn set_duty(&mut self, duty: Self::Duty) {
-        self.reg.reset_ok::<S, _, ()>(|sm| {
-            let modulo: u32 = sm.smval1.read().bits() as u32;
-            let cval = ((duty as u32) * (modulo + 1)) >> 16;
-            let cval = if cval > modulo {
-                modulo as u16
-            } else {
-                cval as u16
-            };
-            sm.smval5.write(|w| unsafe {
-                // Safety: val5 is 16 bits
-                w.val5().bits(cval)
-            });
-        });
-    }
 }

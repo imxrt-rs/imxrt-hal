@@ -8,7 +8,8 @@ mod macros;
 
 pub mod gpio;
 pub mod i2c;
-//pub mod pwm;
+pub mod pwm;
+pub mod spi;
 pub mod uart;
 
 // IOMUXC section of docs originally state that there are up to 8
@@ -36,9 +37,6 @@ pub struct Alt8;
 pub struct Alt9;
 
 pub struct IOMUXC {
-    // private keep this instance so it is taken
-    iomuxc: crate::ral::iomuxc::Instance,
-
     //
     // GPIO_B0
     //
@@ -96,11 +94,14 @@ pub struct IOMUXC {
 }
 
 impl IOMUXC {
-    pub(crate) fn new(iomuxc: crate::ral::iomuxc::Instance) -> Self {
+    pub(crate) fn new(_: crate::ral::iomuxc::Instance) -> Self {
+        // Intentionally dropping the IOMUXC instance. Once it's dropped,
+        // it's not un-taken. So, the user will believe that we own it,
+        // and we don't need to carry it around. The user may still access it
+        // unsafely, but that's on them.
+        //
+        // (Instances never implement Drop)
         Self {
-            // Take the instance so no other code may
-            iomuxc: iomuxc,
-
             //
             // GPIO_B0
             //
