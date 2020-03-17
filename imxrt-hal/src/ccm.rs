@@ -250,7 +250,13 @@ pub mod perclk {
         }
 
         pub fn configure(self, handle: &mut Handle, podf: PODF, clksel: CLKSEL) -> Configured {
-            modify_reg!(ral::ccm, handle.base, CSCMR1, PERCLK_CLK_SEL: clksel.to_perclk_clk_sel());
+            modify_reg!(
+                ral::ccm,
+                handle.base,
+                CSCMR1,
+                PERCLK_CLK_SEL: clksel.to_perclk_clk_sel(),
+                PERCLK_PODF: (podf as u32)
+            );
             Configured {
                 handle,
                 divider: Divider::from(podf),
@@ -273,12 +279,6 @@ pub mod perclk {
                 CLKSEL::OSC => OSCILLATOR_FREQUENCY,
                 CLKSEL::IPG(ipg_freq) => ipg_freq.0,
             }
-        }
-    }
-
-    impl From<u8> for Divider {
-        fn from(podf: u8) -> Divider {
-            Divider((podf + 1) as u32)
         }
     }
 }
