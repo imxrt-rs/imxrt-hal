@@ -8,6 +8,7 @@ mod macros;
 
 pub mod gpio;
 pub mod i2c;
+pub mod pin_config;
 pub mod pwm;
 pub mod spi;
 pub mod uart;
