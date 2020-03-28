@@ -3,6 +3,7 @@ name: All Checks
 on: [push, pull_request]
 
 jobs:
+
   build-ral:
     runs-on: ubuntu-latest
     strategy:
@@ -29,3 +30,28 @@ jobs:
       run: cd imxrt-ral && cargo build --verbose --features ${{ matrix.feature }}
     - name: Run tests (${{ matrix.feature }})
       run: cd imxrt-ral && cargo test --verbose --features ${{ matrix.feature }}
+
+  clippy_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            components: clippy
+            override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: rustup component add rustfmt
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
