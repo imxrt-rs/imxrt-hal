@@ -38,6 +38,7 @@ CRATE_LIB_PREAMBLE = """\
 //! for example usage.
 
 #![no_std]
+#![allow(clippy::all)]
 
 mod register;
 
