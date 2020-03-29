@@ -162,9 +162,9 @@ impl ClockSpeed {
             let error = cmp::max(computed_rate, baud_rate) - cmp::min(computed_rate, baud_rate);
             ByError {
                 prescalar: divider.saturating_sub(1).count_ones(),
-                clkhi: clkhi, /* (1..32) in u8 range */
-                error: error,
-                computed_rate: computed_rate,
+                clkhi, /* (1..32) in u8 range */
+                error,
+                computed_rate,
             }
         });
 
