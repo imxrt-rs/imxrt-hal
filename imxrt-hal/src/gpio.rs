@@ -20,47 +20,47 @@ pub trait IntoGpio {
 
 #[doc(hidden)]
 pub trait IntoRegister {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock;
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock;
 }
 
 impl IntoRegister for GPIO1 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO1
     }
 }
 
 impl IntoRegister for GPIO2 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO2
     }
 }
 
 impl IntoRegister for GPIO3 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO3
     }
 }
 
 impl IntoRegister for GPIO4 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO4
     }
 }
 
 impl IntoRegister for GPIO5 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO5
     }
 }
 
 impl IntoRegister for GPIO6 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO6
     }
 }
 
 impl IntoRegister for GPIO7 {
-    unsafe fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
+    fn into_reg() -> *const crate::ral::gpio::RegisterBlock {
         crate::ral::gpio::GPIO7
     }
 }

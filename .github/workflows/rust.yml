@@ -59,3 +59,5 @@ jobs:
       run: cd imxrt-hal && cargo test --verbose --features ${{ matrix.feature }}
     - name: Check format (${{ matrix.feature }}) for HAL
       run: cd imxrt-hal && cargo fmt --all -- --check
+    - name: Run clippy (${{ matrix.feature }}) for HAL
+      run: cd imxrt-hal && cargo clippy --features ${{ matrix.feature }} -- -D warnings
