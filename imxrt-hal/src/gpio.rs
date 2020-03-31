@@ -236,7 +236,18 @@ ios! {
     17, GPIO1IO17: [GPIO1, gpio17, crate::iomuxc::gpio::GPIO_AD_B1_01<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
     18, GPIO1IO18: [GPIO1, gpio18, crate::iomuxc::gpio::GPIO_AD_B1_02<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
     19, GPIO1IO19: [GPIO1, gpio19, crate::iomuxc::gpio::GPIO_AD_B1_03<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
-    // TODO: more from this bank? Missing 20..=31
+    20, GPIO1IO20: [GPIO1, gpio20, crate::iomuxc::gpio::GPIO_AD_B1_04<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    21, GPIO1IO21: [GPIO1, gpio21, crate::iomuxc::gpio::GPIO_AD_B1_05<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    22, GPIO1IO22: [GPIO1, gpio22, crate::iomuxc::gpio::GPIO_AD_B1_06<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    23, GPIO1IO23: [GPIO1, gpio23, crate::iomuxc::gpio::GPIO_AD_B1_07<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    24, GPIO1IO24: [GPIO1, gpio24, crate::iomuxc::gpio::GPIO_AD_B1_08<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    25, GPIO1IO25: [GPIO1, gpio25, crate::iomuxc::gpio::GPIO_AD_B1_09<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    26, GPIO1IO26: [GPIO1, gpio26, crate::iomuxc::gpio::GPIO_AD_B1_10<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    27, GPIO1IO27: [GPIO1, gpio27, crate::iomuxc::gpio::GPIO_AD_B1_11<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    28, GPIO1IO28: [GPIO1, gpio28, crate::iomuxc::gpio::GPIO_AD_B1_12<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    29, GPIO1IO29: [GPIO1, gpio29, crate::iomuxc::gpio::GPIO_AD_B1_13<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    30, GPIO1IO30: [GPIO1, gpio30, crate::iomuxc::gpio::GPIO_AD_B1_14<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
+    31, GPIO1IO31: [GPIO1, gpio31, crate::iomuxc::gpio::GPIO_AD_B1_15<crate::iomuxc::Alt5>, FAST: (GPIO6, gpr26)],
 }
 
 // Bank 2

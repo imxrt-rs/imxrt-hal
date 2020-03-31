@@ -47,11 +47,13 @@ pub struct IOMUXC {
     pub gpio_b0_03: gpio::GPIO_B0_03<Alt5>,
     pub gpio_b0_10: gpio::GPIO_B0_10<Alt5>,
     pub gpio_b0_11: gpio::GPIO_B0_11<Alt5>,
+
     //
     // GPIO_B1
     //
     pub gpio_b1_00: gpio::GPIO_B1_00<Alt5>,
     pub gpio_b1_01: gpio::GPIO_B1_01<Alt5>,
+
     //
     // GPIO_AD_B0
     //
@@ -59,8 +61,23 @@ pub struct IOMUXC {
     pub gpio_ad_b0_01: gpio::GPIO_AD_B0_01<Alt5>,
     pub gpio_ad_b0_02: gpio::GPIO_AD_B0_02<Alt5>,
     pub gpio_ad_b0_03: gpio::GPIO_AD_B0_03<Alt5>,
+
+    // Note that these pads default to Alt0 rather than Alt5
+    // as described in the reference manual in section 11.7
+    pub gpio_ad_b0_04: gpio::GPIO_AD_B0_04<Alt0>,
+    pub gpio_ad_b0_05: gpio::GPIO_AD_B0_05<Alt0>,
+    pub gpio_ad_b0_06: gpio::GPIO_AD_B0_06<Alt0>,
+    pub gpio_ad_b0_07: gpio::GPIO_AD_B0_07<Alt0>,
+    pub gpio_ad_b0_08: gpio::GPIO_AD_B0_08<Alt0>,
+    pub gpio_ad_b0_09: gpio::GPIO_AD_B0_09<Alt0>,
+    pub gpio_ad_b0_10: gpio::GPIO_AD_B0_10<Alt0>,
+    pub gpio_ad_b0_11: gpio::GPIO_AD_B0_11<Alt0>,
+
     pub gpio_ad_b0_12: gpio::GPIO_AD_B0_12<Alt5>,
     pub gpio_ad_b0_13: gpio::GPIO_AD_B0_13<Alt5>,
+    pub gpio_ad_b0_14: gpio::GPIO_AD_B0_14<Alt5>,
+    pub gpio_ad_b0_15: gpio::GPIO_AD_B0_15<Alt5>,
+
     //
     // GPIO_AD_B1
     //
@@ -68,17 +85,27 @@ pub struct IOMUXC {
     pub gpio_ad_b1_01: gpio::GPIO_AD_B1_01<Alt5>,
     pub gpio_ad_b1_02: gpio::GPIO_AD_B1_02<Alt5>,
     pub gpio_ad_b1_03: gpio::GPIO_AD_B1_03<Alt5>,
+    pub gpio_ad_b1_04: gpio::GPIO_AD_B1_04<Alt5>,
+    pub gpio_ad_b1_05: gpio::GPIO_AD_B1_05<Alt5>,
     pub gpio_ad_b1_06: gpio::GPIO_AD_B1_06<Alt5>,
     pub gpio_ad_b1_07: gpio::GPIO_AD_B1_07<Alt5>,
     pub gpio_ad_b1_08: gpio::GPIO_AD_B1_08<Alt5>,
     pub gpio_ad_b1_09: gpio::GPIO_AD_B1_09<Alt5>,
     pub gpio_ad_b1_10: gpio::GPIO_AD_B1_10<Alt5>,
     pub gpio_ad_b1_11: gpio::GPIO_AD_B1_11<Alt5>,
+    pub gpio_ad_b1_12: gpio::GPIO_AD_B1_12<Alt5>,
+    pub gpio_ad_b1_13: gpio::GPIO_AD_B1_13<Alt5>,
+    pub gpio_ad_b1_14: gpio::GPIO_AD_B1_14<Alt5>,
+    pub gpio_ad_b1_15: gpio::GPIO_AD_B1_15<Alt5>,
+
     //
     // GPIO_SD_B0
     //
     pub gpio_sd_b0_00: gpio::GPIO_SD_B0_00<Alt5>,
     pub gpio_sd_b0_01: gpio::GPIO_SD_B0_01<Alt5>,
+    pub gpio_sd_b0_02: gpio::GPIO_SD_B0_02<Alt5>,
+    pub gpio_sd_b0_03: gpio::GPIO_SD_B0_03<Alt5>,
+
     //
     // GPIO_EMC
     //
@@ -112,11 +139,13 @@ impl IOMUXC {
             gpio_b0_03: gpio::GPIO_B0_03::new(),
             gpio_b0_10: gpio::GPIO_B0_10::new(),
             gpio_b0_11: gpio::GPIO_B0_11::new(),
+
             //
             // GPIO_B1
             //
             gpio_b1_00: gpio::GPIO_B1_00::new(),
             gpio_b1_01: gpio::GPIO_B1_01::new(),
+
             //
             // GPIO_AD_B0
             //
@@ -124,8 +153,19 @@ impl IOMUXC {
             gpio_ad_b0_01: gpio::GPIO_AD_B0_01::new(),
             gpio_ad_b0_02: gpio::GPIO_AD_B0_02::new(),
             gpio_ad_b0_03: gpio::GPIO_AD_B0_03::new(),
+            gpio_ad_b0_04: gpio::GPIO_AD_B0_04::new(),
+            gpio_ad_b0_05: gpio::GPIO_AD_B0_05::new(),
+            gpio_ad_b0_06: gpio::GPIO_AD_B0_06::new(),
+            gpio_ad_b0_07: gpio::GPIO_AD_B0_07::new(),
+            gpio_ad_b0_08: gpio::GPIO_AD_B0_08::new(),
+            gpio_ad_b0_09: gpio::GPIO_AD_B0_09::new(),
+            gpio_ad_b0_10: gpio::GPIO_AD_B0_10::new(),
+            gpio_ad_b0_11: gpio::GPIO_AD_B0_11::new(),
             gpio_ad_b0_12: gpio::GPIO_AD_B0_12::new(),
             gpio_ad_b0_13: gpio::GPIO_AD_B0_13::new(),
+            gpio_ad_b0_14: gpio::GPIO_AD_B0_14::new(),
+            gpio_ad_b0_15: gpio::GPIO_AD_B0_15::new(),
+
             //
             // GPIO_AD_B1
             //
@@ -133,17 +173,27 @@ impl IOMUXC {
             gpio_ad_b1_01: gpio::GPIO_AD_B1_01::new(),
             gpio_ad_b1_02: gpio::GPIO_AD_B1_02::new(),
             gpio_ad_b1_03: gpio::GPIO_AD_B1_03::new(),
+            gpio_ad_b1_04: gpio::GPIO_AD_B1_04::new(),
+            gpio_ad_b1_05: gpio::GPIO_AD_B1_05::new(),
             gpio_ad_b1_06: gpio::GPIO_AD_B1_06::new(),
             gpio_ad_b1_07: gpio::GPIO_AD_B1_07::new(),
             gpio_ad_b1_08: gpio::GPIO_AD_B1_08::new(),
             gpio_ad_b1_09: gpio::GPIO_AD_B1_09::new(),
             gpio_ad_b1_10: gpio::GPIO_AD_B1_10::new(),
             gpio_ad_b1_11: gpio::GPIO_AD_B1_11::new(),
+            gpio_ad_b1_12: gpio::GPIO_AD_B1_12::new(),
+            gpio_ad_b1_13: gpio::GPIO_AD_B1_13::new(),
+            gpio_ad_b1_14: gpio::GPIO_AD_B1_14::new(),
+            gpio_ad_b1_15: gpio::GPIO_AD_B1_15::new(),
+
             //
             // GPIO_SD_B0
             //
             gpio_sd_b0_00: gpio::GPIO_SD_B0_00::new(),
             gpio_sd_b0_01: gpio::GPIO_SD_B0_01::new(),
+            gpio_sd_b0_02: gpio::GPIO_SD_B0_02::new(),
+            gpio_sd_b0_03: gpio::GPIO_SD_B0_03::new(),
+
             //
             // GPIO_EMC
             //
