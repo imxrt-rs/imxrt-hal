@@ -6,6 +6,8 @@ use arm_clock::set_arm_clock;
 use core::time::Duration;
 use imxrt_ral as ral;
 
+use ral::modify_reg;
+
 pub struct Handle {
     pub(crate) base: ral::ccm::Instance,
     pub(crate) analog: ral::ccm_analog::Instance,
@@ -26,6 +28,22 @@ pub struct CCM {
     pub pll2: pll2::PFD,
     /// The 528 MHz PFD
     pub pll3: pll3::PFD,
+}
+
+/// Sets the low power clock mode
+///
+/// This is typically entered with the wfi() or wfe() instruction.
+///
+/// Notably SysTick *does not* wake up the chip from sleep, so
+/// if SysTick is desired to be waited on using wfi() or such
+/// then the ClockMode should be set to Run
+///
+/// Clock modes enum matches the mcuxpresso sdk's clock_mode_t
+#[repr(u32)]
+pub enum ClockMode {
+    Run = 0,
+    Wait = 1,
+    Stop = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,13 +83,24 @@ impl PLL1 {
 
 impl CCM {
     pub(crate) fn new(base: ral::ccm::Instance, analog: ral::ccm_analog::Instance) -> Self {
-        CCM {
+        let mut ccm = CCM {
             handle: Handle { base, analog },
             perclk: perclk::Multiplexer::new(),
             pll1: PLL1::new(),
             pll2: pll2::PFD::new(),
             pll3: pll3::PFD::new(),
-        }
+        };
+        ccm.set_mode(ClockMode::Run);
+        ccm
+    }
+
+    // Set the system clock mode, by default we set this to Run
+    // which prevents the chip from going to to sleep on wfi()
+    // This is because by default wfi() puts the chip to sleep
+    // and systick interrupts *do not* wake up the chip.
+    // See https://github.com/zephyrproject-rtos/zephyr/pull/8535
+    pub fn set_mode(&mut self, mode: ClockMode) {
+        modify_reg!(ral::ccm, self.handle.base, CLPCR, LPM: (mode as u32));
     }
 }
 
