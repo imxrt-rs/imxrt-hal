@@ -146,14 +146,14 @@ macro_rules! pad {
             /// Enables software input on (SION) for the pin, which forces
             /// the input path for the pin.
             #[allow(dead_code)] // Method may not be used on a pin
-            pub(crate) fn sion_enable(&self) {
+            pub(crate) fn sion_enable(&mut self) {
                 unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, SION: $crate::ral::iomuxc::$mux_mod::SION::RW::ENABLED) };
             }
 
             /// Disables software input on (SION) for the pin. This means that
             /// the pin's input path is determined by its functionality.
             #[allow(dead_code)] // Method may not be used on a pin
-            pub(crate) fn sion_disable(&self) {
+            pub(crate) fn sion_disable(&mut self) {
                 unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, SION: $crate::ral::iomuxc::$mux_mod::SION::RW::DISABLED) };
             }
 

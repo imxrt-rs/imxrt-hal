@@ -78,7 +78,7 @@ impl Pin for GPIO_AD_B1_07<Alt1> /* (A) */ {
     type Wire = SCL; // (B)
     type Module = module::_3; // (C)
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_AD_B1_07); // (D)
@@ -96,7 +96,7 @@ impl Pin for GPIO_AD_B1_06<Alt1> {
     type Wire = SDA;
     type Module = module::_3;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_AD_B1_06);
@@ -114,7 +114,7 @@ impl Pin for GPIO_AD_B1_01<Alt3> {
     type Wire = SDA;
     type Module = module::_1;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_AD_B1_01);
@@ -132,7 +132,7 @@ impl Pin for GPIO_AD_B1_00<Alt3> {
     type Wire = SCL;
     type Module = module::_1;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_AD_B1_00);
@@ -150,7 +150,7 @@ impl Pin for GPIO_AD_B0_12<Alt0> {
     type Wire = SCL;
     type Module = module::_4;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_AD_B0_12);
@@ -168,7 +168,7 @@ impl Pin for GPIO_AD_B0_13<Alt0> {
     type Wire = SDA;
     type Module = module::_4;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_AD_B0_13);
@@ -186,7 +186,7 @@ impl Pin for GPIO_SD_B0_01<Alt2> {
     type Wire = SDA;
     type Module = module::_3;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_SD_B0_01);
@@ -204,7 +204,7 @@ impl Pin for GPIO_SD_B0_00<Alt2> {
     type Wire = SCL;
     type Module = module::_3;
     #[inline(always)]
-    fn configure(self) {
+    fn configure(mut self) {
         self.sion_enable();
         unsafe {
             pad_config!(SW_PAD_CTL_PAD_GPIO_SD_B0_00);
