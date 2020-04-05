@@ -2,8 +2,8 @@
 
 use crate::iomuxc::{
     gpio::{
-        GPIO_B0_10, GPIO_B0_11, GPIO_B1_00, GPIO_B1_01, GPIO_EMC_04, GPIO_EMC_05, GPIO_EMC_06,
-        GPIO_EMC_08,
+        GPIO_AD_B0_10, GPIO_AD_B0_11, GPIO_B0_10, GPIO_B0_11, GPIO_B1_00, GPIO_B1_01, GPIO_EMC_04,
+        GPIO_EMC_05, GPIO_EMC_06, GPIO_EMC_08, GPIO_SD_B0_00, GPIO_SD_B0_01,
     },
     Alt1, Alt2, Alt6,
 };
@@ -73,6 +73,30 @@ pub trait Pin {
     type Module: module::Module;
     /// The submodule of the PWM module
     type Submodule: submodule::Submodule;
+}
+
+impl Pin for GPIO_SD_B0_00<Alt1> {
+    type Output = output::A;
+    type Module = module::_1; // FlexPWM1
+    type Submodule = submodule::_0; // FlexPWM1
+}
+
+impl Pin for GPIO_SD_B0_01<Alt1> {
+    type Output = output::B;
+    type Module = module::_1; // FlexPWM1
+    type Submodule = submodule::_0; // FlexPWM1
+}
+
+impl Pin for GPIO_AD_B0_10<Alt1> {
+    type Output = output::A;
+    type Module = module::_1; // FlexPWM1
+    type Submodule = submodule::_3; // PWM3
+}
+
+impl Pin for GPIO_AD_B0_11<Alt1> {
+    type Output = output::B;
+    type Module = module::_1; // FlexPWM1
+    type Submodule = submodule::_3; // PWM3
 }
 
 impl Pin for GPIO_B0_10<Alt2> {
