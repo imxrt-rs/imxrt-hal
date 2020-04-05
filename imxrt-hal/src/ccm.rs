@@ -90,7 +90,6 @@ impl CCM {
             pll2: pll2::PFD::new(),
             pll3: pll3::PFD::new(),
         };
-        ccm.set_mode(ClockMode::Run);
         ccm
     }
 
