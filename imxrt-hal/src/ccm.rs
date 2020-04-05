@@ -83,14 +83,13 @@ impl PLL1 {
 
 impl CCM {
     pub(crate) fn new(base: ral::ccm::Instance, analog: ral::ccm_analog::Instance) -> Self {
-        let mut ccm = CCM {
+        CCM {
             handle: Handle { base, analog },
             perclk: perclk::Multiplexer::new(),
             pll1: PLL1::new(),
             pll2: pll2::PFD::new(),
             pll3: pll3::PFD::new(),
-        };
-        ccm
+        }
     }
 
     // Set the system clock mode, by default we set this to Run
