@@ -53,7 +53,7 @@ CRATE_CARGO_TOML_PREAMBLE = """\
 
 [package]
 name = "imxrt-ral"
-authors = ["Tom Burdick <tom.burdick@electromatic.us>"]
+authors = ["Tom Burdick <tom.burdick@electromatic.us>", "Ian McIntyre <ianpmcintyre@gmail.com>"]
 description = "Register access layer for all NXP i.MX RT microcontrollers"
 repository = "https://github.com/imxrt-rs/imxrt-rs"
 documentation = "https://docs.rs/imxrt"
@@ -64,7 +64,7 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 # Change version in imxrtral.py, not in Cargo.toml!
-version = "0.1.0"
+version = "0.2.0"
 
 [package.metadata.docs.rs]
 features = ["doc"]
