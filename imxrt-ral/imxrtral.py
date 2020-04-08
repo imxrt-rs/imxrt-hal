@@ -76,6 +76,10 @@ bare-metal = "0.2.5"
 external_cortex_m = { package = "cortex-m", version = "0.6.2" }
 # TODO use imxrt-rt here in place cortex-m-rt = { version = "0.6.12", optional = true }
 
+[lib]
+bench = false
+test = false
+
 [features]
 rt = []
 inline-asm = ["external_cortex_m/inline-asm"]
