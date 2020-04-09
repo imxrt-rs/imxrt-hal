@@ -4,7 +4,12 @@ From a clean repository, at the root:
 
 1. Update the `imxrt-ral` crate version in `imxrt-ral/imxrtral.py`.
 2. Build the RAL: `make -C imxrt-ral`
-3. Sanity check the RAL: `cargo build -p imxrt-ral --features imxrt1062`
+3. Sanity check the RAL: 
+
+```
+cd imxrt-ral && cargo build --features imxrt1062 && cd ..
+```
+
 4. Publish the RAL: `cargo publish --manifest-path imxrt-ral/Cargo.toml`
 5. In `imxrt-hal/Cargo.toml`, update both
     - the version of the HAL
