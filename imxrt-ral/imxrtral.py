@@ -64,7 +64,7 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 # Change version in imxrtral.py, not in Cargo.toml!
-version = "0.2.1-alpha"
+version = "0.2.1"
 
 [package.metadata.docs.rs]
 features = ["doc"]
