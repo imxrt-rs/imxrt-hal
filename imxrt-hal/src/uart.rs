@@ -453,6 +453,7 @@ bitflags::bitflags! {
 }
 
 /// Type that describes a read error
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReadError {
     /// Decribes the reason for the error
     pub flags: ReadErrorFlags,
