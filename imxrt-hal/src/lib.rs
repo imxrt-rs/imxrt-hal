@@ -20,6 +20,7 @@ pub use imxrt_ral as ral;
 
 pub mod ccm;
 pub mod gpio;
+pub mod gpt;
 pub mod i2c;
 pub mod iomuxc;
 pub mod pit;
@@ -49,6 +50,8 @@ pub struct Peripherals {
     pub i2c: i2c::Unclocked,
     pub uart: uart::Unclocked,
     pub spi: spi::Unclocked,
+    pub gpt1: gpt::Unclocked,
+    pub gpt2: gpt::Unclocked,
 }
 
 impl Peripherals {
@@ -84,6 +87,8 @@ impl Peripherals {
                 spi3: ral::lpspi::LPSPI3::take()?,
                 spi4: ral::lpspi::LPSPI4::take()?,
             },
+            gpt1: gpt::Unclocked::one(ral::gpt::GPT1::take()?),
+            gpt2: gpt::Unclocked::two(ral::gpt::GPT2::take()?),
         };
         Some(p)
     }
