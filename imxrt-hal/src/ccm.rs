@@ -261,8 +261,8 @@ pub mod perclk {
     pub struct Multiplexer;
     pub struct Configured<'a> {
         handle: &'a mut Handle,
-        divider: Divider,
-        clock_hz: Frequency,
+        podf: PODF,
+        clksel: CLKSEL,
     }
 
     impl From<PODF> for Divider {
@@ -286,16 +286,30 @@ pub mod perclk {
             );
             Configured {
                 handle,
-                divider: Divider::from(podf),
-                clock_hz: Frequency::from(clksel),
+                podf,
+                clksel,
             }
         }
     }
 
     impl<'a> Configured<'a> {
-        pub(crate) fn enable(self) -> (Frequency, Divider) {
+        pub(crate) fn enable_pit_clock_gates(&mut self) -> (Frequency, Divider) {
             modify_reg!(ral::ccm, self.handle.base, CCGR1, CG6: 0x3);
-            (self.clock_hz, self.divider)
+            (self.clksel.into(), self.podf.into())
+        }
+
+        pub(crate) fn enable_gpt1_clock_gates(&mut self) -> (Frequency, Divider) {
+            modify_reg!(ral::ccm, self.handle.base, CCGR1, CG10: 0x3, CG11: 0x3);
+            (self.clksel.into(), self.podf.into())
+        }
+
+        pub(crate) fn enable_gpt2_clock_gates(&mut self) -> (Frequency, Divider) {
+            modify_reg!(ral::ccm, self.handle.base, CCGR0, CG12: 0x3, CG13: 0x3);
+            (self.clksel.into(), self.podf.into())
+        }
+
+        pub(crate) fn clock_selection(&self) -> CLKSEL {
+            self.clksel
         }
     }
 

@@ -20,14 +20,14 @@ impl UnclockedPIT {
     /// module.
     pub fn clock(
         self,
-        configured: perclk::Configured,
+        configured: &mut perclk::Configured,
     ) -> (
         PIT<channel::_0>,
         PIT<channel::_1>,
         PIT<channel::_2>,
         PIT<channel::_3>,
     ) {
-        let (clock_hz, divider) = configured.enable();
+        let (clock_hz, divider) = configured.enable_pit_clock_gates();
         ral::write_reg!(ral::pit, self.0, MCR, MDIS: MDIS_0);
         // Intentionally dropping the ral::pit::Instance. We will give consumers
         // the appearance that we own it so that they cannot subsequently take it.
