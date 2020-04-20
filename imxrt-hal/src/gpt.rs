@@ -8,6 +8,12 @@
 //! value in a compare register, the GPT signals the comparison.
 //! A comparison can generate an interrupt.
 //!
+//! Use GPTs to
+//!
+//! - detect if a timing interval has elapsed
+//! - trigger an interrupt when an interval elapses
+//! - measure code execution
+//!
 //! ## TODO
 //!
 //! - Input capture. Each GPT can capture the value of the counter
@@ -54,7 +60,12 @@ const DEFAULT_PRESCALER: u32 = 2;
 ///
 /// By default, the timer runs in wait mode.
 pub struct GPT {
+    /// Registers for this GPT instance
     registers: ral::gpt::Instance,
+    /// The effective clock frequency that controls
+    /// the counter.
+    ///
+    /// The value accounts for all prescalers and dividers.
     clock_hz: u32,
 }
 
@@ -122,7 +133,7 @@ impl Unclocked {
         // Clear all statuses
         ral::write_reg!(ral::gpt, self.registers, SR, 0b11_1111);
 
-        let clock_hz = (freq / div).0;
+        let clock_hz = (freq / div).0 / DEFAULT_PRESCALER;
 
         GPT {
             registers: self.registers,
@@ -165,7 +176,7 @@ impl GPT {
     }
 
     /// Enable the GPT interrupt when the output compares
-    pub fn set_interrupt_on_compare(&mut self, output: OutputCompareRegister, intr: bool) {
+    pub fn set_output_interrupt_on_compare(&mut self, output: OutputCompareRegister, intr: bool) {
         let ir: u32 = ral::read_reg!(ral::gpt, self.registers, IR);
         let ir: u32 = if intr {
             ir | (1 << (output as u32))
@@ -175,8 +186,13 @@ impl GPT {
         ral::write_reg!(ral::gpt, self.registers, IR, ir);
     }
 
+    /// Returns `true` if a comparison triggers an interrupt
+    pub fn is_output_interrupt_on_compare(&self, output: OutputCompareRegister) -> bool {
+        ral::read_reg!(ral::gpt, self.registers, IR) & (1 << (output as u32)) != 0
+    }
+
     /// Returns the current count of the GPT
-    pub fn count(&self) -> u32 {
+    fn count(&self) -> u32 {
         ral::read_reg!(ral::gpt, self.registers, CNT)
     }
 
@@ -201,8 +217,8 @@ impl GPT {
         output: OutputCompareRegister,
         duration: Duration,
     ) {
-        let tics: u32 =
-            ticks(duration, self.clock_hz, DEFAULT_PRESCALER).unwrap_or(u32::max_value());
+        // Accounting for prescaler in the `clock_hz` member.
+        let tics: u32 = ticks(duration, self.clock_hz, 1).unwrap_or(u32::max_value());
         let next_count = self.count().wrapping_add(tics);
         self.set_output_compare_count(output, next_count);
     }
@@ -210,6 +226,83 @@ impl GPT {
     /// Returns a handle that can query and modify the output compare status for the provided output
     pub fn output_compare_status(&mut self, output: OutputCompareRegister) -> OutputCompareStatus {
         OutputCompareStatus { gpt: self, output }
+    }
+
+    /// Returns the clock period as a duration
+    ///
+    /// This represents the resolution of the clock. The maximum measurement
+    /// interval is `clock_period() * u32::max_value()`.
+    pub fn clock_period(&self) -> Duration {
+        Duration::from_nanos((1_000_000_000u32 / self.clock_hz).into())
+    }
+
+    /// Measure the execution time of an action `act` using the GPT. Returns
+    /// the result of the action, along with how long it took to execute the
+    /// action.
+    ///
+    /// User must ensure that the timer is enabled. Otherwise, the resulting
+    /// duration is zero.
+    ///
+    /// User must ensure that the action takes less time than it takes for the
+    /// timer to wrap around. We cannot distinguish a wrapped-around counter
+    /// from an incrementing counter with this implementation. Consider using
+    /// `time_no_overflow` if you need a better guarantee.
+    pub fn time<F: FnOnce() -> R, R>(&self, act: F) -> (R, Duration) {
+        let start = self.count();
+        let result = act();
+        let end = self.count();
+        let counts = end.wrapping_sub(start);
+        (result, counts * self.clock_period())
+    }
+
+    /// Time an operation, returning the result, and the amount of time the
+    /// operation took.
+    ///
+    /// Unlike `time()`, `time_no_overflow()` uses an output compare register to check if the
+    /// counter overflowed. It requires a mutable GPT, since we need to
+    /// disable the timer and modify compare registers to properly measure the interval.
+    /// If the timer wrapped around, the return is `None`.
+    ///
+    /// When `time_no_overflow()` returns,
+    ///
+    /// - the GPT is disabled
+    /// - the interrupt on compare for the output is disabled
+    /// - the compare value in the specified output compare register is undefined
+    ///
+    /// Users are responsible for resetting the state of the GPT as needed.
+    ///
+    /// Users are responsible for enabling the GPT before using `time_no_overflow()`.
+    /// Otherwise, the returned duration is non-`None`, but zero.
+    ///
+    /// If you know that you're measuring short intervals that will not overflow the
+    /// counter, consider using `time()`.
+    pub fn time_no_overflow<F: FnOnce() -> R, R>(
+        &mut self,
+        output: OutputCompareRegister,
+        act: F,
+    ) -> (R, Option<Duration>) {
+        self.set_output_interrupt_on_compare(output, false);
+
+        let start = self.count();
+        // Set the compare to trigger if the counter elapses the wrapped start time.
+        // This is how we know that the timer overflowed.
+        self.set_output_compare_count(output, start.wrapping_sub(1));
+        self.set_enable(true);
+        let result = act();
+        // We can read the count faster than we can disable the peripheral.
+        let end = self.count();
+        self.set_enable(false);
+
+        let mut status = self.output_compare_status(output);
+        if status.is_set() {
+            status.clear();
+            // Compare triggered, so we don't actually know how long this
+            // took.
+            (result, None)
+        } else {
+            let counts = end.wrapping_sub(start);
+            (result, Some(counts * self.clock_period()))
+        }
     }
 }
 
