@@ -8,6 +8,10 @@
 //! value in a compare register, the GPT signals the comparison.
 //! A comparison can generate an interrupt.
 //!
+//! GPTs, by default, are not enabled in wait mode. Use
+//! [`set_wait_mode_enable(true)`](struct.GPT.html#method.set_wait_mode_enable)
+//! to enable GPTs in wait mode.
+//!
 //! Use GPTs to
 //!
 //! - detect if a timing interval has elapsed
@@ -105,10 +109,11 @@ impl Unclocked {
                     CR,
                     EN_24M: 1, // Enable crystal oscillator
                     CLKSRC: 0b101, // Crystal Oscillator
-                    FRR: 1, // Channel 1 doesn't reset the counter on trigger
-                    WAITEN: 1 // Run GPT in wait mode
+                    FRR: 1 // Channel 1 doesn't reset the counter on trigger
                 );
                 // The 24MHz prescaler register can't be non-zero. Not sure why.
+                // The reference manual says its OK, but it doesn't work. The
+                // se4L project noted the same issue in their kernel.
                 // So, this means that there's a divider of 2 when using the
                 // crystal oscillator.
                 ral::write_reg!(ral::gpt, self.registers, PR, PRESCALER24M: (DEFAULT_PRESCALER - 1));
@@ -120,8 +125,7 @@ impl Unclocked {
                     CR,
                     EN_24M: 0, // No crystal oscillator
                     CLKSRC: 0b001, // Peripheral Clock
-                    FRR: 1, // Channel 1 doesn't reset the counter on trigger
-                    WAITEN: 1 // Run GPT in wait mode
+                    FRR: 1 // Channel 1 doesn't reset the counter on trigger
                 );
                 // See the above comment about needing a prescaler for the other
                 // clock. This is for consistency, so that we can implement the
