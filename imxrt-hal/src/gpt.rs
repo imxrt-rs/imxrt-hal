@@ -208,18 +208,16 @@ impl GPT {
 
     /// Set an output compare register to trigger when the specified duration elapses
     ///
-    /// This requires a read of the counter, then a conversion of the duration of the duration
-    /// to a count value, then a write to the correct register. If the GPT is currently
-    /// enabled, and the duration is small, this could miss the comparison until the counter
-    /// wraps. Consider disabling the GPT before setting a wait duration.
+    /// If the duration is very small, the time could elapse before we commit the comparison
+    /// value to the correct register. If this is a concern, consider disabling the GPT
+    /// before specifying an output duration.
     pub fn set_output_compare_duration(
         &mut self,
         output: OutputCompareRegister,
         duration: Duration,
     ) {
-        // Accounting for prescaler in the `clock_hz` member.
-        let tics: u32 = ticks(duration, self.clock_hz, 1).unwrap_or(u32::max_value());
-        let next_count = self.count().wrapping_add(tics);
+        let counts: u32 = ticks(duration, self.clock_hz, 1).unwrap_or(u32::max_value());
+        let next_count = self.count().wrapping_add(counts);
         self.set_output_compare_count(output, next_count);
     }
 
@@ -281,6 +279,7 @@ impl GPT {
         output: OutputCompareRegister,
         act: F,
     ) -> (R, Option<Duration>) {
+        self.set_enable(false);
         self.set_output_interrupt_on_compare(output, false);
 
         let start = self.count();
@@ -303,6 +302,26 @@ impl GPT {
             let counts = end.wrapping_sub(start);
             (result, Some(counts * self.clock_period()))
         }
+    }
+
+    /// Returns an adapter that implements count down traits
+    ///
+    /// Assumes that the timer is already enabled. Otherwise, the
+    /// count down adapter will block forever. The adapter will never
+    /// disable the counter, so the borrowed GPT may still track other
+    /// times while it is borrowed.
+    pub fn count_down(&mut self, output: OutputCompareRegister) -> CountDown {
+        CountDown(Timer::oneshot(self, output))
+    }
+
+    /// Returns an adapter that implements periodic traits
+    ///
+    /// Assumes that the timer is already enabled. Otherwise, the
+    /// periodic adapter will block forever. The adapter will never
+    /// disable the counter. so the borrowed GPT may still track other
+    /// times while it is borrowed.
+    pub fn periodic(&mut self, output: OutputCompareRegister) -> Periodic {
+        Periodic(Timer::periodic(self, output))
     }
 }
 
@@ -327,3 +346,115 @@ impl<'a> OutputCompareStatus<'a> {
         ral::write_reg!(ral::gpt, self.gpt.registers, SR, 1 << (self.output as u32));
     }
 }
+
+/// How the timer should behave
+#[derive(PartialEq, Eq)]
+enum Policy {
+    /// Don't repeat
+    Oneshot,
+    /// Repeat with the specified duration
+    Periodic(Option<Duration>),
+}
+
+/// Shared implementation for `embedded_hal` traits
+struct Timer<'a> {
+    gpt: &'a mut GPT,
+    output: OutputCompareRegister,
+    policy: Policy,
+}
+
+impl<'a> Timer<'a> {
+    /// Constructs a timer that implements oneshot behavior (not periodic)
+    fn oneshot(gpt: &'a mut GPT, output: OutputCompareRegister) -> Self {
+        Timer {
+            gpt,
+            output,
+            policy: Policy::Oneshot,
+        }
+    }
+
+    /// Constructs a timer that implements periodic behavior
+    fn periodic(gpt: &'a mut GPT, output: OutputCompareRegister) -> Self {
+        Timer {
+            gpt,
+            output,
+            policy: Policy::Periodic(None),
+        }
+    }
+
+    /// Start the timer
+    ///
+    /// Assumes that the GPT is enabled.
+    fn start(&mut self, duration: Duration) {
+        self.gpt.set_output_compare_duration(self.output, duration);
+        if let Policy::Periodic(ref mut period) = &mut self.policy {
+            *period = Some(duration);
+        }
+    }
+
+    /// Returns `Ok(())` when the timer has elapsed; otherwise, returns `Err(nb::WouldBlock)`.
+    ///
+    /// If the policy is periodic, we will restart the timer. If the user already observed an elapsed
+    /// timer, but calls `wait()` again, the behavior is unspecified (as stated by the trait contract).
+    fn wait(&mut self) -> nb::Result<(), void::Void> {
+        let mut status = self.gpt.output_compare_status(self.output);
+        if status.is_set() {
+            status.clear();
+            match self.policy {
+                Policy::Oneshot | Policy::Periodic(None) => (),
+                Policy::Periodic(Some(duration)) => {
+                    self.gpt.set_output_compare_duration(self.output, duration)
+                }
+            }
+            Ok(())
+        } else {
+            Err(nb::Error::WouldBlock)
+        }
+    }
+}
+
+/// Adapter that implements [the `CountDown` trait][docs].
+///
+/// It mutably borrows the GPT, and it uses the supplied
+/// output compare register to track time. If the GPT has
+/// other compare channels that are active, those channels
+/// remain active while the GPT is borrowed.
+///
+/// [docs]: https://docs.rs/embedded-hal/0.2.3/embedded_hal/timer/trait.CountDown.html
+pub struct CountDown<'a>(Timer<'a>);
+
+impl<'a> embedded_hal::timer::CountDown for CountDown<'a> {
+    type Time = Duration;
+
+    fn start<T: Into<Duration>>(&mut self, duration: T) {
+        self.0.start(duration.into())
+    }
+
+    fn wait(&mut self) -> nb::Result<(), void::Void> {
+        self.0.wait()
+    }
+}
+
+/// Adapter that implements [ther `Periodic` trait][docs].
+///
+/// It mutably borrows the GPT, and it uses the supplied output
+/// compare register to track time. If the GPT has other output
+/// compare channels that are active, those channels remain active
+/// while the GPT is borrowed.
+///
+/// [docs]: https://docs.rs/embedded-hal/0.2.3/embedded_hal/timer/trait.Periodic.html
+pub struct Periodic<'a>(Timer<'a>);
+
+impl<'a> embedded_hal::timer::CountDown for Periodic<'a> {
+    type Time = Duration;
+
+    fn start<T: Into<Duration>>(&mut self, duration: T) {
+        self.0.start(duration.into())
+    }
+
+    fn wait(&mut self) -> nb::Result<(), void::Void> {
+        self.0.wait()
+    }
+}
+
+impl<'a> embedded_hal::timer::Periodic for Periodic<'a> {}
