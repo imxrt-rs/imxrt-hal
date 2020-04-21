@@ -4,9 +4,7 @@
 
 ### Added
 
-- The iMXRT's general purpose timers (GPT) are now available. The timers do not implement any of the `embedded_hal`
-  traits at this time. However, the timers are suitable for generating interrupts on repeated durations. See the
-  module-level docs for more information and TODOs.
+- The iMXRT's general purpose timers (GPT) are now available.
 
 ### Changed
 
