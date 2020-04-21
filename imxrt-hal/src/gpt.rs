@@ -2,73 +2,87 @@
 //!
 //! # Features
 //!
-//! The GPTs are count-up timers that run off of the IPG clock or the
+//! The GPTs are count-up, wrapping timers that run off of the IPG clock or the
 //! crystal oscillator (24MHz). Each GPT has three compare registers,
 //! called **output comparison registers (OCR)**. When the counter reaches a
-//! value in an OCR, the GPT signals the comparison. A comparison can
-//! generate an interrupt.
+//! value in an OCR, the GPT signals the comparison through status flags.
+//! A comparison can generate an interrupt.
 //!
 //! Use GPTs to
 //!
 //! - detect if a timing interval has elapsed
 //! - trigger an interrupt when an interval elapses
 //! - measure code execution
-//! 
+//!
 //! # GPT modes
-//! 
+//!
 //! The table below summarizes the effects of an output comparison operation
 //! when in restart mode, and when in free-running mode. See the subsequent
 //! sections for a discussion of the two modes.
-//! 
+//!
 //! | GPT Mode     | OCR1                                      | OCR2                                      | OCR3         |
 //! | ------------ | ----------------------------------------- | ----------------------------------------- | ------------ |
 //! | Restart      | Resets the counter to zero                | No effect; counter continues incrementing | No effect... |
 //! | Free-running | No effect; counter continues incrementing | No effect ...                             | No effect... |
-//! 
+//!
 //! In summary, **OCR1 is special in restart mode**, as it will reset the value in the GPT counter.
-//! 
+//!
 //! Select a mode with [`set_mode()`](struct.GPT.html#method.set_mode).
-//! 
+//!
 //! ## Restart mode
-//! 
+//!
 //! The GPTs default to 'restart mode.' In restart mode, a compare on **channel
 //! 1** will reset the GPT counter to zero. Compare events on channels 2 and 3
 //! will not reset the GPT counter. If you would rather have the GPT counter continue
 //! no matter the comparison event, set the GPT to free-running mode.
-//! 
+//!
 //! ## Free-running mode
-//! 
+//!
 //! The GPTs may be in free-running mode. When a comparion event occurs in free-running
 //! mode, the counter continues to increment, eventually wrapping around. Free-running
 //! mode treats all channels as equal; that is, channel 1 is no different than channel
 //! 2 or 3.
-//! 
+//!
 //! # Reset on enable
-//! 
+//!
 //! Reset on enable is a complementary feature to the two modes. When reset on enable
 //! is active, the GPT counter will reset to zero each time the timer is enabled. By default,
 //! the counter will restart at whatever value is currently in the counter. The default
 //! behavior lets a user 'pause' the counter by disabling the GPT. On the other hand,
 //! reset on enable lets users reset the counter by disabling and re-enabling the GPT.
-//! 
+//!
 //! The table below summarizes the 'reset on enable' behaviors. Use
 //! [`set_reset_on_enable()`](struct.GPT.html#method.set_reset_on_enable) to configure
 //! the reset on enable behavior.
-//! 
+//!
 //! | State   | Behavior                                                 |
 //! | ------- | -------------------------------------------------------- |
 //! | `false` | When the GPT is disabled, it maintains its counter value |
 //! | `true`  | When the GPT is disabled, the counter resets to zero     |
-//! 
+//!
 //! # GPTs and system WAIT / STOP
-//! 
+//!
 //! By default, GPTs do not run when the process is in in wait mode. Use
 //! [`set_wait_mode_enable(true)`](struct.GPT.html#method.set_wait_mode_enable)
 //! to enable GPTs in wait mode.
-//! 
+//!
 //! If the GPT stops counting in WAIT / STOP system states, the counter freezes its
 //! counter. When the processor transitions into RUNNING, the counter increments from
 //! its previously-frozen value (provided the GPT was enabled).
+//!
+//! # `embedded_hal` implementations
+//!
+//! The module provides adapters that pair a GPT with an OCR. The
+//! adapters implement the `embedded_hal` timers using the GPT and the OCR
+//! Users must ensure that the selected mode is suitable for the behaviors of the adapters.
+//!
+//! The two adapters include
+//!
+//! - [`CountDown`](struct.CountDown.html), which implements the `CountDown` trait
+//! - [`Periodic`](struct.Periodic.html), which implements the `Periodic` trait
+//!
+//! Although the adapters work on a single OCR, the timer may continue to monitor the
+//! other two OCRs.
 //!
 //! # TODO
 //!
@@ -187,16 +201,14 @@ impl Unclocked {
         // Clear all statuses
         ral::write_reg!(ral::gpt, self.registers, SR, 0b11_1111);
 
-        let clock_hz = (freq / div).0 / DEFAULT_PRESCALER;
-
         GPT {
             registers: self.registers,
-            clock_hz,
+            clock_hz: (freq / div).0 / DEFAULT_PRESCALER,
         }
     }
 }
 
-/// An output compare register
+/// An output compare register (OCR)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OutputCompareRegister {
     One,
@@ -208,19 +220,18 @@ pub enum OutputCompareRegister {
 /// Possible modes of the GPT
 pub enum Mode {
     /// Reset mode
-    /// 
+    ///
     /// A comparions event on channel 1 will reset the GPT counter.
     /// Comparison events on channels 2 and 3 do not reset the counter.
     Reset,
     /// Free running mode
-    /// 
+    ///
     /// Comparisons on channel 1 are treated like comparions on channels
     /// 2 and 3. The counter continues to increment on comparison.
-    FreeRunning
+    FreeRunning,
 }
 
 impl GPT {
-
     /// Returns the current mode of the GPT
     pub fn mode(&self) -> Mode {
         if ral::read_reg!(ral::gpt, self.registers, CR, FRR == 0) {
@@ -231,17 +242,22 @@ impl GPT {
     }
 
     /// Set the GPT mode
-    /// 
+    ///
     /// Refer to the module level documentation for more information on the GPT modes.
     pub fn set_mode(&mut self, mode: Mode) {
         ral::modify_reg!(ral::gpt, self.registers, CR, FRR: (mode as u32))
     }
 
     /// Set the reset on enable behavior
-    /// 
+    ///
     /// See the module level docs for more information.
     pub fn set_reset_on_enable(&mut self, reset_on_enable: bool) {
         ral::modify_reg!(ral::gpt, self.registers, CR, ENMOD: (reset_on_enable as u32));
+    }
+
+    /// Returns `true` if the GPT counter will reset the next time it is enabled
+    pub fn reset_on_enable(&self) -> bool {
+        ral::read_reg!(ral::gpt, self.registers, CR, ENMOD == 1)
     }
 
     /// Enable or disable the GPT
@@ -253,7 +269,7 @@ impl GPT {
     }
 
     /// Indicates if the GPT is enabled (`true`) or disabled (`false`).
-    pub fn is_enabled(&self) -> bool {
+    pub fn enabled(&self) -> bool {
         ral::read_reg!(ral::gpt, self.registers, CR, EN == 1)
     }
 
@@ -264,7 +280,7 @@ impl GPT {
     }
 
     /// Indicates if the GPT runs while in wait mode
-    pub fn is_wait_mode_enabled(&self) -> bool {
+    pub fn wait_mode_enabled(&self) -> bool {
         ral::read_reg!(ral::gpt, self.registers, CR, WAITEN == 1)
     }
 
@@ -280,18 +296,18 @@ impl GPT {
     }
 
     /// Returns `true` if a comparison triggers an interrupt
-    pub fn is_output_interrupt_on_compare(&self, output: OutputCompareRegister) -> bool {
+    pub fn output_interrupt_on_compare(&self, output: OutputCompareRegister) -> bool {
         ral::read_reg!(ral::gpt, self.registers, IR) & (1 << (output as u32)) != 0
     }
 
     /// Returns the current count of the GPT
-    fn count(&self) -> u32 {
+    pub fn count(&self) -> u32 {
         ral::read_reg!(ral::gpt, self.registers, CNT)
     }
 
     /// Set an output compare register to trigger on the next `count` value of the
     /// counter.
-    fn set_output_compare_count(&mut self, output: OutputCompareRegister, count: u32) {
+    pub fn set_output_compare_count(&mut self, output: OutputCompareRegister, count: u32) {
         match output {
             OutputCompareRegister::One => ral::write_reg!(ral::gpt, self.registers, OCR1, count),
             OutputCompareRegister::Two => ral::write_reg!(ral::gpt, self.registers, OCR2, count),
@@ -299,12 +315,23 @@ impl GPT {
         }
     }
 
+    /// Returns the current output compare count for the specified register
+    pub fn output_compare_count(&self, output: OutputCompareRegister) -> u32 {
+        match output {
+            OutputCompareRegister::One => ral::read_reg!(ral::gpt, self.registers, OCR1),
+            OutputCompareRegister::Two => ral::read_reg!(ral::gpt, self.registers, OCR2),
+            OutputCompareRegister::Three => ral::read_reg!(ral::gpt, self.registers, OCR3),
+        }
+    }
+
     /// Set an output compare register to trigger when the specified duration elapses
     ///
-    /// If the duration is very small, the time could elapse before we commit the comparison
-    /// value to the correct register. If this is a concern, consider disabling the GPT
-    /// before specifying an output duration. Note that the disable behavior of the counter
-    /// is affected by the reset on enable setting; see the module docs for more information.
+    /// This is a convenience for an operation that resembles
+    ///
+    /// 1. compute the number of counts represented in the duration, based on the clock frequency
+    /// 2. acquire the current GPT count
+    /// 3. add the number of counts from 1 to the count of 2, accounting for wrap-around
+    /// 4. set the value for the OCR
     pub fn set_output_compare_duration(
         &mut self,
         output: OutputCompareRegister,
@@ -398,24 +425,59 @@ impl GPT {
         }
     }
 
-    /// Returns an adapter that implements count down traits
+    /// Returns an adapter that implements the count down trait
     ///
     /// Assumes that the timer is already enabled. Otherwise, the
     /// count down adapter will block forever. The adapter will never
     /// disable the counter, so the borrowed GPT may still track other
     /// times while it is borrowed.
+    ///
+    /// The adapter assumes the current GPT's mode. User is responsible
+    /// for making sure that this mode is sensible for the qualities of
+    /// the timer.
     pub fn count_down(&mut self, output: OutputCompareRegister) -> CountDown {
         CountDown(Timer::oneshot(self, output))
     }
 
-    /// Returns an adapter that implements periodic traits
+    /// Returns an adapter that implements the periodic trait
     ///
     /// Assumes that the timer is already enabled. Otherwise, the
     /// periodic adapter will block forever. The adapter will never
     /// disable the counter. so the borrowed GPT may still track other
     /// times while it is borrowed.
+    ///
+    /// The adapter assumes the current GPT's mode. User is responsible for
+    /// making sure this mode is sensible for the qualities of the timer.
     pub fn periodic(&mut self, output: OutputCompareRegister) -> Periodic {
         Periodic(Timer::periodic(self, output))
+    }
+
+    /// Enable / disable an interrupt when the GPT counter rolls over from `u32::max_value()` to
+    /// `0`
+    ///
+    /// The GPT triggers a rollover regardless of the GPT mode.
+    pub fn set_rollover_interrupt(&mut self, rov: bool) {
+        ral::modify_reg!(ral::gpt, self.registers, IR, ROVIE: (rov as u32));
+    }
+
+    /// Returns `true` if a rollover generates an interrupt
+    pub fn rollover_interrupt(&self) -> bool {
+        ral::read_reg!(ral::gpt, self.registers, IR, ROVIE == 1)
+    }
+
+    /// Returns `true` if the rollover flag is set
+    ///
+    /// A rollover occurs when the counter rolls over from `u32::max_value()` to `0`. Rollover
+    /// may occur regardless of the GPT mode.
+    pub fn rollover(&self) -> bool {
+        ral::read_reg!(ral::gpt, self.registers, SR, ROV == 1)
+    }
+
+    /// Clear the rollover status flag
+    ///
+    /// Users must clear the rollover flag if a rollover triggered an interrupt.
+    pub fn clear_rollover(&self) {
+        ral::write_reg!(ral::gpt, self.registers, SR, ROV: 1);
     }
 }
 
