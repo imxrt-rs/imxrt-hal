@@ -19,6 +19,7 @@
 pub use imxrt_ral as ral;
 
 pub mod ccm;
+pub mod dma;
 pub mod gpio;
 pub mod gpt;
 pub mod i2c;
@@ -52,6 +53,7 @@ pub struct Peripherals {
     pub spi: spi::Unclocked,
     pub gpt1: gpt::Unclocked,
     pub gpt2: gpt::Unclocked,
+    pub dma: [dma::Channel; 32],
 }
 
 impl Peripherals {
@@ -89,6 +91,40 @@ impl Peripherals {
             },
             gpt1: gpt::Unclocked::one(ral::gpt::GPT1::take()?),
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::take()?),
+            dma: [
+                dma::Channel::new(0),
+                dma::Channel::new(1),
+                dma::Channel::new(2),
+                dma::Channel::new(3),
+                dma::Channel::new(4),
+                dma::Channel::new(5),
+                dma::Channel::new(6),
+                dma::Channel::new(7),
+                dma::Channel::new(8),
+                dma::Channel::new(9),
+                dma::Channel::new(10),
+                dma::Channel::new(11),
+                dma::Channel::new(12),
+                dma::Channel::new(13),
+                dma::Channel::new(14),
+                dma::Channel::new(15),
+                dma::Channel::new(16),
+                dma::Channel::new(17),
+                dma::Channel::new(18),
+                dma::Channel::new(19),
+                dma::Channel::new(20),
+                dma::Channel::new(21),
+                dma::Channel::new(22),
+                dma::Channel::new(23),
+                dma::Channel::new(24),
+                dma::Channel::new(25),
+                dma::Channel::new(26),
+                dma::Channel::new(27),
+                dma::Channel::new(28),
+                dma::Channel::new(29),
+                dma::Channel::new(30),
+                dma::Channel::new(31),
+            ],
         };
         Some(p)
     }
