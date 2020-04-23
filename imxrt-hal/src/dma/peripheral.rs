@@ -1,10 +1,31 @@
 //! Supporting traits for defining peripheral DMA
 //! sources and destinations
+//!
+//! # How to add DMA capabilities to your peripheral
+//!
+//! 1. Make sure your device can support DMA transfers!
+//! 2. If your device can either produce data for a DMA transfer, or
+//!    accept data from a DMA transfer, implement the `private::Sealed`
+//!    trait for your peripheral *in the `private` module*.
+//! 3. If your device can produce data for a DMA transfer, implement the
+//!    `Source` trait for your peripheral *in your peripheral's module*.
+//! 4. If your device can accept data from a DMA transfer, implement the
+//!    `Destination` trait for your peripheral *in your peripheral's module*.
+//!
+//! See the [Rust API guidelines on future-proofing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
+//! to learn about the 'Sealed' pattern. Use the UART peripheral as an example.
 
 use super::Element;
 
 /// Describes a peripheral that can be the source of DMA data
-pub trait Source<E: Element>: source::Sealed<E> {
+///
+/// By 'source,' we mean that it provides data for a DMA transfer.
+/// A 'source,' would be a hardware device sending data into our
+/// memory.
+///
+/// This trait may only be implemented by HAL authors. Users will find
+/// that [HAL peripherals already implement `Source`](trait.Source.html#implementors).
+pub trait Source<E: Element>: private::Sealed {
     type Error;
     /// Peripheral source request signal
     ///
@@ -32,7 +53,13 @@ pub trait Source<E: Element>: source::Sealed<E> {
 }
 
 /// Describes a peripheral that can be the destination for DMA data
-pub trait Destination<E: Element>: destination::Sealed<E> {
+///
+/// By 'destination,' we mean that it receives data from a DMA transfer.
+/// Software is sending data from memory to a device using DMA.
+///
+/// The trait may only be implemented by HAL authors. Users will find
+/// that [HAL peripherals already implement `Destination`](trait.Destination.html#implementors).
+pub trait Destination<E: Element>: private::Sealed {
     type Error;
     /// Peripheral destination request signal
     ///
@@ -57,24 +84,11 @@ pub trait Destination<E: Element>: destination::Sealed<E> {
     fn disable_destination(&mut self);
 }
 
-pub(crate) mod source {
-    use super::{Element, Source};
-    pub trait Sealed<E> {}
-    impl<S, E> Sealed<E> for S
-    where
-        S: Source<E>,
-        E: Element,
-    {
-    }
-}
+/// Preventing crate users from implementing `Source` and `Destination`
+/// for arbitrary types.
+mod private {
+    pub trait Sealed {}
 
-pub(crate) mod destination {
-    use super::{Destination, Element};
-    pub trait Sealed<E> {}
-    impl<D, E> Sealed<E> for D
-    where
-        D: Destination<E>,
-        E: Element,
-    {
-    }
+    use crate::uart;
+    impl<M> Sealed for uart::UART<M> where M: uart::module::Module {}
 }

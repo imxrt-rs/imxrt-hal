@@ -1,4 +1,4 @@
-//! Trait to define acceptable DMA transfer elements
+//! Trait to generalize acceptable DMA transfer elements
 
 /// Describes a transferrable DMA element; basically, an unsigned
 /// integer of any size.
@@ -28,6 +28,9 @@ impl Element for u64 {
 
 mod private {
     pub trait Sealed {}
-    use super::Element;
-    impl<E> Sealed for E where E: Element {}
+
+    impl Sealed for u8 {}
+    impl Sealed for u16 {}
+    impl Sealed for u32 {}
+    impl Sealed for u64 {}
 }

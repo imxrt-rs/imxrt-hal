@@ -1,14 +1,27 @@
+//! A RAL-like module to support DMA register access
+//!
+//! The RAL has TONS of symbols for DMA. The script that auto-generates
+//! the RAL from a SVD file doesn't represent register clusters as an array
+//! of structs. The transfer control descriptions, in particularly, could
+//! conveniently be represented by 32 TCD structs. Same with the multiplexer
+//! registers. Same with the priority registers...
+//!
+//! This module lets us hit those ideals. At the same time, we can expose an
+//! interface that lets us use the RAL macros, where applicable.
+
 use crate::ral::{RORegister, RWRegister};
 use core::ops::Index;
 
 /// DMA multiplexer configuration registers
 #[repr(C)]
 pub(super) struct MultiplexerRegisters {
+    /// Multiplexer configuration registers, one per channel
     pub chcfg: [RWRegister<u32>; 32],
 }
 
 pub(super) const MULTIPLEXER: Static<MultiplexerRegisters> = Static(0x400E_C000 as *const _);
 
+/// DMA registers
 #[repr(C)]
 pub(super) struct DMARegisters {
     /// Control Register

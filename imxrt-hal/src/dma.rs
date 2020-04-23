@@ -1,9 +1,37 @@
 //! Direct Memory Access (DMA)
+//!
+//! Users may wrap iMXRT peripherals in a [`Peripheral`](struct.Peripheral.html)
+//! to perform DMA transfers to and from the device. A `Peripheral` accepts up
+//! to two DMA [`Channel`](struct.Channel.html)s. One channel can support either
+//! a peripheral-to-memory transfer, or a memory-to-peripheral transfer. When
+//! constructing a `Peripheral`, you may configure the transfer completion to
+//! generate an interrupt.
+//!
+//! # Terms
+//!
+//! - *Source* is a location in memory that provides data. A source may be a buffer
+//!    of data, or a peripheral register.
+//! - *Destination* is a location in memory that will receive data.
+//!   A destination may be a buffer of data, or a peripheral register.
+//! - *Transfer* is an overloaded term, meaning either a DMA transfer, or the movement
+//!   of data out of software, through a peripheral, to an external device.
+//! - *DMA Transfer* is an operation achieved by the DMA controller to move data from a
+//!   source to a destination.
+//! - *Receive* means that we're moving data into software, through a peripheral, from an
+//!   external device.
+//!
+//! ## TODO
+//!
+//! - Channel arbitration modes
+//! - Channel grouping
+//! - Channel priority, and channel priority swapping
+//! - Channel chaining
+//! - Indivisible transfers (transfers that have one major loop, and multiple minor loops)
 
 #![allow(non_snake_case)] // Compatibility with RAL
 
 mod element;
-mod peripheral;
+pub(crate) mod peripheral;
 mod register;
 
 pub use element::Element;
@@ -14,6 +42,14 @@ use core::mem;
 use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 
 /// A DMA channel
+///
+/// DMA channels provide one-way transfers of data. They accept a source of data,
+/// and a destination of data. They copy data from the source to the destination.
+/// When the transfer is complete, a DMA channel signals completion by changing a
+/// value in a register, or triggering an interrupt.
+///
+/// DMA channels have very little public interface. They're best used when paired with a
+/// [`Peripheral`](struct.Peripheral.html).
 pub struct Channel {
     /// Our channel number, expected to be between 0 to 31
     index: usize,
@@ -183,9 +219,28 @@ impl Channel {
 /// `Peripheral` wraps an object that can act as a source and / or destination
 /// for a DMA transfer. It provides an interface for scheduling transfers, and
 /// for knowing when transfers are complete.
+///
+/// The most useful methods are [`start_transfer()`](struct.Peripheral.html#method.start_transfer)
+/// and [`start_receive()`](struct.Peripheral.html#method.start_receive). Each method accepts
+/// a buffer, and will either
+///
+/// - send data from the buffer to the peripheral (`start_transfer()`)
+/// - move data from a peripheral into the buffer (`start_receive()`)
+///
+/// Both methods are unsafe! You're responsible for making sure the lifetime of the buffers is
+/// greater than the lifetime of the transfer.
+///
+/// When constructing a `Peripheral`, you may supply a configuration to trigger an interrupt when
+/// the DMA transfer completes. If you enable interrupts, you're responsible for registering the
+/// interrupt, and for clearing the interrupt. The `Peripheral` has methods for clearing interrupts
+/// due to transfer and receive DMA channels.
 pub struct Peripheral<P, E> {
+    /// Channel used for outgoing data (from software, to external device)
     tx_channel: Option<Channel>,
+    /// Channel used for incoming data (from external device, to software)
     rx_channel: Option<Channel>,
+    /// The peripheral that is either providing the data, or accepting the data,
+    /// or both.
     peripheral: P,
     _element: core::marker::PhantomData<E>,
 }
@@ -212,7 +267,7 @@ pub enum Error<P> {
     ///
     /// Cancel the transfer and try again.
     ActiveTransfer,
-    /// The peripheral returned an error.
+    /// The peripheral returned an error
     Peripheral(P),
     /// Error in setting up the DMA transfer
     Setup,
@@ -260,7 +315,7 @@ where
         self.rx_channel = Some(channel);
     }
 
-    /// Start a DMA transfer that receives data from the peripheral into the supplied buffer
+    /// Start a DMA transfer that transfers data from the peripheral into the supplied buffer
     ///
     /// A complete transfer is signaled by `receive_complete()`, and possibly an interrupt.
     ///
@@ -274,7 +329,7 @@ where
             return Err(Error::ActiveTransfer);
         }
         rx_channel.set_desination_buffer(buffer);
-        self.peripheral.enable_source()?; // TODO see if order matters
+        self.peripheral.enable_source()?;
         rx_channel.set_enable(true);
         if rx_channel.error() {
             rx_channel.clear_error();
@@ -362,7 +417,7 @@ where
             return Err(Error::ActiveTransfer);
         }
         tx_channel.set_source_buffer(buffer);
-        self.peripheral.enable_destination()?; // TODO see if order matters
+        self.peripheral.enable_destination()?;
         tx_channel.set_enable(true);
         if tx_channel.error() {
             tx_channel.clear_error();
@@ -429,6 +484,9 @@ where
     }
 }
 
+/// Unclocked, uninitialized DMA channels
+///
+/// Use [`clock()`](struct.Unclocked.html#method.clock) to initialize and acquire all DMA channels
 pub struct Unclocked([Option<Channel>; 32]);
 impl Unclocked {
     pub(crate) fn new() -> Self {
@@ -438,6 +496,10 @@ impl Unclocked {
             None, None, None, None,
         ])
     }
+    /// Enable the clocks for the DMA peripheral
+    ///
+    /// The return is 32 channels, each being initialized as `Some(Channel)`. Users may take channels as needed.
+    /// The index in the array maps to the DMA channel number.
     pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; 32] {
         let (ccm, _) = ccm.raw();
         ral::modify_reg!(ral::ccm, ccm, CCGR5, CG3: 0x03);

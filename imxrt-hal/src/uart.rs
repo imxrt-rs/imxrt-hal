@@ -4,6 +4,8 @@
 //! the `embedded_hal::serial` traits. The peripheral is sufficient
 //! for implementing basic serial communications.
 //!
+//! UARTs may also be used in bi-directional DMA transfers.
+//!
 //! # Example
 //!
 //! ```no_run
@@ -529,9 +531,9 @@ where
     }
 }
 
-use crate::dma::{Destination, Source};
+use crate::dma;
 
-impl<M> Source<u8> for UART<M>
+impl<M> dma::Source<u8> for UART<M>
 where
     M: module::Module,
 {
@@ -552,7 +554,7 @@ where
     }
 }
 
-impl<M> Destination<u8> for UART<M>
+impl<M> dma::Destination<u8> for UART<M>
 where
     M: module::Module,
 {
