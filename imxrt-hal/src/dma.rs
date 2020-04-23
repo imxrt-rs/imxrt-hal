@@ -9,7 +9,7 @@ mod register;
 pub use element::Element;
 pub use peripheral::{Destination, Source};
 
-use crate::ral;
+use crate::{ccm, ral};
 use core::mem;
 use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 
@@ -26,7 +26,7 @@ pub struct Channel {
 impl Channel {
     /// Allocates a DMA channel, and sets the initial state for
     /// the channel.
-    pub(crate) fn new(index: usize) -> Self {
+    fn new(index: usize) -> Self {
         let channel = Channel {
             index,
             registers: DMA,
@@ -49,7 +49,7 @@ impl Channel {
 
     /// Safety: lifetime of 'destination' must be greater than the lifetime
     /// of the DMA transfer.
-    unsafe fn set_destination<E: Element>(&self, destination: *mut E) {
+    unsafe fn set_destination<E: Element>(&self, destination: *const E) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, 0);
@@ -426,5 +426,24 @@ where
         peripheral.init_receive(rx.0, rx.1);
         peripheral.init_transfer(tx.0, tx.1);
         peripheral
+    }
+}
+
+pub struct Unclocked([Option<Channel>; 32]);
+impl Unclocked {
+    pub(crate) fn new() -> Self {
+        Unclocked([
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None,
+        ])
+    }
+    pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; 32] {
+        let (ccm, _) = ccm.raw();
+        ral::modify_reg!(ral::ccm, ccm, CCGR5, CG3: 0x03);
+        for (idx, channel) in self.0.iter_mut().enumerate() {
+            *channel = Some(Channel::new(idx));
+        }
+        self.0
     }
 }

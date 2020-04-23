@@ -4,7 +4,7 @@
 use super::Element;
 
 /// Describes a peripheral that can be the source of DMA data
-pub trait Source<E: Element> {
+pub trait Source<E: Element>: source::Sealed<E> {
     type Error;
     /// Peripheral source request signal
     ///
@@ -32,7 +32,7 @@ pub trait Source<E: Element> {
 }
 
 /// Describes a peripheral that can be the destination for DMA data
-pub trait Destination<E: Element> {
+pub trait Destination<E: Element>: destination::Sealed<E> {
     type Error;
     /// Peripheral destination request signal
     ///
@@ -45,7 +45,7 @@ pub trait Destination<E: Element> {
     /// This is the register that software writes to when sending data to a
     /// device. The type of the pointer describes the type of reads the
     /// DMA channel performs when transferring data.
-    fn destination(&self) -> *mut E;
+    fn destination(&self) -> *const E;
     /// Perform any actions necessary to enable DMA transfers
     ///
     /// Callers use this method to put the peripheral into a state where
@@ -55,4 +55,26 @@ pub trait Destination<E: Element> {
     ///
     /// This may include undoing the actions in `enable_destination()`.
     fn disable_destination(&mut self);
+}
+
+pub(crate) mod source {
+    use super::{Element, Source};
+    pub trait Sealed<E> {}
+    impl<S, E> Sealed<E> for S
+    where
+        S: Source<E>,
+        E: Element,
+    {
+    }
+}
+
+pub(crate) mod destination {
+    use super::{Destination, Element};
+    pub trait Sealed<E> {}
+    impl<D, E> Sealed<E> for D
+    where
+        D: Destination<E>,
+        E: Element,
+    {
+    }
 }
