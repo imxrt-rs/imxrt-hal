@@ -38,7 +38,7 @@ impl Channel {
 
     /// Safety: lifetime of `source` must be greater than the lifetime
     /// of the DMA transfer.
-    unsafe fn set_source<E: Element>(&self, source: *const E) {
+    unsafe fn set_source<E: Element>(&mut self, source: *const E) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
         ral::write_reg!(register::tcd, tcd, SOFF, 0);
@@ -49,7 +49,7 @@ impl Channel {
 
     /// Safety: lifetime of 'destination' must be greater than the lifetime
     /// of the DMA transfer.
-    unsafe fn set_destination<E: Element>(&self, destination: *const E) {
+    unsafe fn set_destination<E: Element>(&mut self, destination: *const E) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, 0);
@@ -60,7 +60,7 @@ impl Channel {
 
     /// Safety: lifetime of 'source' must be greater than the lifetime of the
     /// DMA transfer.
-    unsafe fn set_source_buffer<E: Element>(&self, source: &[E]) {
+    unsafe fn set_source_buffer<E: Element>(&mut self, source: &[E]) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, SADDR, source.as_ptr() as u32);
         ral::write_reg!(register::tcd, tcd, SOFF, mem::size_of::<E>() as i16);
@@ -80,7 +80,7 @@ impl Channel {
 
     /// Safety: lifetime of 'destination' must be greater than the lifetime of
     /// the DMA transfer
-    unsafe fn set_desination_buffer<E: Element>(&self, destination: &mut [E]) {
+    unsafe fn set_desination_buffer<E: Element>(&mut self, destination: &mut [E]) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, DADDR, destination.as_mut_ptr() as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
@@ -102,7 +102,7 @@ impl Channel {
     ///
     /// If source is `Some(value)`, we trigger from hardware identified by the source identifier.
     /// If `source` is `None`, we disable hardware triggering.
-    fn set_trigger_from_hardware(&self, source: Option<u32>) {
+    fn set_trigger_from_hardware(&mut self, source: Option<u32>) {
         let chcfg = &self.multiplexer.chcfg[self.index];
         chcfg.write(0);
         if let Some(source) = source {
@@ -117,7 +117,7 @@ impl Channel {
     }
 
     /// Enable or disable the DMA channel
-    fn set_enable(&self, enable: bool) {
+    fn set_enable(&mut self, enable: bool) {
         if enable {
             self.registers.SERQ.write(self.index as u8);
         } else {
@@ -131,7 +131,7 @@ impl Channel {
     }
 
     /// Clear the interrupt flag from this DMA channel
-    fn clear_interrupt(&self) {
+    fn clear_interrupt(&mut self) {
         self.registers.CINT.write(self.index as u8);
     }
 
@@ -139,13 +139,13 @@ impl Channel {
     ///
     /// 'Disable on completion' lets the DMA channel automatically clear the request signal
     /// when it completes a transfer.
-    fn set_disable_on_completion(&self, dreq: bool) {
+    fn set_disable_on_completion(&mut self, dreq: bool) {
         let tcd = &self.registers.TCD[self.index];
         ral::modify_reg!(register::tcd, tcd, CSR, DREQ: dreq as u16);
     }
 
     /// Enable or disable interrupt generation when the transfer completes
-    fn set_interrupt_on_completion(&self, intr: bool) {
+    fn set_interrupt_on_completion(&mut self, intr: bool) {
         let tcd = &self.registers.TCD[self.index];
         ral::modify_reg!(register::tcd, tcd, CSR, INTMAJOR: intr as u16);
     }
@@ -157,7 +157,7 @@ impl Channel {
     }
 
     /// Clears completion indication
-    fn clear_complete(&self) {
+    fn clear_complete(&mut self) {
         self.registers.CDNE.write(self.index as u8);
     }
 
@@ -167,7 +167,7 @@ impl Channel {
     }
 
     /// Clears the error flag
-    fn clear_error(&self) {
+    fn clear_error(&mut self) {
         self.registers.CERR.write(self.index as u8);
     }
 
@@ -247,7 +247,7 @@ where
         peripheral
     }
 
-    fn init_receive(&mut self, channel: Channel, config: Config) {
+    fn init_receive(&mut self, mut channel: Channel, config: Config) {
         channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
         // Safety: Source trait is only implemented on peripherals within
         // this crate. We may study those implementations to show that the
@@ -269,7 +269,7 @@ where
     /// Caller must ensure that the lifetime of the buffer is greater than the lifetime
     /// of the transfer.
     pub unsafe fn start_receive(&mut self, buffer: &mut [E]) -> Result<(), Error<P::Error>> {
-        let rx_channel = self.rx_channel.as_ref().unwrap();
+        let rx_channel = self.rx_channel.as_mut().unwrap();
         if rx_channel.active() {
             return Err(Error::ActiveTransfer);
         }
@@ -295,7 +295,7 @@ where
     /// Users are **required** to call this to disable the source. Otherwise,
     /// the source may continue to generate DMA requests.
     pub fn receive_clear_complete(&mut self) {
-        self.rx_channel.as_ref().unwrap().clear_complete();
+        self.rx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_source();
     }
 
@@ -309,13 +309,13 @@ where
     /// Users are **required** to clear the interrupt flag, or the hardware
     /// may continue to generate interrupts for the channel.
     pub fn receive_clear_interrupt(&mut self) {
-        self.rx_channel.as_ref().unwrap().clear_interrupt()
+        self.rx_channel.as_mut().unwrap().clear_interrupt()
     }
 
     /// Cancel a receive transfer
     pub fn receive_cancel(&mut self) {
         self.peripheral.disable_source();
-        let rx_channel = self.rx_channel.as_ref().unwrap();
+        let rx_channel = self.rx_channel.as_mut().unwrap();
         while rx_channel.hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
@@ -335,7 +335,7 @@ where
         peripheral
     }
 
-    fn init_transfer(&mut self, channel: Channel, config: Config) {
+    fn init_transfer(&mut self, mut channel: Channel, config: Config) {
         channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
         // Safety: Destination trait is only implemented on peripherals within
         // this crate. We may study those implementations to show that the pointers
@@ -357,7 +357,7 @@ where
     /// Caller must ensure that the lifetime of the buffer is greater than the lifetime
     /// of the transfer.
     pub unsafe fn start_transfer(&mut self, buffer: &[E]) -> Result<(), Error<P::Error>> {
-        let tx_channel = self.tx_channel.as_ref().unwrap();
+        let tx_channel = self.tx_channel.as_mut().unwrap();
         if tx_channel.active() {
             return Err(Error::ActiveTransfer);
         }
@@ -383,7 +383,7 @@ where
     /// Users are **required** to call this to disable the source. Otherwise,
     /// the source may continue to generate DMA requests.
     pub fn transfer_clear_complete(&mut self) {
-        self.tx_channel.as_ref().unwrap().clear_complete();
+        self.tx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_destination();
     }
 
@@ -397,13 +397,13 @@ where
     /// Users are **required** to clear the interrupt flag, or the hardware
     /// may continue to generate interrupts for the channel.
     pub fn transfer_clear_interrupt(&mut self) {
-        self.tx_channel.as_ref().unwrap().clear_interrupt()
+        self.tx_channel.as_mut().unwrap().clear_interrupt()
     }
 
     /// Cancel a transfer that sends data to the peripheral
     pub fn transfer_cancel(&mut self) {
         self.peripheral.disable_destination();
-        let tx_channel = self.tx_channel.as_ref().unwrap();
+        let tx_channel = self.tx_channel.as_mut().unwrap();
         while tx_channel.hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
