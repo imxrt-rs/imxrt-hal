@@ -91,4 +91,7 @@ mod private {
 
     use crate::uart;
     impl<M> Sealed for uart::UART<M> where M: uart::module::Module {}
+
+    use crate::spi;
+    impl<M> Sealed for spi::SPI<M> where M: spi::module::Module {}
 }

@@ -357,12 +357,17 @@ where
     }
 
     #[inline(always)]
+    fn set_frame_size<Word>(&mut self) {
+        ral::modify_reg!(ral::lpspi, self.reg, TCR, FRAMESZ: ((core::mem::size_of::<Word>() * 8 - 1) as u32));
+    }
+
+    #[inline(always)]
     fn send<Word: Into<u32> + Copy>(&mut self, word: Word) -> nb::Result<(), Error> {
         use ral::lpspi::SR::*;
 
         let sr = self.check_errors()?;
         self.clear_status();
-        ral::modify_reg!(ral::lpspi, self.reg, TCR, FRAMESZ: ((core::mem::size_of::<Word>() * 8 - 1) as u32));
+        self.set_frame_size::<Word>();
 
         if (sr & MBF::mask != 0) || (sr & TDF::mask == 0) {
             return Err(nb::Error::WouldBlock);
@@ -386,6 +391,36 @@ where
             Ok(word)
         } else {
             Err(nb::Error::WouldBlock)
+        }
+    }
+
+    /// Perform common actions for enabling a DMA source
+    #[inline(always)]
+    fn enable_dma_source<W>(&mut self) {
+        self.set_frame_size::<W>();
+        ral::modify_reg!(ral::lpspi, self.reg, FCR, RXWATER: 0); // No watermarks; affects DMA signaling
+        ral::modify_reg!(ral::lpspi, self.reg, DER, RDDE: 1);
+    }
+
+    /// Perform common actions for disabling a DMA source
+    #[inline(always)]
+    fn disable_dma_source(&mut self) {
+        while ral::read_reg!(ral::lpspi, self.reg, DER, RDDE == 1) {
+            ral::modify_reg!(ral::lpspi, self.reg, DER, RDDE: 0);
+        }
+    }
+
+    #[inline(always)]
+    fn enable_dma_destination<W>(&mut self) {
+        self.set_frame_size::<W>();
+        ral::modify_reg!(ral::lpspi, self.reg, FCR, TXWATER: 0); // No watermarks; affects DMA signaling
+        ral::modify_reg!(ral::lpspi, self.reg, DER, TDDE: 1);
+    }
+
+    #[inline(always)]
+    fn disable_dma_destination(&mut self) {
+        while ral::read_reg!(ral::lpspi, self.reg, DER, TDDE == 1) {
+            ral::modify_reg!(ral::lpspi, self.reg, DER, TDDE: 0);
         }
     }
 }
@@ -440,3 +475,81 @@ where
 impl<M> embedded_hal::blocking::spi::write::Default<u16> for SPI<M> where M: module::Module {}
 impl<M> embedded_hal::blocking::spi::transfer::Default<u16> for SPI<M> where M: module::Module {}
 impl<M> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M> where M: module::Module {}
+
+//
+// DMA peripheral support
+//
+
+use crate::dma;
+
+impl<M> dma::Source<u8> for SPI<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    fn source(&self) -> *const u8 {
+        &self.reg.RDR as *const _ as *const u8
+    }
+    fn enable_source(&mut self) -> Result<(), Self::Error> {
+        self.enable_dma_source::<u8>();
+        Ok(())
+    }
+    fn disable_source(&mut self) {
+        self.disable_dma_source();
+    }
+}
+
+impl<M> dma::Destination<u8> for SPI<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    fn destination(&self) -> *const u8 {
+        &self.reg.TDR as *const _ as *const u8
+    }
+    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+        self.enable_dma_destination::<u8>();
+        Ok(())
+    }
+    fn disable_destination(&mut self) {
+        self.disable_dma_destination();
+    }
+}
+
+impl<M> dma::Source<u16> for SPI<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    fn source(&self) -> *const u16 {
+        &self.reg.RDR as *const _ as *const u16
+    }
+    fn enable_source(&mut self) -> Result<(), Self::Error> {
+        self.enable_dma_source::<u16>();
+        Ok(())
+    }
+    fn disable_source(&mut self) {
+        self.disable_dma_source();
+    }
+}
+
+impl<M> dma::Destination<u16> for SPI<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    fn destination(&self) -> *const u16 {
+        &self.reg.TDR as *const _ as *const u16
+    }
+    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+        self.enable_dma_destination::<u16>();
+        Ok(())
+    }
+    fn disable_destination(&mut self) {
+        self.disable_dma_destination();
+    }
+}
