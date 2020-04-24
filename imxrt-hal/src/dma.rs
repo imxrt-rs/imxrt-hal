@@ -245,9 +245,32 @@ pub struct Peripheral<P, E> {
     _element: core::marker::PhantomData<E>,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 /// Configurations for defining DMA transfers
+///
+/// Use [`ConfigBuilder`](struct.ConfigBuilder.html) to create a DMA
+/// transfer configuration.
 pub struct Config {
+    interrupt_on_completion: bool,
+}
+
+/// Builder for defining your DMA configuration
+pub struct ConfigBuilder(Config);
+
+impl Default for ConfigBuilder {
+    fn default() -> Self {
+        ConfigBuilder::new()
+    }
+}
+
+impl ConfigBuilder {
+    /// Construct a builder, and begin defining a configuration
+    pub fn new() -> Self {
+        ConfigBuilder(Config {
+            interrupt_on_completion: false,
+        })
+    }
+
     /// Specifies that this DMA channel will trigger an interrupt
     /// when the transfer completes.
     ///
@@ -256,7 +279,15 @@ pub struct Config {
     /// interrupt supports two channels. You're responsible for managing
     /// the interrupts, and for registering your handler for the correct
     /// DMA channel.
-    pub interrupt_on_completion: bool,
+    pub fn interrupt_on_completion(mut self, interrupt_on_completion: bool) -> Self {
+        self.0.interrupt_on_completion = interrupt_on_completion;
+        self
+    }
+
+    /// Complete configuration, and return a `Config` for a DMA transfer
+    pub fn build(self) -> Config {
+        self.0
+    }
 }
 
 /// An error when preparing a transfer
@@ -378,6 +409,22 @@ where
     }
 }
 
+/// Create a peripheral that can suppy `u8` data for DMA transfers
+pub fn receive_u8<P>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8>
+where
+    P: Source<u8>,
+{
+    Peripheral::new_receive(source, channel, config)
+}
+
+/// Create a peripheral that can supply `u16` data for DMA transfers
+pub fn receive_u16<P>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16>
+where
+    P: Source<u16>,
+{
+    Peripheral::new_receive(source, channel, config)
+}
+
 impl<P, E> Peripheral<P, E>
 where
     P: Destination<E>,
@@ -466,6 +513,22 @@ where
     }
 }
 
+/// Create a peripheral that can accept `u8` data from DMA transfers
+pub fn transfer_u8<P>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u8>
+where
+    P: Destination<u8>,
+{
+    Peripheral::new_transfer(destination, channel, config)
+}
+
+/// Create a peripheral that can accept `u16` data from DMA transfers
+pub fn transfer_u16<P>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u16>
+where
+    P: Destination<u16>,
+{
+    Peripheral::new_transfer(destination, channel, config)
+}
+
 impl<P, E> Peripheral<P, E>
 where
     P: Source<E> + Destination<E>,
@@ -482,6 +545,32 @@ where
         peripheral.init_transfer(tx.0, tx.1);
         peripheral
     }
+}
+
+/// Create a peripheral that can accept `u8` data from DMA transfers, and can
+/// source `u8` data for DMA transfers
+pub fn transfer_receive_u8<P>(
+    peripheral: P,
+    tx: (Channel, Config),
+    rx: (Channel, Config),
+) -> Peripheral<P, u8>
+where
+    P: Source<u8> + Destination<u8>,
+{
+    Peripheral::new_transfer_receive(peripheral, tx, rx)
+}
+
+/// Create a peripheral that can accept `u16` data from DMA transfers, and can
+/// source `u16` data for DMA transfers
+pub fn transfer_receive_u16<P>(
+    peripheral: P,
+    tx: (Channel, Config),
+    rx: (Channel, Config),
+) -> Peripheral<P, u16>
+where
+    P: Source<u16> + Destination<u16>,
+{
+    Peripheral::new_transfer_receive(peripheral, tx, rx)
 }
 
 /// Unclocked, uninitialized DMA channels
