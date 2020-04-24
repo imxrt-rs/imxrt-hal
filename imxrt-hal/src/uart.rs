@@ -538,7 +538,7 @@ where
     M: module::Module,
 {
     type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = 67;
+    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
     fn source(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
@@ -559,7 +559,7 @@ where
     M: module::Module,
 {
     type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = 66;
+    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
     fn destination(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
