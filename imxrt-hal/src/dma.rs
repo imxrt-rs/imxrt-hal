@@ -38,7 +38,10 @@ pub use element::Element;
 pub use peripheral::{Destination, Source};
 
 use crate::{ccm, ral};
-use core::mem;
+use core::{
+    fmt::{self, Debug, Display},
+    mem,
+};
 use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 
 /// A DMA channel
@@ -212,6 +215,14 @@ impl Channel {
         let tcd = &self.registers.TCD[self.index];
         ral::read_reg!(register::tcd, tcd, CSR, ACTIVE == 1)
     }
+
+    /// Returns the value from the **global** error status register
+    ///
+    /// It may reflect the last channel that produced an error, and that
+    /// may not be related to this channel.
+    fn error_status(&self) -> u32 {
+        self.registers.ES.read()
+    }
 }
 
 /// A DMA-capable peripheral
@@ -301,7 +312,7 @@ pub enum Error<P> {
     /// The peripheral returned an error
     Peripheral(P),
     /// Error in setting up the DMA transfer
-    Setup,
+    Setup(ErrorStatus),
 }
 
 impl<P> From<P> for Error<P> {
@@ -363,8 +374,9 @@ where
         self.peripheral.enable_source()?;
         rx_channel.set_enable(true);
         if rx_channel.error() {
+            let es = ErrorStatus::new(rx_channel.error_status());
             rx_channel.clear_error();
-            Err(Error::Setup)
+            Err(Error::Setup(es))
         } else {
             Ok(())
         }
@@ -467,8 +479,9 @@ where
         self.peripheral.enable_destination()?;
         tx_channel.set_enable(true);
         if tx_channel.error() {
+            let es = ErrorStatus::new(tx_channel.error_status());
             tx_channel.clear_error();
-            Err(Error::Setup)
+            Err(Error::Setup(es))
         } else {
             Ok(())
         }
@@ -596,5 +609,51 @@ impl Unclocked {
             *channel = Some(Channel::new(idx));
         }
         self.0
+    }
+}
+
+/// A wrapper around a DMA error status value
+///
+/// The wrapper contains a copy of the DMA controller's
+/// error status register at the point of an error. The
+/// wrapper implements both `Debug` and `Display`. The
+/// type may be printed to understand why there was a
+/// DMA error.
+#[derive(Clone, Copy)]
+pub struct ErrorStatus {
+    /// The raw error status
+    es: u32,
+}
+
+impl ErrorStatus {
+    fn new(es: u32) -> Self {
+        ErrorStatus { es }
+    }
+}
+
+impl Debug for ErrorStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DMA_ES({:#010X})", self.es)
+    }
+}
+
+impl Display for ErrorStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,
+            "DMA_ES: VLD {vld} ECX {ecx} GPE {gpe} CPE {cpe} ERRCHN {errchn} SAE {sae} SOE {soe} DAE {dae} DOE {doe} NCE {nce} SGE {sge} SBE {sbe} DBE {dbe}",
+            vld = (self.es >> 31) & 0x1,
+            ecx = (self.es >> 16) & 0x1,
+            gpe = (self.es >> 15) & 0x1,
+            cpe = (self.es >> 14) & 0x1,
+            errchn = (self.es >> 8) & 0x1F,
+            sae = (self.es >> 7) & 0x1,
+            soe = (self.es >> 6) & 0x1,
+            dae = (self.es >> 5) & 0x1,
+            doe = (self.es >> 4) & 0x1,
+            nce = (self.es >> 3) & 0x1,
+            sge = (self.es >> 2) & 0x1,
+            sbe = (self.es >> 1) & 0x1,
+            dbe = self.es & 0x1
+        )
     }
 }
