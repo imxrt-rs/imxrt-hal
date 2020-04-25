@@ -189,6 +189,12 @@ impl Channel {
         ral::modify_reg!(register::tcd, tcd, CSR, INTMAJOR: intr as u16);
     }
 
+    /// Returns `true` if this channel's completion will generate an interrupt
+    fn interrupt_on_completion(&self) -> bool {
+        let tcd = &self.registers.TCD[self.index];
+        ral::read_reg!(register::tcd, tcd, CSR, INTMAJOR == 1)
+    }
+
     /// Indicates if the DMA transfer has completed
     fn complete(&self) -> bool {
         let tcd = &self.registers.TCD[self.index];
@@ -263,6 +269,17 @@ pub struct Peripheral<P, E> {
 /// transfer configuration.
 pub struct Config {
     interrupt_on_completion: bool,
+    // Developer note: update `Config::from_channel` when
+    // adding more fields!
+}
+
+impl Config {
+    /// Returns a `Config` that represents the state of the supplied channel
+    fn from_channel(channel: &Channel) -> Self {
+        Config {
+            interrupt_on_completion: channel.interrupt_on_completion(),
+        }
+    }
 }
 
 /// Builder for defining your DMA configuration
@@ -419,6 +436,26 @@ where
         }
         rx_channel.set_enable(false);
     }
+
+    /// Returns a copy of the config used to create the receive
+    /// peripheral
+    pub fn receive_config(&self) -> Config {
+        let rx_channel = self.rx_channel.as_ref().unwrap();
+        Config::from_channel(rx_channel)
+    }
+
+    /// Release the peripheral and the channel
+    ///
+    /// Users should ensure that any started transfer has completed. If the
+    /// `Peripheral` was constructed with [`new_transfer_receive()`](struct.Peripheral.html#method.new_transfer_receive),
+    /// callers should use [`release_transfer_receive()`](struct.Peripheral.html#method.release_transfer_receive);
+    /// otherwise, the transfer channel will be dropped when this method returns.
+    ///
+    /// To get a copy of the original config, use [`receive_config()`](struct.Peripheral.html#method.receive_config)
+    /// before releasing the object.
+    pub fn receive_release(mut self) -> (P, Channel) {
+        (self.peripheral, self.rx_channel.take().unwrap())
+    }
 }
 
 /// Create a peripheral that can suppy `u8` data for DMA transfers
@@ -524,6 +561,26 @@ where
         }
         tx_channel.set_enable(false);
     }
+
+    /// Returns a copy of the transfer config supplied during
+    /// construction
+    pub fn transfer_config(&self) -> Config {
+        let tx_channel = self.tx_channel.as_ref().unwrap();
+        Config::from_channel(tx_channel)
+    }
+
+    /// Release the peripheral and the channel
+    ///
+    /// Users should ensure that any started transfer has completed. If the
+    /// `Peripheral` was constructed with [`new_transfer_receive()`](struct.Peripheral.html#method.new_transfer_receive),
+    /// callers should use [`transfer_receive_release()`](struct.Peripheral.html#method.transfer_receive_release);
+    /// otherwise, the receiver channel will be dropped when this method returns.
+    ///
+    /// To get a copy of the original config, use [`transfer_config()`](struct.Peripheral.html#method.transfer_config)
+    /// before releasing the object.
+    pub fn transfer_release(mut self) -> (P, Channel) {
+        (self.peripheral, self.tx_channel.take().unwrap())
+    }
 }
 
 /// Create a peripheral that can accept `u8` data from DMA transfers
@@ -557,6 +614,20 @@ where
         peripheral.init_receive(rx.0, rx.1);
         peripheral.init_transfer(tx.0, tx.1);
         peripheral
+    }
+
+    /// Release the peripheral and both channels (transfer channel, release channel)
+    ///
+    /// Users should ensure that any active transfers are complete before releasing the
+    /// peripheral.
+    pub fn transfer_receive_release(mut self) -> (P, (Channel, Channel)) {
+        (
+            self.peripheral,
+            (
+                self.tx_channel.take().unwrap(),
+                self.rx_channel.take().unwrap(),
+            ),
+        )
     }
 }
 
