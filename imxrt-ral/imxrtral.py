@@ -4,7 +4,7 @@ imxrtral.py
 Copyright 2018 Adam Greig
 Copyright 2020 Tom Burdick
 
-Licensed under MIT and Apache 2.0, see LICENSE_MIT and LICENSE_APACHE.
+Licensed under MIT and Apache 2.0. See LICENSE_MIT and LICENSE_APACHE.
 """
 
 import os
