@@ -21,7 +21,7 @@ jobs:
       uses: actions/cache@v1
       id: ral-cache
       with:
-        path: imxrt-ral/src
+        path: imxrt-ral
         key: ${{ runner.OS }}-ral-cache-${{ hashFiles('imxrt-ral/imxrtral.py') }}
     - name: Generate code
       if: steps.ral-cache.outputs.cache-hit != 'true'
@@ -48,7 +48,7 @@ jobs:
       uses: actions/cache@v1
       id: ral-cache
       with:
-        path: imxrt-ral/src
+        path: imxrt-ral
         key: ${{ runner.OS }}-ral-cache-${{ hashFiles('imxrt-ral/imxrtral.py') }}
     - name: Generate code
       if: steps.ral-cache.outputs.cache-hit != 'true'
