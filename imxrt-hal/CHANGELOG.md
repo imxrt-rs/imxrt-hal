@@ -5,6 +5,7 @@
 ### Added
 
 - The iMXRT's general purpose timers (GPT) are now available.
+- DMA channels and DMA-capable peripherals are available. DMA-capable peripherals include SPI and UART.
 
 ### Changed
 
