@@ -5,6 +5,13 @@ i.MX RT register access layer, hardware abstraction layer, and svd patches.
 This is very much modeled on the great stm32ral and stm32-rs crates which do 
 much the same for ST's fantastic STM32 family.
 
+## Development
+
+- Clone this repository
+- Install the requirements: `pip3 install --user svdtools`
+- Make sure a `Cargo.toml` gets generated: `cd imxrt-ral; make; cd ..;`
+- After this, the cargo workspace should be set up and your editor's language server should work with this repository.
+
 ## Goals
 
 * Create *the* collaborative group to support using Rust on NXP's i.MX RT series.
