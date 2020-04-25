@@ -112,7 +112,7 @@ impl Channel {
             (source.len() as i32).wrapping_neg()
         );
 
-        let iterations = (source.len() / mem::size_of::<E>()).max(1) as u16;
+        let iterations = source.len() as u16;
         ral::write_reg!(register::tcd, tcd, CITER, iterations);
         ral::write_reg!(register::tcd, tcd, BITER, iterations);
     }
@@ -132,7 +132,7 @@ impl Channel {
             (destination.len() as i32).wrapping_neg()
         );
 
-        let iterations = (destination.len() / mem::size_of::<E>()).max(1) as u16;
+        let iterations = destination.len() as u16;
         ral::write_reg!(register::tcd, tcd, CITER, iterations);
         ral::write_reg!(register::tcd, tcd, BITER, iterations);
     }
