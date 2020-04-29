@@ -27,20 +27,20 @@ The `imxrt-ral` crate is auto-generated from the checked-in SVD files, available
 
 To generate the RAL,
 
-- Install Python 3, if you don't already have it. You'll need at least Python 3.6.
+- Install Python 3. You'll need at least Python 3.6.
 - Install the Python dependencies needed to generate the RAL: `pip3 install --user svdtools`. Alternatively, use the rules in the RAL's `Makefile` to create a virtual environment with the necessary dependencies: `make venv update-venv && source venv/bin/activate`.
 - Run `make` in the `imxrt-ral` directory: `cd imxrt-ral; make; cd ..;`. The auto-generation script might generate warnings; that's OK.
 
-If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files. The RAL can build by itself: `cd imxrt-ral && cargo build --features imxrt1062`.
+If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files. The RAL can build by itself: `cd imxrt-ral && cargo check --features imxrt1062 --target thumbv7em-none-eabihf`.
 
-The RAL doesn't change too frequently. But, if you add an SVD patch, you'll need to re-generate the RAL to realize the change. Keep an eye on pull requests that mention a RAL change; those changes may indicate a need to re-generate the RAL.
+The RAL doesn't change too frequently. But, if you add an SVD patch, you'll need to re-generate the RAL to realize the change. Keep an eye on pull requests that mention a RAL change.
 
 ### HAL
 
-Make sure you've generated the RAL (see above). When developing the HAL, ensure that you specify a feature flag from the command line. To check the HAL for `imxrt1062` processors, `cd imxrt-hal`, then
+Make sure you've generated the RAL (see above). When developing the HAL, specify a feature flag from the command line. To check the HAL for `imxrt1062` processors, `cd imxrt-hal`, then
 
 ```
-cargo check --features imxrt1062
+cargo check --features imxrt1062 --target thumbv7em-none-eabihf
 ```
 
 ### SVD Patches
@@ -54,7 +54,7 @@ Our CI system ensures that the RAL and HAL builds for all processor variants. Bu
 - [the `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp)
 - [the `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs)
 
-Follow the instructions in those projects to prepare an environment for testing HAL changes. You may also consider adding your contributions in those crates. The `teensy4-rs` project, in particular, maintains a set of [examples](https://github.com/mciantyre/teensy4-rs/tree/master/teensy4-examples/src) that may help you test changes.
+Follow the instructions in those projects to prepare an environment for testing HAL changes. You may also consider contributing to those projects. The `teensy4-rs` project, in particular, maintains a set of [examples](https://github.com/mciantyre/teensy4-rs/tree/master/teensy4-examples/src) that may help you test changes.
 
 ## Resources
 
