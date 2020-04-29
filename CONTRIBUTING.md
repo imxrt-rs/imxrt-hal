@@ -8,13 +8,13 @@ Thanks for helping us build embedded Rust support for NXP's i.MX RT processors! 
 
 ## Development
 
-The steps below are useful for developers who want to build the RAL and the HAL on their own systems. All steps below assume that you've cloned the repository.
+The steps below are useful for developers who want to build and modify the RAL and the HAL. All steps assume that you've cloned the repository.
 
 ### Dependencies
 
 You'll need
 
-- a Rust installation, at least Rust 1.40
+- a Rust installation, at least Rust 1.40, possibly later. To be safe, use the latest, stable Rust compiler.
 - the `thumbv7-none-eabihf` Rust target, which may be installed via `rustup`:
 
 ```bash
@@ -23,15 +23,15 @@ rustup target add thumbv7em-none-eabihf
 
 ### RAL
 
-The `imxrt-ral` crate is auto-generated from the checked-in SVD files, available in `imxrt-ral/svd`. Note that the RAL source files are not checked into source control. They're ignored so that developers are not encouraged to directly modify the Rust source files. If we modified the files directly, the changes might be lost the next time we auto-generate the RAL crate.
+The `imxrt-ral` crate is auto-generated from the checked-in SVD files, available in `imxrt-ral/svd`. Note that the auto-generated RAL source files are not checked into git. They're ignored so that developers are not encouraged to directly modify the Rust source files. If we modified the files directly, the changes might be lost the next time we auto-generate the RAL crate.
 
 To generate the RAL,
 
 - Install Python 3, if you don't already have it. You'll need at least Python 3.6.
 - Install the Python dependencies needed to generate the RAL: `pip3 install --user svdtools`. Alternatively, use the rules in the RAL's `Makefile` to create a virtual environment with the necessary dependencies: `make venv update-venv && source venv/bin/activate`.
-- Run `make` in the `imxrt-ral` directory: `cd imxrt-ral; make; cd ..;`. The auto-generation script might generate many warnings; that's OK right now.
+- Run `make` in the `imxrt-ral` directory: `cd imxrt-ral; make; cd ..;`. The auto-generation script might generate warnings; that's OK.
 
-If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files.
+If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files. The RAL can build by itself: `cd imxrt-ral && cargo build --features imxrt1062`.
 
 The RAL doesn't change too frequently. But, if you add an SVD patch, you'll need to re-generate the RAL to realize the change. Keep an eye on pull requests that mention a RAL change; those changes may indicate a need to re-generate the RAL.
 
@@ -49,7 +49,7 @@ To modify the RAL, you'll need to describe your change as an SVD patch. If you'd
 
 ### Testing
 
-Our CI system ensures that the RAL and HAL builds for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL using another project, like a BSP. Some BSP crates that use the `imxrt-hal` include
+Our CI system ensures that the RAL and HAL builds for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt-hal` include
 
 - [the `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp)
 - [the `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs)

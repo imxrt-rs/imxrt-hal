@@ -1,6 +1,6 @@
 # imxrt-rs
 
-A Rust register access layer (RAL), hardware abstraction layer (HAL), and SVD patches for NXP i.MX RT processors.
+A Rust hardware abstraction layer (HAL), register access layer (RAL, and SVD patches for NXP i.MX RT processors.
 
 [![All Checks][all-checks-badge]][all-checks-url] [![Crates.io][imxrt-hal-badge]][imxrt-hal-url]
 
@@ -17,7 +17,7 @@ A Rust register access layer (RAL), hardware abstraction layer (HAL), and SVD pa
 * Embedded HAL support.
 * RTFM support.
 * NXP EVK board support
-* Popular boards such as the Teensy 4.
+* Supporting popular boards such as the Teensy 4.
 
 ## Getting Started
 
@@ -60,27 +60,29 @@ If you would like a lower-level interface for i.MX RT processor registers, consi
 
 The `imxrt-ral` supports all i.MX RT processors:
 
-- [x] imxrt1011
-- [x] imxrt1015
-- [x] imxrt1021
-- [x] imxrt1051
-- [x] imxrt1052
-- [x] imxrt1061
-- [x] imxrt1062
-- [x] imxrt1064
+- [x] `"imxrt1011"`
+- [x] `"imxrt1015"`
+- [x] `"imxrt1021"`
+- [x] `"imxrt1051"`
+- [x] `"imxrt1052"`
+- [x] `"imxrt1061"`
+- [x] `"imxrt1062"`
+- [x] `"imxrt1064"`
+
+As with the HAL, the RAL also **requires** a feature flag to specify the processor variant. The RAL is also [on crates.io](https://crates.io/crates/imxrt-ral).
 
 ## Q/A
 
-*Are there any board support packages (BSP) that use the `imxrt-hal` crate*
+*Are there any board support packages (BSP) that use the `imxrt-hal` crate?*
 
-There are a few board support packages (BSP)s that use the `imxrt-hal` crate:
+There are a few BSPs that use the `imxrt-hal` crate:
 
-- [The `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp), useful for the i.MX RT 1060 Evaluation Kit (EVK)
-- [The `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs), useful for the Teensy 4
+- [The `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp), useful for the i.MX RT 1060 Evaluation Kit (EVK).
+- [The `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs), supporting Rust development on the Teensy 4.
 
-Consider using those crates if you already own those hardware platforms, as they may provide a more useful foundation for building Rust applications.
+Consider using those crates if you already own those hardware platforms, as they may provide a simpler foundation for building Rust applications.
 
-*How do I use Rust to boot an i.MX RT-based system? Does the HAL provide the reset handler?*
+*How can I use Rust to boot an i.MX RT-based system? Does the HAL provide the reset handler?*
 
 Neither the HAL nor the RAL can help you boot an i.MX RT-based system. Typically, Rust developers use [the `cortex-m-rt` crate](https://github.com/rust-embedded/cortex-m-rt) as a minimal runtime for Cortex-M processors. However, i.MX RT processors require more setup than what the `cortex-m-rt` crate offers. As of now, you're required to use your own runtime crate to support i.MX RT processor start-up.
 
