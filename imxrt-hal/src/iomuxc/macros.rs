@@ -2,7 +2,14 @@ macro_rules! alt0 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt0 setting
         pub fn alt0(self) -> $Pad<$crate::iomuxc::Alt0> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT0) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT0
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -14,7 +21,14 @@ macro_rules! alt1 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt1 setting
         pub fn alt1(self) -> $Pad<$crate::iomuxc::Alt1> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT1) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT1
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -26,7 +40,14 @@ macro_rules! alt2 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt2 setting
         pub fn alt2(self) -> $Pad<$crate::iomuxc::Alt2> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT2) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT2
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -38,7 +59,14 @@ macro_rules! alt3 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt3 setting
         pub fn alt3(self) -> $Pad<$crate::iomuxc::Alt3> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT3) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT3
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -50,7 +78,14 @@ macro_rules! alt4 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt4 setting
         pub fn alt4(self) -> $Pad<$crate::iomuxc::Alt4> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT4) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT4
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -62,7 +97,14 @@ macro_rules! alt5 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt5 setting
         pub fn alt5(self) -> $Pad<$crate::iomuxc::Alt5> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT5) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT5
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -74,7 +116,14 @@ macro_rules! alt6 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt6 setting
         pub fn alt6(self) -> $Pad<$crate::iomuxc::Alt6> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT6) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT6
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -86,7 +135,14 @@ macro_rules! alt7 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt7 setting
         pub fn alt7(self) -> $Pad<$crate::iomuxc::Alt7> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT7) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT7
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -98,7 +154,14 @@ macro_rules! alt8 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt8 setting
         pub fn alt8(self) -> $Pad<$crate::iomuxc::Alt8> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT8) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT8
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -110,7 +173,14 @@ macro_rules! alt9 {
     ($Pad:ident, $mux_mod:ident) => {
         /// Converts the pad into its Alt9 setting
         pub fn alt9(self) -> $Pad<$crate::iomuxc::Alt9> {
-            unsafe { ::imxrt_ral::modify_reg!($crate::ral::iomuxc, $crate::ral::iomuxc::IOMUXC, $mux_mod, MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT9) };
+            unsafe {
+                ::imxrt_ral::modify_reg!(
+                    $crate::ral::iomuxc,
+                    $crate::ral::iomuxc::IOMUXC,
+                    $mux_mod,
+                    MUX_MODE: $crate::ral::iomuxc::$mux_mod::MUX_MODE::RW::ALT9
+                )
+            };
             $Pad {
                 _alt: core::marker::PhantomData,
             }
@@ -175,16 +245,16 @@ macro_rules! pad {
             ///
             /// # Example using const builder functions
             ///
-            /// ```ignore
+            /// ```no_run
             /// use imxrt_hal::iomuxc::pin_config::*;
             /// use imxrt_hal::Peripherals;
             ///
-            /// const led_pin_cfg = PinConfig::with_none()
-            ///                      .set_pull_keeper_enable(PullKeeperEnable::Enabled)
+            /// const LED_PIN_CONFIG: PinConfig = PinConfig::with_none()
+            ///                      .set_pull_up(PullUp::PullUp_100KOhm)
             ///                      .set_speed(Speed::Speed2_150MHz)
             ///                      .set_drive_strength(DriveStrength::R0_DIV_6);
             /// let mut peripherals = Peripherals::take().unwrap();
-            /// peripherals.iomuxc.gpio_ad_b0_00.configure(&led_pin_cfg);
+            /// peripherals.iomuxc.gpio_ad_b0_00.configure(&LED_PIN_CONFIG);
             /// ```
             pub fn configure(&mut self, cfg: &$crate::iomuxc::pin_config::PinConfig) {
                 // Safety: iomux registers are per pin and effectively owned by
