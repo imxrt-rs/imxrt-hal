@@ -106,7 +106,7 @@
 //! let mut gpt1 = peripherals.gpt1.clock(&mut cfg);
 //!
 //! gpt1.set_output_interrupt_on_compare(
-//!     imxrt_hal::gpt::OutputCompareRegister::Three, 
+//!     imxrt_hal::gpt::OutputCompareRegister::Three,
 //!     true,
 //! );
 //! gpt1.set_wait_mode_enable(true);

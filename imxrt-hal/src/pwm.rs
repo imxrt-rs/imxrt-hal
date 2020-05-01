@@ -12,6 +12,45 @@
 //!   in a `Handle`, to acquire a `Controller`.
 //! - `Controller` implements `embedded_hal::Pwm`. It lets you set PWM duty cycles.
 //!   Once you're done setting duty cycles, drop the `Controller`.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//! use imxrt_hal::pwm::Channel;
+//! use embedded_hal::Pwm;
+//!
+//! let mut p = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let (_, ipg_hz) =
+//!     p.ccm
+//!         .pll1
+//!         .set_arm_clock(imxrt_hal::ccm::PLL1::ARM_HZ, &mut p.ccm.handle, &mut p.dcdc);
+//!
+//! let mut pwm2 = p.pwm2.clock(&mut p.ccm.handle);
+//!
+//! let mut sm2 = pwm2
+//!     .sm2
+//!     .outputs(
+//!         &mut pwm2.handle,
+//!         p.iomuxc.gpio_b0_10.alt2(),
+//!         p.iomuxc.gpio_b0_11.alt2(),
+//!         imxrt_hal::pwm::Timing {
+//!             clock_select: imxrt_hal::ccm::pwm::ClockSelect::IPG(ipg_hz),
+//!             prescalar: imxrt_hal::ccm::pwm::Prescalar::PRSC_5,
+//!             switching_period: core::time::Duration::from_micros(1000),
+//!         },
+//!     )
+//!     .unwrap();
+//!
+//! let (duty1, duty2) = (core::u16::MAX / 4, core::u16::MAX / 2);
+//! let mut ctrl = sm2.control(&mut pwm2.handle);
+//!
+//! ctrl.enable(Channel::A);
+//! ctrl.enable(Channel::B);
+//! ctrl.set_duty(Channel::A, duty1);
+//! ctrl.set_duty(Channel::B, duty2);
+//! ```
 
 use crate::ccm;
 use crate::iomuxc::pwm::Pin;
