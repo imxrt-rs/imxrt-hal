@@ -1,4 +1,35 @@
 //! I2C support
+//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//! use imxrt_hal::i2c::ClockSpeed;
+//! use embedded_hal::blocking::i2c::WriteRead;
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let (_, _, i2c3_builder, _) = peripherals.i2c.clock(
+//!     &mut peripherals.ccm.handle,
+//!     imxrt_hal::ccm::i2c::ClockSelect::OSC, // 24MHz clock...
+//!     imxrt_hal::ccm::i2c::PrescalarSelect::DIVIDE_3, // Divide by 3
+//! );
+//!
+//! let mut i2c3 = i2c3_builder.build(
+//!     peripherals.iomuxc.gpio_ad_b1_07.alt1(),
+//!     peripherals.iomuxc.gpio_ad_b1_06.alt1(),
+//! );
+//!
+//! i2c3.set_bus_idle_timeout(core::time::Duration::from_micros(200)).unwrap();
+//! i2c3.set_pin_low_timeout(core::time::Duration::from_millis(1)).unwrap();
+//! i2c3.set_clock_speed(ClockSpeed::KHz400).unwrap();
+//!
+//! let mut input = [0; 3];
+//! let output = [0x74];
+//! # const MY_SLAVE_ADDRESS: u8 = 0;
+//! 
+//! i2c3.write_read(MY_SLAVE_ADDRESS, &output, &mut input).unwrap();
+//! ```
 
 pub use crate::iomuxc::i2c::module;
 
