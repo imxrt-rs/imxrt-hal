@@ -1,7 +1,7 @@
 //! Direct Memory Access (DMA)
 //!
 //! Users may wrap iMXRT peripherals in a [`Peripheral`](struct.Peripheral.html)
-//! to perform DMA transfers to and from the device. A `Peripheral` accepts up
+//! to perform uni- or bi-directional DMA transfers. A `Peripheral` accepts up
 //! to two DMA [`Channel`](struct.Channel.html)s. One channel can support either
 //! a peripheral-to-memory transfer, or a memory-to-peripheral transfer. When
 //! constructing a `Peripheral`, you may configure the transfer completion to
@@ -19,6 +19,88 @@
 //!   source to a destination.
 //! - *Receive* means that we're moving data into software, through a peripheral, from an
 //!   external device.
+//!
+//! # Example: Full-Duplex SPI Peripheral
+//!
+//! In this example, we prepare a SPI peripheral (SPI4) with two DMA
+//! channels. One channel will send data; the other will receive data.
+//! The example assumes that the user has registered a DMA interrupt
+//! handler, since we're enabling an interrupt when the receive completes.
+//!
+//! ```no_run
+//! use imxrt_hal::dma::{Peripheral, ConfigBuilder, transfer_receive_u16};
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let (_, _, _, spi4_builder) = peripherals.spi.clock(
+//!     &mut peripherals.ccm.handle,
+//!     imxrt_hal::ccm::spi::ClockSelect::Pll2,
+//!     imxrt_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
+//! );
+//!
+//! let mut spi4 = spi4_builder.build(
+//!     peripherals.iomuxc.gpio_b0_02.alt3(),
+//!     peripherals.iomuxc.gpio_b0_01.alt3(),
+//!     peripherals.iomuxc.gpio_b0_03.alt3(),
+//! );
+//!
+//! spi4.enable_chip_select_0(peripherals.iomuxc.gpio_b0_00.alt3());
+//!
+//! // Set the SPI clock speed, if desired
+//!
+//! let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
+//!
+//! // i.MX RT DMA interrupt handlers manage pairs of DMA channels. There's one
+//! // interrupt for both DMA channel 9 and channel 25. By selecting these two
+//! // DMA channels, we can register one interrupt to handle both DMA channel
+//! // completion.
+//! let tx_channel = dma_channels[9].take().unwrap();
+//! let rx_channel = dma_channels[25].take().unwrap();
+//!
+//! // We only want to interrupt when the receive completes. When
+//! // the receive completes, we know that we're also done transferring
+//! // data.
+//! let rx_config = ConfigBuilder::new()
+//!     .interrupt_on_completion(true)
+//!     .build();
+//!
+//! // The peripheral will transfer and receive u16 elements
+//! let mut peripheral = transfer_receive_u16(
+//!     spi4,
+//!     (tx_channel, ConfigBuilder::default().build()),
+//!     (rx_channel, rx_config),
+//! );
+//!
+//! static TX_BUFFER: [u16; 6] = [1, 2, 3, 4, 5, 6];
+//! static mut RX_BUFFER: [u16; 6] = [0; 6];
+//!
+//! unsafe {
+//!     // These two calls are unsafe, since the caller needs to ensure
+//!     // that the lifetime of the buffers is greater than the lifetime
+//!     // of the DMA transfer. We can be sure of that here, because the
+//!     // two buffers are static.
+//!     peripheral.start_transfer(&TX_BUFFER).unwrap();
+//!     peripheral.start_receive(&mut RX_BUFFER).unwrap();
+//! }
+//!
+//! // At this point, the DMA controller is transferring data from
+//! // the SPI peripheral, and receiving data from the SPI peripheral.
+//! // Received data appears in RX_BUFFER. The DMA controller will trigger
+//! // an interrupt for DMA channel 25 when it has transferred 6 u16s.
+//! //
+//! // Your ISR should clear the interrupt and complete the transfers,
+//! // as depicted below:
+//!
+//! while peripheral.receive_interrupt() {
+//!     peripheral.receive_clear_interrupt();
+//! }
+//! while peripheral.receive_complete() {
+//!     peripheral.receive_clear_complete();
+//! }
+//! while peripheral.transfer_complete() {
+//!     peripheral.transfer_clear_complete();
+//! }
+//! ```
 //!
 //! ## TODO
 //!
@@ -251,6 +333,9 @@ impl Channel {
 /// the DMA transfer completes. If you enable interrupts, you're responsible for registering the
 /// interrupt, and for clearing the interrupt. The `Peripheral` has methods for clearing interrupts
 /// due to transfer and receive DMA channels.
+///
+/// See the [module-level docs](index.html#example-full-duplex-spi-peripheral)
+/// for an example of how to create and use a peripheral.
 pub struct Peripheral<P, E> {
     /// Channel used for outgoing data (from software, to external device)
     tx_channel: Option<Channel>,
@@ -283,6 +368,16 @@ impl Config {
 }
 
 /// Builder for defining your DMA configuration
+///
+/// ```no_run
+/// use imxrt_hal::dma::ConfigBuilder;
+///
+/// let config = ConfigBuilder::new()
+///     .interrupt_on_completion(true)
+///     .build();
+///
+/// let default_config = ConfigBuilder::new().build();
+/// ```
 pub struct ConfigBuilder(Config);
 
 impl Default for ConfigBuilder {
@@ -660,6 +755,14 @@ where
 /// Unclocked, uninitialized DMA channels
 ///
 /// Use [`clock()`](struct.Unclocked.html#method.clock) to initialize and acquire all DMA channels
+///
+/// ```no_run
+/// let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+///
+/// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
+/// let channel_27 = dma_channels[27].take().unwrap();
+/// let channel_0 = dma_channels[1].take().unwrap();
+/// ```
 pub struct Unclocked([Option<Channel>; 32]);
 impl Unclocked {
     pub(crate) fn new() -> Self {
