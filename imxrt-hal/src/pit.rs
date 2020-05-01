@@ -1,4 +1,28 @@
 //! Periodic Interrupt Timer (PIT)
+//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//! use embedded_hal::timer::CountDown;
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
+//!     imxrt_hal::ccm::PLL1::ARM_HZ,
+//!     &mut peripherals.ccm.handle,
+//!     &mut peripherals.dcdc,
+//! );
+//!
+//! let mut cfg = peripherals.ccm.perclk.configure(
+//!     &mut peripherals.ccm.handle,
+//!     imxrt_hal::ccm::perclk::PODF::DIVIDE_3,
+//!     imxrt_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
+//! );
+//!
+//! let (_, _, _, mut timer) = peripherals.pit.clock(&mut cfg);
+//! timer.start(core::time::Duration::from_micros(200));
+//! ```
 
 use crate::ccm::{perclk, ticks, Divider, Frequency, TicksError};
 use crate::ral;
