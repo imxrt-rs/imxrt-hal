@@ -84,6 +84,40 @@
 //! Although the adapters work on a single OCR, the timer may continue to monitor the
 //! other two OCRs.
 //!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
+//!     imxrt_hal::ccm::PLL1::ARM_HZ,
+//!     &mut peripherals.ccm.handle,
+//!     &mut peripherals.dcdc,
+//! );
+//!
+//! let mut cfg = peripherals.ccm.perclk.configure(
+//!     &mut peripherals.ccm.handle,
+//!     imxrt_hal::ccm::perclk::PODF::DIVIDE_3,
+//!     imxrt_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
+//! );
+//!
+//! let mut gpt1 = peripherals.gpt1.clock(&mut cfg);
+//!
+//! gpt1.set_output_interrupt_on_compare(
+//!     imxrt_hal::gpt::OutputCompareRegister::Three, 
+//!     true,
+//! );
+//! gpt1.set_wait_mode_enable(true);
+//! gpt1.set_mode(imxrt_hal::gpt::Mode::FreeRunning);
+//!
+//! gpt1.set_output_compare_duration(
+//!     imxrt_hal::gpt::OutputCompareRegister::Three,
+//!     core::time::Duration::from_micros(765),
+//! );
+//! ```
+//!
 //! # TODO
 //!
 //! - Input capture. Each GPT can capture the value of the counter
