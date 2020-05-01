@@ -41,3 +41,6 @@ imxrt1062 = ["imxrt-ral/imxrt1062"]
 rtfm = ["imxrt-ral/rtfm"]
 rt = ["imxrt-ral/rt"]
 nosync = ["imxrt-ral/nosync"]
+
+[package.metadata.docs.rs]
+features = ["imxrt1062"]
