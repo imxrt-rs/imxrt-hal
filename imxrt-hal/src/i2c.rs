@@ -27,7 +27,7 @@
 //! let mut input = [0; 3];
 //! let output = [0x74];
 //! # const MY_SLAVE_ADDRESS: u8 = 0;
-//! 
+//!
 //! i2c3.write_read(MY_SLAVE_ADDRESS, &output, &mut input).unwrap();
 //! ```
 
