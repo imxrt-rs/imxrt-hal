@@ -3,6 +3,39 @@
 //! The UART module provides a serial peripheral that implements
 //! the `embedded_hal::serial` traits. The peripheral is sufficient
 //! for implementing basic serial communications.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//! use embedded_hal::serial::{Read, Write};
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let uarts = peripherals.uart.clock(
+//!     &mut peripherals.ccm.handle,
+//!     imxrt_hal::ccm::uart::ClockSelect::OSC,
+//!     imxrt_hal::ccm::uart::PrescalarSelect::DIVIDE_1,
+//! );
+//!
+//! let mut uart = uarts
+//!     .uart2
+//!     .init(
+//!         peripherals.iomuxc.gpio_ad_b1_02.alt2(),
+//!         peripherals.iomuxc.gpio_ad_b1_03.alt2(),
+//!         115_200,
+//!     )
+//!     .unwrap();
+//!
+//! uart.set_tx_fifo(core::num::NonZeroU8::new(3));
+//! uart.set_rx_fifo(true);
+//! uart.set_parity(Some(imxrt_hal::uart::Parity::Even));
+//! uart.set_rx_inversion(true);
+//! uart.set_tx_inversion(false);
+//!
+//! uart.write(0xDE).unwrap();
+//! let byte = uart.read().unwrap();
+//! ```
 
 use crate::ccm;
 pub use crate::iomuxc::uart::{self, module};
