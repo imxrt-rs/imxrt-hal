@@ -12,6 +12,34 @@
 //! `N` is the CS number, to enable the peripheral-controlled CS. Your hardware must be wired to
 //! accomodate this selection. If you do not want to use the peripheral-controlled CS, you may
 //! select your own GPIO.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//! use embedded_hal::blocking::spi::Transfer;
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let (_, _, _, spi4_builder) = peripherals.spi.clock(
+//!     &mut peripherals.ccm.handle,
+//!     imxrt_hal::ccm::spi::ClockSelect::Pll2,
+//!     imxrt_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
+//! );
+//!
+//! let mut spi4 = spi4_builder.build(
+//!     peripherals.iomuxc.gpio_b0_02.alt3(),
+//!     peripherals.iomuxc.gpio_b0_01.alt3(),
+//!     peripherals.iomuxc.gpio_b0_03.alt3(),
+//! );
+//!
+//! spi4.enable_chip_select_0(peripherals.iomuxc.gpio_b0_00.alt3());
+//!
+//! spi4.set_clock_speed(imxrt_hal::spi::ClockSpeed(1_000_000)).unwrap();
+//!
+//! let mut buffer: [u8; 3] = [1, 2, 3];
+//! spi4.transfer(&mut buffer).unwrap();
+//! ```
 
 pub use crate::iomuxc::spi::module;
 
