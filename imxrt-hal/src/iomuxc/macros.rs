@@ -229,7 +229,7 @@ macro_rules! pad {
 
             /// Configure a pin
             ///
-            /// See the [module-level docs](../index.html#configure-pin-settings) for more information.
+            /// See the [`PinConfig` docs](../pin_config/index.html#configure-pin-settings) for more information.
             pub fn configure(&mut self, cfg: &$crate::iomuxc::pin_config::PinConfig) {
                 // Safety: iomux registers are per pin and effectively owned by
                 // the pin allowing safe access so long as direct register

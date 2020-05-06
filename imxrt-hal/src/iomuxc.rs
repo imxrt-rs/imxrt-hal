@@ -1,4 +1,50 @@
-//! IOMUX Controller
+//! # IOMUX Controller
+//!
+//! The IOMUXC controller exposes all processor pads as unique GPIO structs.
+//! Each GPIO may be transitioned into various alternatives, or modes, that
+//! support different use-cases. All GPIOs are defined in [the `gpio` module](gpio/index.html).
+//!
+//! [The `pin_config` module](pin_config/index.html) lets users specify pin configurations, like
+//! pull-up resistors and pin speeds. See the module-level docs for more information.
+//!
+//! Finally, the peripheral-specific modules define type tags for pins, and traits that denote
+//! peripheral-compatible pins. Each peripheral-specific module, like `spi` and `uart`, defines
+//! a `Pin` trait. The list of trait implementors describe which pad and alternative is needed
+//! to support that peripheral. For example, an implementor of the `uart::Pin` trait is
+//! `GPIO_AD_B1_02<Alt2>`: 
+//!
+//! ```text
+//! impl uart::Pin for GPIO_AD_B1_02<Alt2>
+//!    type Direction = TX
+//!    type Module = _2
+//! ```
+//!
+//! The listing indicates that, in the second alternative, `GPIO_AD_B1_02` is a UART TX pin for
+//! UART2. The HAL's UART peripheral will design to that trait, accepting GPIOs that can satisfy
+//! the trait bounds:
+//!
+//! ```no_run
+//! use imxrt_hal;
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! let uarts = peripherals.uart.clock(
+//!     // ...
+//! #    &mut peripherals.ccm.handle,
+//! #    imxrt_hal::ccm::uart::ClockSelect::OSC,
+//! #    imxrt_hal::ccm::uart::PrescalarSelect::DIVIDE_1,
+//! );
+//!
+//! // Use the UART2-compatible pins to create a UART peripheral
+//! let mut uart = uarts
+//!     .uart2
+//!     .init(
+//!         peripherals.iomuxc.gpio_ad_b1_02.alt2(),
+//!         peripherals.iomuxc.gpio_ad_b1_03.alt2(),
+//!         115_200,
+//!     )
+//!     .unwrap();
+//! ```
 
 #![allow(non_camel_case_types)]
 
