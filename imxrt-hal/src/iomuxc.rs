@@ -11,7 +11,7 @@
 //! peripheral-compatible pins. Each peripheral-specific module, like `spi` and `uart`, defines
 //! a `Pin` trait. The list of trait implementors describe which pad and alternative is needed
 //! to support that peripheral. For example, an implementor of the `uart::Pin` trait is
-//! `GPIO_AD_B1_02<Alt2>`: 
+//! `GPIO_AD_B1_02<Alt2>`:
 //!
 //! ```text
 //! impl uart::Pin for GPIO_AD_B1_02<Alt2>
