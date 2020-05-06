@@ -1,6 +1,35 @@
-/// Pin configuration provides types, macros, and methods for
-/// setting a pin configuration such as pull resistors, speed, and
-/// open drain options.
+//! # Pin configuration
+//!
+//! All GPIOs take a given `PinConfig` that specifies features like
+//!
+//! - pull up/down resistor connectivity and resistance
+//! - pin speed
+//! - pin drive strength
+//!
+//! If the PinConfig does not write to all fields, which is checked
+//! by PinConfig::is_modify() the config is applied as a
+//! modification to the current PAD_MUX_PAD register value.
+//!
+//! Otherwise the PAD_MUX_PAD register is overwritten with the new
+//! configuration.
+//!
+//! PinConfig docs supply more information on how to build a
+//! PinConfig and what typical defaults from the reference
+//! manual look like.
+//!
+//! # Example using const builder functions
+//!
+//! ```no_run
+//! use imxrt_hal::iomuxc::pin_config::*;
+//! use imxrt_hal::Peripherals;
+//!
+//! const LED_PIN_CONFIG: PinConfig = PinConfig::with_none()
+//!                      .set_pull_up(PullUp::PullUp_100KOhm)
+//!                      .set_speed(Speed::Speed2_150MHz)
+//!                      .set_drive_strength(DriveStrength::R0_DIV_6);
+//! let mut peripherals = Peripherals::take().unwrap();
+//! peripherals.iomuxc.gpio_ad_b0_00.configure(&LED_PIN_CONFIG);
+//! ```
 
 /// localized alias for field specific mods below
 mod pad {
