@@ -157,7 +157,16 @@ impl Channel {
         channel
     }
 
-    /// Safety: lifetime of `source` must be greater than the lifetime
+    /// Indicates that `source` will supply data for a DMA tranfser
+    ///
+    /// `set_source()` prepares the DMA channel to perform `E`-sized reads
+    /// from the memory pointed at by `source`. However, it does *not* tell
+    /// the DMA controller how many reads to perform. When the transfer completes,
+    /// the DMA controller will continue pointing at `source`.
+    ///
+    /// # Safety
+    ///
+    /// Lifetime of `source` must be greater than the lifetime
     /// of the DMA transfer.
     unsafe fn set_source<E: Element>(&mut self, source: *const E) {
         let tcd = &self.registers.TCD[self.index];
@@ -168,7 +177,16 @@ impl Channel {
         ral::write_reg!(register::tcd, tcd, SLAST, 0);
     }
 
-    /// Safety: lifetime of 'destination' must be greater than the lifetime
+    /// Indiates that `destination` will receive data from a DMA transfer
+    ///
+    /// `set_destination()` prepares the DMA channel to perform `E`-sized writes
+    /// on the memory pointed at by `destination`. However, it does *not* tell
+    /// the DMA controller how many writes to perform. When the transfer completes,
+    /// the DMA channel will continue pointing at `destination`.
+    ///
+    /// # Safety
+    ///
+    /// Lifetime of 'destination' must be greater than the lifetime
     /// of the DMA transfer.
     unsafe fn set_destination<E: Element>(&mut self, destination: *const E) {
         let tcd = &self.registers.TCD[self.index];
@@ -179,7 +197,16 @@ impl Channel {
         ral::write_reg!(register::tcd, tcd, DLAST_SGA, 0);
     }
 
-    /// Safety: lifetime of 'source' must be greater than the lifetime of the
+    /// Indicates that the `source` buffer will supply data for a DMA transfer
+    ///
+    /// `set_source_buffer()` prepares the DMA channel to perform `E`-sized reads
+    /// of all the elements in `source`. The number of elements to transfer corresponds
+    /// to the size of the buffer. When the transfer completes, the DMA channel
+    /// will point at the beginning of `source`.
+    ///
+    /// # Safety
+    ///
+    /// Lifetime of 'source' must be greater than the lifetime of the
     /// DMA transfer.
     unsafe fn set_source_buffer<E: Element>(&mut self, source: &[E]) {
         let tcd = &self.registers.TCD[self.index];
@@ -199,8 +226,17 @@ impl Channel {
         ral::write_reg!(register::tcd, tcd, BITER, iterations);
     }
 
-    /// Safety: lifetime of 'destination' must be greater than the lifetime of
-    /// the DMA transfer
+    /// Indicates that the `destination` buffer will receive data from a DMA transfer
+    ///
+    /// `set_desination_buffer()` prepares the DMA channel to perform `E`-sized writes
+    /// of all the elements in `destination`. The number of elements to transfer corresponds
+    /// to the size of the buffer. When the transfer completes, the DMA channel
+    /// will point at the beginning of `destination`.
+    ///
+    /// # Safety
+    ///
+    /// Lifetime of 'destination' must be greater than the lifetime of the
+    /// DMA transfer.
     unsafe fn set_desination_buffer<E: Element>(&mut self, destination: &mut [E]) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, DADDR, destination.as_mut_ptr() as u32);
