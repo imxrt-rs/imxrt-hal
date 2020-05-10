@@ -225,7 +225,7 @@ impl Channel {
 
     /// Indicates that the `destination` buffer will receive data from a DMA transfer
     ///
-    /// `set_desination_buffer()` prepares the DMA channel to perform `E`-sized writes
+    /// `set_destination_buffer()` prepares the DMA channel to perform `E`-sized writes
     /// of all the elements in `destination`. The number of elements to transfer corresponds
     /// to the size of the buffer. When the transfer completes, the DMA channel
     /// will point at the beginning of `destination`.
@@ -234,7 +234,7 @@ impl Channel {
     ///
     /// Lifetime of 'destination' must be greater than the lifetime of the
     /// DMA transfer.
-    unsafe fn set_desination_buffer<E: Element>(&mut self, destination: &mut [E]) {
+    unsafe fn set_destination_buffer<E: Element>(&mut self, destination: &mut [E]) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, DADDR, destination.as_mut_ptr() as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
@@ -523,7 +523,7 @@ where
         if rx_channel.active() {
             return Err(Error::ActiveTransfer);
         }
-        rx_channel.set_desination_buffer(buffer);
+        rx_channel.set_destination_buffer(buffer);
         // Convert to `i16` to cap at `i16::max_value()`,
         // which is the max number of iterations we can support.
         rx_channel.set_transfer_iterations(
