@@ -121,6 +121,7 @@ pub use peripheral::{Destination, Source};
 
 use crate::{ccm, ral};
 use core::{
+    convert::TryFrom,
     fmt::{self, Debug, Display},
     mem,
 };
@@ -220,10 +221,6 @@ impl Channel {
             SLAST,
             (source.len() as i32).wrapping_neg()
         );
-
-        let iterations = source.len() as u16;
-        ral::write_reg!(register::tcd, tcd, CITER, iterations);
-        ral::write_reg!(register::tcd, tcd, BITER, iterations);
     }
 
     /// Indicates that the `destination` buffer will receive data from a DMA transfer
@@ -249,8 +246,13 @@ impl Channel {
             DLAST_SGA,
             (destination.len() as i32).wrapping_neg()
         );
+    }
 
-        let iterations = destination.len() as u16;
+    /// Tells the DMA channel how many transfer iterations to perform
+    ///
+    /// A 'transfer iteration' is a read from a source, and a write to a destination.
+    fn set_transfer_iterations(&mut self, iterations: u16) {
+        let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, CITER, iterations);
         ral::write_reg!(register::tcd, tcd, BITER, iterations);
     }
@@ -459,8 +461,11 @@ pub enum Error<P> {
     ActiveTransfer,
     /// The peripheral returned an error
     Peripheral(P),
-    /// Error in setting up the DMA transfer
+    /// Error setting up the DMA transfer
     Setup(ErrorStatus),
+    /// User requested `usize` number of elements to transfer, which
+    /// is too many elements to transfer
+    TooManyElements(usize),
 }
 
 impl<P> From<P> for Error<P> {
@@ -519,6 +524,13 @@ where
             return Err(Error::ActiveTransfer);
         }
         rx_channel.set_desination_buffer(buffer);
+        // Convert to `i16` to cap at `i16::max_value()`,
+        // which is the max number of iterations we can support.
+        rx_channel.set_transfer_iterations(
+            i16::try_from(buffer.len())
+                .map(|iterations| iterations as u16)
+                .map_err(|_| Error::TooManyElements(buffer.len()))?,
+        );
         self.peripheral.enable_source()?;
         rx_channel.set_enable(true);
         if rx_channel.error() {
@@ -644,6 +656,13 @@ where
             return Err(Error::ActiveTransfer);
         }
         tx_channel.set_source_buffer(buffer);
+        // Convert to `i16` to cap at `i16::max_value()`,
+        // which is the max number of iterations we can support.
+        tx_channel.set_transfer_iterations(
+            i16::try_from(buffer.len())
+                .map(|iterations| iterations as u16)
+                .map_err(|_| Error::TooManyElements(buffer.len()))?,
+        );
         self.peripheral.enable_destination()?;
         tx_channel.set_enable(true);
         if tx_channel.error() {
