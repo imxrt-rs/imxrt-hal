@@ -113,6 +113,7 @@
 #![allow(non_snake_case)] // Compatibility with RAL
 
 mod element;
+pub mod memcpy;
 pub(crate) mod peripheral;
 mod register;
 
@@ -348,6 +349,18 @@ impl Channel {
     /// may not be related to this channel.
     fn error_status(&self) -> u32 {
         self.registers.ES.read()
+    }
+
+    /// Start a DMA transfer
+    ///
+    /// `start()` should be used to request service from the DMA controller. It's
+    /// necessary for in-memory DMA transfers. Do not use it for hardware-initiated
+    /// DMA transfers. DMA transfers that involve hardware will rely on the hardware
+    /// to request DMA service.
+    ///
+    /// Flag is automatically cleared by hardware after it's asserted.
+    fn start(&mut self) {
+        self.registers.SSRT.write(self.index as u8);
     }
 }
 
