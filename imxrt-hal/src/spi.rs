@@ -482,7 +482,7 @@ impl<M> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M> where M
 
 use crate::dma;
 
-impl<M> dma::Source<u8> for SPI<M>
+impl<M> dma::peripheral::Source<u8> for SPI<M>
 where
     M: module::Module,
 {
@@ -500,7 +500,7 @@ where
     }
 }
 
-impl<M> dma::Destination<u8> for SPI<M>
+impl<M> dma::peripheral::Destination<u8> for SPI<M>
 where
     M: module::Module,
 {
@@ -518,7 +518,7 @@ where
     }
 }
 
-impl<M> dma::Source<u16> for SPI<M>
+impl<M> dma::peripheral::Source<u16> for SPI<M>
 where
     M: module::Module,
 {
@@ -536,7 +536,7 @@ where
     }
 }
 
-impl<M> dma::Destination<u16> for SPI<M>
+impl<M> dma::peripheral::Destination<u16> for SPI<M>
 where
     M: module::Module,
 {

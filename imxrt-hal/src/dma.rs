@@ -67,7 +67,7 @@
 //! // The peripheral will transfer and receive u16 elements
 //! let mut peripheral = transfer_receive_u16(
 //!     spi4,
-//!     (tx_channel, ConfigBuilder::default().build()),
+//!     (tx_channel, ConfigBuilder::new().build()),
 //!     (rx_channel, rx_config),
 //! );
 //!
@@ -112,13 +112,14 @@
 
 #![allow(non_snake_case)] // Compatibility with RAL
 
+mod buffer;
 mod element;
 pub mod memcpy;
 pub(crate) mod peripheral;
 mod register;
 
+pub use buffer::*;
 pub use element::Element;
-pub use peripheral::{Destination, Source};
 
 use crate::{ccm, ral};
 use core::{
@@ -224,6 +225,21 @@ impl Channel {
         );
     }
 
+    unsafe fn set_source_circular<E: Element>(&mut self, source: *const E, size: usize) {
+        let tcd = &self.registers.TCD[self.index];
+        ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
+        ral::write_reg!(register::tcd, tcd, SOFF, mem::size_of::<E>() as i16);
+        ral::modify_reg!(
+            register::tcd,
+            tcd,
+            ATTR,
+            SSIZE: E::DATA_TRANSFER_ID,
+            SMOD: (31 - size.leading_zeros()) as u16
+        );
+        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
+        ral::write_reg!(register::tcd, tcd, SLAST, 0);
+    }
+
     /// Indicates that the `destination` buffer will receive data from a DMA transfer
     ///
     /// `set_destination_buffer()` prepares the DMA channel to perform `E`-sized writes
@@ -247,6 +263,21 @@ impl Channel {
             DLAST_SGA,
             (destination.len() as i32).wrapping_neg()
         );
+    }
+
+    unsafe fn set_destination_circular<E: Element>(&mut self, destination: *mut E, size: usize) {
+        let tcd = &self.registers.TCD[self.index];
+        ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
+        ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
+        ral::modify_reg!(
+            register::tcd,
+            tcd,
+            ATTR,
+            DSIZE: E::DATA_TRANSFER_ID,
+            DMOD: (31 - size.leading_zeros()) as u16
+        );
+        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
+        ral::write_reg!(register::tcd, tcd, DLAST_SGA, 0);
     }
 
     /// Tells the DMA channel how many transfer iterations to perform
@@ -426,16 +457,8 @@ impl Config {
 /// let config = ConfigBuilder::new()
 ///     .interrupt_on_completion(true)
 ///     .build();
-///
-/// let default_config = ConfigBuilder::new().build();
 /// ```
 pub struct ConfigBuilder(Config);
-
-impl Default for ConfigBuilder {
-    fn default() -> Self {
-        ConfigBuilder::new()
-    }
-}
 
 impl ConfigBuilder {
     /// Construct a builder, and begin defining a configuration
@@ -477,7 +500,10 @@ pub enum Error<P> {
     /// Error setting up the DMA transfer
     Setup(ErrorStatus),
     /// User requested `usize` number of elements to transfer, which
-    /// is too many elements to transfer
+    /// is too many elements to transfer.
+    ///
+    /// The request either exceeded the size of the buffer, or exceeded the hardware
+    /// limit.
     TooManyElements(usize),
 }
 
@@ -500,7 +526,7 @@ impl<P, E> Peripheral<P, E> {
 
 impl<P, E> Peripheral<P, E>
 where
-    P: Source<E>,
+    P: peripheral::Source<E>,
     E: Element,
 {
     /// Wraps a peripheral that can act as the source of a DMA transfer
@@ -617,7 +643,7 @@ where
 /// Create a peripheral that can suppy `u8` data for DMA transfers
 pub fn receive_u8<P>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8>
 where
-    P: Source<u8>,
+    P: peripheral::Source<u8>,
 {
     Peripheral::new_receive(source, channel, config)
 }
@@ -625,14 +651,14 @@ where
 /// Create a peripheral that can supply `u16` data for DMA transfers
 pub fn receive_u16<P>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16>
 where
-    P: Source<u16>,
+    P: peripheral::Source<u16>,
 {
     Peripheral::new_receive(source, channel, config)
 }
 
 impl<P, E> Peripheral<P, E>
 where
-    P: Destination<E>,
+    P: peripheral::Destination<E>,
     E: Element,
 {
     /// Wraps a peripheral that can act as the destination of a DMA transfer
@@ -749,7 +775,7 @@ where
 /// Create a peripheral that can accept `u8` data from DMA transfers
 pub fn transfer_u8<P>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u8>
 where
-    P: Destination<u8>,
+    P: peripheral::Destination<u8>,
 {
     Peripheral::new_transfer(destination, channel, config)
 }
@@ -757,14 +783,14 @@ where
 /// Create a peripheral that can accept `u16` data from DMA transfers
 pub fn transfer_u16<P>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u16>
 where
-    P: Destination<u16>,
+    P: peripheral::Destination<u16>,
 {
     Peripheral::new_transfer(destination, channel, config)
 }
 
 impl<P, E> Peripheral<P, E>
 where
-    P: Source<E> + Destination<E>,
+    P: peripheral::Source<E> + peripheral::Destination<E>,
     E: Element,
 {
     /// Wraps a peripheral that can act as both the source and destination of a DMA transfer
@@ -802,7 +828,7 @@ pub fn transfer_receive_u8<P>(
     rx: (Channel, Config),
 ) -> Peripheral<P, u8>
 where
-    P: Source<u8> + Destination<u8>,
+    P: peripheral::Source<u8> + peripheral::Destination<u8>,
 {
     Peripheral::new_transfer_receive(peripheral, tx, rx)
 }
@@ -815,7 +841,7 @@ pub fn transfer_receive_u16<P>(
     rx: (Channel, Config),
 ) -> Peripheral<P, u16>
 where
-    P: Source<u16> + Destination<u16>,
+    P: peripheral::Source<u16> + peripheral::Destination<u16>,
 {
     Peripheral::new_transfer_receive(peripheral, tx, rx)
 }

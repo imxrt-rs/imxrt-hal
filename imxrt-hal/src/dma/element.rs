@@ -2,7 +2,7 @@
 
 /// Describes a transferrable DMA element; basically, an unsigned
 /// integer of any size.
-pub trait Element: private::Sealed {
+pub trait Element: Copy + private::Sealed {
     /// An identifier describing the data transfer size
     ///
     /// Part of the TCD API; see documentation on TCD[SSIZE]

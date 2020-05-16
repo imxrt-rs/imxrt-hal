@@ -533,7 +533,7 @@ where
 
 use crate::dma;
 
-impl<M> dma::Source<u8> for UART<M>
+impl<M> dma::peripheral::Source<u8> for UART<M>
 where
     M: module::Module,
 {
@@ -554,7 +554,7 @@ where
     }
 }
 
-impl<M> dma::Destination<u8> for UART<M>
+impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
     M: module::Module,
 {
