@@ -122,12 +122,13 @@
 
 mod buffer;
 mod element;
-pub mod memcpy;
+mod memcpy;
 pub(crate) mod peripheral;
 mod register;
 
 pub use buffer::*;
 pub use element::Element;
+pub use memcpy::*;
 
 use crate::{ccm, ral};
 use core::{
@@ -144,7 +145,7 @@ use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 /// value in a register, or triggering an interrupt.
 ///
 /// DMA channels have very little public interface. They're best used when paired with a
-/// [`Peripheral`](struct.Peripheral.html).
+/// [`Peripheral`](struct.Peripheral.html) or a [`Memcpy`](struct.Memcpy.html).
 pub struct Channel {
     /// Our channel number, expected to be between 0 to 31
     index: usize,

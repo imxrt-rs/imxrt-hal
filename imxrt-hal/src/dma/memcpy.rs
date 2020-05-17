@@ -1,49 +1,48 @@
 //! DMA-powered memory copy
-//!
-//! The `memcpy` module lets users execute memory-to-memory DMA transfers. It's like
-//! a thread to copy memory between two buffers. Methods that start transfers will
-//! return immediately. Then, you may query for DMA completion. Unlike the peripheral
-//! DMA support, the memory copy interface does not enable interrupts on completion.
-//!
-//! A [`Memcpy`](struct.Memcpy.html) accepts either a [`Linear`](../struct.Linear.html)
-//! or a [`Circular`](../struct.Circular.html) buffer.
-//!
-//! # Example
-//!
-//! ```no_run
-//! use imxrt_hal::dma;
-//!
-//! static SOURCE: dma::Buffer<[u8; 32]> = dma::Buffer::new([0; 32]);
-//! static DESTINATION: dma::Buffer<[u8; 64]> = dma::Buffer::new([0; 64]);
-//!
-//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
-//! let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
-//! let mut memcpy = dma::memcpy::Memcpy::new(dma_channels[7].take().unwrap());
-//!
-//! let mut source = dma::Linear::new(&SOURCE).unwrap();
-//! let mut destination = dma::Linear::new(&DESTINATION).unwrap();
-//!
-//! source.as_mut_elements()[..14].copy_from_slice(&[8; 14]);
-//! source.set_transfer_len(14);
-//! destination.set_transfer_len(12);
-//! // Total 12 elements transferred
-//!
-//! // Begin the transfer
-//! memcpy.transfer(source, destination).unwrap();
-//!
-//! // Wait for the transfer...
-//! while !memcpy.is_complete() {}
-//!
-//! // Transfer complete! It's safe to look at the destination.
-//! // Don't forget to clear the complete signal.
-//! let (source, destination) = memcpy.complete().unwrap();
-//! ```
 
 use super::{buffer, Channel, Element, Error, ErrorStatus};
 use core::marker::PhantomData;
 
 /// A type that can peform memory-to-memory
 /// DMA transfers
+///
+/// Methods that start transfers will
+/// return immediately. Then, you may query for DMA completion. Unlike the peripheral
+/// DMA support, the memory copy interface **does not** enable interrupts on completion.
+///
+/// A `Memcpy` accepts either a [`Linear`](struct.Linear.html)
+/// or a [`Circular`](struct.Circular.html) buffer.
+///
+/// # Example
+///
+/// ```no_run
+/// use imxrt_hal::dma;
+///
+/// static SOURCE: dma::Buffer<[u8; 32]> = dma::Buffer::new([0; 32]);
+/// static DESTINATION: dma::Buffer<[u8; 64]> = dma::Buffer::new([0; 64]);
+///
+/// let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+/// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
+/// let mut memcpy = dma::Memcpy::new(dma_channels[7].take().unwrap());
+///
+/// let mut source = dma::Linear::new(&SOURCE).unwrap();
+/// let mut destination = dma::Linear::new(&DESTINATION).unwrap();
+///
+/// source.as_mut_elements()[..14].copy_from_slice(&[8; 14]);
+/// source.set_transfer_len(14);
+/// destination.set_transfer_len(12);
+/// // Total 12 elements transferred
+///
+/// // Begin the transfer
+/// memcpy.transfer(source, destination).unwrap();
+///
+/// // Wait for the transfer...
+/// while !memcpy.is_complete() {}
+///
+/// // Transfer complete! It's safe to look at the destination.
+/// // Don't forget to clear the complete signal.
+/// let (source, destination) = memcpy.complete().unwrap();
+/// ```
 pub struct Memcpy<E, S, D> {
     channel: Channel,
     buffers: Option<(S, D)>,
