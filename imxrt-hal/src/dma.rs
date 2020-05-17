@@ -757,6 +757,21 @@ where
     }
 }
 
+impl<P, E, S> Peripheral<P, E, S, Circular<E>>
+where
+    P: peripheral::Source<E>,
+    E: Element,
+{
+    /// Returns the read half of the circular buffer that's being
+    /// used as a DMA transfer destination
+    ///
+    /// Returns `None` if there's no destination buffer, which may mean
+    /// that there's no active transfer.
+    pub fn read_half(&mut self) -> Option<ReadHalf<E>> {
+        self.destination_buffer.as_mut().map(ReadHalf::new)
+    }
+}
+
 /// Create a peripheral that can suppy `u8` data for DMA transfers
 pub fn receive_u8<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8, B>
 where
@@ -825,6 +840,24 @@ where
             }
             Err(err) => Err((buffer, err)),
         }
+    }
+}
+
+impl<P, E, D> Peripheral<P, E, Circular<E>, D>
+where
+    P: peripheral::Destination<E>,
+    E: Element,
+{
+    /// Returns the write half of the circular buffer that's being
+    /// used as a DMA transfer source.
+    ///
+    /// Returns `None` if there's no source buffer, which may mean
+    /// that there's no active transfer.
+    ///
+    /// You may use the [`WriteHalf`](struct.WriteHalf.html) to prepare
+    /// data for another DMA transfer.
+    pub fn write_half(&mut self) -> Option<WriteHalf<E>> {
+        self.source_buffer.as_mut().map(WriteHalf::new)
     }
 }
 

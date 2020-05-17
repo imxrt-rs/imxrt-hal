@@ -575,6 +575,58 @@ impl<'a, E: Element> Iterator for Drain<'a, E> {
 
 impl<'a, E: Element> ExactSizeIterator for Drain<'a, E> {}
 
+/// Exposes the write-half of the circular buffer
+pub struct WriteHalf<'a, E>(&'a mut Circular<E>);
+
+impl<'a, E: Element> WriteHalf<'a, E> {
+    /// Creates an adapter that exposes the write methods of the [`Circular`](struct.Circular.html)
+    /// buffer.
+    pub(super) fn new(circular: &'a mut Circular<E>) -> Self {
+        WriteHalf(circular)
+    }
+    /// Push an element into the circular buffer
+    ///
+    /// See [`Circular::push()`](struct.Circular.html#method.push) for more information.
+    pub fn push(&mut self, element: E) -> bool {
+        self.0.push(element)
+    }
+    /// Insert elements into the circular buffer
+    ///
+    /// See [`Circular::insert()`](struct.Circular.html#method.insert) for more information.
+    pub fn insert<I: IntoIterator<Item = E>>(&mut self, iter: I) -> usize {
+        self.0.insert(iter)
+    }
+}
+
+/// Exposes the read-half of the circular buffer
+pub struct ReadHalf<'a, E>(&'a mut Circular<E>);
+
+impl<'a, E: Element> ReadHalf<'a, E> {
+    /// Creates an adapter that exposes the read methods of the [`Circular`](struct.Circular.html)
+    /// buffer.
+    pub(super) fn new(circular: &'a mut Circular<E>) -> Self {
+        ReadHalf(circular)
+    }
+    /// Pops an element from the circular buffer
+    ///
+    /// See [`Circular::pop()`](struct.Circular.html#method.pop) for details.
+    pub fn pop(&mut self) -> Option<E> {
+        self.0.pop()
+    }
+    /// Peeks at the next element in the circular buffer
+    ///
+    /// See [`Circular::peek()`](struct.Circular.html#method.peek) for details.
+    pub fn peek(&self) -> Option<E> {
+        self.0.peek()
+    }
+    /// Drains elements from the circular buffer
+    ///
+    /// See [`Circular::drain()`](struct.Circular.html#method.drain) for details.
+    pub fn drain(&mut self) -> Drain<E> {
+        Drain(self.0)
+    }
+}
+
 /// A buffer that can be used as the source of a DMA transfer
 pub trait Source<E: Element>: private::Sealed {
     /// Prepare the buffer to be used as a source of a DMA transfer, returning the
