@@ -126,7 +126,7 @@ mod memcpy;
 pub(crate) mod peripheral;
 mod register;
 
-pub use buffer::*;
+pub use buffer::{Buffer, Circular, CircularError, Linear, ReadHalf, WriteHalf};
 pub use element::Element;
 pub use memcpy::*;
 
