@@ -142,11 +142,6 @@
 //! - Channel priority, and channel priority swapping
 //! - Channel chaining
 
-// TODO - set source and destination buffers before starting transfer. If transfer completes before we set the buffer,
-//        caller might not get their buffer back. Then again, the &mut implies that things need to be synchronized, so
-//        it might be on the caller to run this all in a interrupt free context...
-// TODO - compiler fences
-
 #![allow(non_snake_case)] // Compatibility with RAL
 
 mod buffer;
@@ -163,6 +158,7 @@ use crate::{ccm, ral};
 use core::{
     fmt::{self, Debug, Display},
     mem,
+    sync::atomic::{compiler_fence, Ordering},
 };
 use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 
@@ -670,6 +666,7 @@ where
             core::sync::atomic::spin_loop_hint();
         }
         rx_channel.set_enable(false);
+        compiler_fence(Ordering::Acquire);
         self.destination_buffer.take()
     }
 
@@ -720,6 +717,7 @@ where
     let len = buffer.prepare_destination(rx_channel);
     rx_channel.set_transfer_iterations(len as u16);
     periph.peripheral.enable_source()?;
+    compiler_fence(Ordering::Release);
     rx_channel.set_enable(true);
     if rx_channel.is_error() {
         let es = ErrorStatus::new(rx_channel.error_status());
@@ -787,6 +785,7 @@ where
             core::sync::atomic::spin_loop_hint();
         }
         tx_channel.set_enable(false);
+        compiler_fence(Ordering::Acquire);
         self.source_buffer.take()
     }
 
@@ -897,6 +896,7 @@ where
     let len = buffer.prepare_source(tx_channel);
     tx_channel.set_transfer_iterations(len as u16);
     periph.peripheral.enable_destination()?;
+    compiler_fence(Ordering::Release);
     tx_channel.set_enable(true);
     if tx_channel.is_error() {
         let es = ErrorStatus::new(tx_channel.error_status());

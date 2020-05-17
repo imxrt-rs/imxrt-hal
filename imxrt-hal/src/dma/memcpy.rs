@@ -1,7 +1,10 @@
 //! DMA-powered memory copy
 
 use super::{buffer, Channel, Element, Error, ErrorStatus};
-use core::marker::PhantomData;
+use core::{
+    marker::PhantomData,
+    sync::atomic::{compiler_fence, Ordering},
+};
 
 /// A type that can peform memory-to-memory
 /// DMA transfers
@@ -84,7 +87,7 @@ where
         let dst = destination.prepare_destination(&mut self.channel) as u16;
         let iterations = src.min(dst);
         self.channel.set_transfer_iterations(iterations as u16);
-
+        compiler_fence(Ordering::Release);
         self.channel.set_enable(true);
         self.channel.start();
         if self.channel.is_error() {
@@ -115,8 +118,9 @@ where
     /// Cancel an active transfer
     ///
     /// Does nothing if there is not an active transfer
-    pub fn cancel(&mut self) {
+    pub fn cancel(&mut self) -> Option<(S, D)> {
         self.channel.set_enable(false);
+        self.buffers.take()
     }
 
     /// Returns `true` if there is an active transfer
