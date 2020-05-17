@@ -197,6 +197,11 @@ impl Channel {
         channel
     }
 
+    /// Returns a handle to this channel's transfer control descriptor
+    fn tcd(&self) -> &register::TransferControlDescriptor {
+        &self.registers.TCD[self.index]
+    }
+
     /// Indicates that `source` will supply data for a DMA tranfser
     ///
     /// `set_source()` prepares the DMA channel to perform `E`-sized reads
@@ -208,7 +213,7 @@ impl Channel {
     /// Lifetime of `source` must be greater than the lifetime
     /// of the DMA transfer.
     unsafe fn set_source<E: Element>(&mut self, source: *const E) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
         ral::write_reg!(register::tcd, tcd, SOFF, 0);
         ral::modify_reg!(register::tcd, tcd, ATTR, SSIZE: E::DATA_TRANSFER_ID, SMOD: 0);
@@ -227,7 +232,7 @@ impl Channel {
     /// Lifetime of 'destination' must be greater than the lifetime
     /// of the DMA transfer.
     unsafe fn set_destination<E: Element>(&mut self, destination: *const E) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, 0);
         ral::modify_reg!(register::tcd, tcd, ATTR, DSIZE: E::DATA_TRANSFER_ID, DMOD: 0);
@@ -246,7 +251,7 @@ impl Channel {
     /// Lifetime of 'source' must be greater than the lifetime of the
     /// DMA transfer.
     unsafe fn set_source_buffer<E: Element>(&mut self, source: &[E]) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, SADDR, source.as_ptr() as u32);
         ral::write_reg!(register::tcd, tcd, SOFF, mem::size_of::<E>() as i16);
         ral::modify_reg!(register::tcd, tcd, ATTR, SSIZE: E::DATA_TRANSFER_ID, SMOD: 0);
@@ -274,7 +279,7 @@ impl Channel {
     /// Lifetime of `source` must be greater than the lifetime of the transfer. All of the size
     /// and alignment guarantees must hold.
     unsafe fn set_source_circular<E: Element>(&mut self, source: *const E, size: usize) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
         ral::write_reg!(register::tcd, tcd, SOFF, mem::size_of::<E>() as i16);
         ral::modify_reg!(
@@ -299,7 +304,7 @@ impl Channel {
     /// Lifetime of 'destination' must be greater than the lifetime of the
     /// DMA transfer.
     unsafe fn set_destination_buffer<E: Element>(&mut self, destination: &mut [E]) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, DADDR, destination.as_mut_ptr() as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
         ral::modify_reg!(register::tcd, tcd, ATTR, DSIZE: E::DATA_TRANSFER_ID, DMOD: 0);
@@ -327,7 +332,7 @@ impl Channel {
     /// Lifetime of `destination` must be greater than the lifetime of the transfer. All of the size
     /// and alignment guarantees must hold.
     unsafe fn set_destination_circular<E: Element>(&mut self, destination: *mut E, size: usize) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
         ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
         ral::modify_reg!(
@@ -345,7 +350,7 @@ impl Channel {
     ///
     /// A 'transfer iteration' is a read from a source, and a write to a destination.
     fn set_transfer_iterations(&mut self, iterations: u16) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, CITER, iterations);
         ral::write_reg!(register::tcd, tcd, BITER, iterations);
     }
@@ -392,37 +397,37 @@ impl Channel {
     /// 'Disable on completion' lets the DMA channel automatically clear the request signal
     /// when it completes a transfer.
     fn set_disable_on_completion(&mut self, dreq: bool) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::modify_reg!(register::tcd, tcd, CSR, DREQ: dreq as u16);
     }
 
     /// Enable or disable interrupt generation when the transfer completes
     fn set_interrupt_on_completion(&mut self, intr: bool) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::modify_reg!(register::tcd, tcd, CSR, INTMAJOR: intr as u16);
     }
 
     /// Returns `true` if this channel's completion will generate an interrupt
     fn is_interrupt_on_completion(&self) -> bool {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::read_reg!(register::tcd, tcd, CSR, INTMAJOR == 1)
     }
 
     /// Enable or disable interrupt generation when the transfer is half complete
     fn set_interrupt_on_half(&mut self, intr: bool) {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::modify_reg!(register::tcd, tcd, CSR, INTHALF: intr as u16);
     }
 
     /// Returns `true` if this channel will generate an interrupt halfway through transfer
     fn is_interrupt_on_half(&self) -> bool {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::read_reg!(register::tcd, tcd, CSR, INTHALF == 1)
     }
 
     /// Indicates if the DMA transfer has completed
     fn is_complete(&self) -> bool {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::read_reg!(register::tcd, tcd, CSR, DONE == 1)
     }
 
@@ -443,7 +448,7 @@ impl Channel {
 
     /// Indicates if this DMA channel is actively transferring data
     fn is_active(&self) -> bool {
-        let tcd = &self.registers.TCD[self.index];
+        let tcd = self.tcd();
         ral::read_reg!(register::tcd, tcd, CSR, ACTIVE == 1)
     }
 
