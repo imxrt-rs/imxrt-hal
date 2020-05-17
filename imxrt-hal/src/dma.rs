@@ -619,7 +619,15 @@ impl<P, E, S, D> Peripheral<P, E, S, D>
 where
     P: peripheral::Source<E>,
     E: Element,
+    D: buffer::Destination<E>,
 {
+    /// Wraps a peripheral that can act as the source of a DMA transfer
+    pub fn new_receive(source: P, channel: Channel, config: Config) -> Self {
+        let mut peripheral = Peripheral::new(source);
+        peripheral.init_receive(channel, config);
+        peripheral
+    }
+
     fn init_receive(&mut self, mut channel: Channel, config: Config) {
         channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
         // Safety: Source trait is only implemented on peripherals within
@@ -632,6 +640,31 @@ where
         channel.set_interrupt_on_half(config.interrupt_on_half);
         channel.set_disable_on_completion(true);
         self.rx_channel = Some(channel);
+    }
+
+    /// Start a DMA transfer that transfers data from the peripheral into the supplied buffer
+    ///
+    /// A complete transfer is signaled by `is_receive_complete()`, and possibly an interrupt.
+    pub fn start_receive(&mut self, mut buffer: D) -> Result<(), (D, Error<P::Error>)> {
+        let rx_channel = self.rx_channel.as_mut().unwrap();
+        if rx_channel.is_enabled() {
+            return Err((buffer, Error::ScheduledTransfer));
+        }
+        let len = buffer.prepare_destination(rx_channel);
+        rx_channel.set_transfer_iterations(len as u16);
+        if let Err(error) = self.peripheral.enable_source() {
+            return Err((buffer, Error::Peripheral(error)));
+        }
+        compiler_fence(Ordering::Release);
+        rx_channel.set_enable(true);
+        if rx_channel.is_error() {
+            let es = ErrorStatus::new(rx_channel.error_status());
+            rx_channel.clear_error();
+            Err((buffer, Error::Setup(es)))
+        } else {
+            self.destination_buffer = Some(buffer);
+            Ok(())
+        }
     }
 
     /// Returns `true` if the receive is complete
@@ -647,7 +680,10 @@ where
     pub fn receive_complete(&mut self) -> Option<D> {
         self.rx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_source();
-        self.destination_buffer.take()
+        self.destination_buffer.take().and_then(|mut buffer| {
+            buffer.complete_destination();
+            Some(buffer)
+        })
     }
 
     /// Indicates if the receive channel has generated an interrupt
@@ -707,38 +743,52 @@ where
     }
 }
 
-fn start_receive<P, E, S, D>(
-    periph: &mut Peripheral<P, E, S, D>,
-    buffer: &mut D,
-) -> Result<(), Error<P::Error>>
+impl<P, E, S> Peripheral<P, E, S, Circular<E>>
 where
     P: peripheral::Source<E>,
     E: Element,
-    D: buffer::Destination<E>,
 {
-    let rx_channel = periph.rx_channel.as_mut().unwrap();
-    if rx_channel.is_enabled() {
-        return Err(Error::ScheduledTransfer);
+    /// Returns the read half of the circular buffer that's being
+    /// used as a DMA transfer destination
+    ///
+    /// Returns `None` if there's no destination buffer, which may mean
+    /// that there's no active transfer.
+    pub fn read_half(&mut self) -> Option<ReadHalf<E>> {
+        self.destination_buffer.as_mut().map(ReadHalf::new)
     }
-    let len = buffer.prepare_destination(rx_channel);
-    rx_channel.set_transfer_iterations(len as u16);
-    periph.peripheral.enable_source()?;
-    compiler_fence(Ordering::Release);
-    rx_channel.set_enable(true);
-    if rx_channel.is_error() {
-        let es = ErrorStatus::new(rx_channel.error_status());
-        rx_channel.clear_error();
-        Err(Error::Setup(es))
-    } else {
-        Ok(())
-    }
+}
+
+/// Create a peripheral that can suppy `u8` data for DMA transfers
+pub fn receive_u8<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8, B>
+where
+    P: peripheral::Source<u8>,
+    B: buffer::Destination<u8>,
+{
+    Peripheral::new_receive(source, channel, config)
+}
+
+/// Create a peripheral that can supply `u16` data for DMA transfers
+pub fn receive_u16<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16, B>
+where
+    P: peripheral::Source<u16>,
+    B: buffer::Destination<u16>,
+{
+    Peripheral::new_receive(source, channel, config)
 }
 
 impl<P, E, S, D> Peripheral<P, E, S, D>
 where
     P: peripheral::Destination<E>,
     E: Element,
+    S: buffer::Source<E>,
 {
+    /// Wraps a peripheral that can act as the destination of a DMA transfer
+    pub fn new_transfer(destination: P, channel: Channel, config: Config) -> Self {
+        let mut peripheral = Peripheral::new(destination);
+        peripheral.init_transfer(channel, config);
+        peripheral
+    }
+
     fn init_transfer(&mut self, mut channel: Channel, config: Config) {
         channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
         // Safety: Destination trait is only implemented on peripherals within
@@ -751,6 +801,31 @@ where
         channel.set_interrupt_on_half(config.interrupt_on_half);
         channel.set_disable_on_completion(true);
         self.tx_channel = Some(channel);
+    }
+
+    /// Start a DMA transfer that transfers data from the supplied buffer to the peripheral
+    ///
+    /// A complete transfer is signaled by `is_transfer_complete()`, and possibly an interrupt.
+    pub fn start_transfer(&mut self, mut buffer: S) -> Result<(), (S, Error<P::Error>)> {
+        let tx_channel = self.tx_channel.as_mut().unwrap();
+        if tx_channel.is_enabled() {
+            return Err((buffer, Error::ScheduledTransfer));
+        }
+        let len = buffer.prepare_source(tx_channel);
+        tx_channel.set_transfer_iterations(len as u16);
+        if let Err(error) = self.peripheral.enable_destination() {
+            return Err((buffer, Error::Peripheral(error)));
+        }
+        compiler_fence(Ordering::Release);
+        tx_channel.set_enable(true);
+        if tx_channel.is_error() {
+            let es = ErrorStatus::new(tx_channel.error_status());
+            tx_channel.clear_error();
+            Err((buffer, Error::Setup(es)))
+        } else {
+            self.source_buffer = Some(buffer);
+            Ok(())
+        }
     }
 
     /// Returns `true` if the transfer is complete
@@ -766,7 +841,10 @@ where
     pub fn transfer_complete(&mut self) -> Option<S> {
         self.tx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_destination();
-        self.source_buffer.take()
+        self.source_buffer.take().and_then(|mut buffer| {
+            buffer.complete_source();
+            Some(buffer)
+        })
     }
 
     /// Indicates if the transfer channel has generated an interrupt
@@ -823,120 +901,6 @@ where
     /// - the transfer is preempted
     pub fn is_transfer_active(&self) -> bool {
         self.rx_channel.as_ref().unwrap().is_active()
-    }
-}
-
-impl<P, E, S, D> Peripheral<P, E, S, D>
-where
-    P: peripheral::Source<E>,
-    E: Element,
-    D: buffer::Destination<E>,
-{
-    /// Wraps a peripheral that can act as the source of a DMA transfer
-    pub fn new_receive(source: P, channel: Channel, config: Config) -> Self {
-        let mut peripheral = Peripheral::new(source);
-        peripheral.init_receive(channel, config);
-        peripheral
-    }
-
-    /// Start a DMA transfer that transfers data from the peripheral into the supplied buffer
-    ///
-    /// A complete transfer is signaled by `is_receive_complete()`, and possibly an interrupt.
-    pub fn start_receive(&mut self, mut buffer: D) -> Result<(), (D, Error<P::Error>)> {
-        match start_receive(self, &mut buffer) {
-            Ok(()) => {
-                self.destination_buffer = Some(buffer);
-                Ok(())
-            }
-            Err(err) => Err((buffer, err)),
-        }
-    }
-}
-
-impl<P, E, S> Peripheral<P, E, S, Circular<E>>
-where
-    P: peripheral::Source<E>,
-    E: Element,
-{
-    /// Returns the read half of the circular buffer that's being
-    /// used as a DMA transfer destination
-    ///
-    /// Returns `None` if there's no destination buffer, which may mean
-    /// that there's no active transfer.
-    pub fn read_half(&mut self) -> Option<ReadHalf<E>> {
-        self.destination_buffer.as_mut().map(ReadHalf::new)
-    }
-}
-
-/// Create a peripheral that can suppy `u8` data for DMA transfers
-pub fn receive_u8<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8, B>
-where
-    P: peripheral::Source<u8>,
-    B: buffer::Destination<u8>,
-{
-    Peripheral::new_receive(source, channel, config)
-}
-
-/// Create a peripheral that can supply `u16` data for DMA transfers
-pub fn receive_u16<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16, B>
-where
-    P: peripheral::Source<u16>,
-    B: buffer::Destination<u16>,
-{
-    Peripheral::new_receive(source, channel, config)
-}
-
-fn start_transfer<P, E, S, D>(
-    periph: &mut Peripheral<P, E, S, D>,
-    buffer: &mut S,
-) -> Result<(), Error<P::Error>>
-where
-    P: peripheral::Destination<E>,
-    E: Element,
-    S: buffer::Source<E>,
-{
-    let tx_channel = periph.tx_channel.as_mut().unwrap();
-    if tx_channel.is_enabled() {
-        return Err(Error::ScheduledTransfer);
-    }
-    let len = buffer.prepare_source(tx_channel);
-    tx_channel.set_transfer_iterations(len as u16);
-    periph.peripheral.enable_destination()?;
-    compiler_fence(Ordering::Release);
-    tx_channel.set_enable(true);
-    if tx_channel.is_error() {
-        let es = ErrorStatus::new(tx_channel.error_status());
-        tx_channel.clear_error();
-        Err(Error::Setup(es))
-    } else {
-        Ok(())
-    }
-}
-
-impl<P, E, S, D> Peripheral<P, E, S, D>
-where
-    P: peripheral::Destination<E>,
-    E: Element,
-    S: buffer::Source<E>,
-{
-    /// Wraps a peripheral that can act as the destination of a DMA transfer
-    pub fn new_transfer(destination: P, channel: Channel, config: Config) -> Self {
-        let mut peripheral = Peripheral::new(destination);
-        peripheral.init_transfer(channel, config);
-        peripheral
-    }
-
-    /// Start a DMA transfer that transfers data from the supplied buffer to the peripheral
-    ///
-    /// A complete transfer is signaled by `is_transfer_complete()`, and possibly an interrupt.
-    pub fn start_transfer(&mut self, mut buffer: S) -> Result<(), (S, Error<P::Error>)> {
-        match start_transfer(self, &mut buffer) {
-            Ok(()) => {
-                self.source_buffer = Some(buffer);
-                Ok(())
-            }
-            Err(err) => Err((buffer, err)),
-        }
     }
 }
 
