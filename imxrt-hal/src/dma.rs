@@ -118,6 +118,13 @@
 //! - Channel chaining
 //! - Indivisible transfers (transfers that have one major loop, and multiple minor loops)
 
+// TODO - check for enabled, not active
+// TODO - set source and destination buffers before starting transfer. If transfer completes before we set the buffer,
+//        caller might not get their buffer back. Then again, the &mut implies that things need to be synchronized, so
+//        it might be on the caller to run this all in a interrupt free context...
+// TODO - compiler fences
+// TODO - rename buffer trait methods; too many `set_source()`s and `set_destination()`s
+
 #![allow(non_snake_case)] // Compatibility with RAL
 
 mod buffer;
@@ -528,7 +535,7 @@ pub struct Peripheral<P, E, S, D = S> {
     /// or both.
     peripheral: P,
     _element: core::marker::PhantomData<E>,
-    /// The buffer that satisfies to send data in a DMA transfer
+    /// The buffer that used to send data in a DMA transfer
     source_buffer: Option<S>,
     /// The buffer that's used to receive data in a DMA transfer
     destination_buffer: Option<D>,
@@ -616,7 +623,7 @@ where
     ///
     /// Users should ensure that any started transfer has completed. If the
     /// `Peripheral` was constructed with [`new_receive_transfer()`](struct.Peripheral.html#method.new_receive_transfer),
-    /// callers should use [`release_transfer_receive()`](struct.Peripheral.html#method.release_transfer_receive);
+    /// callers should use [`receive_transfer_release()`](struct.Peripheral.html#method.receive_transfer_release);
     /// otherwise, the transfer channel will be dropped when this method returns.
     ///
     /// To get a copy of the original config, use [`receive_config()`](struct.Peripheral.html#method.receive_config)
