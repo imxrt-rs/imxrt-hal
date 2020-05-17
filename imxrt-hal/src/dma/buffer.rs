@@ -634,7 +634,7 @@ pub trait Source<E: Element>: private::Sealed {
     ///
     /// The implementation should tell the provided `channel` how to interact
     /// with this buffer's memory.
-    fn set_source(&mut self, channel: &mut super::Channel) -> usize;
+    fn prepare_source(&mut self, channel: &mut super::Channel) -> usize;
     /// Invoked when the DMA transfer is complete
     ///
     /// Use this to perform any final state transformations before hand-off to
@@ -649,7 +649,7 @@ pub trait Destination<E: Element>: private::Sealed {
     ///
     /// The implementation should tell the provided `channel` how to interact
     /// with this buffer's memory.
-    fn set_destination(&mut self, channel: &mut super::Channel) -> usize;
+    fn prepare_destination(&mut self, channel: &mut super::Channel) -> usize;
     /// Invoked when the DMA transfer is complete
     ///
     /// Use this to perform any final state transformations before hand-off to
@@ -670,7 +670,7 @@ mod private {
 //
 
 impl<E: Element> Source<E> for Linear<E> {
-    fn set_source(&mut self, channel: &mut super::Channel) -> usize {
+    fn prepare_source(&mut self, channel: &mut super::Channel) -> usize {
         unsafe {
             channel.set_source_buffer(&self.as_elements()[..self.usable]);
         }
@@ -680,7 +680,7 @@ impl<E: Element> Source<E> for Linear<E> {
 }
 
 impl<E: Element> Destination<E> for Linear<E> {
-    fn set_destination(&mut self, channel: &mut super::Channel) -> usize {
+    fn prepare_destination(&mut self, channel: &mut super::Channel) -> usize {
         let offset = self.usable;
         unsafe {
             channel.set_destination_buffer(&mut self.as_mut_elements()[..offset]);
@@ -695,7 +695,7 @@ impl<E: Element> Destination<E> for Linear<E> {
 //
 
 impl<E: Element> Source<E> for Circular<E> {
-    fn set_source(&mut self, channel: &mut super::Channel) -> usize {
+    fn prepare_source(&mut self, channel: &mut super::Channel) -> usize {
         unsafe { channel.set_source_circular(self.read_ptr(), self.cap) };
         self.reserved = self.len();
         self.reserved
@@ -706,7 +706,7 @@ impl<E: Element> Source<E> for Circular<E> {
 }
 
 impl<E: Element> Destination<E> for Circular<E> {
-    fn set_destination(&mut self, channel: &mut super::Channel) -> usize {
+    fn prepare_destination(&mut self, channel: &mut super::Channel) -> usize {
         unsafe { channel.set_destination_circular(self.write_ptr(), self.cap) }
         self.reserved
     }

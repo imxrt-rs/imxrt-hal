@@ -146,7 +146,6 @@
 //        caller might not get their buffer back. Then again, the &mut implies that things need to be synchronized, so
 //        it might be on the caller to run this all in a interrupt free context...
 // TODO - compiler fences
-// TODO - rename buffer trait methods; too many `set_source()`s and `set_destination()`s
 // TODO - half complete interrupts
 
 #![allow(non_snake_case)] // Compatibility with RAL
@@ -690,7 +689,7 @@ where
     if rx_channel.is_enabled() {
         return Err(Error::ScheduledTransfer);
     }
-    let len = buffer.set_destination(rx_channel);
+    let len = buffer.prepare_destination(rx_channel);
     rx_channel.set_transfer_iterations(len as u16);
     periph.peripheral.enable_source()?;
     rx_channel.set_enable(true);
@@ -865,7 +864,7 @@ where
     if tx_channel.is_enabled() {
         return Err(Error::ScheduledTransfer);
     }
-    let len = buffer.set_source(tx_channel);
+    let len = buffer.prepare_source(tx_channel);
     tx_channel.set_transfer_iterations(len as u16);
     periph.peripheral.enable_destination()?;
     tx_channel.set_enable(true);

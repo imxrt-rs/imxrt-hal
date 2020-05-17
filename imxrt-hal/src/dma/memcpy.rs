@@ -79,8 +79,8 @@ where
             return Err(Error::ScheduledTransfer);
         }
 
-        let src = source.set_source(&mut self.channel) as u16;
-        let dst = destination.set_destination(&mut self.channel) as u16;
+        let src = source.prepare_source(&mut self.channel) as u16;
+        let dst = destination.prepare_destination(&mut self.channel) as u16;
         let iterations = src.min(dst);
         self.channel.set_transfer_iterations(iterations as u16);
 
