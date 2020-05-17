@@ -135,6 +135,12 @@
 //!
 //! See the [`Memcpy`](struct.Memcpy.html#example) documentation for an example of DMA-powered memcpy.
 //!
+//! # Notes on Data Cache
+//!
+//! If your i.MX RT system is using a data cache (DCache), you're responsible for issuing memory barriers,
+//! and flushing any cached buffers, for the DMA controller. More generally, you're responsible for placing
+//! your DMA buffers into memory regions that the DMA controller can use.
+//!
 //! ## TODO
 //!
 //! - Channel arbitration modes
@@ -1041,7 +1047,7 @@ where
 ///
 /// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
 /// let channel_27 = dma_channels[27].take().unwrap();
-/// let channel_0 = dma_channels[1].take().unwrap();
+/// let channel_0 = dma_channels[0].take().unwrap();
 /// ```
 pub struct Unclocked([Option<Channel>; 32]);
 impl Unclocked {
