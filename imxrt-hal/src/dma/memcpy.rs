@@ -75,8 +75,8 @@ where
     /// The number of elements transferred is the minimum size of the two
     /// buffers.
     pub fn transfer(&mut self, mut source: S, mut destination: D) -> Result<(), Error<void::Void>> {
-        if self.is_active() {
-            return Err(Error::ActiveTransfer);
+        if self.channel.is_enabled() {
+            return Err(Error::ScheduledTransfer);
         }
 
         let src = source.set_source(&mut self.channel) as u16;

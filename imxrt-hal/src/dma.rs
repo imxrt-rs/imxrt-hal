@@ -142,7 +142,6 @@
 //! - Channel priority, and channel priority swapping
 //! - Channel chaining
 
-// TODO - check for enabled, not active
 // TODO - set source and destination buffers before starting transfer. If transfer completes before we set the buffer,
 //        caller might not get their buffer back. Then again, the &mut implies that things need to be synchronized, so
 //        it might be on the caller to run this all in a interrupt free context...
@@ -432,10 +431,20 @@ impl Channel {
         self.registers.CERR.write(self.index as u8);
     }
 
-    /// Indicates if this DMA channel is active
+    /// Indicates if this DMA channel is actively transferring data
     fn is_active(&self) -> bool {
         let tcd = &self.registers.TCD[self.index];
         ral::read_reg!(register::tcd, tcd, CSR, ACTIVE == 1)
+    }
+
+    /// Indicates if this DMA channel is enabled and requesting service
+    ///
+    /// 'Enabled' and 'active' are different:
+    ///
+    /// - 'enabled' means "there's a transfer defined, and we're ready to be serviced"
+    /// - 'active' implies 'enabled,' and also adds "we're actively transferring data"
+    fn is_enabled(&self) -> bool {
+        self.registers.ERQ.read() & (1 << self.index) != 0
     }
 
     /// Returns the value from the **global** error status register
@@ -522,10 +531,10 @@ impl ConfigBuilder {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error<P> {
-    /// There is already an active transfer
+    /// There is already a scheduled transfer
     ///
     /// Cancel the transfer and try again.
-    ActiveTransfer,
+    ScheduledTransfer,
     /// The peripheral returned an error
     Peripheral(P),
     /// Error setting up the DMA transfer
@@ -656,6 +665,16 @@ where
     pub fn receive_release(mut self) -> (P, Channel) {
         (self.peripheral, self.rx_channel.take().unwrap())
     }
+
+    /// Indicates if the DMA controller is actively moving data for this DMA request
+    ///
+    /// It may not be moving data if
+    ///
+    /// - the transfer is complete, or there is no transfer
+    /// - the transfer is preempted
+    pub fn is_receive_active(&self) -> bool {
+        self.rx_channel.as_ref().unwrap().is_active()
+    }
 }
 
 fn start_receive<P, E, S, D>(
@@ -668,8 +687,8 @@ where
     D: buffer::Destination<E>,
 {
     let rx_channel = periph.rx_channel.as_mut().unwrap();
-    if rx_channel.is_active() {
-        return Err(Error::ActiveTransfer);
+    if rx_channel.is_enabled() {
+        return Err(Error::ScheduledTransfer);
     }
     let len = buffer.set_destination(rx_channel);
     rx_channel.set_transfer_iterations(len as u16);
@@ -761,6 +780,16 @@ where
     pub fn transfer_release(mut self) -> (P, Channel) {
         (self.peripheral, self.tx_channel.take().unwrap())
     }
+
+    /// Indicates if the DMA controller is actively moving data for this DMA request
+    ///
+    /// It may not be moving data if
+    ///
+    /// - the transfer is complete, or there is no transfer
+    /// - the transfer is preempted
+    pub fn is_transfer_active(&self) -> bool {
+        self.rx_channel.as_ref().unwrap().is_active()
+    }
 }
 
 impl<P, E, S, D> Peripheral<P, E, S, D>
@@ -833,8 +862,8 @@ where
     S: buffer::Source<E>,
 {
     let tx_channel = periph.tx_channel.as_mut().unwrap();
-    if tx_channel.is_active() {
-        return Err(Error::ActiveTransfer);
+    if tx_channel.is_enabled() {
+        return Err(Error::ScheduledTransfer);
     }
     let len = buffer.set_source(tx_channel);
     tx_channel.set_transfer_iterations(len as u16);
@@ -920,11 +949,7 @@ where
     D: buffer::Destination<E>,
 {
     /// Wraps a peripheral that can act as both the source and destination of a DMA transfer
-    pub fn new_bidirectional(
-        peripheral: P,
-        tx: (Channel, Config),
-        rx: (Channel, Config),
-    ) -> Self {
+    pub fn new_bidirectional(peripheral: P, tx: (Channel, Config), rx: (Channel, Config)) -> Self {
         let mut peripheral = Peripheral::new(peripheral);
         peripheral.init_receive(rx.0, rx.1);
         peripheral.init_transfer(tx.0, tx.1);
