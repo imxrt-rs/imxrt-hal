@@ -34,7 +34,7 @@
 //! handler, since we're enabling an interrupt when the receive completes.
 //!
 //! ```no_run
-//! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, ConfigBuilder, receive_transfer_u16};
+//! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, ConfigBuilder, bidirectional_u16};
 //!
 //! // Two buffers that can support maximum receive and transfer sizes of 256 elements
 //! static RX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
@@ -84,7 +84,7 @@
 //!
 //! // The peripheral will transfer and receive u16 elements.
 //! // It takes ownership of the SPI object, and the two DMA channels.
-//! let mut peripheral = receive_transfer_u16(
+//! let mut peripheral = bidirectional_u16(
 //!     spi4,
 //!     (tx_channel, ConfigBuilder::new().build()),
 //!     (rx_channel, rx_config),
@@ -647,8 +647,8 @@ where
     /// Release the peripheral and the channel
     ///
     /// Users should ensure that any started transfer has completed. If the
-    /// `Peripheral` was constructed with [`new_receive_transfer()`](struct.Peripheral.html#method.new_receive_transfer),
-    /// callers should use [`receive_transfer_release()`](struct.Peripheral.html#method.receive_transfer_release);
+    /// `Peripheral` was constructed with [`new_bidirectional()`](struct.Peripheral.html#method.new_bidirectional),
+    /// callers should use [`bidirectional_release()`](struct.Peripheral.html#method.bidirectional_release);
     /// otherwise, the transfer channel will be dropped when this method returns.
     ///
     /// To get a copy of the original config, use [`receive_config()`](struct.Peripheral.html#method.receive_config)
@@ -752,8 +752,8 @@ where
     /// Release the peripheral and the channel
     ///
     /// Users should ensure that any started transfer has completed. If the
-    /// `Peripheral` was constructed with [`new_receive_transfer()`](struct.Peripheral.html#method.new_receive_transfer),
-    /// callers should use [`receive_transfer_release()`](struct.Peripheral.html#method.receive_transfer_release);
+    /// `Peripheral` was constructed with [`new_bidirectional()`](struct.Peripheral.html#method.new_bidirectional),
+    /// callers should use [`bidirectional_release()`](struct.Peripheral.html#method.bidirectional_release);
     /// otherwise, the receiver channel will be dropped when this method returns.
     ///
     /// To get a copy of the original config, use [`transfer_config()`](struct.Peripheral.html#method.transfer_config)
@@ -920,7 +920,7 @@ where
     D: buffer::Destination<E>,
 {
     /// Wraps a peripheral that can act as both the source and destination of a DMA transfer
-    pub fn new_receive_transfer(
+    pub fn new_bidirectional(
         peripheral: P,
         tx: (Channel, Config),
         rx: (Channel, Config),
@@ -935,7 +935,7 @@ where
     ///
     /// Users should ensure that any active transfers are complete before releasing the
     /// peripheral.
-    pub fn receive_transfer_release(mut self) -> (P, (Channel, Channel)) {
+    pub fn bidirectional_release(mut self) -> (P, (Channel, Channel)) {
         (
             self.peripheral,
             (
@@ -948,7 +948,7 @@ where
 
 /// Create a peripheral that can accept `u8` data from DMA transfers, and can
 /// source `u8` data for DMA transfers
-pub fn receive_transfer_u8<P, S, D>(
+pub fn bidirectional_u8<P, S, D>(
     peripheral: P,
     tx: (Channel, Config),
     rx: (Channel, Config),
@@ -959,12 +959,12 @@ where
     S: buffer::Source<u8>,
     D: buffer::Destination<u8>,
 {
-    Peripheral::new_receive_transfer(peripheral, tx, rx)
+    Peripheral::new_bidirectional(peripheral, tx, rx)
 }
 
 /// Create a peripheral that can accept `u16` data from DMA transfers, and can
 /// source `u16` data for DMA transfers
-pub fn receive_transfer_u16<P, S, D>(
+pub fn bidirectional_u16<P, S, D>(
     peripheral: P,
     tx: (Channel, Config),
     rx: (Channel, Config),
@@ -975,7 +975,7 @@ where
     S: buffer::Source<u16>,
     D: buffer::Destination<u16>,
 {
-    Peripheral::new_receive_transfer(peripheral, tx, rx)
+    Peripheral::new_bidirectional(peripheral, tx, rx)
 }
 
 /// Unclocked, uninitialized DMA channels
