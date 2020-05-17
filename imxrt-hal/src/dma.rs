@@ -1,11 +1,17 @@
 //! Direct Memory Access (DMA)
 //!
-//! Users may wrap iMXRT peripherals in a [`Peripheral`](struct.Peripheral.html)
-//! to perform uni- or bi-directional DMA transfers. A `Peripheral` accepts up
-//! to two DMA [`Channel`](struct.Channel.html)s. One channel can support either
-//! a peripheral-to-memory transfer, or a memory-to-peripheral transfer. When
-//! constructing a `Peripheral`, you may configure the transfer completion to
-//! generate an interrupt.
+//! We support
+//!
+//! - DMA from memory to a peripheral. Transfers may be uni- or bi-directional.
+//!   See the [`Peripheral`](struct.Peripheral.html) for details.
+//! - DMA memory copy, or memory-to-memory transfers. See [`Memcpy`](struct.Memcpy.html)
+//!  for details.
+//!
+//! DMA types support either [`Linear`](struct.Linear.html) or [`Circular`](struct.Circular.html)
+//! memory buffers. Either may be used as a DMA transfer source or destination. Both are backed
+//! by statically-allocated [`Buffer`s](struct.Buffer.html). A user will create a memory buffer,
+//! then pass ownership to a DMA type that defines a transfer. When the transfer completes, the
+//! DMA type will release ownership back to the user.
 //!
 //! # Terms
 //!
@@ -30,10 +36,15 @@
 //! ```no_run
 //! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, ConfigBuilder, receive_transfer_u16};
 //!
+//! // Two buffers that can support maximum receive and transfer sizes of 256 elements
 //! static RX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
 //! static TX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
 //!
 //! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//!
+//! //
+//! // SPI setup...
+//! //
 //!
 //! let (_, _, _, spi4_builder) = peripherals.spi.clock(
 //!     &mut peripherals.ccm.handle,
@@ -49,12 +60,16 @@
 //!
 //! spi4.enable_chip_select_0(peripherals.iomuxc.gpio_b0_00.alt3());
 //!
-//! // Set the SPI clock speed, if desired
+//! // Set the SPI clock speed, if desired...
+//!
+//! //
+//! // DMA setup
+//! //
 //!
 //! let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
 //!
 //! // i.MX RT DMA interrupt handlers manage pairs of DMA channels. There's one
-//! // interrupt for both DMA channel 9 and channel 25. By selecting these two
+//! // interrupt for DMA channel 9 and channel 25. By selecting these two
 //! // DMA channels, we can register one interrupt to handle both DMA channel
 //! // completion.
 //! let tx_channel = dma_channels[9].take().unwrap();
@@ -67,21 +82,27 @@
 //!     .interrupt_on_completion(true)
 //!     .build();
 //!
-//! // The peripheral will transfer and receive u16 elements
+//! // The peripheral will transfer and receive u16 elements.
+//! // It takes ownership of the SPI object, and the two DMA channels.
 //! let mut peripheral = receive_transfer_u16(
 //!     spi4,
 //!     (tx_channel, ConfigBuilder::new().build()),
 //!     (rx_channel, rx_config),
 //! );
 //!
+//! // Create DMA memory adapters over the statically-allocated DMA memory.
+//! // These adapters will 'own' the statically-allocated memory. See the
+//! // Linear and Circular docs for more information.
 //! let mut tx_buffer = Circular::new(&TX_BUFFER).unwrap();
 //! let mut rx_buffer = Linear::new(&RX_BUFFER).unwrap();
 //!
+//! // Send 6 elements, and expect to receive 6 elements
 //! for v in 1..=6 {
 //!     tx_buffer.push(v);
 //! }
 //! rx_buffer.set_transfer_len(6);
 //!
+//! // Start the DMA transfers
 //! peripheral.start_receive(rx_buffer).unwrap();
 //! peripheral.start_transfer(tx_buffer).unwrap();
 //!
@@ -110,13 +131,16 @@
 //! }
 //! ```
 //!
+//! # Example: memcpy
+//!
+//! See the [`Memcpy`](struct.Memcpy.html#example) documentation for an example of DMA-powered memcpy.
+//!
 //! ## TODO
 //!
 //! - Channel arbitration modes
 //! - Channel grouping
 //! - Channel priority, and channel priority swapping
 //! - Channel chaining
-//! - Indivisible transfers (transfers that have one major loop, and multiple minor loops)
 
 // TODO - check for enabled, not active
 // TODO - set source and destination buffers before starting transfer. If transfer completes before we set the buffer,
@@ -124,6 +148,7 @@
 //        it might be on the caller to run this all in a interrupt free context...
 // TODO - compiler fences
 // TODO - rename buffer trait methods; too many `set_source()`s and `set_destination()`s
+// TODO - half complete interrupts
 
 #![allow(non_snake_case)] // Compatibility with RAL
 
