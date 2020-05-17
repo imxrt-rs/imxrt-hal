@@ -5,54 +5,63 @@
 //! return immediately. Then, you may query for DMA completion. Unlike the peripheral
 //! DMA support, the memory copy interface does not enable interrupts on completion.
 //!
-//! # Example
+//! A [`Memcpy`](struct.Memcpy.html) accepts either a [`Linear`](../struct.Linear.html)
+//! or a [`Circular`](../struct.Circular.html) buffer.
 //!
-//! There's an `unsafe` interface that requires you to ensure the two source and destination
-//! buffers are alive for the lifetime of the transfer:
+//! # Example
 //!
 //! ```no_run
 //! use imxrt_hal::dma;
+//!
+//! static SOURCE: dma::Buffer<[u8; 32]> = dma::Buffer::new([0; 32]);
+//! static DESTINATION: dma::Buffer<[u8; 64]> = dma::Buffer::new([0; 64]);
 //!
 //! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
 //! let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
 //! let mut memcpy = dma::memcpy::Memcpy::new(dma_channels[7].take().unwrap());
 //!
-//! let source: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
-//! let mut destination: [u8; 4] = [0; 4];
+//! let mut source = dma::Linear::new(&SOURCE).unwrap();
+//! let mut destination = dma::Linear::new(&DESTINATION).unwrap();
+//!
+//! source.as_mut_elements()[..14].copy_from_slice(&[8; 14]);
+//! source.set_transfer_len(14);
+//! destination.set_transfer_len(12);
+//! // Total 12 elements transferred
 //!
 //! // Begin the transfer
-//! //
-//! // The call returns immediately, so we must ensure that the
-//! // source and destination buffers remain alive for the life
-//! // of the transfer. We also should not look at destination
-//! // until the transfer completes.
-//! unsafe { memcpy.transfer(&source, &mut destination); }
-//! while !memcpy.complete() {}
+//! memcpy.transfer(source, destination).unwrap();
+//!
+//! // Wait for the transfer...
+//! while !memcpy.is_complete() {}
 //!
 //! // Transfer complete! It's safe to look at the destination.
 //! // Don't forget to clear the complete signal.
-//! memcpy.clear_complete();
-//! assert_eq!(destination, source);
+//! let (source, destination) = memcpy.complete().unwrap();
 //! ```
 
-use super::{Channel, Element, Error, ErrorStatus};
-use core::convert::TryFrom;
+use super::{buffer, Channel, Element, Error, ErrorStatus};
 use core::marker::PhantomData;
 
 /// A type that can peform memory-to-memory
 /// DMA transfers
-pub struct Memcpy<E> {
+pub struct Memcpy<E, S, D> {
     channel: Channel,
+    buffers: Option<(S, D)>,
     _element: PhantomData<E>,
 }
 
-impl<E: Element> Memcpy<E> {
+impl<E: Element, S, D> Memcpy<E, S, D>
+where
+    S: buffer::Source<E>,
+    D: buffer::Destination<E>,
+{
     /// Create a type that can perform memory-to-memory DMA transfers
     pub fn new(mut channel: Channel) -> Self {
         channel.set_interrupt_on_completion(false);
         channel.set_trigger_from_hardware(None);
         Memcpy {
             channel,
+            buffers: None,
             _element: PhantomData,
         }
     }
@@ -66,52 +75,41 @@ impl<E: Element> Memcpy<E> {
     ///
     /// The number of elements transferred is the minimum size of the two
     /// buffers.
-    ///
-    /// # Safety
-    ///
-    /// The lifetime of both `source` and `destination` must be greater than
-    /// the lifetime of the transfer.
-    pub unsafe fn transfer(
-        &mut self,
-        source: &[E],
-        destination: &mut [E],
-    ) -> Result<(), Error<void::Void>> {
-        if self.active() {
+    pub fn transfer(&mut self, mut source: S, mut destination: D) -> Result<(), Error<void::Void>> {
+        if self.is_active() {
             return Err(Error::ActiveTransfer);
         }
 
-        self.channel.set_source_buffer(source);
-        self.channel.set_destination_buffer(destination);
-        let iterations = source.len().min(destination.len());
-        self.channel.set_transfer_iterations(
-            i16::try_from(iterations)
-                .map(|iterations| iterations as u16)
-                .map_err(|_| Error::TooManyElements(iterations))?,
-        );
+        let src = source.set_source(&mut self.channel) as u16;
+        let dst = destination.set_destination(&mut self.channel) as u16;
+        let iterations = src.min(dst);
+        self.channel.set_transfer_iterations(iterations as u16);
 
         self.channel.set_enable(true);
         self.channel.start();
-        if self.channel.error() {
+        if self.channel.is_error() {
             let es = ErrorStatus::new(self.channel.error_status());
             self.channel.clear_error();
             Err(Error::Setup(es))
         } else {
+            self.buffers = Some((source, destination));
             Ok(())
         }
     }
 
     /// Returns `true` if the transfer is complete, or `false` if the
     /// transfer is not complete
-    pub fn complete(&self) -> bool {
-        self.channel.complete()
+    pub fn is_complete(&self) -> bool {
+        self.channel.is_complete()
     }
 
     /// Clear the completion indication for the DMA transfer
     ///
     /// Users are *required* to clear the completion flag before
     /// starting another transfer.
-    pub fn clear_complete(&mut self) {
+    pub fn complete(&mut self) -> Option<(S, D)> {
         self.channel.clear_complete();
+        self.buffers.take()
     }
 
     /// Cancel an active transfer
@@ -122,7 +120,7 @@ impl<E: Element> Memcpy<E> {
     }
 
     /// Returns `true` if there is an active transfer
-    pub fn active(&self) -> bool {
-        self.channel.active()
+    pub fn is_active(&self) -> bool {
+        self.channel.is_active()
     }
 }

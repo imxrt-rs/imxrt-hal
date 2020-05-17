@@ -28,7 +28,10 @@
 //! handler, since we're enabling an interrupt when the receive completes.
 //!
 //! ```no_run
-//! use imxrt_hal::dma::{Peripheral, ConfigBuilder, transfer_receive_u16};
+//! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, ConfigBuilder, receive_transfer_u16};
+//!
+//! static RX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
+//! static TX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
 //!
 //! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
 //!
@@ -65,23 +68,22 @@
 //!     .build();
 //!
 //! // The peripheral will transfer and receive u16 elements
-//! let mut peripheral = transfer_receive_u16(
+//! let mut peripheral = receive_transfer_u16(
 //!     spi4,
 //!     (tx_channel, ConfigBuilder::new().build()),
 //!     (rx_channel, rx_config),
 //! );
 //!
-//! static TX_BUFFER: [u16; 6] = [1, 2, 3, 4, 5, 6];
-//! static mut RX_BUFFER: [u16; 6] = [0; 6];
+//! let mut tx_buffer = Circular::new(&TX_BUFFER).unwrap();
+//! let mut rx_buffer = Linear::new(&RX_BUFFER).unwrap();
 //!
-//! unsafe {
-//!     // These two calls are unsafe, since the caller needs to ensure
-//!     // that the lifetime of the buffers is greater than the lifetime
-//!     // of the DMA transfer. We can be sure of that here, because the
-//!     // two buffers are static.
-//!     peripheral.start_transfer(&TX_BUFFER).unwrap();
-//!     peripheral.start_receive(&mut RX_BUFFER).unwrap();
+//! for v in 1..=6 {
+//!     tx_buffer.push(v);
 //! }
+//! rx_buffer.set_transfer_len(6);
+//!
+//! peripheral.start_receive(rx_buffer).unwrap();
+//! peripheral.start_transfer(tx_buffer).unwrap();
 //!
 //! // At this point, the DMA controller is transferring data from
 //! // the SPI peripheral, and receiving data from the SPI peripheral.
@@ -91,14 +93,20 @@
 //! // Your ISR should clear the interrupt and complete the transfers,
 //! // as depicted below:
 //!
-//! while peripheral.receive_interrupt() {
+//! while peripheral.is_receive_interrupt() {
 //!     peripheral.receive_clear_interrupt();
 //! }
-//! while peripheral.receive_complete() {
-//!     peripheral.receive_clear_complete();
+//!
+//! let mut rx_buffer = None;
+//! if peripheral.is_receive_complete() {
+//!     // Recover the receive buffer
+//!     rx_buffer = peripheral.receive_complete();
 //! }
-//! while peripheral.transfer_complete() {
-//!     peripheral.transfer_clear_complete();
+//!
+//! let mut tx_buffer = None;
+//! if peripheral.is_transfer_complete() {
+//!     // Recover the transfer buffer
+//!     tx_buffer = peripheral.transfer_complete();
 //! }
 //! ```
 //!
@@ -123,7 +131,6 @@ pub use element::Element;
 
 use crate::{ccm, ral};
 use core::{
-    convert::TryFrom,
     fmt::{self, Debug, Display},
     mem,
 };
@@ -163,8 +170,7 @@ impl Channel {
     /// Indicates that `source` will supply data for a DMA tranfser
     ///
     /// `set_source()` prepares the DMA channel to perform `E`-sized reads
-    /// from the memory pointed at by `source`. However, it does *not* tell
-    /// the DMA controller how many reads to perform. When the transfer completes,
+    /// from the memory pointed at by `source`. When the transfer completes,
     /// the DMA controller will continue pointing at `source`.
     ///
     /// # Safety
@@ -183,8 +189,7 @@ impl Channel {
     /// Indiates that `destination` will receive data from a DMA transfer
     ///
     /// `set_destination()` prepares the DMA channel to perform `E`-sized writes
-    /// on the memory pointed at by `destination`. However, it does *not* tell
-    /// the DMA controller how many writes to perform. When the transfer completes,
+    /// on the memory pointed at by `destination`. When the transfer completes,
     /// the DMA channel will continue pointing at `destination`.
     ///
     /// # Safety
@@ -203,9 +208,8 @@ impl Channel {
     /// Indicates that the `source` buffer will supply data for a DMA transfer
     ///
     /// `set_source_buffer()` prepares the DMA channel to perform `E`-sized reads
-    /// of all the elements in `source`. The number of elements to transfer corresponds
-    /// to the size of the buffer. When the transfer completes, the DMA channel
-    /// will point at the beginning of `source`.
+    /// of the elements in `source`. When the transfer completes, the DMA channel will
+    /// point at the beginning of `source`.
     ///
     /// # Safety
     ///
@@ -225,6 +229,20 @@ impl Channel {
         );
     }
 
+    /// Indicates that `source` will provide data for a DMA transfer as if it
+    /// were a circular buffer
+    ///
+    /// `set_source_circular()` prepares the DMA channel to perform `E`-sized reads from
+    /// the memory pointed at by `source`. `size` indicates the total capacity of the circular
+    /// buffer, and it's expected to be a multiple of two. `source` should be a pointer to
+    /// a readable element. It's expected that the source buffer's alignment is a multiple
+    /// of the buffer size. When the transfer completes, the DMA channel will be pointing at the next
+    /// readable element.
+    ///
+    /// # Safety
+    ///
+    /// Lifetime of `source` must be greater than the lifetime of the transfer. All of the size
+    /// and alignment guarantees must hold.
     unsafe fn set_source_circular<E: Element>(&mut self, source: *const E, size: usize) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
@@ -243,9 +261,8 @@ impl Channel {
     /// Indicates that the `destination` buffer will receive data from a DMA transfer
     ///
     /// `set_destination_buffer()` prepares the DMA channel to perform `E`-sized writes
-    /// of all the elements in `destination`. The number of elements to transfer corresponds
-    /// to the size of the buffer. When the transfer completes, the DMA channel
-    /// will point at the beginning of `destination`.
+    /// of elements starting at the head of `destination`. When the transfer completes, the DMA
+    /// channel will point at the beginning of `destination`.
     ///
     /// # Safety
     ///
@@ -265,6 +282,20 @@ impl Channel {
         );
     }
 
+    /// Indicates that `destination` will recieve data from a DMA transfer as if it
+    /// were a circular buffer
+    ///
+    /// `set_destination_circular()` prepares the DMA channel to perform `E`-sized writes to
+    /// the memory pointed at by `destination`. `size` indicates the total capacity of the circular
+    /// buffer, and it's expected to be a multiple of two. `destination` should be a pointer to
+    /// a writable element. It's expected that the destination buffer's alignment is a multiple
+    /// of the buffer size. When the transfer completes, the DMA channel will be pointing at the next
+    /// writeable element.
+    ///
+    /// # Safety
+    ///
+    /// Lifetime of `destination` must be greater than the lifetime of the transfer. All of the size
+    /// and alignment guarantees must hold.
     unsafe fn set_destination_circular<E: Element>(&mut self, destination: *mut E, size: usize) {
         let tcd = &self.registers.TCD[self.index];
         ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
@@ -303,7 +334,7 @@ impl Channel {
     }
 
     /// Returns `true` if the DMA channel is receiving a service signal from hardware
-    fn hardware_signaling(&self) -> bool {
+    fn is_hardware_signaling(&self) -> bool {
         self.registers.HRS.read() & (1 << self.index) != 0
     }
 
@@ -317,7 +348,7 @@ impl Channel {
     }
 
     /// Returns `true` if this DMA channel generated an interrupt
-    fn interrupt(&self) -> bool {
+    fn is_interrupt(&self) -> bool {
         self.registers.INT.read() & (1 << self.index) != 0
     }
 
@@ -342,13 +373,13 @@ impl Channel {
     }
 
     /// Returns `true` if this channel's completion will generate an interrupt
-    fn interrupt_on_completion(&self) -> bool {
+    fn is_interrupt_on_completion(&self) -> bool {
         let tcd = &self.registers.TCD[self.index];
         ral::read_reg!(register::tcd, tcd, CSR, INTMAJOR == 1)
     }
 
     /// Indicates if the DMA transfer has completed
-    fn complete(&self) -> bool {
+    fn is_complete(&self) -> bool {
         let tcd = &self.registers.TCD[self.index];
         ral::read_reg!(register::tcd, tcd, CSR, DONE == 1)
     }
@@ -359,7 +390,7 @@ impl Channel {
     }
 
     /// Indicates if the DMA channel is in an error state
-    fn error(&self) -> bool {
+    fn is_error(&self) -> bool {
         self.registers.ERR.read() & (1 << self.index) != 0
     }
 
@@ -369,7 +400,7 @@ impl Channel {
     }
 
     /// Indicates if this DMA channel is active
-    fn active(&self) -> bool {
+    fn is_active(&self) -> bool {
         let tcd = &self.registers.TCD[self.index];
         ral::read_reg!(register::tcd, tcd, CSR, ACTIVE == 1)
     }
@@ -395,40 +426,6 @@ impl Channel {
     }
 }
 
-/// A DMA-capable peripheral
-///
-/// `Peripheral` wraps an object that can act as a source and / or destination
-/// for a DMA transfer. It provides an interface for scheduling transfers, and
-/// for knowing when transfers are complete.
-///
-/// The most useful methods are [`start_transfer()`](struct.Peripheral.html#method.start_transfer)
-/// and [`start_receive()`](struct.Peripheral.html#method.start_receive). Each method accepts
-/// a buffer, and will either
-///
-/// - send data from the buffer to the peripheral (`start_transfer()`)
-/// - move data from a peripheral into the buffer (`start_receive()`)
-///
-/// Both methods are unsafe! You're responsible for making sure the lifetime of the buffers is
-/// greater than the lifetime of the transfer.
-///
-/// When constructing a `Peripheral`, you may supply a configuration to trigger an interrupt when
-/// the DMA transfer completes. If you enable interrupts, you're responsible for registering the
-/// interrupt, and for clearing the interrupt. The `Peripheral` has methods for clearing interrupts
-/// due to transfer and receive DMA channels.
-///
-/// See the [module-level docs](index.html#example-full-duplex-spi-peripheral)
-/// for an example of how to create and use a peripheral.
-pub struct Peripheral<P, E> {
-    /// Channel used for outgoing data (from software, to external device)
-    tx_channel: Option<Channel>,
-    /// Channel used for incoming data (from external device, to software)
-    rx_channel: Option<Channel>,
-    /// The peripheral that is either providing the data, or accepting the data,
-    /// or both.
-    peripheral: P,
-    _element: core::marker::PhantomData<E>,
-}
-
 #[derive(Clone, Copy)]
 /// Configurations for defining DMA transfers
 ///
@@ -444,7 +441,7 @@ impl Config {
     /// Returns a `Config` that represents the state of the supplied channel
     fn from_channel(channel: &Channel) -> Self {
         Config {
-            interrupt_on_completion: channel.interrupt_on_completion(),
+            interrupt_on_completion: channel.is_interrupt_on_completion(),
         }
     }
 }
@@ -462,6 +459,7 @@ pub struct ConfigBuilder(Config);
 
 impl ConfigBuilder {
     /// Construct a builder, and begin defining a configuration
+    #[allow(clippy::new_without_default)] // Don't want to commit to a `Default` in the public interface
     pub fn new() -> Self {
         ConfigBuilder(Config {
             interrupt_on_completion: false,
@@ -499,12 +497,6 @@ pub enum Error<P> {
     Peripheral(P),
     /// Error setting up the DMA transfer
     Setup(ErrorStatus),
-    /// User requested `usize` number of elements to transfer, which
-    /// is too many elements to transfer.
-    ///
-    /// The request either exceeded the size of the buffer, or exceeded the hardware
-    /// limit.
-    TooManyElements(usize),
 }
 
 impl<P> From<P> for Error<P> {
@@ -513,29 +505,52 @@ impl<P> From<P> for Error<P> {
     }
 }
 
-impl<P, E> Peripheral<P, E> {
+/// A DMA-capable peripheral
+///
+/// `Peripheral` wraps an object that can act as a source and / or destination
+/// for a DMA transfer. It provides an interface for scheduling transfers, and
+/// for knowing when transfers are complete.
+///
+/// When constructing a `Peripheral`, you may supply a configuration to trigger an interrupt when
+/// the DMA transfer completes. If you enable interrupts, you're responsible for registering the
+/// interrupt, and for clearing the interrupt. The `Peripheral` has methods for clearing interrupts
+/// due to transfer and receive DMA channels.
+///
+/// See the [module-level docs](index.html#example-full-duplex-spi-peripheral)
+/// for an example of how to create and use a peripheral.
+pub struct Peripheral<P, E, S, D = S> {
+    /// Channel used for outgoing data (from software, to external device)
+    tx_channel: Option<Channel>,
+    /// Channel used for incoming data (from external device, to software)
+    rx_channel: Option<Channel>,
+    /// The peripheral that is either providing the data, or accepting the data,
+    /// or both.
+    peripheral: P,
+    _element: core::marker::PhantomData<E>,
+    /// The buffer that satisfies to send data in a DMA transfer
+    source_buffer: Option<S>,
+    /// The buffer that's used to receive data in a DMA transfer
+    destination_buffer: Option<D>,
+}
+
+impl<P, E, S, D> Peripheral<P, E, S, D> {
     fn new(peripheral: P) -> Self {
         Peripheral {
             peripheral,
             rx_channel: None,
             tx_channel: None,
             _element: core::marker::PhantomData,
+            source_buffer: None,
+            destination_buffer: None,
         }
     }
 }
 
-impl<P, E> Peripheral<P, E>
+impl<P, E, S, D> Peripheral<P, E, S, D>
 where
     P: peripheral::Source<E>,
     E: Element,
 {
-    /// Wraps a peripheral that can act as the source of a DMA transfer
-    pub fn new_receive(source: P, channel: Channel, config: Config) -> Self {
-        let mut peripheral = Peripheral::new(source);
-        peripheral.init_receive(channel, config);
-        peripheral
-    }
-
     fn init_receive(&mut self, mut channel: Channel, config: Config) {
         channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
         // Safety: Source trait is only implemented on peripherals within
@@ -549,41 +564,9 @@ where
         self.rx_channel = Some(channel);
     }
 
-    /// Start a DMA transfer that transfers data from the peripheral into the supplied buffer
-    ///
-    /// A complete transfer is signaled by `receive_complete()`, and possibly an interrupt.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure that the lifetime of the buffer is greater than the lifetime
-    /// of the transfer.
-    pub unsafe fn start_receive(&mut self, buffer: &mut [E]) -> Result<(), Error<P::Error>> {
-        let rx_channel = self.rx_channel.as_mut().unwrap();
-        if rx_channel.active() {
-            return Err(Error::ActiveTransfer);
-        }
-        rx_channel.set_destination_buffer(buffer);
-        // Convert to `i16` to cap at `i16::max_value()`,
-        // which is the max number of iterations we can support.
-        rx_channel.set_transfer_iterations(
-            i16::try_from(buffer.len())
-                .map(|iterations| iterations as u16)
-                .map_err(|_| Error::TooManyElements(buffer.len()))?,
-        );
-        self.peripheral.enable_source()?;
-        rx_channel.set_enable(true);
-        if rx_channel.error() {
-            let es = ErrorStatus::new(rx_channel.error_status());
-            rx_channel.clear_error();
-            Err(Error::Setup(es))
-        } else {
-            Ok(())
-        }
-    }
-
     /// Returns `true` if the receive is complete
-    pub fn receive_complete(&self) -> bool {
-        self.rx_channel.as_ref().unwrap().complete()
+    pub fn is_receive_complete(&self) -> bool {
+        self.rx_channel.as_ref().unwrap().is_complete()
     }
 
     /// Clears the flag that indicates the DMA transfer is complete, and
@@ -591,14 +574,15 @@ where
     ///
     /// Users are **required** to call this to disable the source. Otherwise,
     /// the source may continue to generate DMA requests.
-    pub fn receive_clear_complete(&mut self) {
+    pub fn receive_complete(&mut self) -> Option<D> {
         self.rx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_source();
+        self.destination_buffer.take()
     }
 
     /// Indicates if the receive channel has generated an interrupt
-    pub fn receive_interrupt(&self) -> bool {
-        self.rx_channel.as_ref().unwrap().interrupt()
+    pub fn is_receive_interrupt(&self) -> bool {
+        self.rx_channel.as_ref().unwrap().is_interrupt()
     }
 
     /// Clears the interrupt flag on the receive channel
@@ -610,13 +594,14 @@ where
     }
 
     /// Cancel a receive transfer
-    pub fn receive_cancel(&mut self) {
+    pub fn receive_cancel(&mut self) -> Option<D> {
         self.peripheral.disable_source();
         let rx_channel = self.rx_channel.as_mut().unwrap();
-        while rx_channel.hardware_signaling() {
+        while rx_channel.is_hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
         rx_channel.set_enable(false);
+        self.destination_buffer.take()
     }
 
     /// Returns a copy of the config used to create the receive
@@ -629,7 +614,7 @@ where
     /// Release the peripheral and the channel
     ///
     /// Users should ensure that any started transfer has completed. If the
-    /// `Peripheral` was constructed with [`new_transfer_receive()`](struct.Peripheral.html#method.new_transfer_receive),
+    /// `Peripheral` was constructed with [`new_receive_transfer()`](struct.Peripheral.html#method.new_receive_transfer),
     /// callers should use [`release_transfer_receive()`](struct.Peripheral.html#method.release_transfer_receive);
     /// otherwise, the transfer channel will be dropped when this method returns.
     ///
@@ -640,34 +625,37 @@ where
     }
 }
 
-/// Create a peripheral that can suppy `u8` data for DMA transfers
-pub fn receive_u8<P>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8>
+fn start_receive<P, E, S, D>(
+    periph: &mut Peripheral<P, E, S, D>,
+    buffer: &mut D,
+) -> Result<(), Error<P::Error>>
 where
-    P: peripheral::Source<u8>,
+    P: peripheral::Source<E>,
+    E: Element,
+    D: buffer::Destination<E>,
 {
-    Peripheral::new_receive(source, channel, config)
+    let rx_channel = periph.rx_channel.as_mut().unwrap();
+    if rx_channel.is_active() {
+        return Err(Error::ActiveTransfer);
+    }
+    let len = buffer.set_destination(rx_channel);
+    rx_channel.set_transfer_iterations(len as u16);
+    periph.peripheral.enable_source()?;
+    rx_channel.set_enable(true);
+    if rx_channel.is_error() {
+        let es = ErrorStatus::new(rx_channel.error_status());
+        rx_channel.clear_error();
+        Err(Error::Setup(es))
+    } else {
+        Ok(())
+    }
 }
 
-/// Create a peripheral that can supply `u16` data for DMA transfers
-pub fn receive_u16<P>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16>
-where
-    P: peripheral::Source<u16>,
-{
-    Peripheral::new_receive(source, channel, config)
-}
-
-impl<P, E> Peripheral<P, E>
+impl<P, E, S, D> Peripheral<P, E, S, D>
 where
     P: peripheral::Destination<E>,
     E: Element,
 {
-    /// Wraps a peripheral that can act as the destination of a DMA transfer
-    pub fn new_transfer(destination: P, channel: Channel, config: Config) -> Self {
-        let mut peripheral = Peripheral::new(destination);
-        peripheral.init_transfer(channel, config);
-        peripheral
-    }
-
     fn init_transfer(&mut self, mut channel: Channel, config: Config) {
         channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
         // Safety: Destination trait is only implemented on peripherals within
@@ -681,41 +669,9 @@ where
         self.tx_channel = Some(channel);
     }
 
-    /// Start a DMA transfer that transfers data from the supplied buffer to the peripheral
-    ///
-    /// A complete transfer is signaled by `transfer_complete()`, and possibly an interrupt.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure that the lifetime of the buffer is greater than the lifetime
-    /// of the transfer.
-    pub unsafe fn start_transfer(&mut self, buffer: &[E]) -> Result<(), Error<P::Error>> {
-        let tx_channel = self.tx_channel.as_mut().unwrap();
-        if tx_channel.active() {
-            return Err(Error::ActiveTransfer);
-        }
-        tx_channel.set_source_buffer(buffer);
-        // Convert to `i16` to cap at `i16::max_value()`,
-        // which is the max number of iterations we can support.
-        tx_channel.set_transfer_iterations(
-            i16::try_from(buffer.len())
-                .map(|iterations| iterations as u16)
-                .map_err(|_| Error::TooManyElements(buffer.len()))?,
-        );
-        self.peripheral.enable_destination()?;
-        tx_channel.set_enable(true);
-        if tx_channel.error() {
-            let es = ErrorStatus::new(tx_channel.error_status());
-            tx_channel.clear_error();
-            Err(Error::Setup(es))
-        } else {
-            Ok(())
-        }
-    }
-
     /// Returns `true` if the transfer is complete
-    pub fn transfer_complete(&self) -> bool {
-        self.tx_channel.as_ref().unwrap().complete()
+    pub fn is_transfer_complete(&self) -> bool {
+        self.tx_channel.as_ref().unwrap().is_complete()
     }
 
     /// Clears the flag that indicates the DMA transfer is complete, and
@@ -723,14 +679,15 @@ where
     ///
     /// Users are **required** to call this to disable the source. Otherwise,
     /// the source may continue to generate DMA requests.
-    pub fn transfer_clear_complete(&mut self) {
+    pub fn transfer_complete(&mut self) -> Option<S> {
         self.tx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_destination();
+        self.source_buffer.take()
     }
 
     /// Indicates if the transfer channel has generated an interrupt
-    pub fn transfer_interrupt(&self) -> bool {
-        self.tx_channel.as_ref().unwrap().interrupt()
+    pub fn is_transfer_interrupt(&self) -> bool {
+        self.tx_channel.as_ref().unwrap().is_interrupt()
     }
 
     /// Clears the interrupt flag on the transfer channel
@@ -742,13 +699,14 @@ where
     }
 
     /// Cancel a transfer that sends data to the peripheral
-    pub fn transfer_cancel(&mut self) {
+    pub fn transfer_cancel(&mut self) -> Option<S> {
         self.peripheral.disable_destination();
         let tx_channel = self.tx_channel.as_mut().unwrap();
-        while tx_channel.hardware_signaling() {
+        while tx_channel.is_hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
         tx_channel.set_enable(false);
+        self.source_buffer.take()
     }
 
     /// Returns a copy of the transfer config supplied during
@@ -761,8 +719,8 @@ where
     /// Release the peripheral and the channel
     ///
     /// Users should ensure that any started transfer has completed. If the
-    /// `Peripheral` was constructed with [`new_transfer_receive()`](struct.Peripheral.html#method.new_transfer_receive),
-    /// callers should use [`transfer_receive_release()`](struct.Peripheral.html#method.transfer_receive_release);
+    /// `Peripheral` was constructed with [`new_receive_transfer()`](struct.Peripheral.html#method.new_receive_transfer),
+    /// callers should use [`receive_transfer_release()`](struct.Peripheral.html#method.receive_transfer_release);
     /// otherwise, the receiver channel will be dropped when this method returns.
     ///
     /// To get a copy of the original config, use [`transfer_config()`](struct.Peripheral.html#method.transfer_config)
@@ -772,29 +730,131 @@ where
     }
 }
 
+impl<P, E, S, D> Peripheral<P, E, S, D>
+where
+    P: peripheral::Source<E>,
+    E: Element,
+    D: buffer::Destination<E>,
+{
+    /// Wraps a peripheral that can act as the source of a DMA transfer
+    pub fn new_receive(source: P, channel: Channel, config: Config) -> Self {
+        let mut peripheral = Peripheral::new(source);
+        peripheral.init_receive(channel, config);
+        peripheral
+    }
+
+    /// Start a DMA transfer that transfers data from the peripheral into the supplied buffer
+    ///
+    /// A complete transfer is signaled by `is_receive_complete()`, and possibly an interrupt.
+    pub fn start_receive(&mut self, mut buffer: D) -> Result<(), (D, Error<P::Error>)> {
+        match start_receive(self, &mut buffer) {
+            Ok(()) => {
+                self.destination_buffer = Some(buffer);
+                Ok(())
+            }
+            Err(err) => Err((buffer, err)),
+        }
+    }
+}
+
+/// Create a peripheral that can suppy `u8` data for DMA transfers
+pub fn receive_u8<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8, B>
+where
+    P: peripheral::Source<u8>,
+    B: buffer::Destination<u8>,
+{
+    Peripheral::new_receive(source, channel, config)
+}
+
+/// Create a peripheral that can supply `u16` data for DMA transfers
+pub fn receive_u16<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16, B>
+where
+    P: peripheral::Source<u16>,
+    B: buffer::Destination<u16>,
+{
+    Peripheral::new_receive(source, channel, config)
+}
+
+fn start_transfer<P, E, S, D>(
+    periph: &mut Peripheral<P, E, S, D>,
+    buffer: &mut S,
+) -> Result<(), Error<P::Error>>
+where
+    P: peripheral::Destination<E>,
+    E: Element,
+    S: buffer::Source<E>,
+{
+    let tx_channel = periph.tx_channel.as_mut().unwrap();
+    if tx_channel.is_active() {
+        return Err(Error::ActiveTransfer);
+    }
+    let len = buffer.set_source(tx_channel);
+    tx_channel.set_transfer_iterations(len as u16);
+    periph.peripheral.enable_destination()?;
+    tx_channel.set_enable(true);
+    if tx_channel.is_error() {
+        let es = ErrorStatus::new(tx_channel.error_status());
+        tx_channel.clear_error();
+        Err(Error::Setup(es))
+    } else {
+        Ok(())
+    }
+}
+
+impl<P, E, S, D> Peripheral<P, E, S, D>
+where
+    P: peripheral::Destination<E>,
+    E: Element,
+    S: buffer::Source<E>,
+{
+    /// Wraps a peripheral that can act as the destination of a DMA transfer
+    pub fn new_transfer(destination: P, channel: Channel, config: Config) -> Self {
+        let mut peripheral = Peripheral::new(destination);
+        peripheral.init_transfer(channel, config);
+        peripheral
+    }
+
+    /// Start a DMA transfer that transfers data from the supplied buffer to the peripheral
+    ///
+    /// A complete transfer is signaled by `is_transfer_complete()`, and possibly an interrupt.
+    pub fn start_transfer(&mut self, mut buffer: S) -> Result<(), (S, Error<P::Error>)> {
+        match start_transfer(self, &mut buffer) {
+            Ok(()) => {
+                self.source_buffer = Some(buffer);
+                Ok(())
+            }
+            Err(err) => Err((buffer, err)),
+        }
+    }
+}
+
 /// Create a peripheral that can accept `u8` data from DMA transfers
-pub fn transfer_u8<P>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u8>
+pub fn transfer_u8<P, B>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u8, B>
 where
     P: peripheral::Destination<u8>,
+    B: buffer::Source<u8>,
 {
     Peripheral::new_transfer(destination, channel, config)
 }
 
 /// Create a peripheral that can accept `u16` data from DMA transfers
-pub fn transfer_u16<P>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u16>
+pub fn transfer_u16<P, B>(destination: P, channel: Channel, config: Config) -> Peripheral<P, u16, B>
 where
     P: peripheral::Destination<u16>,
+    B: buffer::Source<u16>,
 {
     Peripheral::new_transfer(destination, channel, config)
 }
 
-impl<P, E> Peripheral<P, E>
+impl<P, E, S, D> Peripheral<P, E, S, D>
 where
     P: peripheral::Source<E> + peripheral::Destination<E>,
     E: Element,
+    S: buffer::Source<E>,
+    D: buffer::Destination<E>,
 {
     /// Wraps a peripheral that can act as both the source and destination of a DMA transfer
-    pub fn new_transfer_receive(
+    pub fn new_receive_transfer(
         peripheral: P,
         tx: (Channel, Config),
         rx: (Channel, Config),
@@ -809,7 +869,7 @@ where
     ///
     /// Users should ensure that any active transfers are complete before releasing the
     /// peripheral.
-    pub fn transfer_receive_release(mut self) -> (P, (Channel, Channel)) {
+    pub fn receive_transfer_release(mut self) -> (P, (Channel, Channel)) {
         (
             self.peripheral,
             (
@@ -822,28 +882,34 @@ where
 
 /// Create a peripheral that can accept `u8` data from DMA transfers, and can
 /// source `u8` data for DMA transfers
-pub fn transfer_receive_u8<P>(
+pub fn receive_transfer_u8<P, S, D>(
     peripheral: P,
     tx: (Channel, Config),
     rx: (Channel, Config),
-) -> Peripheral<P, u8>
+) -> Peripheral<P, u8, S, D>
 where
-    P: peripheral::Source<u8> + peripheral::Destination<u8>,
+    P: peripheral::Source<u8, Error = <P as peripheral::Destination<u8>>::Error>
+        + peripheral::Destination<u8>,
+    S: buffer::Source<u8>,
+    D: buffer::Destination<u8>,
 {
-    Peripheral::new_transfer_receive(peripheral, tx, rx)
+    Peripheral::new_receive_transfer(peripheral, tx, rx)
 }
 
 /// Create a peripheral that can accept `u16` data from DMA transfers, and can
 /// source `u16` data for DMA transfers
-pub fn transfer_receive_u16<P>(
+pub fn receive_transfer_u16<P, S, D>(
     peripheral: P,
     tx: (Channel, Config),
     rx: (Channel, Config),
-) -> Peripheral<P, u16>
+) -> Peripheral<P, u16, S, D>
 where
-    P: peripheral::Source<u16> + peripheral::Destination<u16>,
+    P: peripheral::Source<u16, Error = <P as peripheral::Destination<u16>>::Error>
+        + peripheral::Destination<u16>,
+    S: buffer::Source<u16>,
+    D: buffer::Destination<u16>,
 {
-    Peripheral::new_transfer_receive(peripheral, tx, rx)
+    Peripheral::new_receive_transfer(peripheral, tx, rx)
 }
 
 /// Unclocked, uninitialized DMA channels
@@ -894,7 +960,7 @@ pub struct ErrorStatus {
 }
 
 impl ErrorStatus {
-    fn new(es: u32) -> Self {
+    const fn new(es: u32) -> Self {
         ErrorStatus { es }
     }
 }
