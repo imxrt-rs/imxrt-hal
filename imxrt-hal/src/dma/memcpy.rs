@@ -57,6 +57,7 @@ where
     /// Create a type that can perform memory-to-memory DMA transfers
     pub fn new(mut channel: Channel) -> Self {
         channel.set_interrupt_on_completion(false);
+        channel.set_interrupt_on_half(false);
         channel.set_trigger_from_hardware(None);
         Memcpy {
             channel,

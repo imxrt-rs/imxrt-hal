@@ -146,7 +146,6 @@
 //        caller might not get their buffer back. Then again, the &mut implies that things need to be synchronized, so
 //        it might be on the caller to run this all in a interrupt free context...
 // TODO - compiler fences
-// TODO - half complete interrupts
 
 #![allow(non_snake_case)] // Compatibility with RAL
 
@@ -409,6 +408,18 @@ impl Channel {
         ral::read_reg!(register::tcd, tcd, CSR, INTMAJOR == 1)
     }
 
+    /// Enable or disable interrupt generation when the transfer is half complete
+    fn set_interrupt_on_half(&mut self, intr: bool) {
+        let tcd = &self.registers.TCD[self.index];
+        ral::modify_reg!(register::tcd, tcd, CSR, INTHALF: intr as u16);
+    }
+
+    /// Returns `true` if this channel will generate an interrupt halfway through transfer
+    fn is_interrupt_on_half(&self) -> bool {
+        let tcd = &self.registers.TCD[self.index];
+        ral::read_reg!(register::tcd, tcd, CSR, INTHALF == 1)
+    }
+
     /// Indicates if the DMA transfer has completed
     fn is_complete(&self) -> bool {
         let tcd = &self.registers.TCD[self.index];
@@ -474,6 +485,7 @@ impl Channel {
 /// transfer configuration.
 pub struct Config {
     interrupt_on_completion: bool,
+    interrupt_on_half: bool,
     // Developer note: update `Config::from_channel` when
     // adding more fields!
 }
@@ -483,6 +495,7 @@ impl Config {
     fn from_channel(channel: &Channel) -> Self {
         Config {
             interrupt_on_completion: channel.is_interrupt_on_completion(),
+            interrupt_on_half: channel.is_interrupt_on_half(),
         }
     }
 }
@@ -504,6 +517,7 @@ impl ConfigBuilder {
     pub fn new() -> Self {
         ConfigBuilder(Config {
             interrupt_on_completion: false,
+            interrupt_on_half: false,
         })
     }
 
@@ -517,6 +531,13 @@ impl ConfigBuilder {
     /// DMA channel.
     pub fn interrupt_on_completion(mut self, interrupt_on_completion: bool) -> Self {
         self.0.interrupt_on_completion = interrupt_on_completion;
+        self
+    }
+
+    /// Specifies that this DMA channel will trigger an interrupt when the transfer
+    /// is half complete
+    pub fn interrupt_on_half(mut self, interrupt_on_half: bool) -> Self {
+        self.0.interrupt_on_half = interrupt_on_half;
         self
     }
 
@@ -601,6 +622,7 @@ where
             channel.set_source(self.peripheral.source());
         }
         channel.set_interrupt_on_completion(config.interrupt_on_completion);
+        channel.set_interrupt_on_half(config.interrupt_on_half);
         channel.set_disable_on_completion(true);
         self.rx_channel = Some(channel);
     }
@@ -629,7 +651,8 @@ where
     /// Clears the interrupt flag on the receive channel
     ///
     /// Users are **required** to clear the interrupt flag, or the hardware
-    /// may continue to generate interrupts for the channel.
+    /// may continue to generate interrupts for the channel. This must be called
+    /// for completion interrupts and half-transfer interrupts.
     pub fn receive_clear_interrupt(&mut self) {
         self.rx_channel.as_mut().unwrap().clear_interrupt()
     }
@@ -716,6 +739,7 @@ where
             channel.set_destination(self.peripheral.destination());
         }
         channel.set_interrupt_on_completion(config.interrupt_on_completion);
+        channel.set_interrupt_on_half(config.interrupt_on_half);
         channel.set_disable_on_completion(true);
         self.tx_channel = Some(channel);
     }
@@ -744,7 +768,8 @@ where
     /// Clears the interrupt flag on the transfer channel
     ///
     /// Users are **required** to clear the interrupt flag, or the hardware
-    /// may continue to generate interrupts for the channel.
+    /// may continue to generate interrupts for the channel. This must be called
+    /// for completion interrupts and half-transfer interrupts.
     pub fn transfer_clear_interrupt(&mut self) {
         self.tx_channel.as_mut().unwrap().clear_interrupt()
     }
