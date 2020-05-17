@@ -221,6 +221,10 @@ impl<E: Element> AsMutSlice for Linear<E> {
     }
 }
 
+// OK to send; the pointer is assumed to be static. A `Linear` object is the
+// only (safe) owner of the memory.
+unsafe impl<E: Element> Send for Linear<E> {}
+
 /// A circular DMA buffer
 ///
 /// `Circular` provides a [`push()`](struct.Circular.html#method.push) and [`pop()`](struct.Circular.html#method.pop)
@@ -555,6 +559,10 @@ impl<E: Element> Circular<E> {
         self.write = (self.write + size) & (self.cap - 1)
     }
 }
+
+// OK to send; pointer assumed to be pointing at static memory. We're
+// the only owners, and we can transfer that ownership across execution contexts.
+unsafe impl<E: Element> Send for Circular<E> {}
 
 /// An iterator that will drain the contents from
 /// a circular DMA buffer.
