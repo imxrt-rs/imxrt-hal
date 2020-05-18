@@ -62,6 +62,7 @@ where
         channel.set_interrupt_on_completion(false);
         channel.set_interrupt_on_half(false);
         channel.set_trigger_from_hardware(None);
+        channel.set_disable_on_completion(false);
         Memcpy {
             channel,
             buffers: None,
@@ -87,9 +88,9 @@ where
         let dst = destination.prepare_destination(&mut self.channel) as u16;
         let iterations = src.min(dst);
         self.channel.set_transfer_iterations(iterations as u16);
+        self.channel.start();
         compiler_fence(Ordering::Release);
         self.channel.set_enable(true);
-        self.channel.start();
         if self.channel.is_error() {
             let es = ErrorStatus::new(self.channel.error_status());
             self.channel.clear_error();
@@ -112,7 +113,14 @@ where
     /// starting another transfer.
     pub fn complete(&mut self) -> Option<(S, D)> {
         self.channel.clear_complete();
-        self.buffers.take()
+        self.channel.set_enable(false);
+        self.buffers
+            .take()
+            .and_then(|(mut source, mut destination)| {
+                source.complete_source();
+                destination.complete_destination();
+                Some((source, destination))
+            })
     }
 
     /// Cancel an active transfer
