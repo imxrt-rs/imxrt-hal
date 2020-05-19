@@ -466,10 +466,10 @@ impl<E: Element> Circular<E> {
     ///
     /// ```
     /// # use imxrt_hal::dma;
-    /// # #[repr(align(32))]
-    /// # struct Align32(dma::Buffer<[u16; 32]>);
+    /// # #[repr(align(64))]
+    /// # struct Align(dma::Buffer<[u16; 32]>);
     ///
-    /// # static BUFFER: Align32 = Align32(dma::Buffer::new([0; 32]));
+    /// # static BUFFER: Align = Align(dma::Buffer::new([0; 32]));
     ///
     /// let mut circular = dma::Circular::new(&BUFFER.0).unwrap();
     /// circular.insert(0..30);
@@ -515,10 +515,10 @@ impl<E: Element> Circular<E> {
     ///
     /// ```
     /// use imxrt_hal::dma;
-    /// #[repr(align(32))]
-    /// struct Align32(dma::Buffer<[u16; 32]>);
+    /// #[repr(align(64))]
+    /// struct Align(dma::Buffer<[u16; 32]>);
     ///
-    /// static BUFFER: Align32 = Align32(dma::Buffer::new([0; 32]));
+    /// static BUFFER: Align = Align(dma::Buffer::new([0; 32]));
     ///
     /// let mut circular = dma::Circular::new(&BUFFER.0).unwrap();
     /// assert_eq!(circular.insert(0..30), 30);
