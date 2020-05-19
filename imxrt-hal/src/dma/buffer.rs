@@ -8,9 +8,11 @@
 use super::Element;
 
 use as_slice::{AsMutSlice, AsSlice};
-use core::cell::UnsafeCell;
-use core::ptr;
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::{
+    cell::UnsafeCell,
+    mem, ptr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 /// A dedicated DMA memory buffer for transfers and receives
 ///
@@ -428,7 +430,7 @@ impl<E: Element> Circular<E> {
         let ptr = raw.as_mut_slice().as_mut_ptr();
         if !cap.is_power_of_two() {
             Err(CircularError::NotPowerOfTwo)
-        } else if (ptr as usize) % (cap * core::mem::size_of::<E>()) != 0 {
+        } else if (ptr as usize) % (cap * mem::size_of::<E>()) != 0 {
             Err(CircularError::IncorrectAlignment)
         } else {
             Ok(Circular {
@@ -615,7 +617,7 @@ impl<E: Element> Circular<E> {
     ///
     /// See the DMA `Transfer` struct members for more information.
     fn modulo(&self) -> u16 {
-        31 - (self.cap * core::mem::size_of::<E>()).leading_zeros() as u16
+        31 - (self.cap * mem::size_of::<E>()).leading_zeros() as u16
     }
 }
 
@@ -721,14 +723,14 @@ impl<E: Element> From<Description<E>> for super::Transfer<E> {
         Self {
             address: desc.address,
             // Increment sizeof(E) bytes for every read or write
-            offset: core::mem::size_of::<E>() as i16,
+            offset: mem::size_of::<E>() as i16,
             modulo: desc.modulo,
             // If this is a circular buffer, do not perform any last address changes. Otherwise,
             // reset the address back to the beginning
             last_address_adjustment: if desc.modulo != 0 {
                 0
             } else {
-                ((desc.length * core::mem::size_of::<E>()) as i32).wrapping_neg()
+                ((desc.length * mem::size_of::<E>()) as i32).wrapping_neg()
             },
         }
     }
