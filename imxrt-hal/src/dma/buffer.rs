@@ -268,7 +268,6 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// # Example
 ///
 /// ```
-///
 /// use imxrt_hal::dma;
 ///
 /// // A newtype to enforce the required alignment
@@ -372,10 +371,6 @@ pub enum CircularError {
 
 impl<E: Element> Circular<E> {
     /// Creates a new circular DMA buffer using the memory supplied by `buffer`
-    ///
-    /// If the `buffer` is already taken, returns `Err(CircularError::BufferTaken)`.
-    /// If the size of the buffer is *not* a power of two, returns `Err(CircularError::NotPowerOfTwo)`.
-    /// If the buffer is not aligned to a multiple of the size, returns `Err(CircularError::IncorrectAlignment)`.
     pub fn new<B>(buffer: &'static Buffer<B>) -> Result<Self, CircularError>
     where
         B: AsMutSlice<Element = E>,
@@ -393,10 +388,7 @@ impl<E: Element> Circular<E> {
     }
 
     /// Creates a new circular DMA buffer using the memory supplied by `buffer`, but do not
-    /// check for buffer ownership.
-    ///
-    /// If the size of the buffer is *not* a power of two, returns `Err(CircularError::NotPowerOfTwo)`.
-    /// If the buffer is not aligned to a multiple of the size, returns `Err(CircularError::IncorrectAlignment)`.
+    /// check for buffer ownership
     ///
     /// # Safety
     ///
@@ -411,9 +403,6 @@ impl<E: Element> Circular<E> {
 
     /// Creates a new circular DMA buffer from arbitrary memory
     ///
-    /// If the size of the buffer is *not* a power of two, returns `Err(CircularError::NotPowerOfTwo)`.
-    /// If the buffer is not aligned to a multiple of the size, returns `Err(CircularError::IncorrectAlignment)`.
-    ///
     /// # Safety
     ///
     /// Caller must ensure that the lifetime of `raw` is greater than all the DMA transfers that use
@@ -423,9 +412,9 @@ impl<E: Element> Circular<E> {
     /// use imxrt_hal::dma;
     ///
     /// #[repr(align(64))]
-    /// struct Align64([u8; 64]);
+    /// struct Align([u8; 64]);
     ///
-    /// let mut my_memory = Align64([0; 64]);
+    /// let mut my_memory = Align([0; 64]);
     ///
     /// // my_memory is stack-allocated, so we need to ensure that the `Circular` doesn't
     /// // outlive my_memory.
@@ -468,9 +457,7 @@ impl<E: Element> Circular<E> {
     /// # use imxrt_hal::dma;
     /// # #[repr(align(64))]
     /// # struct Align(dma::Buffer<[u16; 32]>);
-    ///
     /// # static BUFFER: Align = Align(dma::Buffer::new([0; 32]));
-    ///
     /// let mut circular = dma::Circular::new(&BUFFER.0).unwrap();
     /// circular.insert(0..30);
     /// assert_eq!(circular.len(), 30);
@@ -511,10 +498,12 @@ impl<E: Element> Circular<E> {
     /// Inserts elements from `iter` into the circular buffer, returning the number
     /// elements inserted into the buffer
     ///
+    /// If inserting an element would overwrite an unread element,
     /// `insert` may *not* insert all the elements into the buffer.
     ///
     /// ```
     /// use imxrt_hal::dma;
+    ///
     /// #[repr(align(64))]
     /// struct Align(dma::Buffer<[u16; 32]>);
     ///
@@ -562,7 +551,27 @@ impl<E: Element> Circular<E> {
     /// the circular queue
     ///
     /// Each iteration calls `pop()`, returning the next readable element
-    /// in the queue, until the readable elements are exhausted.
+    /// in the queue, until the readable elements are exhausted. If the
+    /// `Drain` iterator is dropped before it drains the elements, those
+    /// elements remain in the queue.
+    ///
+    /// ```
+    /// # use imxrt_hal::dma;
+    /// # #[repr(align(64))]
+    /// # struct Align(dma::Buffer<[u16; 32]>);
+    /// # static BUFFER: Align = Align(dma::Buffer::new([0; 32]));
+    /// let mut circular = dma::Circular::new(&BUFFER.0).unwrap();
+    /// circular.insert(0..30);
+    ///
+    /// let elems = circular.drain().take(15);
+    /// for (elem, actual) in elems.zip(0..15) {
+    ///     assert_eq!(elem, actual);
+    /// }
+    ///
+    /// // The `drain()` didn't completely exhaust the circular buffer,
+    /// // so we can `pop()` the next element.
+    /// assert_eq!(circular.pop().unwrap(), 15);
+    /// ```
     pub fn drain(&mut self) -> Drain<E> {
         Drain(self)
     }
@@ -615,9 +624,12 @@ impl<E: Element> Circular<E> {
 unsafe impl<E: Element> Send for Circular<E> {}
 
 /// An iterator that will drain the contents from
-/// a circular DMA buffer.
+/// a circular DMA buffer
 ///
-/// See the [`drain()`] method for details.
+/// Any element that's not realized through the `Drain` iterator will
+/// remain in the queue.
+///
+/// See the [`Circular::drain()`](struct.Circular.html#method.drain) method for details.
 pub struct Drain<'a, E>(&'a mut Circular<E>);
 
 impl<'a, E: Element> Iterator for Drain<'a, E> {

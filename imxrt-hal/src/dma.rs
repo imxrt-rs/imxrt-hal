@@ -36,9 +36,13 @@
 //! ```no_run
 //! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, ConfigBuilder, bidirectional_u16};
 //!
+//! // Circular buffers have alignment requirements
+//! #[repr(align(512))]
+//! struct Align(Buffer<[u16; 256]>);
+//!
 //! // Two buffers that can support maximum receive and transfer sizes of 256 elements
 //! static RX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
-//! static TX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
+//! static TX_BUFFER: Align = Align(Buffer::new([0; 256]));
 //!
 //! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
 //!
@@ -93,7 +97,7 @@
 //! // Create DMA memory adapters over the statically-allocated DMA memory.
 //! // These adapters will 'own' the statically-allocated memory. See the
 //! // Linear and Circular docs for more information.
-//! let mut tx_buffer = Circular::new(&TX_BUFFER).unwrap();
+//! let mut tx_buffer = Circular::new(&TX_BUFFER.0).unwrap();
 //! let mut rx_buffer = Linear::new(&RX_BUFFER).unwrap();
 //!
 //! // Send 6 elements, and expect to receive 6 elements
@@ -156,7 +160,7 @@ mod memcpy;
 pub(crate) mod peripheral;
 mod register;
 
-pub use buffer::{Buffer, Circular, CircularError, Linear, ReadHalf, WriteHalf};
+pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, WriteHalf};
 pub use element::Element;
 pub use memcpy::Memcpy;
 pub use peripheral::{helpers::*, Config, ConfigBuilder, Peripheral};

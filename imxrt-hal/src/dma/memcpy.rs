@@ -77,6 +77,9 @@ where
 
     /// Transfer data from the `source` buffer to the `destination` buffer
     ///
+    /// If `transfer()` returns `Ok(())`, the transfer is in progress. Use [`is_complete()`](struct.Memcpy.html#method.is_complete)
+    /// to check on the transfer status.
+    ///
     /// The number of elements transferred is the minimum size of the two
     /// buffers.
     pub fn transfer(&mut self, mut source: S, mut destination: D) -> Result<(), Error<void::Void>> {
@@ -115,6 +118,9 @@ where
 
     /// Returns `true` if the transfer is complete, or `false` if the
     /// transfer is not complete
+    ///
+    /// Once `is_complete()` returns `true`, you should finish the transfer
+    /// by calling [`complete()`](struct.Memcpy.html#method.complete).
     pub fn is_complete(&self) -> bool {
         self.channel.is_complete()
     }
@@ -144,6 +150,12 @@ where
     }
 
     /// Returns `true` if there is an active transfer
+    ///
+    /// The transfer may not be active if
+    ///
+    /// - the transfer is complete
+    /// - the transfer never started
+    /// - the transfer is preempted by another transfer
     pub fn is_active(&self) -> bool {
         self.channel.is_active()
     }
