@@ -236,7 +236,8 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// `Circular` has two requirements:
 ///
 /// - the size of the backing [`Buffer`](struct.Buffer.html) is a power of two
-/// - the *alignment* of the `Buffer` is a multiple of the *size* of the `Buffer`
+/// - the *alignment* of the `Buffer` is a multiple of the *size* of the `Buffer`. The size includes the element type and the
+///   buffer length.
 ///
 /// If you don't hold these two requirements, you will fail to construct a `Circular`. We enforce the requirements even through
 /// the `unsafe` interface.
@@ -271,10 +272,10 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// use imxrt_hal::dma;
 ///
 /// // A newtype to enforce the required alignment
-/// #[repr(align(512))]
-/// struct Align512(dma::Buffer<[u16; 512]>);
+/// #[repr(align(1024))] // 512 * 2 for size of u16
+/// struct Align(dma::Buffer<[u16; 512]>);
 ///
-/// static BUFFER: Align512 = Align512(dma::Buffer::new([0; 512]));
+/// static BUFFER: Align = Align(dma::Buffer::new([0; 512]));
 ///
 /// let mut circular = dma::Circular::new(&BUFFER.0).unwrap();
 /// // BUFFER is taken and cannot be used again
@@ -302,15 +303,37 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// circular DMA queue:
 ///
 /// ```
-/// use imxrt_hal::dma;
-///
-/// #[repr(align(32))]
-/// struct Align32(dma::Buffer<[u16; 30]>);
-/// static BUFFER: Align32 = Align32(dma::Buffer::new([0; 30]));
+/// # use imxrt_hal::dma;
+/// #[repr(align(64))]
+/// struct Align(dma::Buffer<[u16; 30]>);
+/// static BUFFER: Align = Align(dma::Buffer::new([0; 30]));
 ///
 /// let err = dma::Circular::new(&BUFFER.0).expect_err("30 is not a power of two");
 /// assert_eq!(err, dma::CircularError::NotPowerOfTwo);
 /// ```
+///
+/// If the alignment is not a multiple of the size, we cannot create a circular DMA queue:
+///
+/// ```no_run
+/// # use imxrt_hal::dma;
+/// #[repr(align(256))] // Should be 1024 to account for u32 size
+/// struct Align(dma::Buffer<[u32; 256]>);
+/// static BUFFER: Align = Align(dma::Buffer::new([0; 256]));
+///
+/// let err = dma::Circular::new(&BUFFER.0).expect_err("incorrect alignment");
+/// assert_eq!(err, dma::CircularError::IncorrectAlignment);
+/// ```
+///
+/// # Notes on runtime alignment checks
+///
+/// The implementation might miss a circular memory buffer that has an incorrect alignment specification
+/// but was, by chance, put in a memory location that supports the alignment requirements. For example,
+/// a buffer that should be 64-byte aligned, but is incorrectly labeled `#[repr(32)]`, may be placed at
+/// a 64-byte boundary. The implementation cannot detect these "you got lucky" situations, and you're program
+/// will work. But, you may see an "incorrect alignment" error on a different software build.
+///
+/// If you start to notice "incorrect alignment" errors across different builds of your software, ensure that
+/// your circular buffers are meeting the alignment requirements described above.
 #[derive(Debug)]
 pub struct Circular<E> {
     /// Pointer to memory buffer
@@ -343,7 +366,7 @@ pub enum CircularError {
     /// The buffer is taken, likely used in another DMA buffer
     BufferTaken,
     /// The alignment of the buffer must be a multiple of the buffer's
-    /// size
+    /// size, which includes both element type, and the length of the buffer.
     IncorrectAlignment,
 }
 
@@ -416,7 +439,7 @@ impl<E: Element> Circular<E> {
         let ptr = raw.as_mut_slice().as_mut_ptr();
         if !cap.is_power_of_two() {
             Err(CircularError::NotPowerOfTwo)
-        } else if (ptr as usize) % cap != 0 {
+        } else if (ptr as usize) % (cap * core::mem::size_of::<E>()) != 0 {
             Err(CircularError::IncorrectAlignment)
         } else {
             Ok(Circular {
