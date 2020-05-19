@@ -439,6 +439,26 @@ impl<E: Element> Circular<E> {
         self.write == self.read
     }
 
+    /// Clears the readable contents from the queue
+    ///
+    /// ```
+    /// # use imxrt_hal::dma;
+    /// # #[repr(align(32))]
+    /// # struct Align32(dma::Buffer<[u16; 32]>);
+    ///
+    /// # static BUFFER: Align32 = Align32(dma::Buffer::new([0; 32]));
+    ///
+    /// let mut circular = dma::Circular::new(&BUFFER.0).unwrap();
+    /// circular.insert(0..30);
+    /// assert_eq!(circular.len(), 30);
+    ///
+    /// circular.clear();
+    /// assert!(circular.is_empty());
+    /// ```
+    pub fn clear(&mut self) {
+        self.read = self.write;
+    }
+
     /// Returns the number of elements the circular queue can hold
     ///
     /// The capacity is always one less than the number of elements in the backing
@@ -540,7 +560,7 @@ impl<E: Element> Circular<E> {
     }
 
     /// Returns the pointer to the start of the writeable queue memory
-    fn write_ptr(&mut self) -> *mut E {
+    fn write_ptr(&self) -> *mut E {
         unsafe { self.ptr.add(self.write) }
     }
 
@@ -557,6 +577,13 @@ impl<E: Element> Circular<E> {
     /// Equivalent to calling `push()` `size` times.
     fn mark_written(&mut self, size: usize) {
         self.write = (self.write + size) & (self.cap - 1)
+    }
+
+    /// Computes the modulo value that describes the circular buffer
+    ///
+    /// See the DMA `Transfer` struct members for more information.
+    fn modulo(&self) -> u16 {
+        31 - (self.cap * core::mem::size_of::<E>()).leading_zeros() as u16
     }
 }
 
@@ -635,14 +662,52 @@ impl<'a, E: Element> ReadHalf<'a, E> {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Description<E: Element> {
+    /// Starting address for the transfer to / from the buffer
+    address: *const E,
+    /// Number of usable elements (number of `E`s) in the buffer
+    length: usize,
+    /// Modulus value for the buffer
+    ///
+    /// See the (internal) `Transfer` struct for more details
+    modulo: u16,
+}
+
+impl<E: Element> Description<E> {
+    /// Returns the number of usable elemens (number of `E`s) in the buffer
+    pub fn len(&self) -> usize {
+        self.length
+    }
+}
+
+impl<E: Element> From<Description<E>> for super::Transfer<E> {
+    fn from(desc: Description<E>) -> Self {
+        Self {
+            address: desc.address,
+            // Increment sizeof(E) bytes for every read or write
+            offset: core::mem::size_of::<E>() as i16,
+            modulo: desc.modulo,
+            // If this is a circular buffer, do not perform any last address changes. Otherwise,
+            // reset the address back to the beginning
+            last_address_adjustment: if desc.modulo != 0 {
+                0
+            } else {
+                ((desc.length * core::mem::size_of::<E>()) as i32).wrapping_neg()
+            },
+        }
+    }
+}
+
 /// A buffer that can be used as the source of a DMA transfer
 pub trait Source<E: Element>: private::Sealed {
-    /// Prepare the buffer to be used as a source of a DMA transfer, returning the
-    /// number of elements available to transfer
+    /// Returns a buffer [`Description`](struct.Description.html) that describes
+    /// this source buffer.
+    fn source(&self) -> Description<E>;
+    /// Prepare the buffer to be used as a source of a DMA transfer
     ///
-    /// The implementation should tell the provided `channel` how to interact
-    /// with this buffer's memory.
-    fn prepare_source(&mut self, channel: &mut super::Channel) -> usize;
+    /// Use this to perform any state capture or setup before a transfer starts.
+    fn prepare_source(&mut self);
     /// Invoked when the DMA transfer is complete
     ///
     /// Use this to perform any final state transformations before hand-off to
@@ -652,12 +717,13 @@ pub trait Source<E: Element>: private::Sealed {
 
 /// A buffer that can be used as the destination of a DMA transfer
 pub trait Destination<E: Element>: private::Sealed {
-    /// Prepare the buffer to be used as the destination for a DMA transfer, returning
-    /// the number of elements available to transfer
+    /// Returns a buffer [`Description`](struct.Description.html) that describes this
+    /// destination buffer.
+    fn destination(&self) -> Description<E>;
+    /// Prepare the buffer to be used as the destination for a DMA transfer
     ///
-    /// The implementation should tell the provided `channel` how to interact
-    /// with this buffer's memory.
-    fn prepare_destination(&mut self, channel: &mut super::Channel) -> usize;
+    /// Use this to perform any state capture or setup before a transfer starts.
+    fn prepare_destination(&mut self);
     /// Invoked when the DMA transfer is complete
     ///
     /// Use this to perform any final state transformations before hand-off to
@@ -678,23 +744,26 @@ mod private {
 //
 
 impl<E: Element> Source<E> for Linear<E> {
-    fn prepare_source(&mut self, channel: &mut super::Channel) -> usize {
-        unsafe {
-            channel.set_source_buffer(&self.as_elements()[..self.usable]);
+    fn source(&self) -> Description<E> {
+        Description {
+            address: self.ptr,
+            length: self.usable,
+            modulo: 0u16,
         }
-        self.usable
     }
+    fn prepare_source(&mut self) {}
     fn complete_source(&mut self) {}
 }
 
 impl<E: Element> Destination<E> for Linear<E> {
-    fn prepare_destination(&mut self, channel: &mut super::Channel) -> usize {
-        let offset = self.usable;
-        unsafe {
-            channel.set_destination_buffer(&mut self.as_mut_elements()[..offset]);
+    fn destination(&self) -> Description<E> {
+        Description {
+            address: self.ptr,
+            length: self.usable,
+            modulo: 0u16,
         }
-        self.usable
     }
+    fn prepare_destination(&mut self) {}
     fn complete_destination(&mut self) {}
 }
 
@@ -703,10 +772,15 @@ impl<E: Element> Destination<E> for Linear<E> {
 //
 
 impl<E: Element> Source<E> for Circular<E> {
-    fn prepare_source(&mut self, channel: &mut super::Channel) -> usize {
-        unsafe { channel.set_source_circular(self.read_ptr(), self.cap) };
+    fn source(&self) -> Description<E> {
+        Description {
+            address: self.read_ptr(),
+            length: self.len(),
+            modulo: self.modulo(),
+        }
+    }
+    fn prepare_source(&mut self) {
         self.reserved = self.len();
-        self.reserved
     }
     fn complete_source(&mut self) {
         self.mark_read(self.reserved);
@@ -714,10 +788,14 @@ impl<E: Element> Source<E> for Circular<E> {
 }
 
 impl<E: Element> Destination<E> for Circular<E> {
-    fn prepare_destination(&mut self, channel: &mut super::Channel) -> usize {
-        unsafe { channel.set_destination_circular(self.write_ptr(), self.cap) }
-        self.reserved
+    fn destination(&self) -> Description<E> {
+        Description {
+            address: self.write_ptr(),
+            length: self.reserved,
+            modulo: self.modulo(),
+        }
     }
+    fn prepare_destination(&mut self) {}
     fn complete_destination(&mut self) {
         self.mark_written(self.reserved);
     }
@@ -783,11 +861,14 @@ mod tests {
 
     #[test]
     fn circular_simulate_receive() {
-        let mut memory: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+        let mut memory: [u8; 32] = [0; 32];
+        for (dst, src) in memory.iter_mut().zip(1..=32) {
+            *dst = src;
+        }
         let mut circular: Circular<u8> = unsafe { from_raw_unaligned(&mut memory) };
 
         // User reserves some number of elements for the transfer
-        circular.reserve(5);
+        circular.reserve(23);
 
         // User passes it into another DMA type. This doesn't do anything.
         // There's nothing to read.
@@ -802,6 +883,28 @@ mod tests {
             assert_eq!(expected, actual);
             expected += 1;
         }
-        assert_eq!(expected, 6);
+        assert_eq!(expected, 24);
+
+        // We've expended the readable contents
+        assert!(circular.is_empty());
+
+        // Prepare another DMA destination for 23 elements
+        circular.reserve(23);
+
+        // User passes it into another DMA type
+        assert!(circular.is_empty());
+        assert!(circular.pop().is_none());
+
+        // Transfer completes
+        circular.mark_written(circular.reserved);
+
+        // User can read values.
+        let expected = (24..33).chain(1..);
+        let mut calls = 0;
+        for (actual, expected) in circular.drain().zip(expected) {
+            assert_eq!(expected, actual);
+            calls += 1;
+        }
+        assert_eq!(calls, 23);
     }
 }

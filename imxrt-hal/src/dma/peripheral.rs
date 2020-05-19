@@ -15,7 +15,9 @@
 //! See the [Rust API guidelines on future-proofing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
 //! to learn about the 'Sealed' pattern. Use the UART peripheral as an example.
 
-use super::{buffer, Channel, Circular, Element, Error, ErrorStatus, ReadHalf, WriteHalf};
+use super::{
+    buffer, Channel, Circular, Element, Error, ErrorStatus, ReadHalf, Transfer, WriteHalf,
+};
 use core::sync::atomic::{compiler_fence, Ordering};
 
 /// Describes a peripheral that can be the source of DMA data
@@ -232,7 +234,7 @@ where
         // this crate. We may study those implementations to show that the
         // pointers point to valid memory.
         unsafe {
-            channel.set_source(self.peripheral.source());
+            channel.set_source_transfer(Transfer::hardware(self.peripheral.source()));
         }
         channel.set_interrupt_on_completion(config.interrupt_on_completion);
         channel.set_interrupt_on_half(config.interrupt_on_half);
@@ -247,12 +249,20 @@ where
         let rx_channel = self.rx_channel.as_mut().unwrap();
         if rx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
-        }
-        let len = buffer.prepare_destination(rx_channel);
-        rx_channel.set_transfer_iterations(len as u16);
-        if let Err(error) = self.peripheral.enable_source() {
+        } else if let Err(error) = self.peripheral.enable_source() {
             return Err((buffer, Error::Peripheral(error)));
         }
+
+        let dst = buffer.destination();
+
+        unsafe {
+            rx_channel.set_destination_transfer(dst);
+        }
+        rx_channel.set_minor_loop_elements::<E>(1);
+        rx_channel.set_transfer_iterations(dst.len() as u16);
+
+        buffer.prepare_destination();
+
         compiler_fence(Ordering::Release);
         rx_channel.set_enable(true);
         if rx_channel.is_error() {
@@ -375,7 +385,7 @@ where
         // this crate. We may study those implementations to show that the pointers
         // point to valid memory.
         unsafe {
-            channel.set_destination(self.peripheral.destination());
+            channel.set_destination_transfer(Transfer::hardware(self.peripheral.destination()));
         }
         channel.set_interrupt_on_completion(config.interrupt_on_completion);
         channel.set_interrupt_on_half(config.interrupt_on_half);
@@ -390,12 +400,20 @@ where
         let tx_channel = self.tx_channel.as_mut().unwrap();
         if tx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
-        }
-        let len = buffer.prepare_source(tx_channel);
-        tx_channel.set_transfer_iterations(len as u16);
-        if let Err(error) = self.peripheral.enable_destination() {
+        } else if let Err(error) = self.peripheral.enable_destination() {
             return Err((buffer, Error::Peripheral(error)));
         }
+
+        let src = buffer.source();
+
+        unsafe {
+            tx_channel.set_source_transfer(src);
+        }
+        tx_channel.set_minor_loop_elements::<E>(1);
+        tx_channel.set_transfer_iterations(src.len() as u16);
+
+        buffer.prepare_source();
+
         compiler_fence(Ordering::Release);
         tx_channel.set_enable(true);
         if tx_channel.is_error() {

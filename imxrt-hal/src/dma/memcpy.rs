@@ -84,13 +84,25 @@ where
             return Err(Error::ScheduledTransfer);
         }
 
-        let src = source.prepare_source(&mut self.channel) as u16;
-        let dst = destination.prepare_destination(&mut self.channel) as u16;
-        let iterations = src.min(dst);
-        self.channel.set_transfer_iterations(iterations as u16);
-        self.channel.start();
+        let src = source.source();
+        let dst = destination.destination();
+
+        unsafe {
+            self.channel.set_source_transfer(src);
+            self.channel.set_destination_transfer(dst);
+        }
+
+        source.prepare_source();
+        destination.prepare_destination();
+
+        let length = src.len().min(dst.len());
+
+        self.channel.set_minor_loop_elements::<E>(length);
+        self.channel.set_transfer_iterations(1);
+
         compiler_fence(Ordering::Release);
         self.channel.set_enable(true);
+        self.channel.start();
         if self.channel.is_error() {
             let es = ErrorStatus::new(self.channel.error_status());
             self.channel.clear_error();

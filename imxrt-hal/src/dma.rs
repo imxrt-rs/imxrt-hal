@@ -204,153 +204,59 @@ impl Channel {
         &self.registers.TCD[self.index]
     }
 
-    /// Indicates that `source` will supply data for a DMA tranfser
-    ///
-    /// `set_source()` prepares the DMA channel to perform `E`-sized reads
-    /// from the memory pointed at by `source`. When the transfer completes,
-    /// the DMA controller will continue pointing at `source`.
+    /// Prepare the source of a transfer; see [`Transfer`](struct.Transfer.html) for details.
     ///
     /// # Safety
     ///
-    /// Lifetime of `source` must be greater than the lifetime
-    /// of the DMA transfer.
-    unsafe fn set_source<E: Element>(&mut self, source: *const E) {
+    /// Address pointer must be valid for lifetime of the transfer.
+    unsafe fn set_source_transfer<T: Into<Transfer<E>>, E: Element>(&mut self, transfer: T) {
         let tcd = self.tcd();
-        ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
-        ral::write_reg!(register::tcd, tcd, SOFF, 0);
-        ral::modify_reg!(register::tcd, tcd, ATTR, SSIZE: E::DATA_TRANSFER_ID, SMOD: 0);
-        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
-        ral::write_reg!(register::tcd, tcd, SLAST, 0);
+        let transfer = transfer.into();
+        ral::write_reg!(register::tcd, tcd, SADDR, transfer.address as u32);
+        ral::write_reg!(register::tcd, tcd, SOFF, transfer.offset);
+        ral::modify_reg!(register::tcd, tcd, ATTR, SSIZE: E::DATA_TRANSFER_ID, SMOD: transfer.modulo);
+        ral::write_reg!(register::tcd, tcd, SLAST, transfer.last_address_adjustment);
     }
 
-    /// Indiates that `destination` will receive data from a DMA transfer
-    ///
-    /// `set_destination()` prepares the DMA channel to perform `E`-sized writes
-    /// on the memory pointed at by `destination`. When the transfer completes,
-    /// the DMA channel will continue pointing at `destination`.
+    /// Prepare the destination for a transfer; see [`Transfer`](struct.Transfer.html) for details.
     ///
     /// # Safety
     ///
-    /// Lifetime of 'destination' must be greater than the lifetime
-    /// of the DMA transfer.
-    unsafe fn set_destination<E: Element>(&mut self, destination: *const E) {
+    /// Address pointer must be valid for lifetime of the transfer.
+    unsafe fn set_destination_transfer<T: Into<Transfer<E>>, E: Element>(&mut self, transfer: T) {
         let tcd = self.tcd();
-        ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
-        ral::write_reg!(register::tcd, tcd, DOFF, 0);
-        ral::modify_reg!(register::tcd, tcd, ATTR, DSIZE: E::DATA_TRANSFER_ID, DMOD: 0);
-        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
-        ral::write_reg!(register::tcd, tcd, DLAST_SGA, 0);
-    }
-
-    /// Indicates that the `source` buffer will supply data for a DMA transfer
-    ///
-    /// `set_source_buffer()` prepares the DMA channel to perform `E`-sized reads
-    /// of the elements in `source`. When the transfer completes, the DMA channel will
-    /// point at the beginning of `source`.
-    ///
-    /// # Safety
-    ///
-    /// Lifetime of 'source' must be greater than the lifetime of the
-    /// DMA transfer.
-    unsafe fn set_source_buffer<E: Element>(&mut self, source: &[E]) {
-        let tcd = self.tcd();
-        ral::write_reg!(register::tcd, tcd, SADDR, source.as_ptr() as u32);
-        ral::write_reg!(register::tcd, tcd, SOFF, mem::size_of::<E>() as i16);
-        ral::modify_reg!(register::tcd, tcd, ATTR, SSIZE: E::DATA_TRANSFER_ID, SMOD: 0);
-        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
-        ral::write_reg!(
-            register::tcd,
-            tcd,
-            SLAST,
-            (source.len() as i32).wrapping_neg()
-        );
-    }
-
-    /// Indicates that `source` will provide data for a DMA transfer as if it
-    /// were a circular buffer
-    ///
-    /// `set_source_circular()` prepares the DMA channel to perform `E`-sized reads from
-    /// the memory pointed at by `source`. `size` indicates the total capacity of the circular
-    /// buffer, and it's expected to be a multiple of two. `source` should be a pointer to
-    /// a readable element. It's expected that the source buffer's alignment is a multiple
-    /// of the buffer size. When the transfer completes, the DMA channel will be pointing at the next
-    /// readable element.
-    ///
-    /// # Safety
-    ///
-    /// Lifetime of `source` must be greater than the lifetime of the transfer. All of the size
-    /// and alignment guarantees must hold.
-    unsafe fn set_source_circular<E: Element>(&mut self, source: *const E, size: usize) {
-        let tcd = self.tcd();
-        ral::write_reg!(register::tcd, tcd, SADDR, source as u32);
-        ral::write_reg!(register::tcd, tcd, SOFF, mem::size_of::<E>() as i16);
-        ral::modify_reg!(
-            register::tcd,
-            tcd,
-            ATTR,
-            SSIZE: E::DATA_TRANSFER_ID,
-            SMOD: (31 - size.leading_zeros()) as u16
-        );
-        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
-        ral::write_reg!(register::tcd, tcd, SLAST, 0);
-    }
-
-    /// Indicates that the `destination` buffer will receive data from a DMA transfer
-    ///
-    /// `set_destination_buffer()` prepares the DMA channel to perform `E`-sized writes
-    /// of elements starting at the head of `destination`. When the transfer completes, the DMA
-    /// channel will point at the beginning of `destination`.
-    ///
-    /// # Safety
-    ///
-    /// Lifetime of 'destination' must be greater than the lifetime of the
-    /// DMA transfer.
-    unsafe fn set_destination_buffer<E: Element>(&mut self, destination: &mut [E]) {
-        let tcd = self.tcd();
-        ral::write_reg!(register::tcd, tcd, DADDR, destination.as_mut_ptr() as u32);
-        ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
-        ral::modify_reg!(register::tcd, tcd, ATTR, DSIZE: E::DATA_TRANSFER_ID, DMOD: 0);
-        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
+        let transfer = transfer.into();
+        ral::write_reg!(register::tcd, tcd, DADDR, transfer.address as u32);
+        ral::write_reg!(register::tcd, tcd, DOFF, transfer.offset);
+        ral::modify_reg!(register::tcd, tcd, ATTR, DSIZE: E::DATA_TRANSFER_ID, DMOD: transfer.modulo);
         ral::write_reg!(
             register::tcd,
             tcd,
             DLAST_SGA,
-            (destination.len() as i32).wrapping_neg()
+            transfer.last_address_adjustment
         );
     }
 
-    /// Indicates that `destination` will recieve data from a DMA transfer as if it
-    /// were a circular buffer
+    /// Set the number of *bytes* to transfer per minor loop
     ///
-    /// `set_destination_circular()` prepares the DMA channel to perform `E`-sized writes to
-    /// the memory pointed at by `destination`. `size` indicates the total capacity of the circular
-    /// buffer, and it's expected to be a multiple of two. `destination` should be a pointer to
-    /// a writable element. It's expected that the destination buffer's alignment is a multiple
-    /// of the buffer size. When the transfer completes, the DMA channel will be pointing at the next
-    /// writeable element.
-    ///
-    /// # Safety
-    ///
-    /// Lifetime of `destination` must be greater than the lifetime of the transfer. All of the size
-    /// and alignment guarantees must hold.
-    unsafe fn set_destination_circular<E: Element>(&mut self, destination: *mut E, size: usize) {
+    /// Describes how many bytes we should transfer for each DMA service request.
+    fn set_minor_loop_bytes(&mut self, nbytes: u32) {
         let tcd = self.tcd();
-        ral::write_reg!(register::tcd, tcd, DADDR, destination as u32);
-        ral::write_reg!(register::tcd, tcd, DOFF, mem::size_of::<E>() as i16);
-        ral::modify_reg!(
-            register::tcd,
-            tcd,
-            ATTR,
-            DSIZE: E::DATA_TRANSFER_ID,
-            DMOD: (31 - size.leading_zeros()) as u16
-        );
-        ral::write_reg!(register::tcd, tcd, NBYTES, mem::size_of::<E>() as u32);
-        ral::write_reg!(register::tcd, tcd, DLAST_SGA, 0);
+        ral::write_reg!(register::tcd, tcd, NBYTES, nbytes);
+    }
+
+    /// Se the number of elements to move in each minor loop
+    ///
+    /// Describes how many elements we should transfer for each DMA service request.
+    fn set_minor_loop_elements<E: Element>(&mut self, len: usize) {
+        self.set_minor_loop_bytes((mem::size_of::<E>() * len) as u32);
     }
 
     /// Tells the DMA channel how many transfer iterations to perform
     ///
-    /// A 'transfer iteration' is a read from a source, and a write to a destination.
+    /// A 'transfer iteration' is a read from a source, and a write to a destination, with
+    /// read and write sizes described by a minor loop. Each iteration requires a DMA
+    /// service request, either from hardware or from software.
     fn set_transfer_iterations(&mut self, iterations: u16) {
         let tcd = self.tcd();
         ral::write_reg!(register::tcd, tcd, CITER, iterations);
@@ -576,5 +482,66 @@ impl Display for ErrorStatus {
             sbe = (self.es >> 1) & 0x1,
             dbe = self.es & 0x1
         )
+    }
+}
+
+/// Describes a DMA transfer
+///
+/// `Transfer` describes a source or a destination of a DMA transfer. See the member
+/// documentation for details.
+#[derive(Clone, Copy, Debug)]
+struct Transfer<E: Element> {
+    /// The starting address for the DMA transfer
+    ///
+    /// If this describes a source, `address` will be the first
+    /// address read. If this describes a destination, `address`
+    /// will be the first address written.
+    address: *const E,
+
+    /// Offsets to perform for each read / write of a memory address.
+    ///
+    /// When defining a transfer for a peripheral source or destination,
+    /// `offset` should be zero. Otherwise, `offset` should represent the
+    /// size of the data element, `E`.
+    ///
+    /// Negative (backwards) adjustments are permitted, if you'd like to read
+    /// a buffer backwards or something.
+    offset: i16,
+
+    /* size: u16, // Not needed; captured in E: Element type */
+    /// Defines the strategy for reading / writing linear or circular buffers
+    ///
+    /// `modulo` should be zero if this definition defines a transfer from linear
+    /// memory or a peripheral. `modulo` will be non-zero when defining a transfer
+    /// from a circular buffer. The non-zero value is the number of high bits to freeze
+    /// when performing address offsets (see `offset`). Given that we're only supporting
+    /// power-of-two buffer sizes, `modulo` will be `31 - clz(cap * sizeof(E))`, where `cap` is the
+    /// total size of the circular buffer, `clz` is "count leading zeros," and `sizeof(E)` is
+    /// the size of the element, in bytes.
+    modulo: u16,
+
+    /// Perform any last-address adjustments when we complete the transfer
+    ///
+    /// Once we complete moving data from a linear buffer, we should set our pointer back to the
+    /// initial address. For this case, `last_address_adjustment` should be a negative number that
+    /// describes how may *bytes* to move backwards from our current address to reach our starting
+    /// address. Alternatively, it could describe how to move to a completely new address, like
+    /// a nearby buffer that we're using for a double-buffer. Or, set it to zero, which means "keep
+    /// your current position." "Keep your current position" is important when working with a
+    /// peripheral address!
+    last_address_adjustment: i32,
+}
+
+impl<E: Element> Transfer<E> {
+    fn hardware(address: *const E) -> Self {
+        Transfer {
+            address,
+            // Don't move the address pointer
+            offset: 0,
+            // We're not a circular buffer
+            modulo: 0,
+            // Don't move the address pointer
+            last_address_adjustment: 0,
+        }
     }
 }
