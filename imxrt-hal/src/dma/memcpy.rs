@@ -44,7 +44,7 @@ use core::{
 ///
 /// // Transfer complete! It's safe to look at the destination.
 /// // Don't forget to clear the complete signal.
-/// let (source, destination) = memcpy.complete().unwrap();
+/// let (source, destination) = memcpy.complete().unwrap().unwrap();
 /// ```
 pub struct Memcpy<E, S, D> {
     channel: Channel,
@@ -87,7 +87,7 @@ where
         mut source: S,
         mut destination: D,
     ) -> Result<(), (S, D, Error<void::Void>)> {
-        if self.channel.is_enabled() {
+        if self.buffers.is_some() || self.channel.is_complete() {
             return Err((source, destination, Error::ScheduledTransfer));
         }
 
@@ -108,7 +108,7 @@ where
         self.channel.set_transfer_iterations(1);
 
         compiler_fence(Ordering::Release);
-        self.channel.set_enable(true);
+
         self.channel.start();
         if self.channel.is_error() {
             let es = ErrorStatus::new(self.channel.error_status());
@@ -129,47 +129,30 @@ where
         self.channel.is_complete()
     }
 
-    /// Clear the completion indication for the DMA transfer
+    /// Complete the memory-to-memory the DMA transfer
     ///
-    /// Users are *required* to clear the completion flag before
-    /// starting another transfer. If `complete()` is called before
-    /// the transfer is complete, the transfer is canceled. See
-    /// [`cancel()`](struct.Memcpy.html#method.cancel) for more details.
-    pub fn complete(&mut self) -> Option<(S, D)> {
-        if self.is_complete() {
-            self.channel.clear_complete();
-            self.channel.set_enable(false);
-            self.buffers
-                .take()
-                .and_then(|(mut source, mut destination)| {
-                    source.complete_source();
-                    destination.complete_destination();
-                    Some((source, destination))
-                })
-        } else {
-            self.cancel()
-        }
-    }
-
-    /// Cancel an active transfer, returning the two buffers used for the
-    /// transfer
+    /// If `complete()` is called before the transfer is complete,
+    /// the transfer is canceled. If the transfer is cancelled, the contents of the receive
+    /// buffer are unspecified. Await `is_complete()` before calling `complete()` to avoid
+    /// early transfer cancellation.
     ///
-    /// If the transfer is canceled, the contents in the receive buffer are
-    /// not defined. `cancel()` does nothing if there is not an active transfer,
-    /// and it may be used to retrieve any buffers stored in the `Memcpy`.
-    pub fn cancel(&mut self) -> Option<(S, D)> {
-        self.channel.set_enable(false);
-        self.buffers.take()
-    }
-
-    /// Returns `true` if there is an active transfer
-    ///
-    /// The transfer may not be active if
-    ///
-    /// - the transfer is complete
-    /// - the transfer never started
-    /// - the transfer is preempted by another transfer
-    pub fn is_active(&self) -> bool {
-        self.channel.is_active()
+    /// - `None` indicates that there's no scheduled transfer; we have no buffers
+    /// - `Some(Ok(..))` indicates that the transfer was complete when `complete()` was called
+    /// - `Some(Err(..))` indicates that the transfer was in progress, but was cancelled
+    pub fn complete(&mut self) -> Option<Result<(S, D), (S, D)>> {
+        self.buffers.take().map(|(mut source, mut destination)| {
+            if self.is_complete() {
+                self.channel.clear_complete();
+                source.complete_source();
+                destination.complete_destination();
+                Ok((source, destination))
+            } else {
+                super::halted(|halt| {
+                    self.channel.cancel(halt);
+                });
+                self.channel.clear_complete();
+                Err((source, destination))
+            }
+        })
     }
 }

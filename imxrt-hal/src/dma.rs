@@ -190,6 +190,27 @@ pub struct Channel {
     multiplexer: Static<MultiplexerRegisters>,
 }
 
+/// Run `func` in a context where there will not be a DMA transfer scheduled.
+///
+/// `free` guarantees that a DMA transfer will not start while `func` is executing.
+/// However, a DMA transfer may finish while `func` is active.
+///
+/// Developers should not change the HALT bit inside `func`.
+fn halted<R, F: FnOnce(&Halted) -> R>(func: F) -> R {
+    const HALT_FLAG: u32 = 1 << 5;
+    let dma = DMA;
+    dma.CR.write(HALT_FLAG | dma.CR.read());
+    let res = func(&Halted);
+    dma.CR.write(!HALT_FLAG & dma.CR.read());
+    res
+}
+
+/// Tag type to signal the DMA controller is halted
+///
+/// Developer note: this tag can be instantiated throughout the DMA module.
+/// We trust you not to subvert it.
+struct Halted;
+
 impl Channel {
     /// Allocates a DMA channel, and sets the initial state for
     /// the channel.
@@ -201,6 +222,20 @@ impl Channel {
         };
         channel.registers.TCD[channel.index].reset();
         channel
+    }
+
+    /// Cancel the transfer
+    ///
+    /// Does nothing if this channel isn't active. This cancel isn't sufficient for canceling a
+    /// hardware transfer, since there's a low chance of observing the channel while it's active.
+    /// This cancel should stop a transfer that has one major loop, like a memory-to-memory
+    /// transfer.
+    fn cancel(&mut self, _: &Halted) {
+        const CX_BIT: u32 = 1 << 17;
+        if self.is_active() {
+            self.registers.CR.write(self.registers.CR.read() | CX_BIT);
+            while self.registers.CR.read() & CX_BIT != 0 {}
+        }
     }
 
     /// Returns a handle to this channel's transfer control descriptor
@@ -285,8 +320,8 @@ impl Channel {
         self.registers.HRS.read() & (1 << self.index) != 0
     }
 
-    /// Enable or disable the DMA channel
-    fn set_enable(&mut self, enable: bool) {
+    /// Enable or disable the DMA's hardware request
+    fn set_hardware_enable(&mut self, enable: bool) {
         if enable {
             self.registers.SERQ.write(self.index as u8);
         } else {
@@ -364,13 +399,8 @@ impl Channel {
         ral::read_reg!(register::tcd, tcd, CSR, ACTIVE == 1)
     }
 
-    /// Indicates if this DMA channel is enabled and requesting service
-    ///
-    /// 'Enabled' and 'active' are different:
-    ///
-    /// - 'enabled' means "there's a transfer defined, and we're ready to be serviced"
-    /// - 'active' implies 'enabled,' and also adds "we're actively transferring data"
-    fn is_enabled(&self) -> bool {
+    /// Indicates if this DMA channel is enabled for hardware DMA service
+    fn is_hardware_enabled(&self) -> bool {
         self.registers.ERQ.read() & (1 << self.index) != 0
     }
 
