@@ -170,6 +170,7 @@ use core::{
     fmt::{self, Debug, Display},
     mem,
 };
+pub use register::tcd::BandwidthControl;
 use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 
 /// A DMA channel
@@ -191,6 +192,26 @@ pub struct Channel {
 }
 
 impl Channel {
+    /// Set the channel's bandwidth control
+    ///
+    /// The bandwidth control will be used in any [`Memcpy`](struct.Memcpy.html) or
+    /// [`Peripheral`](struct.Peripheral.html) DMA transfers.
+    ///
+    /// - `None` disables bandwidth control (default setting)
+    /// - `Some(bwc)` sets the bandwidth control to `bwc`
+    pub fn set_bandwidth_control(&mut self, bandwidth: Option<BandwidthControl>) {
+        let raw = BandwidthControl::raw(bandwidth);
+        let tcd = self.tcd();
+        ral::modify_reg!(register::tcd, tcd, CSR, BWC: raw);
+    }
+
+    /// Returns the DMA channel number
+    ///
+    /// Channels are unique and numbered within the half-open range `[0, 32)`.
+    pub fn channel(&self) -> usize {
+        self.index
+    }
+
     /// Allocates a DMA channel, and sets the initial state for
     /// the channel.
     fn new(index: usize) -> Self {

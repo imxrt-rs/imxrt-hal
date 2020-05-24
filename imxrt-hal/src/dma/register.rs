@@ -155,6 +155,31 @@ pub(super) mod tcd {
     pub mod CSR {
         pub use crate::ral::dma0::TCD_CSR0::*;
     }
+
+    /// Throttles the amount of bus bandwidth consumed by the eDMA
+    ///
+    /// Defines the number of stalls that the DMA engine will insert
+    /// between most element transfers.
+    ///
+    /// Some stalls may not occur to minimize startup latency. See the
+    /// reference manual for more details.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(u16)]
+    pub enum BandwidthControl {
+        /// DMA engine stalls for 4 cycles after each R/W.
+        Stall4Cycles = CSR::BWC::RW::BWC_2,
+        /// DMA engine stalls for 8 cycles after each R/W.
+        Stall8Cycles = CSR::BWC::RW::BWC_3,
+    }
+
+    impl BandwidthControl {
+        pub(in crate::dma) fn raw(bwc: Option<Self>) -> u16 {
+            match bwc {
+                None => CSR::BWC::RW::BWC_0,
+                Some(bwc) => bwc as u16,
+            }
+        }
+    }
 }
 
 //
