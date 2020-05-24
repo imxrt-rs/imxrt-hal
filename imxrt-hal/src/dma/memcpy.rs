@@ -61,8 +61,8 @@ where
     pub fn new(mut channel: Channel) -> Self {
         channel.set_interrupt_on_completion(false);
         channel.set_interrupt_on_half(false);
-        channel.set_trigger_from_hardware(None);
-        channel.set_disable_on_completion(false);
+        channel.set_always_on();
+        channel.set_disable_on_completion(true);
         Memcpy {
             channel,
             buffers: None,
@@ -87,7 +87,7 @@ where
         mut source: S,
         mut destination: D,
     ) -> Result<(), (S, D, Error<void::Void>)> {
-        if self.buffers.is_some() || self.channel.is_complete() {
+        if self.buffers.is_some() || self.channel.is_enabled() {
             return Err((source, destination, Error::ScheduledTransfer));
         }
 
@@ -102,13 +102,13 @@ where
         source.prepare_source();
         destination.prepare_destination();
 
-        let length = src.len().min(dst.len());
+        let length = src.len().min(dst.len()) as u16;
 
-        self.channel.set_minor_loop_elements::<E>(length);
-        self.channel.set_transfer_iterations(1);
+        self.channel.set_minor_loop_elements::<E>(1);
+        self.channel.set_transfer_iterations(length);
 
         compiler_fence(Ordering::Release);
-
+        self.channel.set_enable(true);
         self.channel.start();
         if self.channel.is_error() {
             let es = ErrorStatus::new(self.channel.error_status());
@@ -147,9 +147,7 @@ where
                 destination.complete_destination();
                 Ok((source, destination))
             } else {
-                super::halted(|halt| {
-                    self.channel.cancel(halt);
-                });
+                self.channel.set_enable(false);
                 self.channel.clear_complete();
                 Err((source, destination))
             }

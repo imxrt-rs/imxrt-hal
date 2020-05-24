@@ -21,6 +21,11 @@ pub(super) struct MultiplexerRegisters {
 
 pub(super) const MULTIPLEXER: Static<MultiplexerRegisters> = Static(0x400E_C000 as *const _);
 
+impl MultiplexerRegisters {
+    pub const ENBL: u32 = 1 << 31;
+    pub const A_ON: u32 = 1 << 29;
+}
+
 /// DMA registers
 #[repr(C)]
 pub(super) struct DMARegisters {

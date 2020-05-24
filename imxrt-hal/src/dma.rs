@@ -190,27 +190,6 @@ pub struct Channel {
     multiplexer: Static<MultiplexerRegisters>,
 }
 
-/// Run `func` in a context where there will not be a DMA transfer scheduled.
-///
-/// `free` guarantees that a DMA transfer will not start while `func` is executing.
-/// However, a DMA transfer may finish while `func` is active.
-///
-/// Developers should not change the HALT bit inside `func`.
-fn halted<R, F: FnOnce(&Halted) -> R>(func: F) -> R {
-    const HALT_FLAG: u32 = 1 << 5;
-    let dma = DMA;
-    dma.CR.write(HALT_FLAG | dma.CR.read());
-    let res = func(&Halted);
-    dma.CR.write(!HALT_FLAG & dma.CR.read());
-    res
-}
-
-/// Tag type to signal the DMA controller is halted
-///
-/// Developer note: this tag can be instantiated throughout the DMA module.
-/// We trust you not to subvert it.
-struct Halted;
-
 impl Channel {
     /// Allocates a DMA channel, and sets the initial state for
     /// the channel.
@@ -222,20 +201,6 @@ impl Channel {
         };
         channel.registers.TCD[channel.index].reset();
         channel
-    }
-
-    /// Cancel the transfer
-    ///
-    /// Does nothing if this channel isn't active. This cancel isn't sufficient for canceling a
-    /// hardware transfer, since there's a low chance of observing the channel while it's active.
-    /// This cancel should stop a transfer that has one major loop, like a memory-to-memory
-    /// transfer.
-    fn cancel(&mut self, _: &Halted) {
-        const CX_BIT: u32 = 1 << 17;
-        if self.is_active() {
-            self.registers.CR.write(self.registers.CR.read() | CX_BIT);
-            while self.registers.CR.read() & CX_BIT != 0 {}
-        }
     }
 
     /// Returns a handle to this channel's transfer control descriptor
@@ -310,9 +275,24 @@ impl Channel {
         let chcfg = &self.multiplexer.chcfg[self.index];
         chcfg.write(0);
         if let Some(source) = source {
-            const ENBL: u32 = 1 << 31;
-            chcfg.write(ENBL | source);
+            chcfg.write(MultiplexerRegisters::ENBL | source);
         }
+    }
+
+    /// Set this DMA channel as always on
+    ///
+    /// Use `set_always_on()` so that the DMA multiplexer drives the transfer with no
+    /// throttling. Specifically, an "always-on" transfer will not need explicit re-activiation
+    /// between major loops.
+    ///
+    /// Use an always-on channel for memory-to-memory transfers, so that you don't need explicit
+    /// software re-activation to maintain the transfer. On the other hand, most peripheral transfers
+    /// should not use an always-on channel, since the peripheral should control the data flow through
+    /// explicit activation.
+    fn set_always_on(&mut self) {
+        let chcfg = &self.multiplexer.chcfg[self.index];
+        chcfg.write(0);
+        chcfg.write(MultiplexerRegisters::ENBL | MultiplexerRegisters::A_ON);
     }
 
     /// Returns `true` if the DMA channel is receiving a service signal from hardware
@@ -320,8 +300,12 @@ impl Channel {
         self.registers.HRS.read() & (1 << self.index) != 0
     }
 
-    /// Enable or disable the DMA's hardware request
-    fn set_hardware_enable(&mut self, enable: bool) {
+    /// Enable or disable the DMA's multiplexer request
+    ///
+    /// In this DMA implementation, all peripheral transfers and memcpy requests
+    /// go through the DMA multiplexer. So, this needs to be set for the multiplexer
+    /// to service the channel.
+    fn set_enable(&mut self, enable: bool) {
         if enable {
             self.registers.SERQ.write(self.index as u8);
         } else {
@@ -399,8 +383,8 @@ impl Channel {
         ral::read_reg!(register::tcd, tcd, CSR, ACTIVE == 1)
     }
 
-    /// Indicates if this DMA channel is enabled for hardware DMA service
-    fn is_hardware_enabled(&self) -> bool {
+    /// Indicates if this DMA channel is enabled
+    fn is_enabled(&self) -> bool {
         self.registers.ERQ.read() & (1 << self.index) != 0
     }
 

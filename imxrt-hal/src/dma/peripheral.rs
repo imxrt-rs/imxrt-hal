@@ -247,7 +247,7 @@ where
     /// A complete transfer is signaled by `is_receive_complete()`, and possibly an interrupt.
     pub fn start_receive(&mut self, mut buffer: D) -> Result<(), (D, Error<P::Error>)> {
         let rx_channel = self.rx_channel.as_mut().unwrap();
-        if rx_channel.is_hardware_enabled() {
+        if rx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
         } else if let Err(error) = self.peripheral.enable_source() {
             return Err((buffer, Error::Peripheral(error)));
@@ -264,7 +264,7 @@ where
         buffer.prepare_destination();
 
         compiler_fence(Ordering::Release);
-        rx_channel.set_hardware_enable(true);
+        rx_channel.set_enable(true);
         if rx_channel.is_error() {
             let es = ErrorStatus::new(rx_channel.error_status());
             rx_channel.clear_error();
@@ -315,7 +315,7 @@ where
         while rx_channel.is_hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
-        rx_channel.set_hardware_enable(false);
+        rx_channel.set_enable(false);
         compiler_fence(Ordering::Acquire);
         self.destination_buffer.take()
     }
@@ -398,7 +398,7 @@ where
     /// A complete transfer is signaled by `is_transfer_complete()`, and possibly an interrupt.
     pub fn start_transfer(&mut self, mut buffer: S) -> Result<(), (S, Error<P::Error>)> {
         let tx_channel = self.tx_channel.as_mut().unwrap();
-        if tx_channel.is_hardware_enabled() {
+        if tx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
         } else if let Err(error) = self.peripheral.enable_destination() {
             return Err((buffer, Error::Peripheral(error)));
@@ -415,7 +415,7 @@ where
         buffer.prepare_source();
 
         compiler_fence(Ordering::Release);
-        tx_channel.set_hardware_enable(true);
+        tx_channel.set_enable(true);
         if tx_channel.is_error() {
             let es = ErrorStatus::new(tx_channel.error_status());
             tx_channel.clear_error();
@@ -466,7 +466,7 @@ where
         while tx_channel.is_hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
-        tx_channel.set_hardware_enable(false);
+        tx_channel.set_enable(false);
         compiler_fence(Ordering::Acquire);
         self.source_buffer.take()
     }
