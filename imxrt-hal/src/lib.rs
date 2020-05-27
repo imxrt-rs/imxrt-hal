@@ -91,7 +91,7 @@ impl Peripherals {
             },
             gpt1: gpt::Unclocked::one(ral::gpt::GPT1::take()?),
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::take()?),
-            dma: dma::Unclocked::new(),
+            dma: dma::Unclocked::new(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?),
         };
         Some(p)
     }
