@@ -4,11 +4,16 @@
 
 ### Added
 
-- The iMXRT's general purpose timers (GPT) are now available.
+- `uart::ReadError` implements `Clone`, `Debug`, `PartialEq`, and `Eq`
+- General purpose timers (GPT)
 - Introducing the DMA module
-  - Peripheral-to-meory transfers, supporting both SPI and UART
-  - DMA memory-to-memory copies
+  - Peripheral-to-memory transfers, supporting both SPI and UART
+  - Memory-to-memory copies
   - Statically-allocated linear and circular buffers
+- Documentation
+  - Getting Started
+  - Contributing
+  - Rustdoc-checked code examples
 
 ### Changed
 
@@ -18,4 +23,4 @@
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rt/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...HEAD
