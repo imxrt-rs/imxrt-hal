@@ -464,7 +464,7 @@ impl Unclocked {
         // used in the implementation.
         drop(dma);
         drop(mux);
-        
+
         Unclocked([
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
