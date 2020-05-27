@@ -4,6 +4,8 @@
 //! the `embedded_hal::serial` traits. The peripheral is sufficient
 //! for implementing basic serial communications.
 //!
+//! UARTs may also be used in bi-directional DMA transfers.
+//!
 //! # Example
 //!
 //! ```no_run
@@ -345,6 +347,7 @@ where
                 ral::modify_reg!(ral::lpuart, this.reg, FIFO, TXFE: TXFE_1);
                 tx_fifo_size
             } else {
+                ral::modify_reg!(ral::lpuart, this.reg, WATER, TXWATER: 0);
                 ral::modify_reg!(ral::lpuart, this.reg, FIFO, TXFE: TXFE_0);
                 0
             }
@@ -441,6 +444,7 @@ where
                 ral::modify_reg!(ral::lpuart, this.reg, CTRL, RIE: RIE_1);
                 rx_fifo_size
             } else {
+                ral::modify_reg!(ral::lpuart, this.reg, WATER, RXWATER: 0);
                 ral::modify_reg!(ral::lpuart, this.reg, CTRL, RIE: RIE_0);
                 0
             }
@@ -523,6 +527,49 @@ where
             } else {
                 Err(nb::Error::Other(ReadError { flags, raw }))
             }
+        }
+    }
+}
+
+use crate::dma;
+
+impl<M> dma::peripheral::Source<u8> for UART<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    fn source(&self) -> *const u8 {
+        &self.reg.DATA as *const _ as *const u8
+    }
+    fn enable_source(&mut self) -> Result<(), Self::Error> {
+        self.clear_status();
+        ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
+        Ok(())
+    }
+    fn disable_source(&mut self) {
+        while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
+            ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 0);
+        }
+    }
+}
+
+impl<M> dma::peripheral::Destination<u8> for UART<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    fn destination(&self) -> *const u8 {
+        &self.reg.DATA as *const _ as *const u8
+    }
+    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+        ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
+        Ok(())
+    }
+    fn disable_destination(&mut self) {
+        while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
+            ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
         }
     }
 }

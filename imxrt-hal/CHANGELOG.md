@@ -5,6 +5,10 @@
 ### Added
 
 - The iMXRT's general purpose timers (GPT) are now available.
+- Introducing the DMA module
+  - Peripheral-to-meory transfers, supporting both SPI and UART
+  - DMA memory-to-memory copies
+  - Statically-allocated linear and circular buffers
 
 ### Changed
 

@@ -19,6 +19,7 @@
 pub use imxrt_ral as ral;
 
 pub mod ccm;
+pub mod dma;
 pub mod gpio;
 pub mod gpt;
 pub mod i2c;
@@ -52,6 +53,7 @@ pub struct Peripherals {
     pub spi: spi::Unclocked,
     pub gpt1: gpt::Unclocked,
     pub gpt2: gpt::Unclocked,
+    pub dma: dma::Unclocked,
 }
 
 impl Peripherals {
@@ -89,6 +91,7 @@ impl Peripherals {
             },
             gpt1: gpt::Unclocked::one(ral::gpt::GPT1::take()?),
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::take()?),
+            dma: dma::Unclocked::new(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?),
         };
         Some(p)
     }

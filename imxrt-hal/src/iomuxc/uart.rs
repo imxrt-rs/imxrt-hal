@@ -5,38 +5,62 @@ use crate::ral;
 pub mod module {
     pub trait Module {
         const IDX: usize;
+        /// UART TX DMA Request signal
+        ///
+        /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+        const TX_DMA_REQUEST: u32;
+        /// UART RX DMA Request signal
+        ///
+        /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+        const RX_DMA_REQUEST: u32;
     }
     pub struct _1;
     impl Module for _1 {
         const IDX: usize = 1;
+        const TX_DMA_REQUEST: u32 = 2;
+        const RX_DMA_REQUEST: u32 = 3;
     }
     pub struct _2;
     impl Module for _2 {
         const IDX: usize = 2;
+        const TX_DMA_REQUEST: u32 = 66;
+        const RX_DMA_REQUEST: u32 = 67;
     }
     pub struct _3;
     impl Module for _3 {
         const IDX: usize = 3;
+        const TX_DMA_REQUEST: u32 = 4;
+        const RX_DMA_REQUEST: u32 = 5;
     }
     pub struct _4;
     impl Module for _4 {
         const IDX: usize = 4;
+        const TX_DMA_REQUEST: u32 = 68;
+        const RX_DMA_REQUEST: u32 = 69;
     }
     pub struct _5;
     impl Module for _5 {
         const IDX: usize = 5;
+        const TX_DMA_REQUEST: u32 = 6;
+        const RX_DMA_REQUEST: u32 = 7;
     }
     pub struct _6;
     impl Module for _6 {
         const IDX: usize = 6;
+        const TX_DMA_REQUEST: u32 = 70;
+        const RX_DMA_REQUEST: u32 = 71;
     }
     pub struct _7;
     impl Module for _7 {
         const IDX: usize = 7;
+        const TX_DMA_REQUEST: u32 = 8;
+        const RX_DMA_REQUEST: u32 = 9;
     }
     pub struct _8;
     impl Module for _8 {
         const IDX: usize = 8;
+        const TX_DMA_REQUEST: u32 = 72;
+        const RX_DMA_REQUEST: u32 = 73;
     }
 }
 

@@ -3,22 +3,38 @@
 pub mod module {
     pub trait Module {
         const IDX: usize;
+        /// SPI RX DMA Request signal
+        ///
+        /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+        const RX_DMA_REQUEST: u32;
+        /// SPI TX DMA Request signal
+        ///
+        /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+        const TX_DMA_REQUEST: u32;
     }
     pub struct _1;
     impl Module for _1 {
         const IDX: usize = 1;
+        const RX_DMA_REQUEST: u32 = 13;
+        const TX_DMA_REQUEST: u32 = 14;
     }
     pub struct _2;
     impl Module for _2 {
         const IDX: usize = 2;
+        const RX_DMA_REQUEST: u32 = 77;
+        const TX_DMA_REQUEST: u32 = 78;
     }
     pub struct _3;
     impl Module for _3 {
         const IDX: usize = 3;
+        const RX_DMA_REQUEST: u32 = 15;
+        const TX_DMA_REQUEST: u32 = 16;
     }
     pub struct _4;
     impl Module for _4 {
         const IDX: usize = 4;
+        const RX_DMA_REQUEST: u32 = 79;
+        const TX_DMA_REQUEST: u32 = 80;
     }
 }
 
