@@ -37,6 +37,9 @@
 //!
 //! uart.write(0xDE).unwrap();
 //! let byte = uart.read().unwrap();
+//!
+//! // Split the peripheral into transfer and receive halves
+//! let (tx, rx) = uart.split();
 //! ```
 
 use crate::ccm;
@@ -242,6 +245,20 @@ pub struct UART<M: module::Module> {
     _module: PhantomData<M>,
 }
 
+/// A UART transfer half
+///
+/// `Tx` is capable of writing data, and nothing else. To configure
+/// a transfer half, configure the [`UART`](struct.UART.html) peripheral
+/// before calling [`split()`](struct.UART.html#method.split).
+pub struct Tx<M: module::Module>(UART<M>);
+
+/// A UART receive half
+///
+/// `Rx` is capable of receiving data, and nothing else. To configure
+/// a receive half, configure the [`UART`](struct.UART.html) peripheral
+/// before calling [`split()`](struct.UART.html#method.split).
+pub struct Rx<M: module::Module>(UART<M>);
+
 /// Parity selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Parity {
@@ -274,6 +291,31 @@ where
         uart.set_baud(baud)?;
         ral::modify_reg!(ral::lpuart, uart.reg, CTRL, TE: TE_1, RE: RE_1);
         Ok(uart)
+    }
+
+    /// Split the UART peripheral into its transfer and receive half
+    ///
+    /// Ensure your UART peripheral is configured before calling
+    /// `split()`.
+    pub fn split(self) -> (Tx<M>, Rx<M>) {
+        let rx_half = UART {
+            reg: unsafe { M::steal() },
+            effective_clock: self.effective_clock,
+            _module: self._module,
+        };
+        (Tx(self), Rx(rx_half))
+    }
+
+    /// Re-combine the transfer and receive halves to create a full UART peripheral
+    ///
+    /// `join()` will let you re-configure a UART peripheral if theres a need to change
+    /// settings.
+    pub fn join(tx: Tx<M>, _rx: Rx<M>) -> Self {
+        UART {
+            reg: tx.0.reg,
+            effective_clock: tx.0.effective_clock,
+            _module: tx.0._module,
+        }
     }
 
     /// Specify parity bit settings. If there is no parity, use `None`.
@@ -475,6 +517,21 @@ where
     }
 }
 
+impl<M> serial::Write<u8> for Tx<M>
+where
+    M: module::Module,
+{
+    type Error = core::convert::Infallible;
+
+    fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
+        self.0.write(word)
+    }
+
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        self.0.flush()
+    }
+}
+
 bitflags::bitflags! {
     /// Errors that may occur when reading data
     pub struct ReadErrorFlags : u8 {
@@ -528,6 +585,17 @@ where
                 Err(nb::Error::Other(ReadError { flags, raw }))
             }
         }
+    }
+}
+
+impl<M> serial::Read<u8> for Rx<M>
+where
+    M: module::Module,
+{
+    type Error = ReadError;
+
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
+        self.0.read()
     }
 }
 

@@ -5,6 +5,7 @@
 ### Added
 
 - `uart::ReadError` implements `Clone`, `Debug`, `PartialEq`, and `Eq`
+- `UART` peripherals may be `split()` into `Tx` and `Rx` halves
 - General purpose timers (GPT)
 - Introducing the DMA module
   - Peripheral-to-memory transfers, supporting both SPI and UART

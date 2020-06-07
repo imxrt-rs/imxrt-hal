@@ -3,6 +3,8 @@
 use crate::ral;
 
 pub mod module {
+    use super::ral;
+
     pub trait Module {
         const IDX: usize;
         /// UART TX DMA Request signal
@@ -13,54 +15,93 @@ pub mod module {
         ///
         /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
         const RX_DMA_REQUEST: u32;
+
+        /// Steal the UART instance
+        ///
+        /// # Safety
+        ///
+        /// The instance may be used elsewhere
+        unsafe fn steal() -> ral::lpuart::Instance;
     }
     pub struct _1;
     impl Module for _1 {
         const IDX: usize = 1;
         const TX_DMA_REQUEST: u32 = 2;
         const RX_DMA_REQUEST: u32 = 3;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART1::steal()
+        }
     }
     pub struct _2;
     impl Module for _2 {
         const IDX: usize = 2;
         const TX_DMA_REQUEST: u32 = 66;
         const RX_DMA_REQUEST: u32 = 67;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART2::steal()
+        }
     }
     pub struct _3;
     impl Module for _3 {
         const IDX: usize = 3;
         const TX_DMA_REQUEST: u32 = 4;
         const RX_DMA_REQUEST: u32 = 5;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART3::steal()
+        }
     }
     pub struct _4;
     impl Module for _4 {
         const IDX: usize = 4;
         const TX_DMA_REQUEST: u32 = 68;
         const RX_DMA_REQUEST: u32 = 69;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART4::steal()
+        }
     }
     pub struct _5;
     impl Module for _5 {
         const IDX: usize = 5;
         const TX_DMA_REQUEST: u32 = 6;
         const RX_DMA_REQUEST: u32 = 7;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART5::steal()
+        }
     }
     pub struct _6;
     impl Module for _6 {
         const IDX: usize = 6;
         const TX_DMA_REQUEST: u32 = 70;
         const RX_DMA_REQUEST: u32 = 71;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART6::steal()
+        }
     }
     pub struct _7;
     impl Module for _7 {
         const IDX: usize = 7;
         const TX_DMA_REQUEST: u32 = 8;
         const RX_DMA_REQUEST: u32 = 9;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART7::steal()
+        }
     }
     pub struct _8;
     impl Module for _8 {
         const IDX: usize = 8;
         const TX_DMA_REQUEST: u32 = 72;
         const RX_DMA_REQUEST: u32 = 73;
+
+        unsafe fn steal() -> ral::lpuart::Instance {
+            ral::lpuart::LPUART8::steal()
+        }
     }
 }
 
