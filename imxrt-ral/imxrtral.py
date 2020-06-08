@@ -34,7 +34,7 @@ CRATE_LIB_PREAMBLE = """\
 //! will be available.
 //!
 //! See the
-//! [README](https://github.com/imxrt-rs/imxrt-rs/blob/master/README.md)
+//! [README](https://github.com/imxrt-rs/imxrt-rs/blob/master/imxrt-ral/README.md)
 //! for example usage.
 
 #![no_std]

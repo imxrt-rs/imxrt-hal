@@ -73,8 +73,9 @@ unsafe { modify_reg!(gpio, GPIOA, MODER, MODER1: Output) };
 // With the `nosync` feature set, this is the only way to access registers.
 ```
 
-See [the example project](https://github.com/adamgreig/stm32ral-example) for
-a more complete example that should build out of the box.
+See [the `stm32ral`'s example project](https://github.com/adamgreig/stm32ral-example) for
+a more complete example that should build out of the box. Note that this example project
+is for a different microcontroller; however, the ideas are the same.
 
 ## Why use imxrt-ral?
 
