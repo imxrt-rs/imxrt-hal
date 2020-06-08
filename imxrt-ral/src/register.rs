@@ -150,18 +150,18 @@ impl<T: Copy> UnsafeWORegister<T> {
 ///
 /// # Examples
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // Safely acquire the peripheral instance (will panic if already acquired)
-/// let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 ///
 /// // Write some value to the register.
-/// write_reg!(stm32ral::gpio, gpioa, ODR, 1<<3);
+/// write_reg!(imxrt_ral::gpio, gpio, ICR1, 0b11<<6);
 ///
 /// // Write values to specific fields. Unspecified fields are written to 0.
-/// write_reg!(stm32ral::gpio, gpioa, MODER, MODER3: Output, MODER4: Analog);
+/// write_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL);
 ///
 /// // Unsafe access without requiring you to first `take()` the instance
-/// unsafe { write_reg!(stm32ral::gpio, GPIOA, MODER, MODER3: Output, MODER4: Analog) };
+/// unsafe { write_reg!(imxrt_ral::gpio, GPIO1, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL) };
 /// # }
 /// ```
 ///
@@ -170,35 +170,35 @@ impl<T: Copy> UnsafeWORegister<T> {
 /// the whole register, or with multiple fields each with their own value.
 ///
 /// In both cases, the first arguments are:
-/// * the path to the peripheral module: `stm32ral::gpio`,
-/// * a reference to the instance of that peripheral: 'gpioa' (anything which dereferences to
+/// * the path to the peripheral module: `imxrt_ral::gpio`,
+/// * a reference to the instance of that peripheral: 'gpio' (anything which dereferences to
 ///   `RegisterBlock`, such as `Instance`, `&Instance`, `&RegisterBlock`, or
 ///   `*const RegisterBlock`),
-/// * the register you wish you access: `MODER` (a field on the `RegisterBlock`).
+/// * the register you wish you access: `ICR1` (a field on the `RegisterBlock`).
 ///
 /// In the single-value usage, the final argument is just the value to write:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// // Turn on PA3 (and turn everything else off).
-/// write_reg!(stm32ral::gpio, gpioa, ODR, 1<<3);
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// // Turn on the fourth pin (and turn everything else off).
+/// write_reg!(imxrt_ral::gpio, gpio, DR, 1<<3);
 /// # }
 /// ```
 ///
 /// Otherwise, the remaining arguments are each `Field: Value` pairs:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// // Set PA3 to Output, PA4 to Analog, and everything else to 0 (which is Input).
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// write_reg!(stm32ral::gpio, gpioa, MODER, MODER3: 0b01, MODER4: 0b11);
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// // Set ICR3 and ICR4, and everything else to 0 (which is Input).
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// write_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: 0b01, ICR4: 0b11);
 /// # }
 /// ```
 /// For fields with annotated values, you can also specify a named value:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // As above, but with named values.
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// write_reg!(stm32ral::gpio, gpioa, MODER, MODER3: Output, MODER4: Analog);
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// write_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL);
 /// # }
 /// ```
 ///
@@ -208,25 +208,25 @@ impl<T: Copy> UnsafeWORegister<T> {
 /// The named values are brought into scope by `use $peripheral::$register::$field::*` for
 /// each field. The same constants could just be specified manually:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // As above, but being explicit about named values.
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// write_reg!(stm32ral::gpio, gpioa, MODER, MODER3: stm32ral::gpio::MODER::MODER3::RW::Output,
-///                                          MODER4: stm32ral::gpio::MODER::MODER4::RW::Analog);
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// write_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: imxrt_ral::gpio::ICR1::ICR3::RW::FALLING_EDGE,
+///                                          ICR4: imxrt_ral::gpio::ICR1::ICR4::RW::LOW_LEVEL);
 /// # }
 /// ```
 ///
 /// The fully expanded form is equivalent to:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // As above, but expanded.
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// (*gpioa).MODER.write(
-///     ((stm32ral::gpio::MODER::MODER3::RW::Output << stm32ral::gpio::MODER::MODER3::offset)
-///      & stm32ral::gpio::MODER::MODER3::mask)
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// (*gpio).ICR1.write(
+///     ((imxrt_ral::gpio::ICR1::ICR3::RW::FALLING_EDGE << imxrt_ral::gpio::ICR1::ICR3::offset)
+///      & imxrt_ral::gpio::ICR1::ICR3::mask)
 ///     |
-///     ((stm32ral::gpio::MODER::MODER4::RW::Analog << stm32ral::gpio::MODER::MODER4::offset)
-///      & stm32ral::gpio::MODER::MODER4::mask)
+///     ((imxrt_ral::gpio::ICR1::ICR4::RW::LOW_LEVEL << imxrt_ral::gpio::ICR1::ICR4::offset)
+///      & imxrt_ral::gpio::ICR1::ICR4::mask)
 /// );
 /// # }
 /// ```
@@ -238,11 +238,11 @@ impl<T: Copy> UnsafeWORegister<T> {
 /// When run in an unsafe context, peripheral instances are directly accessible without requiring
 /// having called `take()` beforehand:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// unsafe { write_reg!(stm32ral::gpio, GPIOA, MODER, MODER3: Output, MODER4: Analog) };
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// unsafe { write_reg!(imxrt_ral::gpio, GPIO1, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL) };
 /// # }
 /// ```
-/// This works because `GPIOA` is a `*const RegisterBlock` in the `stm32ral::gpio` module;
+/// This works because `GPIO1` is a `*const RegisterBlock` in the `imxrt_ral::gpio` module;
 /// and the macro brings such constants into scope and then dereferences the provided reference.
 #[macro_export]
 macro_rules! write_reg {
@@ -265,18 +265,18 @@ macro_rules! write_reg {
 ///
 /// # Examples
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // Safely acquire the peripheral instance (will panic if already acquired)
-/// let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 ///
 /// // Update the register to ensure bit 3 is set.
-/// modify_reg!(stm32ral::gpio, gpioa, ODR, |reg| reg | (1<<3));
+/// modify_reg!(imxrt_ral::gpio, gpio, DR, |reg| reg | (1<<3));
 ///
 /// // Write values to specific fields. Unspecified fields are left unchanged.
-/// modify_reg!(stm32ral::gpio, gpioa, MODER, MODER3: Output, MODER4: Analog);
+/// modify_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL);
 ///
 /// // Unsafe access without requiring you to first `take()` the instance
-/// unsafe { modify_reg!(stm32ral::gpio, GPIOA, MODER, MODER3: Output, MODER4: Analog) };
+/// unsafe { modify_reg!(imxrt_ral::gpio, GPIO1, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL) };
 /// # }
 /// ```
 ///
@@ -285,37 +285,37 @@ macro_rules! write_reg {
 /// register, or by specifying which fields to change and what value to change them to.
 ///
 /// In both cases, the first arguments are:
-/// * the path to the peripheral module: `stm32ral::gpio`,
-/// * a reference to the instance of that peripheral: 'gpioa' (anything which dereferences to
+/// * the path to the peripheral module: `imxrt_ral::gpio`,
+/// * a reference to the instance of that peripheral: 'gpio' (anything which dereferences to
 ///   `RegisterBlock`, such as `Instance`, `&Instance`, `&RegisterBlock`, or
 ///   `*const RegisterBlock`),
-/// * the register you wish you access: `MODER` (a field on the `RegisterBlock`).
+/// * the register you wish you access: `ICR1` (a field on the `RegisterBlock`).
 ///
 /// In the whole-register usage, the final argument is a closure that accepts the current value
 /// of the register and returns the new value to write:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 /// // Turn on PA3 without affecting anything else.
-/// modify_reg!(stm32ral::gpio, gpioa, ODR, |reg| reg | (1<<3));
+/// modify_reg!(imxrt_ral::gpio, gpio, DR, |reg| reg | (1<<3));
 /// # }
 /// ```
 ///
 /// Otherwise, the remaining arguments are `Field: Value` pairs:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// // Set PA3 to Output, PA4 to Analog, and leave everything else unchanged.
-/// modify_reg!(stm32ral::gpio, gpioa, MODER, MODER3: 0b01, MODER4: 0b11);
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// // Set ICR3 and ICR4, and leave everything else unchanged.
+/// modify_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: 0b01, ICR4: 0b11);
 /// # }
 /// ```
 ///
 /// For fields with annotated values, you can also specify a named value:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 /// // As above, but with named values.
-/// modify_reg!(stm32ral::gpio, gpioa, MODER, MODER3: Output, MODER4: Analog);
+/// modify_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL);
 /// # }
 /// ```
 ///
@@ -328,34 +328,34 @@ macro_rules! write_reg {
 /// by `use peripheral::register::field::*` for each field. The same constants could just be
 /// specified manually:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 /// // As above, but being explicit about named values.
-/// modify_reg!(stm32ral::gpio, gpioa, MODER, MODER3: stm32ral::gpio::MODER::MODER3::RW::Output,
-///                                           MODER4: stm32ral::gpio::MODER::MODER4::RW::Analog);
+/// modify_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: imxrt_ral::gpio::ICR1::ICR3::RW::FALLING_EDGE,
+///                                           ICR4: imxrt_ral::gpio::ICR1::ICR4::RW::LOW_LEVEL);
 /// # }
 /// ```
 ///
 /// The fully expanded form is equivalent to:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 /// // As above, but expanded.
-/// (*gpioa).MODER.write(
+/// (*gpio).ICR1.write(
 ///     (
 ///         // First read the current value...
-///         (*gpioa).MODER.read()
+///         (*gpio).ICR1.read()
 ///         // Then AND it with an appropriate mask...
 ///         &
-///         !( stm32ral::gpio::MODER::MODER3::mask | stm32ral::gpio::MODER::MODER4::mask )
+///         !( imxrt_ral::gpio::ICR1::ICR3::mask | imxrt_ral::gpio::ICR1::ICR4::mask )
 ///     )
 ///     // Then OR with each field value.
 ///     |
-///         ((stm32ral::gpio::MODER::MODER3::RW::Output << stm32ral::gpio::MODER::MODER3::offset)
-///          & stm32ral::gpio::MODER::MODER3::mask)
+///         ((imxrt_ral::gpio::ICR1::ICR3::RW::FALLING_EDGE << imxrt_ral::gpio::ICR1::ICR3::offset)
+///          & imxrt_ral::gpio::ICR1::ICR3::mask)
 ///     |
-///         ((stm32ral::gpio::MODER::MODER4::RW::Analog << stm32ral::gpio::MODER::MODER3::offset)
-///          & stm32ral::gpio::MODER::MODER3::mask)
+///         ((imxrt_ral::gpio::ICR1::ICR4::RW::LOW_LEVEL << imxrt_ral::gpio::ICR1::ICR3::offset)
+///          & imxrt_ral::gpio::ICR1::ICR3::mask)
 /// );
 /// # }
 /// ```
@@ -367,11 +367,11 @@ macro_rules! write_reg {
 /// When run in an unsafe context, peripheral instances are directly accessible without requiring
 /// having called `take()` beforehand:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// unsafe { modify_reg!(stm32ral::gpio, GPIOA, MODER, MODER3: Output, MODER4: Analog) };
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// unsafe { modify_reg!(imxrt_ral::gpio, GPIO1, ICR1, ICR3: FALLING_EDGE, ICR4: LOW_LEVEL) };
 /// # }
 /// ```
-/// This works because `GPIOA` is a `*const RegisterBlock` in the `stm32ral::gpio` module;
+/// This works because `GPIO1` is a `*const RegisterBlock` in the `imxrt_ral::gpio` module;
 /// and the macro brings such constants into scope and then dereferences the provided reference.
 #[macro_export]
 macro_rules! modify_reg {
@@ -394,24 +394,24 @@ macro_rules! modify_reg {
 ///
 /// # Examples
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // Safely acquire the peripheral instance (will panic if already acquired)
-/// let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 ///
 /// // Read the whole register.
-/// let val = read_reg!(stm32ral::gpio, gpioa, IDR);
+/// let val = read_reg!(imxrt_ral::gpio, gpio, ICR2);
 ///
 /// // Read one field from the register.
-/// let val = read_reg!(stm32ral::gpio, gpioa, IDR, IDR2);
+/// let val = read_reg!(imxrt_ral::gpio, gpio, ICR2, ICR29);
 ///
 /// // Read multiple fields from the register.
-/// let (val1, val2, val3) = read_reg!(stm32ral::gpio, gpioa, IDR, IDR0, IDR1, IDR2);
+/// let (val1, val2, val3) = read_reg!(imxrt_ral::gpio, gpio, ICR2, ICR16, ICR21, ICR29);
 ///
 /// // Check if one field is equal to a specific value, with the field's named values in scope.
-/// while read_reg!(stm32ral::gpio, gpioa, IDR, IDR2 == High) {}
+/// while read_reg!(imxrt_ral::gpio, gpio, ICR2, ICR29 == HIGH_LEVEL) {}
 ///
 /// // Unsafe access without requiring you to first `take()` the instance
-/// let val = unsafe { read_reg!(stm32ral::gpio, GPIOA, IDR) };
+/// let val = unsafe { read_reg!(imxrt_ral::gpio, GPIO1, ICR2) };
 /// # }
 /// ```
 ///
@@ -420,57 +420,49 @@ macro_rules! modify_reg {
 /// reading a one or more fields from it and potentially performing a comparison with one field.
 ///
 /// In all cases, the first arguments are:
-/// * the path to the peripheral module: `stm32ral::gpio`,
-/// * a reference to the instance of that peripheral: 'gpioa' (anything which dereferences to
+/// * the path to the peripheral module: `imxrt_ral::gpio`,
+/// * a reference to the instance of that peripheral: 'gpio' (anything which dereferences to
 ///   `RegisterBlock`, such as `Instance`, `&Instance`, `&RegisterBlock`, or
 ///   `*const RegisterBlock`),
-/// * the register you wish to access: `IDR` (a field on the `RegisterBlock`).
+/// * the register you wish to access: `ICR2` (a field on the `RegisterBlock`).
 ///
 /// In the whole-register usage, the macro simply returns the register's value:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// // Read the entire value of GPIOA.IDR into `val`.
-/// let val = read_reg!(stm32ral::gpio, gpioa, IDR);
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// // Read the entire value of GPIO1.ICR2 into `val`.
+/// let val = read_reg!(imxrt_ral::gpio, gpio, ICR2);
 /// # }
 /// ```
 ///
 /// For reading individual fields, the macro masks and shifts appropriately:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// // Read just the value of the field GPIOA.IDR2 into `val`.
-/// let val = read_reg!(stm32ral::gpio, gpioa, IDR, IDR2);
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// // Read just the value of the field GPIO1.ICR29 into `val`.
+/// let val = read_reg!(imxrt_ral::gpio, gpio, ICR2, ICR29);
 ///
 /// // As above, but expanded for exposition:
-/// let val = ((*gpioa).IDR.read() & stm32ral::gpio::IDR::IDR2::mask)
-///           >> stm32ral::gpio::IDR::IDR2::offset;
+/// let val = ((*gpio).ICR2.read() & imxrt_ral::gpio::ICR2::ICR29::mask)
+///           >> imxrt_ral::gpio::ICR2::ICR29::offset;
 ///
 /// // Read multiple fields
-/// let (val1, val2) = read_reg!(stm32ral::gpio, gpioa, IDR, IDR2, IDR3);
+/// let (val1, val2) = read_reg!(imxrt_ral::gpio, gpio, ICR2, ICR29, ICR30);
 ///
 /// // As above, but expanded for exposition:
-/// let (val1, val2) = { let val = (*gpioa).IDR.read();
-///     ((val & stm32ral::gpio::IDR::IDR2::mask) >> stm32ral::gpio::IDR::IDR2::offset,
-///      (val & stm32ral::gpio::IDR::IDR3::mask) >> stm32ral::gpio::IDR::IDR3::offset,
+/// let (val1, val2) = { let val = (*gpio).ICR2.read();
+///     ((val & imxrt_ral::gpio::ICR2::ICR29::mask) >> imxrt_ral::gpio::ICR2::ICR29::offset,
+///      (val & imxrt_ral::gpio::ICR2::ICR30::mask) >> imxrt_ral::gpio::ICR2::ICR30::offset,
 ///     )};
 /// # }
 /// ```
 ///
 /// For comparing a single field, the macro masks and shifts and then performs the comparison:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// # let rcc = stm32ral::rcc::RCC::take().unwrap();
-/// // Loop while PA2 is High.
-/// while read_reg!(stm32ral::gpio, gpioa, IDR, IDR2 == High) {}
-///
-/// // Only proceed if the clock is not the HSI.
-/// if read_reg!(stm32ral::rcc, rcc, CFGR, SWS != HSI) { }
-///
-/// // Equivalent expansion:
-/// if (((*rcc).CFGR.read() & stm32ral::rcc::CFGR::SWS::mask)
-///     >> stm32ral::rcc::CFGR::SWS::offset) != stm32ral::rcc::CFGR::SWS::R::HSI { }
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// // Loop while ICR29 is HIGH_LEVEL.
+/// while read_reg!(imxrt_ral::gpio, gpio, ICR2, ICR29 == HIGH_LEVEL) {}
 /// # }
 /// ```
 ///
@@ -481,11 +473,11 @@ macro_rules! modify_reg {
 /// When run in an unsafe context, peripheral instances are directly accessible without requiring
 /// having called `take()` beforehand:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// let val = unsafe { read_reg!(stm32ral::gpio, GPIOA, MODER) };
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// let val = unsafe { read_reg!(imxrt_ral::gpio, GPIO1, ICR1) };
 /// # }
 /// ```
-/// This works because `GPIOA` is a `*const RegisterBlock` in the `stm32ral::gpio` module;
+/// This works because `GPIO1` is a `*const RegisterBlock` in the `imxrt_ral::gpio` module;
 /// and the macro brings such constants into scope and then dereferences the provided reference.
 #[macro_export]
 macro_rules! read_reg {
@@ -517,15 +509,15 @@ macro_rules! read_reg {
 ///
 /// # Examples
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// // Safely acquire the peripheral instance (will panic if already acquired)
-/// let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 ///
-/// // Reset PA14 and PA15 to their reset state
-/// reset_reg!(stm32ral::gpio, gpioa, GPIOA, MODER, MODER14, MODER15);
+/// // Reset ICR9 and ICR10 to their reset state
+/// reset_reg!(imxrt_ral::gpio, gpio, GPIO1, ICR1, ICR9, ICR10);
 ///
-/// // Reset the entire GPIOA.MODER to its reset state
-/// reset_reg!(stm32ral::gpio, gpioa, GPIOA, MODER);
+/// // Reset the entire GPIO1.ICR1 to its reset state
+/// reset_reg!(imxrt_ral::gpio, gpio, GPIO1, ICR1);
 /// # }
 /// ```
 ///
@@ -535,29 +527,29 @@ macro_rules! read_reg {
 /// reset values.
 ///
 /// In both cases, the first arguments are:
-/// * the path to the peripheral module: `stm32ral::gpio`,
-/// * a reference to the instance of that peripheral: 'gpioa' (anything which dereferences to
+/// * the path to the peripheral module: `imxrt_ral::gpio`,
+/// * a reference to the instance of that peripheral: 'gpio' (anything which dereferences to
 ///   `RegisterBlock`, such as `Instance`, `&Instance`, `&RegisterBlock`, or
 ///   `*const RegisterBlock`),
-/// * the module for the instance of that peripheral: `GPIOA`,
-/// * the register you wish to access: `MODER` (a field on the `RegisterBlock`).
+/// * the module for the instance of that peripheral: `GPIO1`,
+/// * the register you wish to access: `ICR1` (a field on the `RegisterBlock`).
 ///
 /// In the whole-register usage, that's it:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
-/// // Reset the entire GPIOA.MODER
-/// reset_reg!(stm32ral::gpio, gpioa, GPIOA, MODER);
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
+/// // Reset the entire GPIO1.ICR1
+/// reset_reg!(imxrt_ral::gpio, gpio, GPIO1, ICR1);
 /// # }
 /// ```
 ///
 /// Otherwise, the remaining arguments are each field names:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// # let gpioa = stm32ral::gpio::GPIOA::take().unwrap();
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 /// // Reset the JTAG pins
-/// reset_reg!(stm32ral::gpio, gpioa, GPIOA, MODER, MODER13, MODER14, MODER15);
-/// reset_reg!(stm32ral::gpio, gpioa, GPIOB, MODER, MODER3, MODER4);
+/// reset_reg!(imxrt_ral::gpio, gpio, GPIO1, ICR1, ICR5, ICR6, ICR7);
+/// reset_reg!(imxrt_ral::gpio, gpio, GPIO2, ICR1, ICR1, ICR2);
 /// # }
 /// ```
 ///
@@ -575,15 +567,15 @@ macro_rules! read_reg {
 /// When run in an unsafe context, peripheral instances are directly accessible without requiring
 /// having called `take()` beforehand:
 /// ```rust,no_run
-/// # use stm32ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// unsafe { reset_reg!(stm32ral::gpio, GPIOA, GPIOA, MODER) };
+/// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
+/// unsafe { reset_reg!(imxrt_ral::gpio, GPIO1, GPIO1, ICR1) };
 /// # }
 /// ```
-/// This works because `GPIOA` is a `*const RegisterBlock` in the `stm32ral::gpio` module;
+/// This works because `GPIO1` is a `*const RegisterBlock` in the `imxrt_ral::gpio` module;
 /// and the macro brings such constants into scope and then dereferences the provided reference.
 ///
 /// Note that the second argument is a `*const` and the third is a path; despite both being written
-/// `GPIOA` they are not the same thing.
+/// `GPIO1` they are not the same thing.
 #[macro_export]
 macro_rules! reset_reg {
     ( $periph:path, $instance:expr, $instancemod:path, $reg:ident, $( $field:ident ),+ ) => {{
