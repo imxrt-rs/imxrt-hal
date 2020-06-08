@@ -1,9 +1,12 @@
 # Changelog
 
-## [0.2.1] 
+## [Unreleased]
+
+* Fix RAL's documentation to refer to i.MX RT registers
+
+## [0.2.1] 2020-04-10
 
 * Fixes cargo release, adds release building documentation
-
 
 ## [0.2.0] 2020-04-08
 
@@ -13,3 +16,8 @@
 ## [0.1.0] 2020-02-06
 
 Initial build and release of imxrt family of peripheral access crates
+
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...HEAD
+[0.2.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.0...0.2.1
+[0.2.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.1.0...0.2.1
+[0.1.0]: https://github.com/imxrt-rs/imxrt-rs/releases/tag/0.1.0
