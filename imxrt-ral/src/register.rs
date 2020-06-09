@@ -188,7 +188,7 @@ impl<T: Copy> UnsafeWORegister<T> {
 /// Otherwise, the remaining arguments are each `Field: Value` pairs:
 /// ```rust,no_run
 /// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
-/// // Set ICR3 and ICR4, and everything else to 0 (which is Input).
+/// // Set ICR3 and ICR4, and everything else to 0.
 /// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
 /// write_reg!(imxrt_ral::gpio, gpio, ICR1, ICR3: 0b01, ICR4: 0b11);
 /// # }
@@ -296,7 +296,7 @@ macro_rules! write_reg {
 /// ```rust,no_run
 /// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
-/// // Turn on PA3 without affecting anything else.
+/// // Set the third bit without touching any other bits
 /// modify_reg!(imxrt_ral::gpio, gpio, DR, |reg| reg | (1<<3));
 /// # }
 /// ```
@@ -354,8 +354,8 @@ macro_rules! write_reg {
 ///         ((imxrt_ral::gpio::ICR1::ICR3::RW::FALLING_EDGE << imxrt_ral::gpio::ICR1::ICR3::offset)
 ///          & imxrt_ral::gpio::ICR1::ICR3::mask)
 ///     |
-///         ((imxrt_ral::gpio::ICR1::ICR4::RW::LOW_LEVEL << imxrt_ral::gpio::ICR1::ICR3::offset)
-///          & imxrt_ral::gpio::ICR1::ICR3::mask)
+///         ((imxrt_ral::gpio::ICR1::ICR4::RW::LOW_LEVEL << imxrt_ral::gpio::ICR1::ICR4::offset)
+///          & imxrt_ral::gpio::ICR1::ICR4::mask)
 /// );
 /// # }
 /// ```
@@ -547,7 +547,7 @@ macro_rules! read_reg {
 /// ```rust,no_run
 /// # use imxrt_ral::{read_reg, write_reg, modify_reg, reset_reg}; fn main() {
 /// # let gpio = imxrt_ral::gpio::GPIO1::take().unwrap();
-/// // Reset the JTAG pins
+/// // Reset fields in GPIO1 and GPIO2
 /// reset_reg!(imxrt_ral::gpio, gpio, GPIO1, ICR1, ICR5, ICR6, ICR7);
 /// reset_reg!(imxrt_ral::gpio, gpio, GPIO2, ICR1, ICR1, ICR2);
 /// # }
