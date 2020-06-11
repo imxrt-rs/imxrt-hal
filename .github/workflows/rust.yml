@@ -33,7 +33,7 @@ jobs:
     - name: Build imxrt-ral for (${{ matrix.feature }}) RAL
       run: cd imxrt-ral && cargo build --verbose --features ${{ matrix.feature }}
     - name: Run tests (${{ matrix.feature }}) for RAL
-      run: cd imxrt-ral && cargo test --verbose --features ${{ matrix.feature }} --lib
+      run: cd imxrt-ral && cargo test --verbose --features ${{ matrix.feature }}
 
   build-hal:
     runs-on: ubuntu-latest
