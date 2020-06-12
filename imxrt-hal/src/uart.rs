@@ -622,6 +622,23 @@ where
     }
 }
 
+impl<M> dma::peripheral::Source<u8> for Rx<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    fn source(&self) -> *const u8 {
+        self.0.source()
+    }
+    fn enable_source(&mut self) -> Result<(), Self::Error> {
+        self.0.enable_source()
+    }
+    fn disable_source(&mut self) {
+        self.0.disable_source()
+    }
+}
+
 impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
     M: module::Module,
@@ -639,5 +656,22 @@ where
         while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
             ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
         }
+    }
+}
+
+impl<M> dma::peripheral::Destination<u8> for Tx<M>
+where
+    M: module::Module,
+{
+    type Error = void::Void;
+    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    fn destination(&self) -> *const u8 {
+        self.0.destination()
+    }
+    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+        self.0.enable_destination()
+    }
+    fn disable_destination(&mut self) {
+        self.0.disable_destination()
     }
 }
