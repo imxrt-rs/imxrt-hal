@@ -675,3 +675,8 @@ where
         self.0.disable_destination()
     }
 }
+
+use embedded_hal::blocking::serial::write::Default as BlockingWrite;
+
+impl<M> BlockingWrite<u8> for UART<M> where M: module::Module {}
+impl<M> BlockingWrite<u8> for Tx<M> where M: module::Module {}
