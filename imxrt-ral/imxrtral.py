@@ -1215,7 +1215,7 @@ class Device(Node):
 
                 #[cfg(feature="rt")]
                 #[doc(hidden)]
-                #[link_section=".vector_table.interrupts"]
+                #[cfg_attr(target_arch = "arm", link_section = ".vector_table.interrupts")]
                 #[no_mangle]
                 pub static __INTERRUPTS: [Vector; {nvectors}] = [
                 {vectors}
