@@ -56,7 +56,6 @@ name = "imxrt-ral"
 authors = ["Tom Burdick <tom.burdick@electromatic.us>", "Ian McIntyre <ianpmcintyre@gmail.com>"]
 description = "Register access layer for all NXP i.MX RT microcontrollers"
 repository = "https://github.com/imxrt-rs/imxrt-rs"
-documentation = "https://docs.rs/imxrt"
 readme = "README.md"
 keywords = ["imxrt", "nxp", "embedded", "no_std"]
 categories = ["embedded", "no-std"]
@@ -64,7 +63,7 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 # Change version in imxrtral.py, not in Cargo.toml!
-version = "0.2.1"
+version = "0.3.0"
 
 [package.metadata.docs.rs]
 features = ["doc"]
