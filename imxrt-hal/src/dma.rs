@@ -591,3 +591,8 @@ impl<E: Element> Transfer<E> {
         }
     }
 }
+
+// It's OK to send a channel across an execution context.
+// They can't be cloned or copied, so there's no chance of
+// them being (mutably) shared.
+unsafe impl Send for Channel {}
