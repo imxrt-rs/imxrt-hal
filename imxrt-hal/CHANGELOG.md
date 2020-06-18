@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2020-06-18
+
 ### Added
 
 - `uart::ReadError` implements `Clone`, `Debug`, `PartialEq`, and `Eq`
@@ -25,4 +27,5 @@
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...0.3.0
