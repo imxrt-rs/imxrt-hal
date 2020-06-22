@@ -36,7 +36,7 @@ default = ["embedded-hal/unproven"] # Allows us to access the new digital pin tr
 #imxrt1061 = ["imxrt-ral/imxrt1061"]
 imxrt1062 = ["imxrt-ral/imxrt1062"]
 #imxrt1064 = ["imxrt-ral/imxrt1064"]
-rtfm = ["imxrt-ral/rtfm"]
+rtic = ["imxrt-ral/rtic"]
 rt = ["imxrt-ral/rt"]
 nosync = ["imxrt-ral/nosync"]
 

@@ -82,7 +82,7 @@ test = false
 [features]
 rt = []
 inline-asm = ["external_cortex_m/inline-asm"]
-rtfm = []
+rtic = []
 default = []
 nosync = []
 doc = []
@@ -1266,23 +1266,23 @@ class Device(Node):
             for peripheral in self.peripherals:
                 f.write(peripheral.to_parent_entry())
             f.write("\n\n")
-            f.write("#[cfg(all(feature=\"rtfm\", not(feature=\"nosync\")))]")
+            f.write("#[cfg(all(feature=\"rtic\", not(feature=\"nosync\")))]")
             f.write("\n#[allow(non_snake_case)]\n")
             f.write("pub struct Peripherals {\n")
             for peripheral in self.peripherals:
                 f.write("    " + peripheral.to_struct_entry())
             f.write("}\n\n")
-            f.write("#[cfg(all(feature=\"rtfm\", feature=\"nosync\"))]\n")
+            f.write("#[cfg(all(feature=\"rtic\", feature=\"nosync\"))]\n")
             f.write("#[allow(non_snake_case)]\n")
             f.write("pub struct Peripherals {}\n\n")
-            f.write("#[cfg(all(feature=\"rtfm\", not(feature=\"nosync\")))]")
+            f.write("#[cfg(all(feature=\"rtic\", not(feature=\"nosync\")))]")
             f.write("\nimpl Peripherals {\n")
             f.write("    pub unsafe fn steal() -> Self {\n")
             f.write("        Peripherals {\n")
             for peripheral in self.peripherals:
                 f.write("        " + peripheral.to_struct_steal())
             f.write("        }\n    }\n}\n\n")
-            f.write("#[cfg(all(feature=\"rtfm\", feature=\"nosync\"))]\n")
+            f.write("#[cfg(all(feature=\"rtic\", feature=\"nosync\"))]\n")
             f.write("impl Peripherals {\n    pub fn steal() -> Self {\n")
             f.write("        Peripherals {}\n    }\n}")
         rustfmt(mname)

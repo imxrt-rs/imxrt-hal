@@ -14,7 +14,7 @@ A Rust hardware abstraction layer (HAL), register access layer (RAL), and SVD pa
 - Create *the* collaborative group to support using Rust on NXP's i.MX RT series.
 - Simple but useful register level access. It compiles quickly, and it's intuitive for existing embedded developers.
 - Embedded HAL support.
-- RTFM support.
+- RTIC support.
 - NXP EVK board support
 - Supporting popular boards such as the Teensy 4.
 
