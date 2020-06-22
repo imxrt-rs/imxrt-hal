@@ -84,7 +84,7 @@ is for a different microcontroller; however, the ideas are the same.
 * Quick to compile (~3s build time)
 * Covers i.MX RT devices in one crate
 * Supports `cortex-m-rt` via the `rt` feature, including interrupts
-* Supports `cortex-m-rtfm` via the `rtfm` feature, exposing a `device`
+* Supports `cortex-m-rtic` via the `rtic` feature, exposing a `device`
   with all peripherals taken
 * Doesn't get in your way
 * A bit like what you're used to from C header files
