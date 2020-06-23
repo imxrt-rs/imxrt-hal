@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- `steal()` the top-level `Peripherals` object. The `steal()` method lets users use the `imxrt_hal`
+  as an RTIC device.
+
 ### Changed
 
 - **BREAKING** The HAL's `"rtfm"` feature is changed to `"rtic"`, reflecting the framework's

@@ -57,6 +57,55 @@ pub struct Peripherals {
 }
 
 impl Peripherals {
+    /// Steal all of the HAL's peripherals
+    ///
+    /// # Safety
+    ///
+    /// The peripherals may be mutably aliased elsewhere in the code. Consider using
+    /// [`take()`](struct.Peripherals.html#method.take) to safely acquire the HAL's
+    /// peripherals.
+    pub unsafe fn steal() -> Self {
+        Peripherals {
+            iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::steal()),
+            ccm: ccm::CCM::new(ral::ccm::CCM::steal(), ral::ccm_analog::CCM_ANALOG::steal()),
+            pit: pit::UnclockedPIT::new(ral::pit::PIT::steal()),
+            dcdc: dcdc::DCDC(ral::dcdc::DCDC::steal()),
+            pwm1: pwm::Unclocked::new(ral::pwm::PWM1::steal()),
+            pwm2: pwm::Unclocked::new(ral::pwm::PWM2::steal()),
+            pwm3: pwm::Unclocked::new(ral::pwm::PWM3::steal()),
+            pwm4: pwm::Unclocked::new(ral::pwm::PWM4::steal()),
+            i2c: i2c::Unclocked {
+                i2c1: ral::lpi2c::LPI2C1::steal(),
+                i2c2: ral::lpi2c::LPI2C2::steal(),
+                i2c3: ral::lpi2c::LPI2C3::steal(),
+                i2c4: ral::lpi2c::LPI2C4::steal(),
+            },
+            uart: uart::Unclocked {
+                uart1: ral::lpuart::LPUART1::steal(),
+                uart2: ral::lpuart::LPUART2::steal(),
+                uart3: ral::lpuart::LPUART3::steal(),
+                uart4: ral::lpuart::LPUART4::steal(),
+                uart5: ral::lpuart::LPUART5::steal(),
+                uart6: ral::lpuart::LPUART6::steal(),
+                uart7: ral::lpuart::LPUART7::steal(),
+                uart8: ral::lpuart::LPUART8::steal(),
+            },
+            spi: spi::Unclocked {
+                spi1: ral::lpspi::LPSPI1::steal(),
+                spi2: ral::lpspi::LPSPI2::steal(),
+                spi3: ral::lpspi::LPSPI3::steal(),
+                spi4: ral::lpspi::LPSPI4::steal(),
+            },
+            gpt1: gpt::Unclocked::one(ral::gpt::GPT1::steal()),
+            gpt2: gpt::Unclocked::two(ral::gpt::GPT2::steal()),
+            dma: dma::Unclocked::new(ral::dma0::DMA0::steal(), ral::dmamux::DMAMUX::steal()),
+        }
+    }
+
+    /// Take the HAL's peripherals
+    ///
+    /// If the peripherals were already taken, `take()` returns `None`. Consider calling `take()`
+    /// near the start of your program.
     pub fn take() -> Option<Self> {
         let p = Peripherals {
             iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::take()?),
