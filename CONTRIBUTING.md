@@ -23,17 +23,17 @@ rustup target add thumbv7em-none-eabihf
 
 ### RAL
 
-The `imxrt-ral` crate is auto-generated from the checked-in SVD files, available in `imxrt-ral/svd`. Note that the auto-generated RAL source files are not checked into git. They're ignored so that developers are not encouraged to directly modify the Rust source files. If we modified the files directly, the changes might be lost the next time we auto-generate the RAL crate.
+The `imxrt-ral` crate is auto-generated from the checked-in SVD files, available in `imxrt-ral/svd`. It's checked into git, and you should always have whatever represents the latest auto-generated RAL. Generally, you should **not** manually change RAL source files; rather, you should describe changes in `imxrtral.py`, the Python script that auto-generates the RAL.
 
 To generate the RAL,
 
 - Install Python 3. You'll need at least Python 3.6.
 - Install the Python dependencies needed to generate the RAL: `pip3 install --user svdtools`. Alternatively, use the rules in the RAL's `Makefile` to create a virtual environment with the necessary dependencies: `make venv update-venv && source venv/bin/activate`.
-- Run `make` in the `imxrt-ral` directory: `cd imxrt-ral; make; cd ..;`. The auto-generation script might generate warnings; that's OK.
+- Run `make` in the `imxrt-ral` directory: `make -C imxrt-ral`. The auto-generation script might generate warnings; that's OK.
 
-If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files. The RAL can build by itself: `cd imxrt-ral && cargo check --features imxrt1062 --target thumbv7em-none-eabihf`.
+If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files. If you made changes in `imxrtral.py`, you should see those changes reflected in the Rust files. The RAL can build by itself: `cd imxrt-ral && cargo check --features imxrt1062 --target thumbv7em-none-eabihf`.
 
-The RAL doesn't change too frequently. But, if you add an SVD patch, you'll need to re-generate the RAL to realize the change. Keep an eye on pull requests that mention a RAL change.
+If you add a SVD patch, or if you change something in `imxrtral.py`, you'll need to re-generate the RAL to realize the change.
 
 ### HAL
 
