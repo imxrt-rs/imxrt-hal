@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+* **BREAKING** The RAL's `"rtfm"` feature is changed to `"rtic"`, reflecting the framework's
+  new name. Users who are relying on the `"rtfm"` feature should now use the `"rtic"` feature.
+
 ## [0.3.0] 2020-06-18
 
 * Only emit link section for `__INTERRUPTS` when compiling for ARM targets
