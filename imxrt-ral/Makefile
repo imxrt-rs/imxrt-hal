@@ -6,7 +6,10 @@
 SHELL := /usr/bin/env bash
 DEVICES ?= imxrt1011 imxrt1015 imxrt1021 imxrt1051 imxrt1052 imxrt1061 imxrt1062 imxrt1064 
 
-all: patch crate rustfmt check 
+all: patch crate rustfmt check
+
+# Things to do in CI
+ci: patch crate rustfmt
 
 # All yaml files in devices/ will be used to patch an SVD
 DEVICE_YAMLS := $(foreach device, $(DEVICES), \
@@ -68,7 +71,7 @@ clean-patch:
 clean-html:
 	rm -rf html
 
-clean: clean-patch clean-html
+clean: clean-patch clean-html clean-check
 	rm -rf .deps
 
 # As alternative to `pip install --user svdtools`:
