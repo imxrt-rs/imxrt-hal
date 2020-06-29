@@ -16,7 +16,7 @@ jobs:
       - name: Generate RAL
         run: make -C imxrt-ral ci
       - name: Ensure RAL is consistent with checked-in code
-        run: git diff-index --quiet HEAD
+        run: git update-index --refresh && git diff-index --quiet HEAD
 
   build-ral:
     runs-on: ubuntu-latest
