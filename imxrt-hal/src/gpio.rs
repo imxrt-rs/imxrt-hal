@@ -124,7 +124,7 @@ macro_rules! _ios_impl {
                 fn is_set_high(&self) -> Result<bool, Self::Error> {
                     Ok(unsafe {
                         let regs = &(*GPIO::into_reg());
-                        (regs.PSR.read() & self.offset) > 0
+                        (regs.DR.read() & self.offset) > 0
                     })
                 }
 
