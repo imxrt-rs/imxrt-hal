@@ -12,6 +12,12 @@
 - **BREAKING** The HAL's `"rtfm"` feature is changed to `"rtic"`, reflecting the framework's
   new name. Users who are relying on the `"rtfm"` feature should now use the `"rtic"` feature.
 
+### Fixed
+
+- The `StatefulOutputPin` implementation was reading from the wrong GPIO register. The interface
+  would indicate that the GPIO was always low, even when it was driven high. The implementation
+  now reads from the data register, which represents the driven GPIO value.
+
 ## [0.3.0] - 2020-06-18
 
 ### Added
