@@ -101,75 +101,6 @@ mod private {
     impl<M> Sealed for spi::SPI<M> where M: spi::module::Module {}
 }
 
-#[derive(Clone, Copy)]
-/// Configurations for defining DMA transfers
-///
-/// Use [`ConfigBuilder`](struct.ConfigBuilder.html) to create a DMA
-/// transfer configuration.
-pub struct Config {
-    interrupt_on_completion: bool,
-    interrupt_on_half: bool,
-    // Developer note: update `Config::from_channel` when
-    // adding more fields!
-}
-
-impl Config {
-    /// Returns a `Config` that represents the state of the supplied channel
-    fn from_channel(channel: &Channel) -> Self {
-        Config {
-            interrupt_on_completion: channel.is_interrupt_on_completion(),
-            interrupt_on_half: channel.is_interrupt_on_half(),
-        }
-    }
-}
-
-/// Builder for defining your DMA configuration
-///
-/// ```no_run
-/// use imxrt_hal::dma::ConfigBuilder;
-///
-/// let config = ConfigBuilder::new()
-///     .interrupt_on_completion(true)
-///     .build();
-/// ```
-pub struct ConfigBuilder(Config);
-
-impl ConfigBuilder {
-    /// Construct a builder, and begin defining a configuration
-    #[allow(clippy::new_without_default)] // Don't want to commit to a `Default` in the public interface
-    pub fn new() -> Self {
-        ConfigBuilder(Config {
-            interrupt_on_completion: false,
-            interrupt_on_half: false,
-        })
-    }
-
-    /// Specifies that this DMA channel will trigger an interrupt
-    /// when the transfer completes.
-    ///
-    /// The actual interrupt that will trigger depends on the supplied
-    /// channel. There are 15 interrupts for DMA channels, and each
-    /// interrupt supports two channels. You're responsible for managing
-    /// the interrupts, and for registering your handler for the correct
-    /// DMA channel.
-    pub fn interrupt_on_completion(mut self, interrupt_on_completion: bool) -> Self {
-        self.0.interrupt_on_completion = interrupt_on_completion;
-        self
-    }
-
-    /// Specifies that this DMA channel will trigger an interrupt when the transfer
-    /// is half complete
-    pub fn interrupt_on_half(mut self, interrupt_on_half: bool) -> Self {
-        self.0.interrupt_on_half = interrupt_on_half;
-        self
-    }
-
-    /// Complete configuration, and return a `Config` for a DMA transfer
-    pub fn build(self) -> Config {
-        self.0
-    }
-}
-
 impl<P> From<P> for Error<P> {
     fn from(error: P) -> Self {
         Error::Peripheral(error)
@@ -182,8 +113,8 @@ impl<P> From<P> for Error<P> {
 /// for a DMA transfer. It provides an interface for scheduling transfers, and
 /// for knowing when transfers are complete.
 ///
-/// When constructing a `Peripheral`, you may supply a configuration to trigger an interrupt when
-/// the DMA transfer completes. If you enable interrupts, you're responsible for registering the
+/// Before constructing a `Peripheral`, you should configure the [`Channel`](struct.Channel.html)
+/// as necessary. If you enable interrupts, you're responsible for registering the
 /// interrupt, and for clearing the interrupt. The `Peripheral` has methods for clearing interrupts
 /// due to transfer and receive DMA channels.
 ///
@@ -224,13 +155,13 @@ where
     D: buffer::Destination<E>,
 {
     /// Wraps a peripheral that can act as the source of a DMA transfer
-    pub fn new_receive(source: P, channel: Channel, config: Config) -> Self {
+    pub fn new_receive(source: P, channel: Channel) -> Self {
         let mut peripheral = Peripheral::new(source);
-        peripheral.init_receive(channel, config);
+        peripheral.init_receive(channel);
         peripheral
     }
 
-    fn init_receive(&mut self, mut channel: Channel, config: Config) {
+    fn init_receive(&mut self, mut channel: Channel) {
         channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
         // Safety: Source trait is only implemented on peripherals within
         // this crate. We may study those implementations to show that the
@@ -238,8 +169,6 @@ where
         unsafe {
             channel.set_source_transfer(Transfer::hardware(self.peripheral.source()));
         }
-        channel.set_interrupt_on_completion(config.interrupt_on_completion);
-        channel.set_interrupt_on_half(config.interrupt_on_half);
         channel.set_disable_on_completion(true);
         self.rx_channel = Some(channel);
     }
@@ -322,22 +251,12 @@ where
         self.destination_buffer.take()
     }
 
-    /// Returns a copy of the config used to create the receive
-    /// peripheral
-    pub fn receive_config(&self) -> Config {
-        let rx_channel = self.rx_channel.as_ref().unwrap();
-        Config::from_channel(rx_channel)
-    }
-
     /// Release the peripheral and the channel
     ///
     /// Users should ensure that any started transfer has completed. If the
     /// `Peripheral` was constructed with [`new_bidirectional()`](struct.Peripheral.html#method.new_bidirectional),
     /// callers should use [`bidirectional_release()`](struct.Peripheral.html#method.bidirectional_release);
     /// otherwise, the transfer channel will be dropped when this method returns.
-    ///
-    /// To get a copy of the original config, use [`receive_config()`](struct.Peripheral.html#method.receive_config)
-    /// before releasing the object.
     pub fn receive_release(mut self) -> (P, Channel) {
         (self.peripheral, self.rx_channel.take().unwrap())
     }
@@ -375,13 +294,13 @@ where
     S: buffer::Source<E>,
 {
     /// Wraps a peripheral that can act as the destination of a DMA transfer
-    pub fn new_transfer(destination: P, channel: Channel, config: Config) -> Self {
+    pub fn new_transfer(destination: P, channel: Channel) -> Self {
         let mut peripheral = Peripheral::new(destination);
-        peripheral.init_transfer(channel, config);
+        peripheral.init_transfer(channel);
         peripheral
     }
 
-    fn init_transfer(&mut self, mut channel: Channel, config: Config) {
+    fn init_transfer(&mut self, mut channel: Channel) {
         channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
         // Safety: Destination trait is only implemented on peripherals within
         // this crate. We may study those implementations to show that the pointers
@@ -389,8 +308,6 @@ where
         unsafe {
             channel.set_destination_transfer(Transfer::hardware(self.peripheral.destination()));
         }
-        channel.set_interrupt_on_completion(config.interrupt_on_completion);
-        channel.set_interrupt_on_half(config.interrupt_on_half);
         channel.set_disable_on_completion(true);
         self.tx_channel = Some(channel);
     }
@@ -473,22 +390,12 @@ where
         self.source_buffer.take()
     }
 
-    /// Returns a copy of the transfer config supplied during
-    /// construction
-    pub fn transfer_config(&self) -> Config {
-        let tx_channel = self.tx_channel.as_ref().unwrap();
-        Config::from_channel(tx_channel)
-    }
-
     /// Release the peripheral and the channel
     ///
     /// Users should ensure that any started transfer has completed. If the
     /// `Peripheral` was constructed with [`new_bidirectional()`](struct.Peripheral.html#method.new_bidirectional),
     /// callers should use [`bidirectional_release()`](struct.Peripheral.html#method.bidirectional_release);
     /// otherwise, the receiver channel will be dropped when this method returns.
-    ///
-    /// To get a copy of the original config, use [`transfer_config()`](struct.Peripheral.html#method.transfer_config)
-    /// before releasing the object.
     pub fn transfer_release(mut self) -> (P, Channel) {
         (self.peripheral, self.tx_channel.take().unwrap())
     }
@@ -530,10 +437,10 @@ where
     D: buffer::Destination<E>,
 {
     /// Wraps a peripheral that can act as both the source and destination of a DMA transfer
-    pub fn new_bidirectional(peripheral: P, tx: (Channel, Config), rx: (Channel, Config)) -> Self {
+    pub fn new_bidirectional(peripheral: P, tx: Channel, rx: Channel) -> Self {
         let mut peripheral = Peripheral::new(peripheral);
-        peripheral.init_receive(rx.0, rx.1);
-        peripheral.init_transfer(tx.0, tx.1);
+        peripheral.init_receive(rx);
+        peripheral.init_transfer(tx);
         peripheral
     }
 
@@ -554,58 +461,50 @@ where
 
 /// Helper functions for constructing `Peripheral`s
 pub mod helpers {
-    use super::{buffer, Channel, Config, Destination, Peripheral, Source};
+    use super::{buffer, Channel, Destination, Peripheral, Source};
 
     /// Create a peripheral that can suppy `u8` data for DMA transfers
-    pub fn receive_u8<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u8, B>
+    pub fn receive_u8<P, B>(source: P, channel: Channel) -> Peripheral<P, u8, B>
     where
         P: Source<u8>,
         B: buffer::Destination<u8>,
     {
-        Peripheral::new_receive(source, channel, config)
+        Peripheral::new_receive(source, channel)
     }
 
     /// Create a peripheral that can supply `u16` data for DMA transfers
-    pub fn receive_u16<P, B>(source: P, channel: Channel, config: Config) -> Peripheral<P, u16, B>
+    pub fn receive_u16<P, B>(source: P, channel: Channel) -> Peripheral<P, u16, B>
     where
         P: Source<u16>,
         B: buffer::Destination<u16>,
     {
-        Peripheral::new_receive(source, channel, config)
+        Peripheral::new_receive(source, channel)
     }
 
     /// Create a peripheral that can accept `u8` data from DMA transfers
-    pub fn transfer_u8<P, B>(
-        destination: P,
-        channel: Channel,
-        config: Config,
-    ) -> Peripheral<P, u8, B>
+    pub fn transfer_u8<P, B>(destination: P, channel: Channel) -> Peripheral<P, u8, B>
     where
         P: Destination<u8>,
         B: buffer::Source<u8>,
     {
-        Peripheral::new_transfer(destination, channel, config)
+        Peripheral::new_transfer(destination, channel)
     }
 
     /// Create a peripheral that can accept `u16` data from DMA transfers
-    pub fn transfer_u16<P, B>(
-        destination: P,
-        channel: Channel,
-        config: Config,
-    ) -> Peripheral<P, u16, B>
+    pub fn transfer_u16<P, B>(destination: P, channel: Channel) -> Peripheral<P, u16, B>
     where
         P: Destination<u16>,
         B: buffer::Source<u16>,
     {
-        Peripheral::new_transfer(destination, channel, config)
+        Peripheral::new_transfer(destination, channel)
     }
 
     /// Create a peripheral that can accept `u8` data from DMA transfers, and can
     /// source `u8` data for DMA transfers
     pub fn bidirectional_u8<P, S, D>(
         peripheral: P,
-        tx: (Channel, Config),
-        rx: (Channel, Config),
+        tx: Channel,
+        rx: Channel,
     ) -> Peripheral<P, u8, S, D>
     where
         P: Source<u8, Error = <P as Destination<u8>>::Error> + Destination<u8>,
@@ -619,8 +518,8 @@ pub mod helpers {
     /// source `u16` data for DMA transfers
     pub fn bidirectional_u16<P, S, D>(
         peripheral: P,
-        tx: (Channel, Config),
-        rx: (Channel, Config),
+        tx: Channel,
+        rx: Channel,
     ) -> Peripheral<P, u16, S, D>
     where
         P: Source<u16, Error = <P as Destination<u16>>::Error> + Destination<u16>,
