@@ -34,7 +34,7 @@
 //! handler, since we're enabling an interrupt when the receive completes.
 //!
 //! ```no_run
-//! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, ConfigBuilder, bidirectional_u16};
+//! use imxrt_hal::dma::{Circular, Buffer, Linear, Peripheral, bidirectional_u16};
 //!
 //! // Circular buffers have alignment requirements
 //! #[repr(align(512))]
@@ -77,21 +77,19 @@
 //! // DMA channels, we can register one interrupt to handle both DMA channel
 //! // completion.
 //! let tx_channel = dma_channels[9].take().unwrap();
-//! let rx_channel = dma_channels[25].take().unwrap();
+//! let mut rx_channel = dma_channels[25].take().unwrap();
 //!
 //! // We only want to interrupt when the receive completes. When
 //! // the receive completes, we know that we're also done transferring
 //! // data.
-//! let rx_config = ConfigBuilder::new()
-//!     .interrupt_on_completion(true)
-//!     .build();
+//! rx_channel.set_interrupt_on_completion(true);
 //!
 //! // The peripheral will transfer and receive u16 elements.
 //! // It takes ownership of the SPI object, and the two DMA channels.
 //! let mut peripheral = bidirectional_u16(
 //!     spi4,
-//!     (tx_channel, ConfigBuilder::new().build()),
-//!     (rx_channel, rx_config),
+//!     tx_channel,
+//!     rx_channel,
 //! );
 //!
 //! // Create DMA memory adapters over the statically-allocated DMA memory.
@@ -163,7 +161,7 @@ mod register;
 pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, WriteHalf};
 pub use element::Element;
 pub use memcpy::Memcpy;
-pub use peripheral::{helpers::*, Config, ConfigBuilder, Peripheral};
+pub use peripheral::{helpers::*, Peripheral};
 
 use crate::{ccm, ral};
 use core::{
@@ -354,25 +352,29 @@ impl Channel {
     }
 
     /// Enable or disable interrupt generation when the transfer completes
-    fn set_interrupt_on_completion(&mut self, intr: bool) {
+    ///
+    /// You're responsible for registering your interrupt handler.
+    pub fn set_interrupt_on_completion(&mut self, intr: bool) {
         let tcd = self.tcd();
         ral::modify_reg!(register::tcd, tcd, CSR, INTMAJOR: intr as u16);
     }
 
     /// Returns `true` if this channel's completion will generate an interrupt
-    fn is_interrupt_on_completion(&self) -> bool {
+    pub fn is_interrupt_on_completion(&self) -> bool {
         let tcd = self.tcd();
         ral::read_reg!(register::tcd, tcd, CSR, INTMAJOR == 1)
     }
 
     /// Enable or disable interrupt generation when the transfer is half complete
-    fn set_interrupt_on_half(&mut self, intr: bool) {
+    ///
+    /// You're responsible for registering your interrupt handler.
+    pub fn set_interrupt_on_half(&mut self, intr: bool) {
         let tcd = self.tcd();
         ral::modify_reg!(register::tcd, tcd, CSR, INTHALF: intr as u16);
     }
 
     /// Returns `true` if this channel will generate an interrupt halfway through transfer
-    fn is_interrupt_on_half(&self) -> bool {
+    pub fn is_interrupt_on_half(&self) -> bool {
         let tcd = self.tcd();
         ral::read_reg!(register::tcd, tcd, CSR, INTHALF == 1)
     }
