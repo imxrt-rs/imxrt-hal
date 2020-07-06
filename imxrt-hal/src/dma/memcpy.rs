@@ -10,8 +10,7 @@ use core::{
 /// DMA transfers
 ///
 /// Methods that start transfers will
-/// return immediately. Then, you may query for DMA completion. Unlike the peripheral
-/// DMA support, the memory copy interface **does not** enable interrupts on completion.
+/// return immediately. Then, you may query for DMA completion.
 ///
 /// A `Memcpy` accepts either a [`Linear`](struct.Linear.html)
 /// or a [`Circular`](struct.Circular.html) buffer.
@@ -26,7 +25,10 @@ use core::{
 ///
 /// let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
 /// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
-/// let mut memcpy = dma::Memcpy::new(dma_channels[7].take().unwrap());
+/// let mut dma_channel = dma_channels[7].take().unwrap();
+/// dma_channel.set_interrupt_on_completion(false);
+///
+/// let mut memcpy = dma::Memcpy::new(dma_channel);
 ///
 /// let mut source = dma::Linear::new(&SOURCE).unwrap();
 /// let mut destination = dma::Linear::new(&DESTINATION).unwrap();
@@ -59,8 +61,6 @@ where
 {
     /// Create a type that can perform memory-to-memory DMA transfers
     pub fn new(mut channel: Channel) -> Self {
-        channel.set_interrupt_on_completion(false);
-        channel.set_interrupt_on_half(false);
         channel.set_always_on();
         channel.set_disable_on_completion(true);
         Memcpy {
@@ -127,6 +127,20 @@ where
     /// by calling [`complete()`](struct.Memcpy.html#method.complete).
     pub fn is_complete(&self) -> bool {
         self.channel.is_complete()
+    }
+
+    /// Returns `true` if this transfer has generated an interrupt
+    pub fn is_interrupt(&self) -> bool {
+        self.channel.is_interrupt()
+    }
+
+    /// Clears the interrupt flag on the channel
+    ///
+    /// Users are **required** to clear the interrupt flag, or the hardware
+    /// may continue to generate interrupts for the channel. This must be called
+    /// for completion interrupts and half-transfer interrupts.
+    pub fn clear_interrupt(&mut self) {
+        self.channel.clear_interrupt();
     }
 
     /// Complete the memory-to-memory the DMA transfer
