@@ -16,8 +16,8 @@
 //! );
 //!
 //! let mut i2c3 = i2c3_builder.build(
-//!     peripherals.iomuxc.gpio_ad_b1_07.alt1(),
-//!     peripherals.iomuxc.gpio_ad_b1_06.alt1(),
+//!     peripherals.iomuxc.ad_b1.p07,
+//!     peripherals.iomuxc.ad_b1.p06,
 //! );
 //!
 //! i2c3.set_bus_idle_timeout(core::time::Duration::from_micros(200)).unwrap();
@@ -31,7 +31,7 @@
 //! i2c3.write_read(MY_SLAVE_ADDRESS, &output, &mut input).unwrap();
 //! ```
 
-pub use crate::iomuxc::i2c::module;
+pub use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
 
 use crate::ccm;
 use crate::iomuxc::i2c;
@@ -57,12 +57,7 @@ impl Unclocked {
         handle: &mut ccm::Handle,
         clock_select: ccm::i2c::ClockSelect,
         divider: ccm::i2c::PrescalarSelect,
-    ) -> (
-        Builder<module::_1>,
-        Builder<module::_2>,
-        Builder<module::_3>,
-        Builder<module::_4>,
-    ) {
+    ) -> (Builder<U1>, Builder<U2>, Builder<U3>, Builder<U4>) {
         let (ccm, _) = handle.raw();
         // First, disable clocks
         ral::modify_reg!(ral::ccm, ccm, CCGR2, CG3: 0, CG4: 0, CG5: 0);
@@ -93,7 +88,7 @@ pub struct Builder<M> {
 
 impl<M> Builder<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     fn new(source_clock: ccm::Frequency, reg: ral::lpi2c::Instance) -> Self {
         Builder {
@@ -105,13 +100,15 @@ where
 
     /// Builds an I2C peripheral from the SCL and SDA pins. The return
     /// is a configured I2C master running at 100KHz.
-    pub fn build<SCL, SDA>(self, scl: SCL, sda: SDA) -> I2C<M>
+    pub fn build<SCL, SDA>(self, mut scl: SCL, mut sda: SDA) -> I2C<M>
     where
-        SCL: i2c::Pin<Module = M, Wire = i2c::SCL>,
-        SDA: i2c::Pin<Module = M, Wire = i2c::SDA>,
+        SCL: i2c::Pin<Module = M, Signal = i2c::SCL>,
+        SDA: i2c::Pin<Module = M, Signal = i2c::SDA>,
     {
-        scl.configure();
-        sda.configure();
+        unsafe {
+            crate::iomuxc::i2c::prepare(&mut scl);
+            crate::iomuxc::i2c::prepare(&mut sda);
+        }
         I2C::new(self.source_clock, self.reg)
     }
 }
@@ -263,7 +260,7 @@ const RETRIES: usize = 100_000;
 
 impl<M> I2C<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     fn new(source_clock: ccm::Frequency, reg: ral::lpi2c::Instance) -> Self {
         let mut i2c = I2C {
@@ -443,7 +440,7 @@ macro_rules! target_fn {
 
 impl<M> blocking::i2c::Write for I2C<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = Error;
 
@@ -483,7 +480,7 @@ where
 
 impl<M> blocking::i2c::WriteRead for I2C<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = Error;
     fn write_read(
@@ -586,7 +583,7 @@ where
 
 impl<M> blocking::i2c::Read for I2C<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = Error;
 

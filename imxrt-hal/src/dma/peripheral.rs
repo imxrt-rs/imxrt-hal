@@ -93,12 +93,12 @@ mod private {
     pub trait Sealed {}
 
     use crate::uart;
-    impl<M> Sealed for uart::UART<M> where M: uart::module::Module {}
-    impl<M> Sealed for uart::Rx<M> where M: uart::module::Module {}
-    impl<M> Sealed for uart::Tx<M> where M: uart::module::Module {}
+    impl<M> Sealed for uart::UART<M> where M: crate::iomuxc::consts::Unsigned {}
+    impl<M> Sealed for uart::Rx<M> where M: crate::iomuxc::consts::Unsigned {}
+    impl<M> Sealed for uart::Tx<M> where M: crate::iomuxc::consts::Unsigned {}
 
     use crate::spi;
-    impl<M> Sealed for spi::SPI<M> where M: spi::module::Module {}
+    impl<M> Sealed for spi::SPI<M> where M: crate::iomuxc::consts::Unsigned {}
 }
 
 #[derive(Clone, Copy)]

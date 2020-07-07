@@ -18,12 +18,17 @@
 
 pub use imxrt_ral as ral;
 
+mod iomuxc {
+    pub use imxrt_iomuxc::*;
+
+    #[cfg(feature = "imxrt1062")]
+    pub use imxrt106x_iomuxc::*;
+}
+
 pub mod ccm;
 pub mod dma;
-pub mod gpio;
 pub mod gpt;
 pub mod i2c;
-pub mod iomuxc;
 pub mod pit;
 pub mod pwm;
 pub mod spi;
@@ -40,14 +45,14 @@ pub mod dcdc {
 }
 
 pub struct Peripherals {
-    pub iomuxc: iomuxc::IOMUXC,
+    pub iomuxc: iomuxc::Pads,
     pub ccm: ccm::CCM,
     pub pit: pit::UnclockedPIT,
     pub dcdc: dcdc::DCDC,
-    pub pwm1: pwm::Unclocked<pwm::module::_1>,
-    pub pwm2: pwm::Unclocked<pwm::module::_2>,
-    pub pwm3: pwm::Unclocked<pwm::module::_3>,
-    pub pwm4: pwm::Unclocked<pwm::module::_4>,
+    pub pwm1: pwm::Unclocked<pwm::U1>,
+    pub pwm2: pwm::Unclocked<pwm::U2>,
+    pub pwm3: pwm::Unclocked<pwm::U3>,
+    pub pwm4: pwm::Unclocked<pwm::U4>,
     pub i2c: i2c::Unclocked,
     pub uart: uart::Unclocked,
     pub spi: spi::Unclocked,
@@ -66,7 +71,7 @@ impl Peripherals {
     /// peripherals.
     pub unsafe fn steal() -> Self {
         Peripherals {
-            iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::steal()),
+            iomuxc: iomuxc::Pads::new(),
             ccm: ccm::CCM::new(ral::ccm::CCM::steal(), ral::ccm_analog::CCM_ANALOG::steal()),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::steal()),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::steal()),
@@ -108,7 +113,7 @@ impl Peripherals {
     /// near the start of your program.
     pub fn take() -> Option<Self> {
         let p = Peripherals {
-            iomuxc: iomuxc::IOMUXC::new(ral::iomuxc::IOMUXC::take()?),
+            iomuxc: unsafe { iomuxc::Pads::new() },
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::take()?),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::take()?),

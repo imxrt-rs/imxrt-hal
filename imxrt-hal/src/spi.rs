@@ -28,12 +28,12 @@
 //! );
 //!
 //! let mut spi4 = spi4_builder.build(
-//!     peripherals.iomuxc.gpio_b0_02.alt3(),
-//!     peripherals.iomuxc.gpio_b0_01.alt3(),
-//!     peripherals.iomuxc.gpio_b0_03.alt3(),
+//!     peripherals.iomuxc.b0.p02,
+//!     peripherals.iomuxc.b0.p01,
+//!     peripherals.iomuxc.b0.p03,
 //! );
 //!
-//! spi4.enable_chip_select_0(peripherals.iomuxc.gpio_b0_00.alt3());
+//! spi4.enable_chip_select_0(peripherals.iomuxc.b0.p00);
 //!
 //! spi4.set_clock_speed(imxrt_hal::spi::ClockSpeed(1_000_000)).unwrap();
 //!
@@ -41,7 +41,7 @@
 //! spi4.transfer(&mut buffer).unwrap();
 //! ```
 
-pub use crate::iomuxc::spi::module;
+pub use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
 
 use crate::ccm;
 use crate::iomuxc::spi;
@@ -67,12 +67,7 @@ impl Unclocked {
         handle: &mut ccm::Handle,
         clock_select: ccm::spi::ClockSelect,
         divider: ccm::spi::PrescalarSelect,
-    ) -> (
-        Builder<module::_1>,
-        Builder<module::_2>,
-        Builder<module::_3>,
-        Builder<module::_4>,
-    ) {
+    ) -> (Builder<U1>, Builder<U2>, Builder<U3>, Builder<U4>) {
         let (ccm, _) = handle.raw();
         // First, disable clocks
         ral::modify_reg!(
@@ -130,7 +125,7 @@ pub struct Builder<M> {
 
 impl<M> Builder<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     fn new(source_clock: ccm::Frequency, reg: ral::lpspi::Instance) -> Self {
         Builder {
@@ -144,13 +139,15 @@ where
     /// is a configured SPI master running at 8MHz.
     pub fn build<SDO, SDI, SCK>(self, mut sdo: SDO, mut sdi: SDI, mut sck: SCK) -> SPI<M>
     where
-        SDO: spi::Pin<Module = M, Wire = spi::SDO>,
-        SDI: spi::Pin<Module = M, Wire = spi::SDI>,
-        SCK: spi::Pin<Module = M, Wire = spi::SCK>,
+        SDO: spi::Pin<Module = M, Signal = spi::SDO>,
+        SDI: spi::Pin<Module = M, Signal = spi::SDI>,
+        SCK: spi::Pin<Module = M, Signal = spi::SCK>,
     {
-        sdo.configure();
-        sdi.configure();
-        sck.configure();
+        unsafe {
+            crate::iomuxc::spi::prepare(&mut sdo);
+            crate::iomuxc::spi::prepare(&mut sdi);
+            crate::iomuxc::spi::prepare(&mut sck);
+        }
 
         SPI::new(self.source_clock, self.reg)
     }
@@ -238,7 +235,7 @@ const RETRIES: usize = 100_000;
 
 impl<M> SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     fn new(source_clock: ccm::Frequency, reg: ral::lpspi::Instance) -> Self {
         let mut spi = SPI {
@@ -276,9 +273,9 @@ where
     /// and it means that software doesn't need to cooridnate its control.
     pub fn enable_chip_select_0<PCS>(&mut self, mut pcs: PCS)
     where
-        PCS: spi::Pin<Module = M, Wire = spi::PCS0>,
+        PCS: spi::Pin<Module = M, Signal = spi::PCS0>,
     {
-        pcs.configure();
+        unsafe { crate::iomuxc::spi::prepare(&mut pcs) };
     }
 
     /// Set the SPI mode for the peripheral
@@ -440,7 +437,7 @@ pub enum Error {
 
 impl<M> embedded_hal::spi::FullDuplex<u8> for SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = Error;
 
@@ -453,13 +450,13 @@ where
     }
 }
 
-impl<M> embedded_hal::blocking::spi::write::Default<u8> for SPI<M> where M: module::Module {}
-impl<M> embedded_hal::blocking::spi::transfer::Default<u8> for SPI<M> where M: module::Module {}
-impl<M> embedded_hal::blocking::spi::write_iter::Default<u8> for SPI<M> where M: module::Module {}
+impl<M> embedded_hal::blocking::spi::write::Default<u8> for SPI<M> where M: Unsigned {}
+impl<M> embedded_hal::blocking::spi::transfer::Default<u8> for SPI<M> where M: Unsigned {}
+impl<M> embedded_hal::blocking::spi::write_iter::Default<u8> for SPI<M> where M: Unsigned {}
 
 impl<M> embedded_hal::spi::FullDuplex<u16> for SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = Error;
 
@@ -472,9 +469,9 @@ where
     }
 }
 
-impl<M> embedded_hal::blocking::spi::write::Default<u16> for SPI<M> where M: module::Module {}
-impl<M> embedded_hal::blocking::spi::transfer::Default<u16> for SPI<M> where M: module::Module {}
-impl<M> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M> where M: module::Module {}
+impl<M> embedded_hal::blocking::spi::write::Default<u16> for SPI<M> where M: Unsigned {}
+impl<M> embedded_hal::blocking::spi::transfer::Default<u16> for SPI<M> where M: Unsigned {}
+impl<M> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M> where M: Unsigned {}
 
 //
 // DMA peripheral support
@@ -482,12 +479,22 @@ impl<M> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M> where M
 
 use crate::dma;
 
+/// SPI RX DMA Request signal
+///
+/// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+const DMA_RX_REQUEST_LOOKUP: [u32; 4] = [13, 77, 15, 79];
+
+/// SPI TX DMA Request signal
+///
+/// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+const DMA_TX_REQUEST_LOOKUP: [u32; 4] = [14, 78, 16, 80];
+
 impl<M> dma::peripheral::Source<u8> for SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u8 {
         &self.reg.RDR as *const _ as *const u8
     }
@@ -502,10 +509,10 @@ where
 
 impl<M> dma::peripheral::Destination<u8> for SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u8 {
         &self.reg.TDR as *const _ as *const u8
     }
@@ -520,10 +527,10 @@ where
 
 impl<M> dma::peripheral::Source<u16> for SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u16 {
         &self.reg.RDR as *const _ as *const u16
     }
@@ -538,10 +545,10 @@ where
 
 impl<M> dma::peripheral::Destination<u16> for SPI<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u16 {
         &self.reg.TDR as *const _ as *const u16
     }

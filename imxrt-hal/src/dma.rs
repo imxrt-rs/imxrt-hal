@@ -57,12 +57,12 @@
 //! );
 //!
 //! let mut spi4 = spi4_builder.build(
-//!     peripherals.iomuxc.gpio_b0_02.alt3(),
-//!     peripherals.iomuxc.gpio_b0_01.alt3(),
-//!     peripherals.iomuxc.gpio_b0_03.alt3(),
+//!     peripherals.iomuxc.b0.p02,
+//!     peripherals.iomuxc.b0.p01,
+//!     peripherals.iomuxc.b0.p03,
 //! );
 //!
-//! spi4.enable_chip_select_0(peripherals.iomuxc.gpio_b0_00.alt3());
+//! spi4.enable_chip_select_0(peripherals.iomuxc.b0.p00);
 //!
 //! // Set the SPI clock speed, if desired...
 //!
