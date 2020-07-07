@@ -27,6 +27,7 @@ mod iomuxc {
 
 pub mod ccm;
 pub mod dma;
+pub mod gpio;
 pub mod gpt;
 pub mod i2c;
 pub mod pit;
