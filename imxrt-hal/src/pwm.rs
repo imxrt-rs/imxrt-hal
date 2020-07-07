@@ -33,8 +33,8 @@
 //!     .sm2
 //!     .outputs(
 //!         &mut pwm2.handle,
-//!         p.iomuxc.gpio_b0_10.alt2(),
-//!         p.iomuxc.gpio_b0_11.alt2(),
+//!         p.iomuxc.b0.p10,
+//!         p.iomuxc.b0.p11,
 //!         imxrt_hal::pwm::Timing {
 //!             clock_select: imxrt_hal::ccm::pwm::ClockSelect::IPG(ipg_hz),
 //!             prescalar: imxrt_hal::ccm::pwm::Prescalar::PRSC_5,
@@ -53,8 +53,9 @@
 //! ```
 
 use crate::ccm;
+pub use crate::iomuxc::consts::*;
+use crate::iomuxc::pwm;
 use crate::iomuxc::pwm::Pin;
-pub use crate::iomuxc::pwm::{module, output, submodule};
 use crate::ral::{self, pwm::Instance};
 use core::marker::PhantomData;
 use core::ops::DerefMut;
@@ -95,18 +96,18 @@ pub struct PWM<M> {
     /// the handle.
     pub handle: Handle<M>,
     /// Submodule 0
-    pub sm0: Submodule<M, submodule::_0>,
+    pub sm0: Submodule<M, U0>,
     /// Submodule 1
-    pub sm1: Submodule<M, submodule::_1>,
+    pub sm1: Submodule<M, U1>,
     /// Submodule 2
-    pub sm2: Submodule<M, submodule::_2>,
+    pub sm2: Submodule<M, U2>,
     /// Submodule 3
-    pub sm3: Submodule<M, submodule::_3>,
+    pub sm3: Submodule<M, U3>,
 }
 
 impl<M> PWM<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     fn new(reg: Instance) -> Self {
         // Clear any fault levels
@@ -119,16 +120,16 @@ where
                 _marker: PhantomData,
             },
             sm0: Submodule {
-                _marker: PhantomData::<(M, submodule::_0)>,
+                _marker: PhantomData::<(M, U0)>,
             },
             sm1: Submodule {
-                _marker: PhantomData::<(M, submodule::_1)>,
+                _marker: PhantomData::<(M, U1)>,
             },
             sm2: Submodule {
-                _marker: PhantomData::<(M, submodule::_2)>,
+                _marker: PhantomData::<(M, U2)>,
             },
             sm3: Submodule {
-                _marker: PhantomData::<(M, submodule::_3)>,
+                _marker: PhantomData::<(M, U3)>,
             },
         }
     }
@@ -138,13 +139,13 @@ where
 /// incured by the action. Useful for setting VAL registers.
 fn while_reset<M, S, F, R>(handle: &mut Handle<M>, act: F) -> R
 where
-    M: module::Module,
-    S: submodule::Submodule,
+    M: Unsigned,
+    S: Unsigned,
     F: FnOnce(&mut Handle<M>) -> R,
 {
-    ral::modify_reg!(ral::pwm, handle.reg, MCTRL, CLDOK: 1 << <S as submodule::Submodule>::IDX);
+    ral::modify_reg!(ral::pwm, handle.reg, MCTRL, CLDOK: 1 << <S as Unsigned>::USIZE);
     let result = act(handle);
-    ral::modify_reg!(ral::pwm, handle.reg, MCTRL, LDOK: 1 << <S as submodule::Submodule>::IDX);
+    ral::modify_reg!(ral::pwm, handle.reg, MCTRL, LDOK: 1 << <S as Unsigned>::USIZE);
     result
 }
 
@@ -152,7 +153,7 @@ macro_rules! submodule_outputs {
     ($SUBMODULE:path, $SMCTRL2:ident, $SMCTRL:ident, $SMOCTRL:ident, $SMDTCNT0:ident, $SMINIT: ident, $SMVAL0:ident, $SMVAL1:ident, $SMVAL2:ident, $SMVAL3:ident, $SMVAL4:ident, $SMVAL5:ident) => {
         impl<M> Submodule<M, $SUBMODULE>
         where
-            M: module::Module,
+            M: Unsigned,
         {
             /// Converts two pins into PWM outputs. Returns a `Pins` type that wraps the
             /// underlying pins.
@@ -170,8 +171,8 @@ macro_rules! submodule_outputs {
                 timing: Timing,
             ) -> Option<Pins<A, B>>
             where
-                A: Pin<Module = M, Submodule = $SUBMODULE, Output = output::A>,
-                B: Pin<Module = M, Submodule = $SUBMODULE, Output = output::B>,
+                A: Pin<Module = M, Submodule = $SUBMODULE, Output = pwm::A>,
+                B: Pin<Module = M, Submodule = $SUBMODULE, Output = pwm::B>,
             {
                 let clk_sel: u16 = match timing.clock_select {
                     ccm::pwm::ClockSelect::IPG(_) => ral::pwm::SMCTRL20::CLK_SEL::RW::CLK_SEL_0 as u16,
@@ -203,7 +204,7 @@ macro_rules! submodule_outputs {
 
                     Some(())
                 })?;
-                ral::modify_reg!(ral::pwm, handle.reg, MCTRL, RUN: 1 << <$SUBMODULE as submodule::Submodule>::IDX);
+                ral::modify_reg!(ral::pwm, handle.reg, MCTRL, RUN: 1 << <$SUBMODULE as Unsigned>::USIZE);
                 Some(Pins::new(pin_a, pin_b, timing))
             }
         }
@@ -211,60 +212,20 @@ macro_rules! submodule_outputs {
 }
 
 submodule_outputs!(
-    submodule::_0,
-    SMCTRL20,
-    SMCTRL0,
-    SMOCTRL0,
-    SMDTCNT00,
-    SMINIT0,
-    SMVAL00,
-    SMVAL10,
-    SMVAL20,
-    SMVAL30,
-    SMVAL40,
-    SMVAL50
+    U0, SMCTRL20, SMCTRL0, SMOCTRL0, SMDTCNT00, SMINIT0, SMVAL00, SMVAL10, SMVAL20, SMVAL30,
+    SMVAL40, SMVAL50
 );
 submodule_outputs!(
-    submodule::_1,
-    SMCTRL21,
-    SMCTRL1,
-    SMOCTRL1,
-    SMDTCNT01,
-    SMINIT1,
-    SMVAL01,
-    SMVAL11,
-    SMVAL21,
-    SMVAL31,
-    SMVAL41,
-    SMVAL51
+    U1, SMCTRL21, SMCTRL1, SMOCTRL1, SMDTCNT01, SMINIT1, SMVAL01, SMVAL11, SMVAL21, SMVAL31,
+    SMVAL41, SMVAL51
 );
 submodule_outputs!(
-    submodule::_2,
-    SMCTRL22,
-    SMCTRL2,
-    SMOCTRL2,
-    SMDTCNT02,
-    SMINIT2,
-    SMVAL02,
-    SMVAL12,
-    SMVAL22,
-    SMVAL32,
-    SMVAL42,
-    SMVAL52
+    U2, SMCTRL22, SMCTRL2, SMOCTRL2, SMDTCNT02, SMINIT2, SMVAL02, SMVAL12, SMVAL22, SMVAL32,
+    SMVAL42, SMVAL52
 );
 submodule_outputs!(
-    submodule::_3,
-    SMCTRL23,
-    SMCTRL3,
-    SMOCTRL3,
-    SMDTCNT03,
-    SMINIT3,
-    SMVAL03,
-    SMVAL13,
-    SMVAL23,
-    SMVAL33,
-    SMVAL43,
-    SMVAL53
+    U3, SMCTRL23, SMCTRL3, SMOCTRL3, SMDTCNT03, SMINIT3, SMVAL03, SMVAL13, SMVAL23, SMVAL33,
+    SMVAL43, SMVAL53
 );
 
 /// A pair of submodule PWM pins
@@ -278,8 +239,8 @@ pub struct Pins<A, B> {
 
 impl<A, B> Pins<A, B>
 where
-    A: Pin<Output = output::A>,
-    B: Pin<Output = output::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
+    A: Pin<Output = pwm::A>,
+    B: Pin<Output = pwm::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
 {
     fn new(pin_a: A, pin_b: B, timing: Timing) -> Self {
         Pins {
@@ -323,12 +284,12 @@ pub struct Controller<'a, A, B, D, S> {
 
 impl<'a, A, B, D, S> Controller<'a, A, B, D, S>
 where
-    A: Pin<Output = output::A>,
-    B: Pin<Output = output::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
+    A: Pin<Output = pwm::A>,
+    B: Pin<Output = pwm::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
     D: 'a + DerefMut<Target = Handle<<A as Pin>::Module>>,
-    S: submodule::Submodule,
+    S: Unsigned,
 {
-    const IDX: u16 = <<A as Pin>::Submodule as submodule::Submodule>::IDX as u16;
+    const IDX: u16 = <<A as Pin>::Submodule as Unsigned>::USIZE as u16;
     fn new(pins: &'a mut Pins<A, B>, handle: D) -> Self {
         Self {
             pins,
@@ -342,12 +303,8 @@ macro_rules! controller {
     ($SUBMODULE: path, $SMVAL1: ident, $SMVAL3: ident, $SMVAL5: ident) => {
         impl<'a, A, B, D> Pwm for Controller<'a, A, B, D, $SUBMODULE>
         where
-            A: Pin<Output = output::A, Submodule = $SUBMODULE>,
-            B: Pin<
-                Output = output::B,
-                Module = <A as Pin>::Module,
-                Submodule = <A as Pin>::Submodule,
-            >,
+            A: Pin<Output = pwm::A, Submodule = $SUBMODULE>,
+            B: Pin<Output = pwm::B, Module = <A as Pin>::Module, Submodule = <A as Pin>::Submodule>,
             D: 'a + DerefMut<Target = Handle<<A as Pin>::Module>>,
         {
             type Channel = Channel;
@@ -430,10 +387,10 @@ macro_rules! controller {
     };
 }
 
-controller!(submodule::_0, SMVAL10, SMVAL30, SMVAL50);
-controller!(submodule::_1, SMVAL11, SMVAL31, SMVAL51);
-controller!(submodule::_2, SMVAL12, SMVAL32, SMVAL52);
-controller!(submodule::_3, SMVAL13, SMVAL33, SMVAL53);
+controller!(U0, SMVAL10, SMVAL30, SMVAL50);
+controller!(U1, SMVAL11, SMVAL31, SMVAL51);
+controller!(U2, SMVAL12, SMVAL32, SMVAL52);
+controller!(U3, SMVAL13, SMVAL33, SMVAL53);
 
 /// A PWM peripheral that is not receiving a clock input
 ///
@@ -445,7 +402,7 @@ pub struct Unclocked<M> {
 
 impl<M> Unclocked<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     pub(crate) fn new(reg: Instance) -> Self {
         Unclocked {
@@ -469,10 +426,10 @@ macro_rules! clock_impl {
     };
 }
 
-clock_impl!(module::_1, CG8);
-clock_impl!(module::_2, CG9);
-clock_impl!(module::_3, CG10);
-clock_impl!(module::_4, CG11);
+clock_impl!(U1, CG8);
+clock_impl!(U2, CG9);
+clock_impl!(U3, CG10);
+clock_impl!(U4, CG11);
 
 /// Specifies the timing-related parameters for a PWM submodule
 #[derive(Clone, Copy)]

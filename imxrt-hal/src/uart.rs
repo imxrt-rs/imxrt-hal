@@ -23,8 +23,8 @@
 //! let mut uart = uarts
 //!     .uart2
 //!     .init(
-//!         peripherals.iomuxc.gpio_ad_b1_02.alt2(),
-//!         peripherals.iomuxc.gpio_ad_b1_03.alt2(),
+//!         peripherals.iomuxc.ad_b1.p02,
+//!         peripherals.iomuxc.ad_b1.p03,
 //!         115_200,
 //!     )
 //!     .unwrap();
@@ -43,20 +43,21 @@
 //! ```
 
 use crate::ccm;
-pub use crate::iomuxc::uart::{self, module};
+pub use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4, U5, U6, U7, U8};
+pub use crate::iomuxc::uart;
 use crate::ral;
 use core::marker::PhantomData;
 
 /// An uninitialized UART peripheral
 ///
 /// Call `init()` to initialize the peripheral
-pub struct Uninit<M: module::Module> {
+pub struct Uninit<M: Unsigned> {
     effective_clock: ccm::Frequency,
     _module: PhantomData<M>,
     reg: ral::lpuart::Instance,
 }
 
-impl<M: module::Module> Uninit<M> {
+impl<M: Unsigned> Uninit<M> {
     fn new(effective_clock: ccm::Frequency, reg: ral::lpuart::Instance) -> Self {
         Uninit {
             effective_clock,
@@ -71,14 +72,14 @@ impl<M: module::Module> Uninit<M> {
 /// All UARTs are uninitialized. Call `init()` to take and initialize the
 /// peripheral.
 pub struct UARTs {
-    pub uart1: Uninit<module::_1>,
-    pub uart2: Uninit<module::_2>,
-    pub uart3: Uninit<module::_3>,
-    pub uart4: Uninit<module::_4>,
-    pub uart5: Uninit<module::_5>,
-    pub uart6: Uninit<module::_6>,
-    pub uart7: Uninit<module::_7>,
-    pub uart8: Uninit<module::_8>,
+    pub uart1: Uninit<U1>,
+    pub uart2: Uninit<U2>,
+    pub uart3: Uninit<U3>,
+    pub uart4: Uninit<U4>,
+    pub uart5: Uninit<U5>,
+    pub uart6: Uninit<U6>,
+    pub uart7: Uninit<U7>,
+    pub uart8: Uninit<U8>,
 }
 
 /// Unclocked UART peripherals
@@ -212,9 +213,32 @@ impl Unclocked {
     }
 }
 
+trait ModuleExtension {
+    unsafe fn steal() -> ral::lpuart::Instance;
+}
+
+impl<U> ModuleExtension for U
+where
+    U: Unsigned,
+{
+    unsafe fn steal() -> ral::lpuart::Instance {
+        match U::USIZE {
+            1 => ral::lpuart::LPUART1::steal(),
+            2 => ral::lpuart::LPUART2::steal(),
+            3 => ral::lpuart::LPUART3::steal(),
+            4 => ral::lpuart::LPUART4::steal(),
+            5 => ral::lpuart::LPUART5::steal(),
+            6 => ral::lpuart::LPUART6::steal(),
+            7 => ral::lpuart::LPUART7::steal(),
+            8 => ral::lpuart::LPUART8::steal(),
+            _ => unreachable!("there are only eight UART peripherals"),
+        }
+    }
+}
+
 impl<M> Uninit<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     /// Initializes a UART on the `tx` and `rx` pins. Specify the initial
     /// baud rate of the bus with `baud`. Returns the configured UART
@@ -230,8 +254,10 @@ where
         TX: uart::Pin<Direction = uart::TX, Module = M>,
         RX: uart::Pin<Direction = uart::RX, Module = M>,
     {
-        tx.configure();
-        rx.configure();
+        unsafe {
+            crate::iomuxc::uart::prepare(&mut tx);
+            crate::iomuxc::uart::prepare(&mut rx);
+        }
         UART::start(self.reg, self.effective_clock, baud)
     }
 }
@@ -239,7 +265,7 @@ where
 /// An initialized UART peripheral
 ///
 /// Call `read()` or `write()` to transmit bytes.
-pub struct UART<M: module::Module> {
+pub struct UART<M: Unsigned> {
     reg: ral::lpuart::Instance,
     effective_clock: ccm::Frequency,
     _module: PhantomData<M>,
@@ -250,14 +276,14 @@ pub struct UART<M: module::Module> {
 /// `Tx` is capable of writing data, and nothing else. To configure
 /// a transfer half, configure the [`UART`](struct.UART.html) peripheral
 /// before calling [`split()`](struct.UART.html#method.split).
-pub struct Tx<M: module::Module>(UART<M>);
+pub struct Tx<M: Unsigned>(UART<M>);
 
 /// A UART receive half
 ///
 /// `Rx` is capable of receiving data, and nothing else. To configure
 /// a receive half, configure the [`UART`](struct.UART.html) peripheral
 /// before calling [`split()`](struct.UART.html#method.split).
-pub struct Rx<M: module::Module>(UART<M>);
+pub struct Rx<M: Unsigned>(UART<M>);
 
 /// Parity selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -276,7 +302,7 @@ impl Parity {
 
 impl<M> UART<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     fn start(
         reg: ral::lpuart::Instance,
@@ -498,7 +524,7 @@ use embedded_hal::serial;
 
 impl<M> serial::Write<u8> for UART<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = core::convert::Infallible;
 
@@ -519,7 +545,7 @@ where
 
 impl<M> serial::Write<u8> for Tx<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = core::convert::Infallible;
 
@@ -557,7 +583,7 @@ pub struct ReadError {
 
 impl<M> serial::Read<u8> for UART<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = ReadError;
 
@@ -590,7 +616,7 @@ where
 
 impl<M> serial::Read<u8> for Rx<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = ReadError;
 
@@ -601,12 +627,22 @@ where
 
 use crate::dma;
 
+/// UART TX DMA Request signal
+///
+/// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+const DMA_TX_REQUEST_LOOKUP: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
+
+/// UART RX DMA Request signal
+///
+/// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+const DMA_RX_REQUEST_LOOKUP: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
+
 impl<M> dma::peripheral::Source<u8> for UART<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
@@ -624,10 +660,10 @@ where
 
 impl<M> dma::peripheral::Source<u8> for Rx<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = M::RX_DMA_REQUEST;
+    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u8 {
         self.0.source()
     }
@@ -641,10 +677,10 @@ where
 
 impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
@@ -661,10 +697,10 @@ where
 
 impl<M> dma::peripheral::Destination<u8> for Tx<M>
 where
-    M: module::Module,
+    M: Unsigned,
 {
     type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = M::TX_DMA_REQUEST;
+    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u8 {
         self.0.destination()
     }
@@ -678,5 +714,5 @@ where
 
 use embedded_hal::blocking::serial::write::Default as BlockingWrite;
 
-impl<M> BlockingWrite<u8> for UART<M> where M: module::Module {}
-impl<M> BlockingWrite<u8> for Tx<M> where M: module::Module {}
+impl<M> BlockingWrite<u8> for UART<M> where M: Unsigned {}
+impl<M> BlockingWrite<u8> for Tx<M> where M: Unsigned {}
