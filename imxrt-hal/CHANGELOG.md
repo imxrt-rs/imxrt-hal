@@ -6,11 +6,16 @@
 
 - `steal()` the top-level `Peripherals` object. The `steal()` method lets users use the `imxrt_hal`
   as an RTIC device.
+- DMA `Memcpy` may support interrupt handling
 
 ### Changed
 
 - **BREAKING** The HAL's `"rtfm"` feature is changed to `"rtic"`, reflecting the framework's
   new name. Users who are relying on the `"rtfm"` feature should now use the `"rtic"` feature.
+- **BREAKING** The `dma::{Config, ConfigBuilder}` types are gone. This affects the `dma::Peripheral`
+  interface. To configure interrupt on completion / half settings, use `dma::Channel::set_interrupt_on_completion()`
+  / `dma::Channel::set_interrupt_on_half()` to perform the same configurations before suppling the
+  channel to `dma::Peripheral`.
 
 ### Fixed
 
