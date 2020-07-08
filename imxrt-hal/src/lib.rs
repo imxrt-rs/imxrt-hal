@@ -18,7 +18,11 @@
 
 pub use imxrt_ral as ral;
 
-mod iomuxc {
+/// Pin muxing and configuration
+///
+/// See the `imxrt_iomuxc` crate documentation for more information on this module.
+/// This module re-exports that crate, along with a chip-specific IOMUXC crate.
+pub mod iomuxc {
     pub use imxrt_iomuxc::*;
 
     #[cfg(feature = "imxrt1062")]
