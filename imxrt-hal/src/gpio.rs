@@ -93,12 +93,11 @@ where
     ///
     /// If the GPIO cannot support fast mode, `is_fast()` always returns `false`
     pub fn is_fast(&self) -> bool {
-        cortex_m::interrupt::free(|_| {
-            // Safety: MMIO valid per gpr() function
-            self.gpr()
-                .map(|gpr| unsafe { core::ptr::read_volatile(gpr) & self.offset() != 0 })
-                .unwrap_or(false)
-        })
+        // Safety: MMIO valid per gpr() function.
+        // Read is atomic
+        self.gpr()
+            .map(|gpr| unsafe { core::ptr::read_volatile(gpr) & self.offset() != 0 })
+            .unwrap_or(false)
     }
 
     /// Configures the GPIO to fast mode. `true` indicates "fast," and `false` indicates "normal."
@@ -109,9 +108,9 @@ where
     /// Note that the pin may be in a new state after transitioning into fast mode. Consider setting
     /// and maintaining the fast mode setting before relying on the pin.
     pub fn set_fast(&mut self, fast: bool) -> bool {
-        cortex_m::interrupt::free(|_| {
-            self.gpr()
-                .map(|gpr| unsafe {
+        self.gpr()
+            .map(|gpr| {
+                cortex_m::interrupt::free(|_| unsafe {
                     let v = core::ptr::read_volatile(gpr);
 
                     if fast {
@@ -122,8 +121,8 @@ where
 
                     true
                 })
-                .unwrap_or(false)
-        })
+            })
+            .unwrap_or(false)
     }
 }
 
@@ -157,6 +156,7 @@ where
 
     /// Returns `true` if this input pin is high
     pub fn is_set(&self) -> bool {
+        // Safety: read is atomic
         unsafe { ral::read_reg!(ral::gpio, self.register_block(), PSR) & self.offset() != 0 }
     }
 }
