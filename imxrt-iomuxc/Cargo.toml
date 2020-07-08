@@ -1,0 +1,9 @@
+[package]
+name = "imxrt-iomuxc"
+version = "0.1.0"
+authors = ["Ian McIntyre <ianpmcintyre@gmail.com>"]
+edition = "2018"
+description = "Pad configuration interface for i.MX RT processors"
+
+[dependencies]
+typenum = "1.12.0"

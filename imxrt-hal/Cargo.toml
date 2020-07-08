@@ -19,10 +19,16 @@ embedded-hal = "0.2.3"
 nb = "0.1.2"
 void = { version = "1.0.2", default-features = false }
 log = "0.4.8"
-imxrt106x-iomuxc = { path = "../../iomuxc/imxrt106x-iomuxc", optional = true }
 
 [dependencies.imxrt-iomuxc]
-path = "../../iomuxc"
+version = "0.1.0"
+path = "../imxrt-iomuxc"
+
+# TODO this will be exposed by a 106x-specific HAL. We're
+# exposing it here for backwards compatibility.
+[dependencies.imxrt106x-iomuxc]
+path = "../imxrt-iomuxc/imxrt106x-iomuxc"
+optional = true
 
 [lib]
 bench = false
