@@ -1,9 +1,9 @@
 //! UART pad configuration
 
 /// Type tag for the transfer pin
-pub struct TX;
+pub enum TX {}
 /// Type tag for the receive pin
-pub struct RX;
+pub enum RX {}
 
 /// A pin direction, either transfer or receive
 pub trait Direction: private::Sealed {}

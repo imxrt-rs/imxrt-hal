@@ -4,13 +4,13 @@
 pub trait Signal: private::Sealed {}
 
 /// A tag that indicates a SPI clock pad
-pub struct SCK;
+pub enum SCK {}
 /// A tag that indicates a SPI data out pad
-pub struct SDO;
+pub enum SDO {}
 /// A tag that indicates a SPI data in pad
-pub struct SDI;
+pub enum SDI {}
 /// A tag that indicates a SPI chip select pad
-pub struct PCS0;
+pub enum PCS0 {}
 
 impl Signal for SCK {}
 impl Signal for SDO {}

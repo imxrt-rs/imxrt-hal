@@ -3,9 +3,9 @@
 /// A PWM output identified; one of `A` or `B`
 pub trait Output: private::Sealed {}
 /// PWM output A
-pub struct A;
+pub enum A {}
 /// PWM output B
-pub struct B;
+pub enum B {}
 
 impl Output for A {}
 impl Output for B {}

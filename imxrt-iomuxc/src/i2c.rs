@@ -1,9 +1,9 @@
 //! I2C pad configurations
 
 /// Tag that indicates the SCL signal
-pub struct SCL;
+pub enum SCL {}
 /// Tag that indicates the SDA signal
-pub struct SDA;
+pub enum SDA {}
 
 /// An I2C signal; one of `SCL` or `SDA`
 pub trait Signal: private::Sealed {}
