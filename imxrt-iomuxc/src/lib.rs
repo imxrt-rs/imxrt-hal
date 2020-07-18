@@ -112,8 +112,8 @@ pub mod uart;
 use core::ptr;
 
 pub use config::{
-    Config, ConfigBuilder, DriveStrength, Hysteresis, OpenDrain, PullKeep, PullKeepSelect,
-    PullUpDown, SlewRate, Speed,
+    configure, Config, DriveStrength, Hysteresis, OpenDrain, PullKeep, PullKeepSelect, PullUpDown,
+    SlewRate, Speed,
 };
 
 /// Type-level constants and traits
@@ -201,39 +201,6 @@ pub unsafe trait IOMUX {
     ///
     /// Returns a pointer to an address that may be mutably aliased elsewhere.
     unsafe fn pad(&mut self) -> *mut u32;
-}
-
-/// Applies the configuration `config` for the supplied pad
-///
-/// `configure` lets you specify the pad's drive strength, speed, pull-up or pull-down
-/// resistors, and other configurations. See [`ConfigBuilder`](struct.ConfigBuilder.html)
-/// for possible configurations.
-///
-/// # Safety
-///
-/// We can't guarantee that the pointer to the pad's configuration register is
-/// correct.
-///
-/// # Example
-///
-/// ```no_run
-/// use imxrt_iomuxc::{configure, Config, ConfigBuilder, OpenDrain, PullKeep};
-/// # use imxrt_iomuxc::IOMUX; #[allow(non_camel_case_types)] pub struct AD_B0_03;
-/// # impl AD_B0_03 { unsafe fn new() -> Self { Self } fn ptr(&self) -> *mut u32 { core::ptr::null_mut() }}
-/// # unsafe impl IOMUX for AD_B0_03 { unsafe fn mux(&mut self) -> *mut u32 { self.ptr() } unsafe fn pad(&mut self) -> *mut u32 { self.ptr() }}
-///
-/// const CONFIG: Config = ConfigBuilder::zero()
-///     .set_open_drain(OpenDrain::Enabled)
-///     .set_pull_keep(PullKeep::Enabled)
-///     .build();
-///
-/// let mut pad = unsafe { AD_B0_03::new() };
-///
-/// unsafe { configure(&mut pad, CONFIG) };
-/// ```
-#[inline(always)]
-pub unsafe fn configure<I: IOMUX>(pad: &mut I, config: config::Config) {
-    ptr::write_volatile(pad.pad(), config.0)
 }
 
 const SION_BIT: u32 = 1 << 4;
