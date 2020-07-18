@@ -4,11 +4,11 @@ use imxrt_iomuxc_build::{write_impl_gpio_pins, GpioRange, ImplGpioPin, PadRange}
 fn test_write_impl_gpio_pins() {
     let expected_tokens = quote::quote! {
         mod impl_gpio_pins {
-            use ::imxrt_iomuxc::consts::*;
-            use crate::pads::*;
+            use crate::consts::*;
+            use super::pads::*;
 
             #[doc = "GPIO8_IO23 - ALT4"]
-            impl ::imxrt_iomuxc::gpio::Pin for foo::FOO_04 {
+            impl crate::gpio::Pin for foo::FOO_04 {
                 #[doc = "ALT4"]
                 const ALT: u32 = 4u32;
                 #[doc = "GPIO8"]
@@ -18,7 +18,7 @@ fn test_write_impl_gpio_pins() {
             }
 
             #[doc = "GPIO8_IO24 - ALT4"]
-            impl ::imxrt_iomuxc::gpio::Pin for foo::FOO_05 {
+            impl crate::gpio::Pin for foo::FOO_05 {
                 #[doc = "ALT4"]
                 const ALT: u32 = 4u32;
                 #[doc = "GPIO8"]
@@ -28,7 +28,7 @@ fn test_write_impl_gpio_pins() {
             }
 
             #[doc = "GPIO3_IO00 - ALT9"]
-            impl ::imxrt_iomuxc::gpio::Pin for bar::BAR_00 {
+            impl crate::gpio::Pin for bar::BAR_00 {
                 #[doc = "ALT9"]
                 const ALT: u32 = 9u32;
                 #[doc = "GPIO3"]
@@ -38,7 +38,7 @@ fn test_write_impl_gpio_pins() {
             }
 
             #[doc = "GPIO3_IO01 - ALT9"]
-            impl ::imxrt_iomuxc::gpio::Pin for bar::BAR_01 {
+            impl crate::gpio::Pin for bar::BAR_01 {
                 #[doc = "ALT9"]
                 const ALT: u32 = 9u32;
                 #[doc = "GPIO3"]

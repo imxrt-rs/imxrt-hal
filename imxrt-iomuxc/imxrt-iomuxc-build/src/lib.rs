@@ -183,8 +183,8 @@ where
         quote::quote! {
             #[doc = #doc]
             pub mod #name {
-                use crate::{ErasedPad, Pad, bases::*};
-                use imxrt_iomuxc::consts::*;
+                use crate::{ErasedPad, Pad, consts::*};
+                use super::bases::*;
                 #(#types)*
 
                 #[doc = #doc]
@@ -350,25 +350,25 @@ struct GpioPinDetail {
 /// generate Rust code that resembles
 ///
 /// ```ignore
-/// impl ::imxrt_iomuxc::gpio::Pin for ad_b0::AD_B0_00 {
+/// impl crate::gpio::Pin for ad_b0::AD_B0_00 {
 ///     const ALT: u32 = 5;
 ///     type Module = U3;
 ///     type Offset = U8;
 /// }
 ///
-/// impl ::imxrt_iomuxc::gpio::Pin for ad_b0::AD_B0_01 {
+/// impl crate::gpio::Pin for ad_b0::AD_B0_01 {
 ///     const ALT: u32 = 5;
 ///     type Module = U3;
 ///     type Offset = U9;
 /// }
 ///
-/// impl ::imxrt_iomuxc::gpio::Pin for ad_b0::AD_B0_02 {
+/// impl crate::gpio::Pin for ad_b0::AD_B0_02 {
 ///     const ALT: u32 = 5;
 ///     type Module = U3;
 ///     type Offset = U11;
 /// }
 ///
-/// impl ::imxrt_iomuxc::gpio::Pin for ad_b0::AD_B0_03 {
+/// impl crate::gpio::Pin for ad_b0::AD_B0_03 {
 ///     const ALT: u32 = 5;
 ///     type Module = U3;
 ///     type Offset = U11;
@@ -456,7 +456,7 @@ where
             let doc = format!("{}_{} - {}", doc_module, doc_offset, doc_alt);
             quote::quote! {
                 #[doc = #doc]
-                impl ::imxrt_iomuxc::gpio::Pin for #pad_module::#name {
+                impl crate::gpio::Pin for #pad_module::#name {
                     #[doc = #doc_alt]
                     const ALT: u32 = #alt;
                     #[doc = #doc_module]
@@ -470,8 +470,8 @@ where
 
     let module = quote::quote! {
         mod impl_gpio_pins {
-            use ::imxrt_iomuxc::consts::*;
-            use crate::pads::*;
+            use crate::consts::*;
+            use super::pads::*;
             #(#impls)*
         }
     };
