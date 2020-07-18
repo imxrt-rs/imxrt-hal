@@ -12,7 +12,7 @@ fn test_write_pads() {
 
             #[doc = "Pads with the prefix 'FOO'"]
             pub mod foo {
-                use crate::{Pad, bases::*};
+                use crate::{ErasedPad, Pad, bases::*};
                 use imxrt_iomuxc::consts::*;
 
                 pub type FOO_02 = Pad<FOO, U2>;
@@ -23,6 +23,11 @@ fn test_write_pads() {
                     pub p02: FOO_02,
                     pub p03: FOO_03
                 }
+
+                #[doc = "Erased pads with the prefix 'FOO'"]
+                ///
+                /// Use [`Pads::erase()`](struct.Pads.html#method.erase) to get an `ErasedPads` instance.
+                pub type ErasedPads = [ErasedPad; 2usize];
 
                 impl Pads {
                     /// Take all pads from this group
@@ -40,12 +45,26 @@ fn test_write_pads() {
                             p03: <FOO_03>::new()
                         }
                     }
+
+                    /// Erase all of the pads
+                    ///
+                    /// The return type is an array, where the index indicates the pad offset
+                    /// from the start of the group. For example, `AD_B0_03` would be referenced
+                    /// as `erased_pads[3]`.
+                    ///
+                    /// See [`ErasedPad`](../struct.ErasedPad.html) for more information.
+                    pub fn erase(self) -> ErasedPads {
+                        [
+                            self.p02.erase(),
+                            self.p03.erase()
+                        ]
+                    }
                 }
             }
 
             #[doc = "Pads with the prefix 'BAR'"]
             pub mod bar {
-                use crate::{Pad, bases::*};
+                use crate::{ErasedPad, Pad, bases::*};
                 use imxrt_iomuxc::consts::*;
 
                 pub type BAR_37 = Pad<BAR, U37>;
@@ -56,6 +75,11 @@ fn test_write_pads() {
                     pub p37: BAR_37,
                     pub p38: BAR_38
                 }
+
+                #[doc = "Erased pads with the prefix 'BAR'"]
+                ///
+                /// Use [`Pads::erase()`](struct.Pads.html#method.erase) to get an `ErasedPads` instance.
+                pub type ErasedPads = [ErasedPad; 2usize];
 
                 impl Pads {
                     /// Take all pads from this group
@@ -73,6 +97,20 @@ fn test_write_pads() {
                             p38: <BAR_38>::new()
                         }
                     }
+
+                    /// Erase all of the pads
+                    ///
+                    /// The return type is an array, where the index indicates the pad offset
+                    /// from the start of the group. For example, `AD_B0_03` would be referenced
+                    /// as `erased_pads[3]`.
+                    ///
+                    /// See [`ErasedPad`](../struct.ErasedPad.html) for more information.
+                    pub fn erase(self) -> ErasedPads {
+                        [
+                            self.p37.erase(),
+                            self.p38.erase()
+                        ]
+                    }
                 }
             }
 
@@ -87,6 +125,20 @@ fn test_write_pads() {
                 pub bar: bar::Pads
             }
 
+            /// All of the pads, with all types erased
+            ///
+            /// # Convention
+            ///
+            /// The members of `ErasedPads` are arrays that provide erased pads
+            /// as objects. Pads are grouped by their prefix, like `ad_b0`. The array
+            /// index corresponds to the final pad identifier.
+            ///
+            /// Use [`Pads::erase()`](struct.Pads.html#method.erase) to get an `ErasedPads`.
+            pub struct ErasedPads {
+                pub foo: foo::ErasedPads,
+                pub bar: bar::ErasedPads
+            }
+
             impl Pads {
                 /// Take all of the pads
                 ///
@@ -99,6 +151,16 @@ fn test_write_pads() {
                     Pads {
                         foo: <foo::Pads>::new(),
                         bar: <bar::Pads>::new()
+                    }
+                }
+
+                /// Erase the types of all pads
+                ///
+                /// See [`ErasedPad`](struct.ErasedPad.html) for more information.
+                pub fn erase(self) -> ErasedPads {
+                    ErasedPads {
+                        foo: self.foo.erase(),
+                        bar: self.bar.erase()
                     }
                 }
             }

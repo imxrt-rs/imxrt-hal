@@ -61,7 +61,7 @@
 //!         # UART
 //!     }
 //!
-//!     pub unsafe fn new_unchecked(tx: ErasedPad, rx: ErasedPad) -> UART {
+//!     pub unsafe fn new_unchecked(tx: ErasedPad, rx: ErasedPad, /* ... */) -> UART {
 //!         // ...
 //!         # UART
 //!     }
@@ -271,7 +271,7 @@ pub unsafe fn alternate<I: IOMUX>(pad: &mut I, alt: u32) {
 #[macro_export]
 macro_rules! define_pad {
     () => {
-        /// A i.MXT RT pad
+        /// An i.MXT RT pad
         ///
         /// The `Base` is the pad tag, like `AD_B0`. The `Offset` is the
         /// constant (type) that describes the pad number.
@@ -443,6 +443,7 @@ pub struct Daisy {
 impl Daisy {
     /// Create a new select input that, when utilized, will write
     /// `value` into `reg`
+    #[doc(hidden)]
     pub const fn new(reg: *mut u32, value: u32) -> Self {
         Daisy { reg, value }
     }
@@ -452,7 +453,9 @@ impl Daisy {
     /// # Safety
     ///
     /// We cannot be sure that the `reg` pointer created during construction is
-    /// correct.
+    /// correct. This modifies a global, processor register, so the typical
+    /// rules around mutable static memory apply.
+    #[inline(always)]
     pub unsafe fn write(self) {
         ptr::write_volatile(self.reg, self.value);
     }

@@ -171,13 +171,19 @@ where
                 }
             });
 
+        let erase_pad = range.range.clone().map(|n| {
+            let member = quote::format_ident!("p{:02}", n);
+            quote::quote! {self.#member.erase()}
+        });
         let base = range.base.to_lowercase();
         let name = quote::format_ident!("{}", base);
         let doc = format!("Pads with the prefix '{}'", range.base);
+        let len = range.range.end - range.range.start;
+        let erased_doc = format!("Erased pads with the prefix '{}'", range.base);
         quote::quote! {
             #[doc = #doc]
             pub mod #name {
-                use crate::{Pad, bases::*};
+                use crate::{ErasedPad, Pad, bases::*};
                 use imxrt_iomuxc::consts::*;
                 #(#types)*
 
@@ -185,6 +191,11 @@ where
                 pub struct Pads {
                     #(#pad_members),*
                 }
+
+                #[doc = #erased_doc]
+                ///
+                /// Use [`Pads::erase()`](struct.Pads.html#method.erase) to get an `ErasedPads` instance.
+                pub type ErasedPads = [ErasedPad; #len];
 
                 impl Pads {
                     /// Take all pads from this group
@@ -201,6 +212,19 @@ where
                             #(#pad_init),*
                         }
                     }
+
+                    /// Erase all of the pads
+                    ///
+                    /// The return type is an array, where the index indicates the pad offset
+                    /// from the start of the group. For example, `AD_B0_03` would be referenced
+                    /// as `erased_pads[3]`.
+                    ///
+                    /// See [`ErasedPad`](../struct.ErasedPad.html) for more information.
+                    pub fn erase(self) -> ErasedPads {
+                        [
+                            #(#erase_pad),*
+                        ]
+                    }
                 }
             }
         }
@@ -214,9 +238,19 @@ where
             pub #name: #name::Pads
         }
     });
-    let module_pads_init = module_names.into_iter().map(|name| {
+    let module_pads_init = module_names.clone().into_iter().map(|name| {
         quote::quote! {
             #name: <#name::Pads>::new()
+        }
+    });
+    let module_pads_erase_members = module_names.clone().into_iter().map(|name| {
+        quote::quote! {
+            pub #name: #name::ErasedPads
+        }
+    });
+    let module_pads_erase = module_names.into_iter().map(|name| {
+        quote::quote! {
+            #name: self.#name.erase()
         }
     });
     let module = quote::quote! {
@@ -238,6 +272,19 @@ where
                 #(#module_pad_members),*
             }
 
+            /// All of the pads, with all types erased
+            ///
+            /// # Convention
+            ///
+            /// The members of `ErasedPads` are arrays that provide erased pads
+            /// as objects. Pads are grouped by their prefix, like `ad_b0`. The array
+            /// index corresponds to the final pad identifier.
+            ///
+            /// Use [`Pads::erase()`](struct.Pads.html#method.erase) to get an `ErasedPads`.
+            pub struct ErasedPads {
+                #(#module_pads_erase_members),*
+            }
+
             impl Pads {
                 /// Take all of the pads
                 ///
@@ -249,6 +296,15 @@ where
                 pub const unsafe fn new() -> Pads {
                     Pads {
                         #(#module_pads_init),*
+                    }
+                }
+
+                /// Erase the types of all pads
+                ///
+                /// See [`ErasedPad`](struct.ErasedPad.html) for more information.
+                pub fn erase(self) -> ErasedPads {
+                    ErasedPads {
+                        #(#module_pads_erase),*
                     }
                 }
             }

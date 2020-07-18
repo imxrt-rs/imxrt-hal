@@ -2,7 +2,7 @@
 //!
 //! The crate exports all of the i.MX RT 106x processor's pads. Pads that can support peripheral
 //! functions are tagged with `imxrt-iomuxc` traits. This crate, combined with the `imxrt-iomuxc`
-//! interface crate, can let you design and use embedded Rust APIs that require processor pad
+//! interface crate, lets you design and use embedded Rust APIs that require processor pad
 //! configurations.
 //!
 //! # Example
