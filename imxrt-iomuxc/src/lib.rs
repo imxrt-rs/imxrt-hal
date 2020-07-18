@@ -281,6 +281,9 @@ macro_rules! define_pad {
         pub struct Pad<Base, Offset> {
             base: ::core::marker::PhantomData<Base>,
             offset: ::core::marker::PhantomData<Offset>,
+            // Block auto-implement of Send / Sync. We'll manually implement
+            // the traits as necessary.
+            _not_send_sync: ::core::marker::PhantomData<*const ()>,
         }
 
         impl<Base, Offset> Pad<Base, Offset> {
@@ -296,8 +299,16 @@ macro_rules! define_pad {
                 Self {
                     base: ::core::marker::PhantomData,
                     offset: ::core::marker::PhantomData,
+                    _not_send_sync: ::core::marker::PhantomData,
                 }
             }
+        }
+
+        unsafe impl<Base, Offset> Send for Pad<Base, Offset>
+        where
+            Base: Send,
+            Offset: Send,
+        {
         }
 
         impl<Base, Offset> Pad<Base, Offset>
@@ -388,6 +399,8 @@ macro_rules! define_pad {
             }
         }
 
+        unsafe impl Send for ErasedPad {}
+
         /// An error that indicates the conversion from an `ErasedPad` to a
         /// strongly-typed pad failed.
         ///
@@ -456,6 +469,7 @@ impl Daisy {
 #[cfg(doctest)]
 pub struct DocPadSnippet;
 
+/// GPIO pad configuration
 pub mod gpio {
     /// A GPIO pin
     pub trait Pin: super::IOMUX {
@@ -519,3 +533,44 @@ mod tests {
         OtherPad::try_from(erased).expect_err("This is a different pad");
     }
 }
+
+/// ```
+/// imxrt_iomuxc::define_pad!();
+/// fn is_send<S: Send>(s: S) {}
+/// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
+/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// is_send(unsafe { AD_B0_03::new() }.erase());
+/// ```
+#[cfg(doctest)]
+struct ErasedPadsAreSend;
+
+/// ```
+/// imxrt_iomuxc::define_pad!();
+/// fn is_send<S: Send>(s: S) {}
+/// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
+/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// is_send(unsafe { AD_B0_03::new() });
+/// is_send(unsafe { AD_B0_03::new() }.erase());
+/// ```
+#[cfg(doctest)]
+struct PadsAreSend;
+
+/// ```compile_fail
+/// imxrt_iomuxc::define_pad!();
+/// fn is_sync<S: Sync>(s: S) {}
+/// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
+/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// is_sync(unsafe { AD_B0_03::new() }.erase())
+/// ```
+#[cfg(doctest)]
+struct ErasedPadsAreNotSync;
+
+/// ```compile_fail
+/// imxrt_iomuxc::define_pad!();
+/// fn is_sync<S: Sync>(s: S) {}
+/// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
+/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// is_sync(unsafe { AD_B0_03::new() })
+/// ```
+#[cfg(doctest)]
+struct PadsAreNotSync;

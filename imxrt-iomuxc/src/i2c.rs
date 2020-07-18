@@ -1,4 +1,4 @@
-//! I2C pad configurations
+//! I2C pad configuration
 
 /// Tag that indicates the SCL signal
 pub enum SCL {}
