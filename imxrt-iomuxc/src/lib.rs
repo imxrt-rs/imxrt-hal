@@ -11,9 +11,8 @@
 //! the processor's pads for HAL users. The approach lets users treat pads as resources
 //! which will be consumed and used by processor peripherals.
 //!
-//! Processor pads are defined in one or more processor-specific crates. The `imxrt106x-iomuxc`
-//! crate is one example of an processor-specific crate. The crate defines all processor pads,
-//! and provides implementations of the `imxrt-iomuxc` traits.
+//! Processor pads may be enabled using feature flags. For example, the `imxrt106x` feature
+//! flag exposes an `imxrt106x` module that defines all i.MX RT 106x processor pads.
 //!
 //! # Safety
 //!
@@ -21,13 +20,6 @@
 //! the trait and function documentation for more details. Most end-users aren't expected to
 //! use this `unsafe` interface. Rather, HAL implementers should build a safer inteface that
 //! focuses on peripheral-level configuration, rather than pad- and pin-level configuration.
-//!
-//! # Public API
-//!
-//! Any accessible *and documented* symbol is considered part of this crate's public, user-facing
-//! API. Any public *but not documented* symbol is exposed for i.MX RT IOMUXC crate implementers, and is
-//! not for typical users. If a symbol is marked as `#[doc(hidden)]`, or explicitly
-//! documented as "do not use," it should not be used by typical users.
 //!
 //! # Design Guidance
 //!
@@ -139,7 +131,7 @@ pub mod consts {
 /// # Safety
 ///
 /// You must ensure that the two pointers are correct for your processor.
-#[doc(hidden)]
+#[doc(hidden)] // Private trait that needs to be pulic
 pub unsafe trait Base {
     /// Starting register for a multiplexer register
     ///
@@ -161,9 +153,7 @@ pub unsafe trait Base {
 ///
 /// `pad_base` is a `u32` that represents the base's pad address. For the IOMUXC
 /// registers starting with `AD_B0`, this is the pad address of `AD_B0_00`.
-///
-/// For use only by iomuxc crate implementers.
-#[allow(unused)]
+#[allow(unused)] // May be used in processor-specific modules
 macro_rules! define_base {
     ($base_name: ident, $mux_base: expr, $pad_base: expr) => {
         #[allow(non_camel_case_types)] // Conform with reference manual
@@ -181,13 +171,15 @@ macro_rules! define_base {
     };
 }
 
+//
+// Listing the processor modules here, since they may depend on the
+// above `define_base!()` macro...
+//
+
 #[cfg(feature = "imxrt106x")]
 pub mod imxrt106x;
 
 /// An IOMUXC-capable pad which can support I/O multiplexing
-///
-/// **Do not** implement this trait yourself. The crate will provide a blanket implementation
-/// for all pads.
 pub unsafe trait IOMUX {
     /// Returns the absolute address of the multiplex register
     ///
@@ -274,7 +266,7 @@ pub struct Pad<Base, Offset> {
     base: ::core::marker::PhantomData<Base>,
     offset: ::core::marker::PhantomData<Offset>,
     // Block auto-implement of Send / Sync. We'll manually implement
-    // the traits as necessary.
+    // the traits.
     _not_send_sync: ::core::marker::PhantomData<*const ()>,
 }
 
@@ -432,8 +424,8 @@ pub struct Daisy {
 impl Daisy {
     /// Create a new select input that, when utilized, will write
     /// `value` into `reg`
-    #[doc(hidden)]
-    pub const fn new(reg: *mut u32, value: u32) -> Self {
+    #[allow(unused)] // Used behind feature flags
+    const fn new(reg: *mut u32, value: u32) -> Self {
         Daisy { reg, value }
     }
 
