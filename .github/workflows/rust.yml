@@ -45,5 +45,14 @@ jobs:
       run: cd imxrt-hal && cargo fmt --all -- --check
     - name: Run clippy (${{ matrix.feature }}) for HAL
       run: cd imxrt-hal && cargo clippy --features ${{ matrix.feature }} -- -D warnings
-    - name: Run tests for iomuxc crates
-      run: cargo test --package=imxrt-iomuxc --package=imxrt-iomuxc-build --package=imxrt106x-iomuxc
+
+  build-iomuxc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Check formatting
+      run: cd imxrt-iomuxc && cargo fmt -- --check
+    - name: Run tests
+      run: cd imxrt-iomuxc && cargo test --all-features
+    - name: Run clippy
+      run: cd imxrt-iomuxc && cargo clippy --all-features
