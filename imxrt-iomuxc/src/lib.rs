@@ -42,8 +42,7 @@
 //! The API will expect that the user is responsible for manually configuring the type-erased pad.
 //!
 //! ```no_run
-//! # imxrt_iomuxc::define_pad!();
-//! use imxrt_iomuxc::uart::{Pin, TX, RX};
+//! use imxrt_iomuxc::{ErasedPad, uart::{Pin, TX, RX}};
 //! # pub struct UART;
 //!
 //! impl UART {
@@ -66,9 +65,8 @@
 //!         # UART
 //!     }
 //! }
-//! # struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
-//! # type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
-//! # type AD_B0_04 = Pad<AD_B0, imxrt_iomuxc::consts::U4>;
+//! # struct AD_B0_03; impl AD_B0_03 { unsafe fn new() -> Self { Self } fn erase(self) -> ErasedPad { unimplemented!() }} unsafe impl imxrt_iomuxc::IOMUX for AD_B0_03 { unsafe fn mux(&mut self) -> *mut u32 { panic!() } unsafe fn pad(&mut self) -> *mut u32 { panic!() } }
+//! # struct AD_B0_04; impl AD_B0_04 { unsafe fn new() -> Self { Self } fn erase(self) -> ErasedPad { unimplemented!() }} unsafe impl imxrt_iomuxc::IOMUX for AD_B0_04 { unsafe fn mux(&mut self) -> *mut u32 { panic!() } unsafe fn pad(&mut self) -> *mut u32 { panic!() } }
 //! # impl imxrt_iomuxc::uart::Pin for AD_B0_03 { const ALT: u32 = 0; type Direction = imxrt_iomuxc::uart::TX; type Module = imxrt_iomuxc::consts::U1; const DAISY: Option<imxrt_iomuxc::Daisy> = None; }
 //! # impl imxrt_iomuxc::uart::Pin for AD_B0_04 { const ALT: u32 = 0; type Direction = imxrt_iomuxc::uart::RX; type Module = imxrt_iomuxc::consts::U1; const DAISY: Option<imxrt_iomuxc::Daisy> = None; }
 //!
@@ -165,15 +163,14 @@ pub unsafe trait Base {
 /// registers starting with `AD_B0`, this is the pad address of `AD_B0_00`.
 ///
 /// For use only by iomuxc crate implementers.
-#[doc(hidden)]
-#[macro_export]
+#[allow(unused)]
 macro_rules! define_base {
     ($base_name: ident, $mux_base: expr, $pad_base: expr) => {
         #[allow(non_camel_case_types)] // Conform with reference manual
         #[derive(Debug)]
         pub struct $base_name;
 
-        unsafe impl imxrt_iomuxc::Base for $base_name {
+        unsafe impl crate::Base for $base_name {
             fn mux_base() -> *mut u32 {
                 $mux_base as *mut u32
             }
@@ -183,6 +180,9 @@ macro_rules! define_base {
         }
     };
 }
+
+#[cfg(feature = "imxrt106x")]
+pub mod imxrt106x;
 
 /// An IOMUXC-capable pad which can support I/O multiplexing
 ///
@@ -263,170 +263,159 @@ pub unsafe fn alternate<I: IOMUX>(pad: &mut I, alt: u32) {
     ptr::write_volatile(pad.mux(), mux);
 }
 
-/// Defines the `Pad` struct, and provides an implementation of the
-/// `IOMUX` trait
+/// An i.MXT RT pad
 ///
-/// All implementation crates must call `define_pad!()` in their top-level module.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! define_pad {
-    () => {
-        /// An i.MXT RT pad
-        ///
-        /// The `Base` is the pad tag, like `AD_B0`. The `Offset` is the
-        /// constant (type) that describes the pad number.
-        ///
-        /// `Pad`s have no size.
-        #[derive(Debug)]
-        pub struct Pad<Base, Offset> {
-            base: ::core::marker::PhantomData<Base>,
-            offset: ::core::marker::PhantomData<Offset>,
-            // Block auto-implement of Send / Sync. We'll manually implement
-            // the traits as necessary.
-            _not_send_sync: ::core::marker::PhantomData<*const ()>,
-        }
+/// The `Base` is the pad tag, like `AD_B0`. The `Offset` is the
+/// constant (type) that describes the pad number.
+///
+/// `Pad`s have no size.
+#[derive(Debug)]
+pub struct Pad<Base, Offset> {
+    base: ::core::marker::PhantomData<Base>,
+    offset: ::core::marker::PhantomData<Offset>,
+    // Block auto-implement of Send / Sync. We'll manually implement
+    // the traits as necessary.
+    _not_send_sync: ::core::marker::PhantomData<*const ()>,
+}
 
-        impl<Base, Offset> Pad<Base, Offset> {
-            /// Creates a handle to the pad
-            ///
-            /// # Safety
-            ///
-            /// `new()` may be called anywhere, by anyone. This could lead to multiple objects that
-            /// mutate the same memory. Consider calling `new()` once, near startup, then passing objects
-            /// and references throughout your program.
-            #[inline(always)]
-            pub const unsafe fn new() -> Self {
-                Self {
-                    base: ::core::marker::PhantomData,
-                    offset: ::core::marker::PhantomData,
-                    _not_send_sync: ::core::marker::PhantomData,
-                }
-            }
+impl<Base, Offset> Pad<Base, Offset> {
+    /// Creates a handle to the pad
+    ///
+    /// # Safety
+    ///
+    /// `new()` may be called anywhere, by anyone. This could lead to multiple objects that
+    /// mutate the same memory. Consider calling `new()` once, near startup, then passing objects
+    /// and references throughout your program.
+    #[inline(always)]
+    pub const unsafe fn new() -> Self {
+        Self {
+            base: ::core::marker::PhantomData,
+            offset: ::core::marker::PhantomData,
+            _not_send_sync: ::core::marker::PhantomData,
         }
+    }
+}
 
-        unsafe impl<Base, Offset> Send for Pad<Base, Offset>
-        where
-            Base: Send,
-            Offset: Send,
+unsafe impl<Base, Offset> Send for Pad<Base, Offset>
+where
+    Base: Send,
+    Offset: Send,
+{
+}
+
+impl<Base, Offset> Pad<Base, Offset>
+where
+    Base: crate::Base,
+    Offset: crate::consts::Unsigned,
+{
+    /// Erase the pad's type, returning an `ErasedPad`
+    #[inline(always)]
+    pub fn erase(self) -> ErasedPad {
+        ErasedPad {
+            mux_base: Base::mux_base(),
+            pad_base: Base::pad_base(),
+            offset: Offset::USIZE,
+        }
+    }
+}
+
+unsafe impl<Base, Offset> crate::IOMUX for Pad<Base, Offset>
+where
+    Base: crate::Base,
+    Offset: crate::consts::Unsigned,
+{
+    /// # Safety
+    ///
+    /// Returns a pointer to an address that may be mutably aliased elsewhere.
+    #[inline(always)]
+    unsafe fn mux(&mut self) -> *mut u32 {
+        Base::mux_base().add(Offset::USIZE)
+    }
+
+    /// # Safety
+    ///
+    /// Returns a pointer to an address that may be mutably aliased elsewhere.
+    #[inline(always)]
+    unsafe fn pad(&mut self) -> *mut u32 {
+        Base::pad_base().add(Offset::USIZE)
+    }
+}
+
+/// A pad that has its type erased
+///
+/// `ErasedPad` moves the pad state to run time, rather than compile time.
+/// The type may provide more flexibility for some APIs. Each `ErasedPad` is
+/// three pointers large.
+///
+/// `ErasedPad` may be converted back into their strongly-typed analogs using
+/// `TryFrom` and `TryInto` conversions.
+///
+/// ```no_run
+/// use imxrt_iomuxc as iomuxc;
+/// # struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
+/// # type AD_B0_03 = iomuxc::Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// let ad_b0_03 = unsafe { AD_B0_03::new() };
+/// let mut erased = ad_b0_03.erase();
+///
+/// // Erased pads may be manually manipulated
+/// unsafe { iomuxc::alternate(&mut erased, 7) };
+/// unsafe { iomuxc::set_sion(&mut erased) };
+///
+/// // Try to convert the erased pad back to its strongly-typed counterpart
+/// use core::convert::TryFrom;
+/// let ad_b0_03 = AD_B0_03::try_from(erased).unwrap();
+/// ```
+#[derive(Debug)]
+pub struct ErasedPad {
+    mux_base: *mut u32,
+    pad_base: *mut u32,
+    offset: usize,
+}
+
+unsafe impl crate::IOMUX for ErasedPad {
+    /// # Safety
+    ///
+    /// Returns a pointer to an address that may be mutably aliased elsewhere.
+    #[inline(always)]
+    unsafe fn mux(&mut self) -> *mut u32 {
+        self.mux_base.add(self.offset)
+    }
+
+    /// # Safety
+    ///
+    /// Returns a pointer to an address that may be mutably aliased elsewhere.
+    #[inline(always)]
+    unsafe fn pad(&mut self) -> *mut u32 {
+        self.pad_base.add(self.offset)
+    }
+}
+
+unsafe impl Send for ErasedPad {}
+
+/// An error that indicates the conversion from an `ErasedPad` to a
+/// strongly-typed pad failed.
+///
+/// Failure happens when trying to convert an `ErasedPad` into the incorrect
+/// pad. The error indicator wraps the pad that failed to convert.
+#[derive(Debug)]
+pub struct WrongPadError(pub ErasedPad);
+
+impl<Base, Offset> ::core::convert::TryFrom<ErasedPad> for Pad<Base, Offset>
+where
+    Base: crate::Base,
+    Offset: crate::consts::Unsigned,
+{
+    type Error = WrongPadError;
+    fn try_from(erased_pad: ErasedPad) -> Result<Self, Self::Error> {
+        if erased_pad.mux_base == Base::mux_base()
+            && erased_pad.pad_base == Base::pad_base()
+            && erased_pad.offset == Offset::USIZE
         {
+            Ok(unsafe { Self::new() })
+        } else {
+            Err(WrongPadError(erased_pad))
         }
-
-        impl<Base, Offset> Pad<Base, Offset>
-        where
-            Base: imxrt_iomuxc::Base,
-            Offset: imxrt_iomuxc::consts::Unsigned,
-        {
-            /// Erase the pad's type, returning an `ErasedPad`
-            #[inline(always)]
-            pub fn erase(self) -> ErasedPad {
-                ErasedPad {
-                    mux_base: Base::mux_base(),
-                    pad_base: Base::pad_base(),
-                    offset: Offset::USIZE,
-                }
-            }
-        }
-
-        unsafe impl<Base, Offset> imxrt_iomuxc::IOMUX for Pad<Base, Offset>
-        where
-            Base: imxrt_iomuxc::Base,
-            Offset: imxrt_iomuxc::consts::Unsigned,
-        {
-            /// # Safety
-            ///
-            /// Returns a pointer to an address that may be mutably aliased elsewhere.
-            #[inline(always)]
-            unsafe fn mux(&mut self) -> *mut u32 {
-                Base::mux_base().add(Offset::USIZE)
-            }
-
-            /// # Safety
-            ///
-            /// Returns a pointer to an address that may be mutably aliased elsewhere.
-            #[inline(always)]
-            unsafe fn pad(&mut self) -> *mut u32 {
-                Base::pad_base().add(Offset::USIZE)
-            }
-        }
-
-        /// A pad that has its type erased
-        ///
-        /// `ErasedPad` moves the pad state to run time, rather than compile time.
-        /// The type may provide more flexibility for some APIs. Each `ErasedPad` is
-        /// three pointers large.
-        ///
-        /// `ErasedPad` may be converted back into their strongly-typed analogs using
-        /// `TryFrom` and `TryInto` conversions.
-        ///
-        /// ```no_run
-        /// use imxrt_iomuxc as iomuxc;
-        /// # iomuxc::define_pad!();
-        /// # struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
-        /// # type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
-        /// let ad_b0_03 = unsafe { AD_B0_03::new() };
-        /// let mut erased = ad_b0_03.erase();
-        ///
-        /// // Erased pads may be manually manipulated
-        /// unsafe { iomuxc::alternate(&mut erased, 7) };
-        /// unsafe { iomuxc::set_sion(&mut erased) };
-        ///
-        /// // Try to convert the erased pad back to its strongly-typed counterpart
-        /// use core::convert::TryFrom;
-        /// let ad_b0_03 = AD_B0_03::try_from(erased).unwrap();
-        /// ```
-        #[derive(Debug)]
-        pub struct ErasedPad {
-            mux_base: *mut u32,
-            pad_base: *mut u32,
-            offset: usize,
-        }
-
-        unsafe impl imxrt_iomuxc::IOMUX for ErasedPad {
-            /// # Safety
-            ///
-            /// Returns a pointer to an address that may be mutably aliased elsewhere.
-            #[inline(always)]
-            unsafe fn mux(&mut self) -> *mut u32 {
-                self.mux_base.add(self.offset)
-            }
-
-            /// # Safety
-            ///
-            /// Returns a pointer to an address that may be mutably aliased elsewhere.
-            #[inline(always)]
-            unsafe fn pad(&mut self) -> *mut u32 {
-                self.pad_base.add(self.offset)
-            }
-        }
-
-        unsafe impl Send for ErasedPad {}
-
-        /// An error that indicates the conversion from an `ErasedPad` to a
-        /// strongly-typed pad failed.
-        ///
-        /// Failure happens when trying to convert an `ErasedPad` into the incorrect
-        /// pad. The error indicator wraps the pad that failed to convert.
-        #[derive(Debug)]
-        pub struct WrongPadError(pub ErasedPad);
-
-        impl<Base, Offset> ::core::convert::TryFrom<ErasedPad> for Pad<Base, Offset>
-        where
-            Base: imxrt_iomuxc::Base,
-            Offset: imxrt_iomuxc::consts::Unsigned,
-        {
-            type Error = WrongPadError;
-            fn try_from(erased_pad: ErasedPad) -> Result<Self, Self::Error> {
-                if erased_pad.mux_base == Base::mux_base()
-                    && erased_pad.pad_base == Base::pad_base()
-                    && erased_pad.offset == Offset::USIZE
-                {
-                    Ok(unsafe { Self::new() })
-                } else {
-                    Err(WrongPadError(erased_pad))
-                }
-            }
-        }
-    };
+    }
 }
 
 /// A daisy selection
@@ -496,9 +485,7 @@ pub mod gpio {
 
 #[cfg(test)]
 mod tests {
-    use crate as imxrt_iomuxc;
-    super::define_pad!();
-
+    use super::*;
     use crate::consts::{U0, U1};
 
     #[derive(Debug)]
@@ -538,20 +525,18 @@ mod tests {
 }
 
 /// ```
-/// imxrt_iomuxc::define_pad!();
 /// fn is_send<S: Send>(s: S) {}
 /// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
-/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// type AD_B0_03 = imxrt_iomuxc::Pad<AD_B0, imxrt_iomuxc::consts::U3>;
 /// is_send(unsafe { AD_B0_03::new() }.erase());
 /// ```
 #[cfg(doctest)]
 struct ErasedPadsAreSend;
 
 /// ```
-/// imxrt_iomuxc::define_pad!();
 /// fn is_send<S: Send>(s: S) {}
 /// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
-/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// type AD_B0_03 = imxrt_iomuxc::Pad<AD_B0, imxrt_iomuxc::consts::U3>;
 /// is_send(unsafe { AD_B0_03::new() });
 /// is_send(unsafe { AD_B0_03::new() }.erase());
 /// ```
@@ -559,20 +544,18 @@ struct ErasedPadsAreSend;
 struct PadsAreSend;
 
 /// ```compile_fail
-/// imxrt_iomuxc::define_pad!();
 /// fn is_sync<S: Sync>(s: S) {}
 /// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
-/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// type AD_B0_03 = imxrt_iomuxc::Pad<AD_B0, imxrt_iomuxc::consts::U3>;
 /// is_sync(unsafe { AD_B0_03::new() }.erase())
 /// ```
 #[cfg(doctest)]
 struct ErasedPadsAreNotSync;
 
 /// ```compile_fail
-/// imxrt_iomuxc::define_pad!();
 /// fn is_sync<S: Sync>(s: S) {}
 /// struct AD_B0; unsafe impl imxrt_iomuxc::Base for AD_B0 { fn mux_base() -> *mut u32 { 0 as *mut u32 } fn pad_base() -> *mut u32 { 0 as *mut u32 } }
-/// type AD_B0_03 = Pad<AD_B0, imxrt_iomuxc::consts::U3>;
+/// type AD_B0_03 = imxrt_iomuxc::Pad<AD_B0, imxrt_iomuxc::consts::U3>;
 /// is_sync(unsafe { AD_B0_03::new() })
 /// ```
 #[cfg(doctest)]

@@ -1,7 +1,7 @@
 //! I2C pin implementations
 
 use super::pads::{ad_b0::*, ad_b1::*, sd_b0::*};
-use crate::iomuxc::{
+use crate::{
     consts::*,
     i2c::{Pin, SCL, SDA},
     Daisy,

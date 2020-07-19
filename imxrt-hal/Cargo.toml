@@ -24,12 +24,6 @@ log = "0.4.8"
 version = "0.1.0"
 path = "../imxrt-iomuxc"
 
-# TODO this will be exposed by a 106x-specific HAL. We're
-# exposing it here for backwards compatibility.
-[dependencies.imxrt106x-iomuxc]
-path = "../imxrt-iomuxc/imxrt106x-iomuxc"
-optional = true
-
 [lib]
 bench = false
 
@@ -44,7 +38,7 @@ default = ["embedded-hal/unproven"] # Allows us to access the new digital pin tr
 #imxrt1051 = ["imxrt-ral/imxrt1051"]
 #imxrt1052 = ["imxrt-ral/imxrt1052"]
 #imxrt1061 = ["imxrt-ral/imxrt1061"]
-imxrt1062 = ["imxrt-ral/imxrt1062", "imxrt106x-iomuxc"]
+imxrt1062 = ["imxrt-ral/imxrt1062", "imxrt-iomuxc/imxrt106x"]
 #imxrt1064 = ["imxrt-ral/imxrt1064"]
 rtic = ["imxrt-ral/rtic"]
 rt = ["imxrt-ral/rt"]

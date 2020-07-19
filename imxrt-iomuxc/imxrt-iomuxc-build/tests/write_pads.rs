@@ -13,7 +13,7 @@ fn test_write_pads() {
             #[doc = "Pads with the prefix 'FOO'"]
             pub mod foo {
                 use crate::{ErasedPad, Pad, consts::*};
-                use super::bases::*;
+                use super::super::bases::*;
 
                 pub type FOO_02 = Pad<FOO, U2>;
                 pub type FOO_03 = Pad<FOO, U3>;
@@ -65,7 +65,7 @@ fn test_write_pads() {
             #[doc = "Pads with the prefix 'BAR'"]
             pub mod bar {
                 use crate::{ErasedPad, Pad, consts::*};
-                use super::bases::*;
+                use super::super::bases::*;
 
                 pub type BAR_37 = Pad<BAR, U37>;
                 pub type BAR_38 = Pad<BAR, U38>;

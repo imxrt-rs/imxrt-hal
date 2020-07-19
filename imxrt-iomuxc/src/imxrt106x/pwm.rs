@@ -1,7 +1,7 @@
 //! PWM implementation
 
 use super::pads::{ad_b0::*, b0::*, b1::*, emc::*, sd_b0::*};
-use imxrt_iomuxc::{
+use crate::{
     consts::*,
     pwm::{Pin, A, B},
 };

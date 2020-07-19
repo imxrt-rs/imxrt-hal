@@ -1,9 +1,18 @@
-use imxrt_iomuxc_build as build;
+#![allow(unused)]
 use std::{env, fs, io, path::PathBuf};
 
 fn main() -> io::Result<()> {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let mut pads_rs = fs::File::create(out_dir.join("pads.rs"))?;
+
+    #[cfg(feature = "imxrt106x")]
+    imxrt106x(fs::File::create(out_dir.join("imxrt106x.rs"))?)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "imxrt106x")]
+fn imxrt106x<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
+    use imxrt_iomuxc_build as build;
 
     let emc = build::PadRange::new("EMC", 0..42);
     let ad_b0 = build::PadRange::new("AD_B0", 0..16);

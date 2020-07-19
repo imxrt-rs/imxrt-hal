@@ -5,5 +5,4 @@ members = [
 
     "imxrt-iomuxc",
     "imxrt-iomuxc/imxrt-iomuxc-build",
-    "imxrt-iomuxc/imxrt106x-iomuxc",
 ]

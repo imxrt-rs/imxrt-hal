@@ -1,7 +1,7 @@
 //! SPI pin implementation
 
 use super::pads::{ad_b0::*, b0::*, emc::*, sd_b0::*, sd_b1::*};
-use crate::iomuxc::{
+use crate::{
     consts::*,
     spi::{Pin, PCS0, SCK, SDI, SDO},
     Daisy,

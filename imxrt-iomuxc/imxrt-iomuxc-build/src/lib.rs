@@ -1,9 +1,8 @@
-//! Build script support for the `imxrt-iomuxc` crate family
+//! Build script support for the `imxrt-iomuxc` crate
 //!
 //! # Audience
 //!
-//! This crate is intended for i.MX RT IOMUXC crate developers, like developers of the `imxrt106x-iomuxc` crate.
-//! The API may change to support the `imxrt-iomuxc` crate family. End users should not use this crate directly.
+//! This crate is intended for i.MX RT IOMUXC crate developers. End users should not use this crate directly.
 //!
 //! # Generate type aliases
 //!
@@ -92,9 +91,9 @@ use std::ops::Range;
 ///
 /// In the example above, we assume
 ///
-/// - the crate defines a struct, `EMC`, available in the crate's
-///   `bases` module. It may be referenced within the crate using
-///   `use crate::bases::EMC`.
+/// - the processor module defines a struct, `EMC`, available in the module's
+///   `bases` module. It may be referenced within the module using
+///   `use crate::processor_variant::bases::EMC`.
 /// - the processor has 42 pads with the "EMC" prefix, numbered 0 through
 ///   41
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -184,7 +183,7 @@ where
             #[doc = #doc]
             pub mod #name {
                 use crate::{ErasedPad, Pad, consts::*};
-                use super::bases::*;
+                use super::super::bases::*;
                 #(#types)*
 
                 #[doc = #doc]
@@ -435,7 +434,7 @@ impl ImplGpioPin {
 ///
 /// # Requirements
 ///
-/// Assumes that the pads exist and are reachable through their modules, using `use crate::pads::*`.
+/// Assumes that the pads exist and are reachable through their modules, using `use crate::processor_variant::pads::*`.
 /// See [`write_pads()`](fn.write_pads.html) for more information.
 pub fn write_impl_gpio_pins<W, I>(out: &mut W, impl_gpio_pins: I) -> io::Result<()>
 where

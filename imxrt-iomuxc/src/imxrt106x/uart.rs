@@ -1,7 +1,7 @@
 //! UART pin implementations
 
 use super::pads::{ad_b0::*, ad_b1::*, b1::*, emc::*};
-use crate::iomuxc::{
+use crate::{
     consts::*,
     uart::{Pin, RX, TX},
     Daisy,

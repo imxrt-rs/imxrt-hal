@@ -17,7 +17,7 @@ pub mod iomuxc {
     pub use imxrt_iomuxc::*;
 
     #[cfg(feature = "imxrt1062")]
-    pub use imxrt106x_iomuxc::*;
+    pub use imxrt_iomuxc::imxrt106x::*;
 }
 
 pub mod ccm;

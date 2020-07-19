@@ -1,9 +1,7 @@
-//! An `imxrt-iomuxc` implementation crate for the i.MX RT 106x processor family
+//! Pads for the i.MX RT 106x processor family
 //!
-//! The crate exports all of the i.MX RT 106x processor's pads. Pads that can support peripheral
-//! functions are tagged with `imxrt-iomuxc` traits. This crate, combined with the `imxrt-iomuxc`
-//! interface crate, lets you design and use embedded Rust APIs that require processor pad
-//! configurations.
+//! The module exports all of the i.MX RT 106x processor's pads. Pads that can support peripheral
+//! functions are tagged with `imxrt-iomuxc` traits.
 //!
 //! # Example
 //!
@@ -38,8 +36,8 @@
 //!     # UART
 //! }
 //!
-//! # let ad_b0_13 = unsafe { imxrt106x_iomuxc::ad_b0::AD_B0_13::new() };
-//! # let ad_b0_12 = unsafe { imxrt106x_iomuxc::ad_b0::AD_B0_12::new() };
+//! # let ad_b0_13 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_13::new() };
+//! # let ad_b0_12 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_12::new() };
 //! // AD_B0_13 and AD_B0_12 are a suitable pair of UART pins
 //! uart_new(ad_b0_12, ad_b0_13, 115_200);
 //! ```
@@ -61,8 +59,8 @@
 //! #     }
 //! #     UART
 //! # }
-//! # let ad_b0_10 = unsafe { imxrt106x_iomuxc::ad_b0::AD_B0_10::new() };
-//! # let ad_b0_11 = unsafe { imxrt106x_iomuxc::ad_b0::AD_B0_11::new() };
+//! # let ad_b0_10 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_10::new() };
+//! # let ad_b0_11 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_11::new() };
 //! // Neither pad is a valid UART pin
 //! uart_new(ad_b0_10, ad_b0_11, 115_200);
 //! ```
@@ -84,31 +82,26 @@
 //! #     }
 //! #     UART
 //! # }
-//! # let ad_b0_13 = unsafe { imxrt106x_iomuxc::ad_b0::AD_B0_13::new() };
-//! # let ad_b1_02 = unsafe { imxrt106x_iomuxc::ad_b0::AD_B1_02::new() };
+//! # let ad_b0_13 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_13::new() };
+//! # let ad_b1_02 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B1_02::new() };
 //! // AD_B1_02 is a UART2 TX pin, but AD_B0_13 is a UART1 RX pin
 //! uart_new(ad_b1_02, ad_b0_13, 115_200);
 //! ```
-
-#![no_std]
 
 mod i2c;
 mod pwm;
 mod spi;
 mod uart;
 
-use imxrt_iomuxc as iomuxc;
-
-iomuxc::define_pad!();
-include!(concat!(env!("OUT_DIR"), "/pads.rs"));
+include!(concat!(env!("OUT_DIR"), "/imxrt106x.rs"));
 pub use pads::*;
 
 mod bases {
-    imxrt_iomuxc::define_base!(EMC, 0x401F_8014, 0x401F_8204);
-    imxrt_iomuxc::define_base!(AD_B0, 0x401F_80BC, 0x401F_82AC);
-    imxrt_iomuxc::define_base!(AD_B1, 0x401F_80FC, 0x401F_82EC);
-    imxrt_iomuxc::define_base!(B0, 0x401F_813C, 0x401F_832C);
-    imxrt_iomuxc::define_base!(B1, 0x401F_817C, 0x401F_836C);
-    imxrt_iomuxc::define_base!(SD_B0, 0x401F_81BC, 0x401F_83AC);
-    imxrt_iomuxc::define_base!(SD_B1, 0x401F_81D4, 0x401F_83C4);
+    define_base!(EMC, 0x401F_8014, 0x401F_8204);
+    define_base!(AD_B0, 0x401F_80BC, 0x401F_82AC);
+    define_base!(AD_B1, 0x401F_80FC, 0x401F_82EC);
+    define_base!(B0, 0x401F_813C, 0x401F_832C);
+    define_base!(B1, 0x401F_817C, 0x401F_836C);
+    define_base!(SD_B0, 0x401F_81BC, 0x401F_83AC);
+    define_base!(SD_B1, 0x401F_81D4, 0x401F_83C4);
 }

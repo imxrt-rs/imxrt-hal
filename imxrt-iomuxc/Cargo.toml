@@ -7,3 +7,9 @@ description = "Pad configuration interface for i.MX RT processors"
 
 [dependencies]
 typenum = "1.12.0"
+
+[build-dependencies]
+imxrt-iomuxc-build = { path = "imxrt-iomuxc-build" }
+
+[features]
+imxrt106x = []
