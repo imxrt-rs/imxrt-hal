@@ -382,9 +382,9 @@ impl<E: Element> Circular<E> {
             Err(CircularError::BufferTaken)
         } else {
             // Safety: it's not taken
-            unsafe { Self::new_unchecked(buffer) }.or_else(|err| {
+            unsafe { Self::new_unchecked(buffer) }.map_err(|err| {
                 buffer.taken.store(false, Ordering::SeqCst);
-                Err(err)
+                err
             })
         }
     }
@@ -543,9 +543,9 @@ impl<E: Element> Circular<E> {
 
     /// Remove the next element from the queue
     pub fn pop(&mut self) -> Option<E> {
-        self.peek().and_then(|elem| {
+        self.peek().map(|elem| {
             self.mark_read(1);
-            Some(elem)
+            elem
         })
     }
 

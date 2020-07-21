@@ -219,9 +219,9 @@ where
     pub fn receive_complete(&mut self) -> Option<D> {
         self.rx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_source();
-        self.destination_buffer.take().and_then(|mut buffer| {
+        self.destination_buffer.take().map(|mut buffer| {
             buffer.complete_destination();
-            Some(buffer)
+            buffer
         })
     }
 
@@ -358,9 +358,9 @@ where
     pub fn transfer_complete(&mut self) -> Option<S> {
         self.tx_channel.as_mut().unwrap().clear_complete();
         self.peripheral.disable_destination();
-        self.source_buffer.take().and_then(|mut buffer| {
+        self.source_buffer.take().map(|mut buffer| {
             buffer.complete_source();
-            Some(buffer)
+            buffer
         })
     }
 
