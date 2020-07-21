@@ -92,6 +92,7 @@
 //! ```
 
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod config;
 pub mod i2c;
@@ -177,6 +178,7 @@ macro_rules! define_base {
 //
 
 #[cfg(feature = "imxrt106x")]
+#[cfg_attr(docsrs, doc(cfg(feature = "imxrt106x")))]
 pub mod imxrt106x;
 
 /// An IOMUXC-capable pad which can support I/O multiplexing
