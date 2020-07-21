@@ -84,7 +84,7 @@ When using feature flags, the user enables the `imxrt106x` feature:
 
 ```toml
 [dependencies]
-imxrt106x-iomuxc = { version = "0.1", features = ["imxrt106x"] }
+imxrt-iomuxc = { version = "0.1", features = ["imxrt106x"] }
 ```
 
 Both approaches result in the same changes to the dependency graph: the graph now includes code
@@ -95,7 +95,7 @@ This would have translated to the user explicitly including more crates:
 
 ```toml
 [dependencies]
-imxrt106x-iomuxc = { version = "0.1", features = ["imxrt102x", "imxrt106x"] }
+imxrt-iomuxc = { version = "0.1", features = ["imxrt102x", "imxrt106x"] }
 
 # Equivalent:
 

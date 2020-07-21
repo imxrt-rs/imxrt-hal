@@ -48,8 +48,8 @@ cargo check --features imxrt1062 --target thumbv7em-none-eabihf
 The `imxrt-iomuxc` crate family does not require any feature flags, and it will build for your host. Consider using `--package` flags to build and test the crate family in one command:
 
 ```
-cargo build --package=imxrt-iomuxc --package=imxrt106x-iomuxc --package=imxrt-iomuxc-build
-cargo test -p imxrt-iomuxc -p imxrt106x-iomuxc -p imxrt-iomuxc-build
+cargo build --package=imxrt-iomuxc --package=imxrt-iomuxc-build
+cargo test -p imxrt-iomuxc -p imxrt-iomuxc-build
 ```
 
 ### SVD Patches
