@@ -3,13 +3,20 @@ name = "imxrt-iomuxc"
 version = "0.1.0"
 authors = ["Ian McIntyre <ianpmcintyre@gmail.com>"]
 edition = "2018"
-description = "Pad configuration interface for i.MX RT processors"
+description = """Pad configuration interface for NXP i.MX RT processors.
+
+Part of the imxrt-rs project.
+"""
+repository = "https://github.com/imxrt-rs/imxrt-rs"
+license = "MIT OR Apache-2.0"
+keywords = ["imxrt", "nxp", "embedded", "no_std"]
+categories = ["embedded", "no-std"]
 
 [dependencies]
 typenum = "1.12.0"
 
 [build-dependencies]
-imxrt-iomuxc-build = { path = "imxrt-iomuxc-build" }
+imxrt-iomuxc-build = { version = "0.1.0", path = "imxrt-iomuxc-build" }
 
 [features]
 imxrt106x = []

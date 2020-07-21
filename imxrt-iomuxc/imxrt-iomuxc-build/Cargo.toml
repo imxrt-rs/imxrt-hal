@@ -3,8 +3,14 @@ name = "imxrt-iomuxc-build"
 version = "0.1.0"
 authors = ["Ian McIntyre <ianpmcintyre@gmail.com>"]
 edition = "2018"
+description = """Build support for the imxrt-iomuxc crate. Not for general use.
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+Part of the imxrt-rs project.
+"""
+repository = "https://github.com/imxrt-rs/imxrt-rs"
+license = "MIT OR Apache-2.0"
+keywords = ["imxrt", "nxp", "embedded", "no_std"]
+categories = ["embedded", "no-std"]
 
 [dependencies]
 quote = "1.0.6"
