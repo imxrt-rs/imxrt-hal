@@ -14,13 +14,6 @@
 //! Processor pads may be enabled using feature flags. For example, the `imxrt106x` feature
 //! flag exposes an `imxrt106x` module that defines all i.MX RT 106x processor pads.
 //!
-//! # Safety
-//!
-//! Many traits, methods, and functions exposed by the `imxrt-iomuxc` crate are `unsafe`. See
-//! the trait and function documentation for more details. Most end-users aren't expected to
-//! use this `unsafe` interface. Rather, HAL implementers should build a safer inteface that
-//! focuses on peripheral-level configuration, rather than pad- and pin-level configuration.
-//!
 //! # Design Guidance
 //!
 //! For recommendations on how you can use these traits, see the module-level documentation. The
@@ -43,11 +36,8 @@
 //!         T: Pin<Direction = TX>,
 //!         R: Pin<Direction = RX, Module = <T as Pin>::Module>,
 //!     {
-//!         // Peripheral implementer resposible for calling unsafe functions
-//!         unsafe {
-//!             imxrt_iomuxc::uart::prepare(&mut tx);
-//!             imxrt_iomuxc::uart::prepare(&mut rx);
-//!         }
+//!         imxrt_iomuxc::uart::prepare(&mut tx);
+//!         imxrt_iomuxc::uart::prepare(&mut rx);
 //!         // ...
 //!         # UART
 //!     }
@@ -82,11 +72,11 @@
 //!     // manually.
 //!     <AD_B0_03 as imxrt_iomuxc::uart::Pin>::DAISY.map(|daisy| daisy.write());
 //!     <AD_B0_04 as imxrt_iomuxc::uart::Pin>::DAISY.map(|daisy| daisy.write());
-//!     imxrt_iomuxc::alternate(&mut tx_pad, 2);
-//!     imxrt_iomuxc::alternate(&mut rx_pad, 2);
-//!     imxrt_iomuxc::clear_sion(&mut tx_pad);
-//!     imxrt_iomuxc::clear_sion(&mut rx_pad);
 //! }
+//! imxrt_iomuxc::alternate(&mut tx_pad, 2);
+//! imxrt_iomuxc::alternate(&mut rx_pad, 2);
+//! imxrt_iomuxc::clear_sion(&mut tx_pad);
+//! imxrt_iomuxc::clear_sion(&mut rx_pad);
 //! // Pads are configured for UART settings
 //! let uart1 = unsafe { UART::new_unchecked(tx_pad, rx_pad) };
 //! ```
@@ -182,6 +172,9 @@ macro_rules! define_base {
 pub mod imxrt106x;
 
 /// An IOMUXC-capable pad which can support I/O multiplexing
+///
+/// **DO NOT IMPLEMENT THIS TRAIT**. It's exposed to support documentation
+/// browsing.
 pub unsafe trait IOMUX {
     /// Returns the absolute address of the multiplex register
     ///
@@ -207,15 +200,26 @@ const SION_BIT: u32 = 1 << 4;
 ///
 /// However, you should use `set_sion()` if you're using any type-erased pads, since those
 /// pads cannot be used with a peripheral's `prepare()` function.
-///
-/// # Safety
-///
-/// We can't guarantee that the pointer to the pad's mux register is correct.
 #[inline(always)]
-pub unsafe fn set_sion<I: IOMUX>(pad: &mut I) {
-    let mut mux = ptr::read_volatile(pad.mux());
-    mux |= SION_BIT;
-    ptr::write_volatile(pad.mux(), mux);
+pub fn set_sion<I: IOMUX>(pad: &mut I) {
+    // Safety:
+    //
+    // Pointer reads and writes are unsafe. But, because we control
+    // all IOMUXC implementations, we know that the returned pointers
+    // are vaild, aligned, and initialized (MMIO memory).
+    //
+    // The interface design ensures that all pads, type I, are unique
+    // owners of MMIO memory. Users would have to use unsafe code to violate
+    // that guarantee.
+    //
+    // By taking a mutable reference, the caller has to ensure atomicity of this
+    // read-modify-write operation (or, violate the requirement with more unsafe
+    // code).
+    unsafe {
+        let mut mux = ptr::read_volatile(pad.mux());
+        mux |= SION_BIT;
+        ptr::write_volatile(pad.mux(), mux);
+    }
 }
 
 /// Clear the SION bit in a pad's MUX register
@@ -226,15 +230,14 @@ pub unsafe fn set_sion<I: IOMUX>(pad: &mut I) {
 ///
 /// However, you should use `clear_sion()` if you're using any type-erased pads, since those
 /// pads cannot be used with a peripheral's `prepare()` function.
-///
-/// # Safety
-///
-/// We can't guarantee that the pointer to the pad's mux register is correct.
 #[inline(always)]
-pub unsafe fn clear_sion<I: IOMUX>(pad: &mut I) {
-    let mut mux = ptr::read_volatile(pad.mux());
-    mux &= !SION_BIT;
-    ptr::write_volatile(pad.mux(), mux);
+pub fn clear_sion<I: IOMUX>(pad: &mut I) {
+    // Safety: same justification as set_sion
+    unsafe {
+        let mut mux = ptr::read_volatile(pad.mux());
+        mux &= !SION_BIT;
+        ptr::write_volatile(pad.mux(), mux);
+    }
 }
 
 /// Set an alternate value for the pad
@@ -245,16 +248,16 @@ pub unsafe fn clear_sion<I: IOMUX>(pad: &mut I) {
 ///
 /// However, you should use `alternate()` if you're using any type-erased pads, since those
 /// pads cannot be used with a peripheral's `prepare()` function.
-///
-/// # Safety
-///
-/// We can't guarantee that the pointer to the pad's mux register is correct.
 #[inline(always)]
-pub unsafe fn alternate<I: IOMUX>(pad: &mut I, alt: u32) {
+pub fn alternate<I: IOMUX>(pad: &mut I, alt: u32) {
     const ALT_MASK: u32 = 0b1111;
-    let mut mux = ptr::read_volatile(pad.mux());
-    mux = (mux & !ALT_MASK) | (alt & ALT_MASK);
-    ptr::write_volatile(pad.mux(), mux);
+    // Safety: same justification as set_sion. Argument extends to
+    // pad values and alternate values.
+    unsafe {
+        let mut mux = ptr::read_volatile(pad.mux());
+        mux = (mux & !ALT_MASK) | (alt & ALT_MASK);
+        ptr::write_volatile(pad.mux(), mux);
+    }
 }
 
 /// An i.MXT RT pad
@@ -352,8 +355,8 @@ where
 /// let mut erased = ad_b0_03.erase();
 ///
 /// // Erased pads may be manually manipulated
-/// unsafe { iomuxc::alternate(&mut erased, 7) };
-/// unsafe { iomuxc::set_sion(&mut erased) };
+/// iomuxc::alternate(&mut erased, 7);
+/// iomuxc::set_sion(&mut erased);
 ///
 /// // Try to convert the erased pad back to its strongly-typed counterpart
 /// use core::convert::TryFrom;
@@ -435,8 +438,7 @@ impl Daisy {
     ///
     /// # Safety
     ///
-    /// We cannot be sure that the `reg` pointer created during construction is
-    /// correct. This modifies a global, processor register, so the typical
+    /// This modifies a global, processor register, so the typical
     /// rules around mutable static memory apply.
     #[inline(always)]
     pub unsafe fn write(self) {
@@ -468,11 +470,7 @@ pub mod gpio {
     }
 
     /// Prepare a pad to be used as a GPIO pin
-    ///
-    /// # Safety
-    ///
-    /// `prepare()` inherits all the unsafety of the `IOMUX` supertrait.
-    pub unsafe fn prepare<P: Pin>(pin: &mut P) {
+    pub fn prepare<P: Pin>(pin: &mut P) {
         super::alternate(pin, P::ALT);
     }
 }

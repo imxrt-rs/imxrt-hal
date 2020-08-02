@@ -39,10 +39,10 @@ pub trait Pin: super::IOMUX {
 /// `prepare()` inherits all the unsafety that comes from the `IOMUX` supertrait.
 /// In particular, we cannot be sure that the implementation's pointers are correct.
 /// It may also write a daisy configuration that's incorrect.
-pub unsafe fn prepare<P: Pin>(pin: &mut P) {
+pub fn prepare<P: Pin>(pin: &mut P) {
     super::alternate(pin, P::ALT);
     super::clear_sion(pin);
     if let Some(daisy) = P::DAISY {
-        daisy.write();
+        unsafe { daisy.write() };
     }
 }

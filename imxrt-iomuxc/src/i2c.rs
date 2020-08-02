@@ -33,14 +33,8 @@ pub trait Pin: super::IOMUX {
 ///
 /// If you do not call `prepare()` on your I2C pin, it might not work as a I2C
 /// pin.
-///
-/// # Safety
-///
-/// `prepare()` inherits all the unsafety that comes from the `IOMUX` supertrait.
-/// In particular, we cannot be sure that the implementation's pointers are correct.
-/// It may also write a daisy configuration that's incorrect.
-pub unsafe fn prepare<P: Pin>(pin: &mut P) {
+pub fn prepare<P: Pin>(pin: &mut P) {
     super::alternate(pin, P::ALT);
     super::set_sion(pin);
-    P::DAISY.write();
+    unsafe { P::DAISY.write() };
 }
