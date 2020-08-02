@@ -18,6 +18,12 @@ pub mod iomuxc {
 
     #[cfg(feature = "imxrt1062")]
     pub use imxrt_iomuxc::imxrt106x::*;
+
+    /// Use this function to acquire the IOMUXC pads. It requires that you have an
+    /// instance to the RAL's IOMUXC instance.
+    pub(super) fn pads(_: crate::ral::iomuxc::Instance) -> Pads {
+        unsafe { Pads::new() }
+    }
 }
 
 pub mod ccm;
@@ -67,7 +73,7 @@ impl Peripherals {
     /// peripherals.
     pub unsafe fn steal() -> Self {
         Peripherals {
-            iomuxc: iomuxc::Pads::new(),
+            iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::steal()),
             ccm: ccm::CCM::new(ral::ccm::CCM::steal(), ral::ccm_analog::CCM_ANALOG::steal()),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::steal()),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::steal()),
@@ -109,7 +115,7 @@ impl Peripherals {
     /// near the start of your program.
     pub fn take() -> Option<Self> {
         let p = Peripherals {
-            iomuxc: unsafe { iomuxc::Pads::new() },
+            iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::take()?),
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::take()?),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::take()?),
