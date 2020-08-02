@@ -41,7 +41,7 @@
 //! spi4.transfer(&mut buffer).unwrap();
 //! ```
 
-pub use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
+use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
 
 use crate::ccm;
 use crate::iomuxc::spi;

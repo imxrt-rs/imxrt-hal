@@ -53,7 +53,7 @@
 //! ```
 
 use crate::ccm;
-pub use crate::iomuxc::consts::*;
+use crate::iomuxc::consts::{Unsigned, U0, U1, U2, U3, U4};
 use crate::iomuxc::pwm;
 use crate::iomuxc::pwm::Pin;
 use crate::ral::{self, pwm::Instance};

@@ -43,8 +43,8 @@
 //! ```
 
 use crate::ccm;
-pub use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4, U5, U6, U7, U8};
-pub use crate::iomuxc::uart;
+use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4, U5, U6, U7, U8};
+use crate::iomuxc::uart;
 use crate::ral;
 use core::marker::PhantomData;
 
