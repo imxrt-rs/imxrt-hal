@@ -254,10 +254,8 @@ where
         TX: uart::Pin<Direction = uart::TX, Module = M>,
         RX: uart::Pin<Direction = uart::RX, Module = M>,
     {
-        unsafe {
-            crate::iomuxc::uart::prepare(&mut tx);
-            crate::iomuxc::uart::prepare(&mut rx);
-        }
+        crate::iomuxc::uart::prepare(&mut tx);
+        crate::iomuxc::uart::prepare(&mut rx);
         UART::start(self.reg, self.effective_clock, baud)
     }
 }
