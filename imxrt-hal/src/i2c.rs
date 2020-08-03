@@ -31,7 +31,7 @@
 //! i2c3.write_read(MY_SLAVE_ADDRESS, &output, &mut input).unwrap();
 //! ```
 
-pub use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
+use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
 
 use crate::ccm;
 use crate::iomuxc::i2c;
