@@ -33,6 +33,6 @@ pub trait Pin: super::IOMUX {
 /// # Safety
 ///
 /// `prepare()` inherits all the unsafety of the `IOMUX` supertrait.
-pub unsafe fn prepare<P: Pin>(pin: &mut P) {
+pub fn prepare<P: Pin>(pin: &mut P) {
     super::alternate(pin, P::ALT);
 }

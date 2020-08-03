@@ -105,10 +105,8 @@ where
         SCL: i2c::Pin<Module = M, Signal = i2c::SCL>,
         SDA: i2c::Pin<Module = M, Signal = i2c::SDA>,
     {
-        unsafe {
-            crate::iomuxc::i2c::prepare(&mut scl);
-            crate::iomuxc::i2c::prepare(&mut sda);
-        }
+        crate::iomuxc::i2c::prepare(&mut scl);
+        crate::iomuxc::i2c::prepare(&mut sda);
         I2C::new(self.source_clock, self.reg)
     }
 }

@@ -9,11 +9,6 @@ use core::ptr;
 /// resistors, and other configurations. See [`Config`](struct.Config.html)
 /// for possible configurations.
 ///
-/// # Safety
-///
-/// We can't guarantee that the pointer to the pad's configuration register is
-/// correct.
-///
 /// # Example
 ///
 /// ```no_run
@@ -28,13 +23,16 @@ use core::ptr;
 ///
 /// let mut pad = unsafe { AD_B0_03::new() };
 ///
-/// unsafe { configure(&mut pad, CONFIG) };
+/// configure(&mut pad, CONFIG);
 /// ```
 #[inline(always)]
-pub unsafe fn configure<I: IOMUX>(pad: &mut I, config: Config) {
-    let cfg = ptr::read_volatile(pad.pad());
-    let cfg = (cfg & !config.mask) | config.value;
-    ptr::write_volatile(pad.pad(), cfg);
+pub fn configure<I: IOMUX>(pad: &mut I, config: Config) {
+    // Safety: same justification as set_sion.
+    unsafe {
+        let cfg = ptr::read_volatile(pad.pad());
+        let cfg = (cfg & !config.mask) | config.value;
+        ptr::write_volatile(pad.pad(), cfg);
+    }
 }
 
 const HYSTERESIS_SHIFT: u32 = 16;
@@ -384,7 +382,7 @@ mod tests {
     #[test]
     fn zero() {
         let mut pad = PAD_ALL_HIGH;
-        unsafe { configure(&mut pad, Config::zero()) };
+        configure(&mut pad, Config::zero());
         assert_eq!(pad.0, 0);
     }
 
@@ -401,9 +399,7 @@ mod tests {
             .set_drive_strength(DriveStrength::R0_7)
             .set_slew_rate(SlewRate::Fast);
 
-        unsafe {
-            configure(&mut pad, CONFIG);
-        }
+        configure(&mut pad, CONFIG);
 
         assert_eq!(pad.0, PAD_BITMASK);
     }
@@ -421,9 +417,7 @@ mod tests {
             .set_drive_strength(DriveStrength::Disabled)
             .set_slew_rate(SlewRate::Slow);
 
-        unsafe {
-            configure(&mut pad, CONFIG);
-        }
+        configure(&mut pad, CONFIG);
 
         assert_eq!(pad.0, 0);
     }

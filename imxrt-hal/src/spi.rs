@@ -143,11 +143,9 @@ where
         SDI: spi::Pin<Module = M, Signal = spi::SDI>,
         SCK: spi::Pin<Module = M, Signal = spi::SCK>,
     {
-        unsafe {
-            crate::iomuxc::spi::prepare(&mut sdo);
-            crate::iomuxc::spi::prepare(&mut sdi);
-            crate::iomuxc::spi::prepare(&mut sck);
-        }
+        crate::iomuxc::spi::prepare(&mut sdo);
+        crate::iomuxc::spi::prepare(&mut sdi);
+        crate::iomuxc::spi::prepare(&mut sck);
 
         SPI::new(self.source_clock, self.reg)
     }
@@ -275,7 +273,7 @@ where
     where
         PCS: spi::Pin<Module = M, Signal = spi::PCS0>,
     {
-        unsafe { crate::iomuxc::spi::prepare(&mut pcs) };
+        crate::iomuxc::spi::prepare(&mut pcs);
     }
 
     /// Set the SPI mode for the peripheral

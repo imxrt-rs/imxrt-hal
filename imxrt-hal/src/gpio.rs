@@ -134,7 +134,7 @@ where
     ///
     /// All pads may be used as a GPIO, so this should always work.
     pub fn new(mut pin: P) -> Self {
-        unsafe { crate::iomuxc::gpio::prepare(&mut pin) };
+        crate::iomuxc::gpio::prepare(&mut pin);
         Self {
             pin,
             dir: PhantomData,
