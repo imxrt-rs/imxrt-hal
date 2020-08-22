@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.4.0] 2020-08-29
+
+This release contains numerous breaking HAL changes. See the "Changed" section for more information.
+
 ### Added
 
 - `steal()` the top-level `Peripherals` object. The `steal()` method lets users use the `imxrt_hal`
@@ -151,5 +155,6 @@
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...0.3.0

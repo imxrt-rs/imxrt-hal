@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] 2020-08-29
+
 * **BREAKING** The RAL's `"rtfm"` feature is changed to `"rtic"`, reflecting the framework's
   new name. Users who are relying on the `"rtfm"` feature should now use the `"rtic"` feature.
 
@@ -23,7 +25,8 @@
 
 Initial build and release of imxrt family of peripheral access crates
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...0.3.0
 [0.2.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.1.0...0.2.1
