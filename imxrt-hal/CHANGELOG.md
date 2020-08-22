@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.3.1] 2020-08-29
+
+### Fixed
+
+- The `StatefulOutputPin` implementation was reading from the wrong GPIO register. The interface
+  would indicate that the GPIO was always low, even when it was driven high. The implementation
+  now reads from the data register, which represents the driven GPIO value.
+
 ## [0.3.0] - 2020-06-18
 
 ### Added
@@ -28,4 +36,5 @@
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...HEAD
+[0.3.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...0.3.0
