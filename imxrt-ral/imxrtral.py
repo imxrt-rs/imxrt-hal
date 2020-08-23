@@ -61,6 +61,12 @@ keywords = ["imxrt", "nxp", "embedded", "no_std"]
 categories = ["embedded", "no-std"]
 license = "MIT/Apache-2.0"
 edition = "2018"
+exclude = [
+    "cortex_m/*",
+    "devices/*",
+    "scripts/*",
+    "svd/*",
+]
 
 # Change version in imxrtral.py, not in Cargo.toml!
 version = "0.3.0"
