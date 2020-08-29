@@ -17,7 +17,7 @@ include = [
 ]
 
 # Change version in imxrtral.py, not in Cargo.toml!
-version = "0.3.0"
+version = "0.4.0"
 
 [package.metadata.docs.rs]
 features = ["doc"]
