@@ -117,7 +117,7 @@ pub mod prelude {
         configure, Config, DriveStrength, Hysteresis, OpenDrain, PullKeep, PullKeepSelect,
         PullUpDown, SlewRate, Speed,
     };
-    pub use crate::{consts, i2c, pwm, spi, uart};
+    pub use crate::{consts, gpio, i2c, pwm, spi, uart};
 }
 
 /// Type-level constants and traits
