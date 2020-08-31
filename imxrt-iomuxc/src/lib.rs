@@ -97,6 +97,29 @@ pub use config::{
     SlewRate, Speed,
 };
 
+/// Re-export of top-level components, without the chip-specific modules.
+///
+/// `prelude` is to help HAL implementors re-export the `imxrt-iomuxc` APIs
+/// as a single module.
+///
+/// ```
+/// // Your crate's module:
+/// pub mod iomuxc {
+///     // Re-export common modules and types
+///     pub use imxrt_iomuxc::prelude::*;
+///     // Conditionally re-export chip-specific pads
+///     #[cfg(feature = "imxrt106x")]
+///     pub use imxrt_iomuxc::imxrt106x::*;
+/// }
+/// ```
+pub mod prelude {
+    pub use crate::config::{
+        configure, Config, DriveStrength, Hysteresis, OpenDrain, PullKeep, PullKeepSelect,
+        PullUpDown, SlewRate, Speed,
+    };
+    pub use crate::{consts, i2c, pwm, spi, uart};
+}
+
 /// Type-level constants and traits
 ///
 /// Re-exported from the [`typenum` crate](https://crates.io/crates/typenum), but scoped for the requirements
