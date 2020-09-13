@@ -110,8 +110,10 @@ where
     pub fn set_fast(&mut self, fast: bool) -> bool {
         self.gpr()
             .map(|gpr| {
-                cortex_m::interrupt::free(|_| unsafe {
+                cortex_m::interrupt::free(|cs| unsafe {
                     let v = core::ptr::read_volatile(gpr);
+
+                    let was_output = self.is_output();
 
                     if fast {
                         core::ptr::write_volatile(gpr, v | self.offset());
@@ -119,10 +121,42 @@ where
                         core::ptr::write_volatile(gpr, v & !self.offset());
                     }
 
+                    // At this point, calls to set_output / set_input will refer to the 'fast'
+                    // or 'slow' GPIO register block.
+                    if was_output {
+                        self.set_output(cs);
+                    } else {
+                        self.set_input(cs);
+                    }
+
                     true
                 })
             })
             .unwrap_or(false)
+    }
+
+    /// Returns `true` if the pin is configured as an output pin
+    fn is_output(&self) -> bool {
+        // Safety: atomic read
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), GDIR) & self.offset() != 0 }
+    }
+
+    /// Configure the GPIO as an output
+    fn set_output(&self, _: &cortex_m::interrupt::CriticalSection) {
+        // Safety: critical section, enforced by API, ensures consistency
+        unsafe {
+            ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
+                | self.offset());
+        }
+    }
+
+    /// Configure the GPIO as an input
+    fn set_input(&self, _: &cortex_m::interrupt::CriticalSection) {
+        // Safety: critical section, enforced by API, ensures consistency
+        unsafe {
+            ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
+                & !self.offset());
+        }
     }
 }
 
@@ -143,11 +177,7 @@ where
 
     /// Set the GPIO as an output
     pub fn output(self) -> GPIO<P, Output> {
-        // Safety: critical section ensures consistency
-        cortex_m::interrupt::free(|_| unsafe {
-            ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
-                | self.offset());
-        });
+        cortex_m::interrupt::free(|cs| self.set_output(cs));
         GPIO {
             pin: self.pin,
             dir: PhantomData,
@@ -167,11 +197,7 @@ where
 {
     /// Transition the pin back to an input
     pub fn input(self) -> GPIO<P, Input> {
-        // Safety: critical section ensures consistency
-        cortex_m::interrupt::free(|_| unsafe {
-            ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
-                & !self.offset());
-        });
+        cortex_m::interrupt::free(|cs| self.set_input(cs));
         GPIO {
             pin: self.pin,
             dir: PhantomData,
