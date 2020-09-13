@@ -105,8 +105,9 @@ where
     /// Returns `false` if this pin does not support fast mode. Otherwise, returns `true`, indicating
     /// that the setting was respected.
     ///
-    /// Note that the pin may be in a new state after transitioning into fast mode. Consider setting
-    /// and maintaining the fast mode setting before relying on the pin.
+    /// If you transition an output pin into fast mode, the GPIO output state may *not* be maintained.
+    /// That is, if your GPIO pin was high, a transition into fast mode may set the pin low. Consider
+    /// setting fast mode before driving the GPIO output to avoid inconsistencies.
     pub fn set_fast(&mut self, fast: bool) -> bool {
         self.gpr()
             .map(|gpr| {
