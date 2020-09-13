@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.1] 2020-09-23
 
 ### Fix
 
@@ -162,7 +162,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.1...HEAD
+[0.4.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.4.0
 [0.3.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.2.1...0.3.0
