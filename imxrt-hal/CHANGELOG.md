@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fix
+
+- Maintain GPIO input/output configuration when enabling or disabling high-speed mode.
+
 ## [0.4.0] 2020-08-29
 
 This release contains numerous breaking HAL changes. See the "Changed" section for more information.
