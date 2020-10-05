@@ -62,7 +62,7 @@ pub struct Peripherals {
     pub gpt1: gpt::Unclocked,
     pub gpt2: gpt::Unclocked,
     pub dma: dma::Unclocked,
-    pub rtc: srtc::Unclocked,
+    pub srtc: srtc::Unclocked,
 }
 
 impl Peripherals {
@@ -108,7 +108,7 @@ impl Peripherals {
             gpt1: gpt::Unclocked::one(ral::gpt::GPT1::steal()),
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::steal()),
             dma: dma::Unclocked::new(ral::dma0::DMA0::steal(), ral::dmamux::DMAMUX::steal()),
-            rtc: srtc::Unclocked::new(ral::snvs::SNVS::steal()),
+            srtc: srtc::Unclocked::new(ral::snvs::SNVS::steal()),
         }
     }
 
@@ -151,7 +151,7 @@ impl Peripherals {
             gpt1: gpt::Unclocked::one(ral::gpt::GPT1::take()?),
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::take()?),
             dma: dma::Unclocked::new(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?),
-            rtc: srtc::Unclocked::new(ral::snvs::SNVS::take()?),
+            srtc: srtc::Unclocked::new(ral::snvs::SNVS::take()?),
         };
         Some(p)
     }
