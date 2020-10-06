@@ -4,9 +4,35 @@ use std::{env, fs, io, path::PathBuf};
 fn main() -> io::Result<()> {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
+    #[cfg(feature = "imxrt101x")]
+    imxrt101x(fs::File::create(out_dir.join("imxrt101x.rs"))?)?;
+
     #[cfg(feature = "imxrt106x")]
     imxrt106x(fs::File::create(out_dir.join("imxrt106x.rs"))?)?;
 
+    Ok(())
+}
+
+#[cfg(feature = "imxrt101x")]
+fn imxrt101x<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
+    use imxrt_iomuxc_build as build;
+
+    let ad = build::PadRange::new("AD", 0..16);
+    let sd = build::PadRange::new("SD", 0..16);
+    let gpio = build::PadRange::new("GPIO", 0..16);
+
+    build::write_pads(&mut pads_rs, vec![&ad, &sd, &gpio])?;
+    build::write_impl_gpio_pins(
+        &mut pads_rs,
+        vec![
+            // GPIO1
+            build::ImplGpioPin::from_range(&ad, build::GpioRange::no_offset(1, 5)),
+            // GPIO2
+            build::ImplGpioPin::from_range(&sd, build::GpioRange::no_offset(2, 5)),
+            // GPIO3
+            build::ImplGpioPin::from_range(&gpio, build::GpioRange::no_offset(3, 5)),
+        ],
+    )?;
     Ok(())
 }
 
