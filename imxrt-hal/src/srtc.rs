@@ -211,12 +211,6 @@ impl SRTC {
         get(&self.reg)
     }
 
-    /// Gets the current time as a floating point amount of seconds.
-    pub fn get_f64(&self) -> f64 {
-        let (sec, ticks) = self.get_with_ticks();
-        (sec as f64) + (ticks as f64 / 32768.0)
-    }
-
     /// Set the current time as a count of seconds since some point in the past and the sub-second
     /// time as 32768Hz ticks.
     pub fn set(&mut self, time: u32, ticks: u16) {
