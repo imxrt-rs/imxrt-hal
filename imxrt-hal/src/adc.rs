@@ -34,7 +34,7 @@ pub enum ResolutionBits {
     Res12
 }
 
-struct AnalogPin<ADCx, P>
+pub struct AnalogPin<ADCx, P>
 {
     _module: PhantomData<ADCx>,
     pin: P
@@ -57,7 +57,7 @@ where
     P: Pin<ADCx>,
     ADCx: adc::ADC
 {
-    pub fn new(mut pin: P) -> Self {
+    pub fn new(mut pin: P, _adc: &ADC<ADCx>) -> Self {
         prepare_adc_pin(&mut pin);
         Self {
             _module: PhantomData,
@@ -92,7 +92,7 @@ impl<ADCx> ADC<ADCx> {
         let mode: u32 = match bits {
             ResolutionBits::Res8 => 0b00,
             ResolutionBits::Res10 => 0b01,
-            ResolutionBits::Res12 => 0b11
+            ResolutionBits::Res12 => 0b10
         };
 
         ral::modify_reg!(ral::adc, self.reg, CFG, MODE: mode);
@@ -105,7 +105,7 @@ impl<ADCx> ADC<ADCx> {
             _ => 0b1
         };
 
-        let mode: u32 = match avg {
+        let avgs: u32 = match avg {
             AveragingCount::Avg32 => 0b11,
             AveragingCount::Avg16 => 0b10,
             AveragingCount::Avg8 => 0b01,
@@ -113,7 +113,7 @@ impl<ADCx> ADC<ADCx> {
         };
 
         ral::modify_reg!(ral::adc, self.reg, GC, AVGE: avge);
-        ral::modify_reg!(ral::adc, self.reg, CFG, MODE: mode);
+        ral::modify_reg!(ral::adc, self.reg, CFG, AVGS: avgs);
     }
 
     /// Sets the conversion speed for this ADC, see ConversionSpeed for clock cycle counts.
@@ -150,7 +150,7 @@ where
 {
     type Error = u32;
 
-    fn read(&mut self, pin: &mut AnalogPin<ADCx, P>) -> nb::Result<u16, Self::Error> {
+    fn read(&mut self, _pin: &mut AnalogPin<ADCx, P>) -> nb::Result<u16, Self::Error> {
         let channel = <P as Pin<ADCx>>::Input::U32;
         ral::modify_reg!(ral::adc, self.reg, HC0, |_| channel);
         while (ral::read_reg!(ral::adc, self.reg, HS, COCO0) == 0) {}
