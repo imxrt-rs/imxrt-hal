@@ -189,6 +189,9 @@ macro_rules! define_base {
 // Listing the processor modules here, since they may depend on the
 // above `define_base!()` macro...
 //
+#[cfg(feature = "imxrt101x")]
+#[cfg_attr(docsrs, doc(cfg(feature = "imxrt101x")))]
+pub mod imxrt101x;
 
 #[cfg(feature = "imxrt106x")]
 #[cfg_attr(docsrs, doc(cfg(feature = "imxrt106x")))]

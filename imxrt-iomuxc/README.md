@@ -114,7 +114,7 @@ make it easier for the user.
 Since the approaches are equivalent, the change has no effect on a split i.MX RT HAL. An
 `imxrt-hal[-common]` crate would depend on the `imxrt-iomuxc` crate without feature flags.
 Then, a processor-specific HAL would depend on `imxrt-iomuxc` with the appropriate feature
-flag. We achive the goals of a split HAL, as users are unconcerned with feature flags.
+flag. We achieve the goals of a split HAL, as users are unconcerned with feature flags.
 
 We realize that this approach perpetuates the need for feature flags. However,
 the `imxrt-iomuxc` crate is a much lower-level interface than the HAL crates; it's equivalent
