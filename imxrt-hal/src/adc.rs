@@ -5,6 +5,10 @@
 
 use crate::ccm;
 use crate::ral;
+use crate::iomuxc::adc::{ADC1, ADC2, Pin, prepare_adc_pin};
+use crate::iomuxc::{consts::Unsigned, adc};
+use core::marker::PhantomData;
+use embedded_hal::adc::{Channel, OneShot};
 
 /// Conversion speeds done by clock cycles
 pub enum ConversionSpeed {
@@ -30,14 +34,47 @@ pub enum ResolutionBits {
     Res12
 }
 
-pub struct ADC {
-    reg: ral::adc::Instance,
-
+struct AnalogPin<ADCx, P>
+{
+    _module: PhantomData<ADCx>,
+    pin: P
 }
 
-impl ADC {
+impl<P, ADCx> Channel<ADCx> for AnalogPin<ADCx, P>
+where 
+    P: Pin<ADCx>,
+    ADCx: adc::ADC
+{
+    type ID = u16;
+
+    fn channel() -> Self::ID {
+        <P as Pin<ADCx>>::Input::U16
+    }
+}
+
+impl<P, ADCx> AnalogPin<ADCx, P>
+where
+    P: Pin<ADCx>,
+    ADCx: adc::ADC
+{
+    pub fn new(mut pin: P) -> Self {
+        prepare_adc_pin(&mut pin);
+        Self {
+            _module: PhantomData,
+            pin
+        }
+    }
+}
+
+pub struct ADC<ADCx> {
+    _module: PhantomData<ADCx>,
+    reg: ral::adc::Instance
+}
+
+impl<ADCx> ADC<ADCx> {
     fn new(reg: ral::adc::Instance) -> Self {
         let inst = Self {
+            _module: PhantomData,
             reg
         };
 
@@ -106,13 +143,29 @@ impl ADC {
     }
 }
 
+impl<P, ADCx> OneShot<ADCx, u16, AnalogPin<ADCx, P>> for ADC<ADCx>
+where
+    P: Pin<ADCx>,
+    ADCx: adc::ADC
+{
+    type Error = u32;
+
+    fn read(&mut self, pin: &mut AnalogPin<ADCx, P>) -> nb::Result<u16, Self::Error> {
+        let channel = <P as Pin<ADCx>>::Input::U32;
+        ral::modify_reg!(ral::adc, self.reg, HC0, |_| channel);
+        while (ral::read_reg!(ral::adc, self.reg, HS, COCO0) == 0) {}
+
+        Ok(ral::read_reg!(ral::adc, self.reg, R0) as u16)
+    }
+}
+
 pub struct Unclocked {
     pub(crate) adc1: ral::adc::Instance,
     pub(crate) adc2: ral::adc::Instance
 }
 
 impl Unclocked {
-    pub fn clock(self, handle: &mut ccm::Handle) -> (ADC, ADC) {
+    pub fn clock(self, handle: &mut ccm::Handle) -> (ADC<ADC1>, ADC<ADC2>) {
         let (ccm, _) = handle.raw();
         ral::modify_reg!(ral::ccm, ccm, CCGR1, CG8: 0b11); // adc1_clk_enable
         ral::modify_reg!(ral::ccm, ccm, CCGR1, CG4: 0b11); // adc2_clk_enable
