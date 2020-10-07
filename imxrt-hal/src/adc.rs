@@ -10,7 +10,7 @@
 //! let (adc1_builder, _) = peripherals.adc.clock(&mut peripherals.ccm.handle);
 //! 
 //! let mut adc1 = adc1_builder.build(adc::ClockSelect::default(), adc::ClockDivision::default());
-//! let mut a1 = adc::AnalogPin::new(peripherals.iomuxc.ad_b1.p02, adc1);
+//! let mut a1 = adc::AnalogInput::new(peripherals.iomuxc.ad_b1.p02, adc1);
 //! 
 //! let reading = adc1.read(&mut a1).unwrap();
 //!```
