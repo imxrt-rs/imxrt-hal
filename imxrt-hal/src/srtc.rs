@@ -24,7 +24,8 @@
 //!
 //! When the SRTC is enabled, setting the board into program mode then using the Teensy Loader
 //! application (GUI) to reboot it will set the current time (Unix epoch, but time in local
-//! timezone). This will overwrite whatever time you may have previously set.
+//! timezone). This will overwrite whatever time you may have previously set and is ambiguous
+//! around the backwards daylight savings transition point.
 
 use core::fmt;
 
@@ -117,27 +118,29 @@ fn is_enabled(snvs: &Instance) -> bool {
     ral::read_reg!(ral::snvs, snvs, LPCR, SRTC_ENV) != 0
 }
 
-/// Converts the number of milliseconds that have occurred since a second into clock ticks
+/// Converts the number of microseconds that have occurred since a second into clock ticks
 /// (1/32768 of a second).
 ///
-/// For example: for the time 2020-10-05 01:39:56.505, `millis` is `505`.
-pub fn subsec_millis_to_ticks(millis: u16) -> u16 {
-    // 999 is the max valid value outside of a leap second; clamp
-    let millis = millis.min(999);
-    let millis = millis as f32 / 1000.0;
-    let ticks = millis * 32768.0;
+/// For example: for the time `2020-10-05 01:39:56.505`, `micros` is `505000`, and this gives
+/// `16547` ticks.
+pub fn subsec_micros_to_ticks(micros: u32) -> u16 {
+    const RATIO: f32 = 0.032768; // 32768 / 1_000_000, each microsecond is this many ticks
+    let micros = micros.min(999_999);
+    // 999999 is the max valid value outside of a leap second; clamp
+    let ticks = micros as f32 * RATIO;
     ticks as u16
 }
 
 // these won't round trip in part due to the lack of round in no_std
 
-/// Converts clock ticks (1/32768 of a second) into milliseconds.
+/// Converts sub-second clock ticks (1/32768 of a second) into microseconds.
 ///
-/// For example: 32000 ticks works out to 976 milliseconds.
-pub fn ticks_to_subsec_millis(ticks: u16) -> u16 {
+/// For example: 32000 ticks works out to 976562 microseconds.
+pub fn ticks_to_subsec_micros(ticks: u16) -> u32 {
+    const RATIO: f32 = 30.517578; // 1_000_000 / 32768, each tick is this many microseconds
     let ticks = ticks & 0x7FFF;
-    let millis = (ticks as f32) / 32768.0 * 1000.0;
-    millis as u16
+    let micros = (ticks as f32) * RATIO;
+    micros as u32
 }
 
 /// Enable the SNVS_LP clock (enabled by default)
@@ -209,6 +212,13 @@ impl SRTC {
     /// and the sub-second time as 32768Hz ticks.
     pub fn get_with_ticks(&self) -> (u32, u16) {
         get(&self.reg)
+    }
+
+    /// Gets the current time as a tuple containing the count of seconds since some point in the past
+    /// and the sub-second time as microseconds.
+    pub fn get_with_micros(&self) -> (u32, u32) {
+        let (seconds, ticks) = self.get_with_ticks();
+        (seconds, ticks_to_subsec_micros(ticks))
     }
 
     /// Set the current time as a count of seconds since some point in the past and the sub-second
