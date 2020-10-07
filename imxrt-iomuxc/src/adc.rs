@@ -43,6 +43,4 @@ pub fn prepare_adc_pin<ADCx: ADC, P: Pin<ADCx>>(pin: &mut P) {
         pin,
         super::Config::modify().set_pull_keep(super::PullKeep::Disabled),
     );
-    // TODO any other necessary configurations. Haven't searched enough
-    // to know if we need anything else.
 }
