@@ -77,7 +77,7 @@ impl Peripherals {
         Peripherals {
             adc: adc::Unclocked {
                 adc1: ral::adc::ADC1::steal(),
-                adc2: ral::adc::ADC2::steal()
+                adc2: ral::adc::ADC2::steal(),
             },
             iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::steal()),
             ccm: ccm::CCM::new(ral::ccm::CCM::steal(), ral::ccm_analog::CCM_ANALOG::steal()),
@@ -123,7 +123,7 @@ impl Peripherals {
         let p = Peripherals {
             adc: adc::Unclocked {
                 adc1: ral::adc::ADC1::take()?,
-                adc2: ral::adc::ADC2::take()?
+                adc2: ral::adc::ADC2::take()?,
             },
             iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::take()?),
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
