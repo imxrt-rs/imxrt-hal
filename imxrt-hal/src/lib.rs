@@ -36,6 +36,7 @@ pub mod pit;
 pub mod pwm;
 pub mod spi;
 pub mod srtc;
+pub mod trng;
 pub mod uart;
 
 pub mod dcdc {
@@ -65,6 +66,7 @@ pub struct Peripherals {
     pub gpt2: gpt::Unclocked,
     pub dma: dma::Unclocked,
     pub srtc: srtc::Unclocked,
+    pub trng: trng::Unclocked,
 }
 
 impl Peripherals {
@@ -115,6 +117,7 @@ impl Peripherals {
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::steal()),
             dma: dma::Unclocked::new(ral::dma0::DMA0::steal(), ral::dmamux::DMAMUX::steal()),
             srtc: srtc::Unclocked::new(ral::snvs::SNVS::steal()),
+            trng: trng::Unclocked::new(ral::trng::TRNG::steal()),
         }
     }
 
@@ -162,6 +165,7 @@ impl Peripherals {
             gpt2: gpt::Unclocked::two(ral::gpt::GPT2::take()?),
             dma: dma::Unclocked::new(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?),
             srtc: srtc::Unclocked::new(ral::snvs::SNVS::take()?),
+            trng: trng::Unclocked::new(ral::trng::TRNG::take()?),
         };
         Some(p)
     }
