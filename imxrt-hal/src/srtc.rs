@@ -118,29 +118,29 @@ fn is_enabled(snvs: &Instance) -> bool {
     ral::read_reg!(ral::snvs, snvs, LPCR, SRTC_ENV) != 0
 }
 
+/// Number of quarter-nanoseconds per tick. Rounded up from 122,070.3125 to avoid overflowing
+/// the 15-bit result of `micros_to_ticks`.
+const QUARTER_NANOS_PER_TICK: u32 = 122_071;
+
 /// Converts the number of microseconds that have occurred since a second into clock ticks
 /// (1/32768 of a second).
 ///
 /// For example: for the time `2020-10-05 01:39:56.505`, `micros` is `505000`, and this gives
 /// `16547` ticks.
-pub fn subsec_micros_to_ticks(micros: u32) -> u16 {
-    const RATIO: f32 = 0.032768; // 32768 / 1_000_000, each microsecond is this many ticks
-    let micros = micros.min(999_999);
-    // 999999 is the max valid value outside of a leap second; clamp
-    let ticks = micros as f32 * RATIO;
-    ticks as u16
+///
+/// The maximum valid value for `micros` is `999_999`.
+pub fn micros_to_ticks(micros: u32) -> u16 {
+    let quarter_nanos = micros * 4000;
+    (quarter_nanos / QUARTER_NANOS_PER_TICK) as u16
 }
 
-// these won't round trip in part due to the lack of round in no_std
+// it is normal that these won't round trip
 
 /// Converts sub-second clock ticks (1/32768 of a second) into microseconds.
 ///
-/// For example: 32000 ticks works out to 976562 microseconds.
-pub fn ticks_to_subsec_micros(ticks: u16) -> u32 {
-    const RATIO: f32 = 30.517578; // 1_000_000 / 32768, each tick is this many microseconds
-    let ticks = ticks & 0x7FFF;
-    let micros = (ticks as f32) * RATIO;
-    micros as u32
+/// For example: 32000 ticks works out to 976568 microseconds.
+fn ticks_to_micros(ticks: u16) -> u32 {
+    ticks as u32 * QUARTER_NANOS_PER_TICK / 4000
 }
 
 /// Enable the SNVS_LP clock (enabled by default)
@@ -218,7 +218,7 @@ impl SRTC {
     /// and the sub-second time as microseconds.
     pub fn get_with_micros(&self) -> (u32, u32) {
         let (seconds, ticks) = self.get_with_ticks();
-        (seconds, ticks_to_subsec_micros(ticks))
+        (seconds, ticks_to_micros(ticks))
     }
 
     /// Set the current time as a count of seconds since some point in the past and the sub-second
