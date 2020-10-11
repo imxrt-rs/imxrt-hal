@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Basic support for the secure real time clock (SRTC) peripheral, which
+  continues to track time while the SNVS low-power domain remains powered.
+
 ## [0.4.1] 2020-09-23
 
 ### Fix
