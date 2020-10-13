@@ -16,7 +16,7 @@ use core::ops::Index;
 #[repr(C)]
 pub(super) struct MultiplexerRegisters {
     /// Multiplexer configuration registers, one per channel
-    pub chcfg: [RWRegister<u32>; 32],
+    pub chcfg: [RWRegister<u32>; super::DMA_CHANNEL_COUNT],
 }
 
 pub(super) const MULTIPLEXER: Static<MultiplexerRegisters> = Static(0x400E_C000 as *const _);
@@ -72,7 +72,7 @@ pub(super) struct DMARegisters {
     pub DCHPRI: ChannelPriorityRegisters,
     _reserved8: [u32; 952],
     /// Transfer Control Descriptors
-    pub TCD: [TransferControlDescriptor; 32],
+    pub TCD: [TransferControlDescriptor; super::DMA_CHANNEL_COUNT],
 }
 
 pub(super) const DMA: Static<DMARegisters> = Static(0x400E_8000 as *const _);
