@@ -16,27 +16,16 @@ use core::fmt::{self, Display};
 //
 
 /// The number of DMA channels
-#[cfg(any(feature = "imxrt1011"))]
+#[cfg(feature = "imxrt1011")]
 pub const DMA_CHANNEL_COUNT: usize = 16;
 
 /// The number of DMA channels
-#[cfg(any(feature = "imxrt1062"))]
+#[cfg(not(feature = "imxrt1011"))]
 pub const DMA_CHANNEL_COUNT: usize = 32;
-
-/// When adding support for a new chip, make sure to either
-///
-/// - update an existing DMA_CHANNEL_COUNT above, or
-/// - create a new DMA_CHANNEL_COUNT constant
-///
-/// When you add that new chip feature, you should also add
-/// it to this list.
-#[cfg(not(any(feature = "imxrt1011", feature = "imxrt1062",)))]
-pub const DMA_CHANNEL_COUNT: usize =
-    compile_error!("No DMA_CHANNEL_COUNT specified for this chip!");
 
 
 /// Helper symbol to support DMA channel initialization
-#[cfg(any(feature = "imxrt1062"))]
+#[cfg(not(feature = "imxrt1011"))]
 pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None,
     None, None, None, None, None, None, None, None, None, None, None, None, None, None,
@@ -44,22 +33,18 @@ pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] =
 ];
 
 /// Helper symbol to support DMA channel initialization
-#[cfg(any(feature = "imxrt1011"))]
+#[cfg(feature = "imxrt1011")]
 pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None,
     None, None,
 ];
-
-#[cfg(not(any(feature = "imxrt1011", feature = "imxrt1062")))]
-pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] =
-    compile_error!("No DMA_CHANNEL_INIT specified for this chip!");
 
 //
 // Conditionally display group priority errors (GPE), and handle
 // different masks for error channel (ERRCHN)
 //
 
-#[cfg(any(feature = "imxrt1011"))]
+#[cfg(feature = "imxrt1011")]
 impl Display for ErrorStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,
@@ -81,7 +66,7 @@ impl Display for ErrorStatus {
     }
 }
 
-#[cfg(any(feature = "imxrt1062"))]
+#[cfg(not(feature = "imxrt1011"))]
 impl Display for ErrorStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,
@@ -100,12 +85,5 @@ impl Display for ErrorStatus {
             sbe = (self.es >> 1) & 0x1,
             dbe = self.es & 0x1
         )
-    }
-}
-
-#[cfg(not(any(feature = "imxrt1011", feature = "imxrt1062",)))]
-impl Display for ErrorStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        compile_error!("No 'impl Display for ErrorStatus' specified for this chip!")
     }
 }
