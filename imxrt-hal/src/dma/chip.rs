@@ -23,20 +23,17 @@ pub const DMA_CHANNEL_COUNT: usize = 16;
 #[cfg(not(feature = "imxrt1011"))]
 pub const DMA_CHANNEL_COUNT: usize = 32;
 
-
 /// Helper symbol to support DMA channel initialization
 #[cfg(not(feature = "imxrt1011"))]
 pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] = [
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-    None, None, None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
 ];
 
 /// Helper symbol to support DMA channel initialization
 #[cfg(feature = "imxrt1011")]
 pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] = [
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-    None, None,
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
 ];
 
 //
@@ -87,3 +84,14 @@ impl Display for ErrorStatus {
         )
     }
 }
+
+//
+// These don't vary across chips.
+// They're only in this module to
+// show that we thought about that.
+//
+
+/// Address to the DMA multiplexer registers
+pub(crate) const DMA_MULTIPLEXER_ADDRESS: u32 = 0x400E_C000;
+/// Address to the DMA peripheral registers
+pub(crate) const DMA_ADDRESS: u32 = 0x400E_8000;
