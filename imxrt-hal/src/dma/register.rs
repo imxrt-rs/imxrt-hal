@@ -19,7 +19,8 @@ pub(super) struct MultiplexerRegisters {
     pub chcfg: [RWRegister<u32>; super::DMA_CHANNEL_COUNT],
 }
 
-pub(super) const MULTIPLEXER: Static<MultiplexerRegisters> = Static(0x400E_C000 as *const _);
+pub(super) const MULTIPLEXER: Static<MultiplexerRegisters> =
+    Static(super::chip::DMA_MULTIPLEXER_ADDRESS as *const _);
 
 impl MultiplexerRegisters {
     pub const ENBL: u32 = 1 << 31;
@@ -75,7 +76,7 @@ pub(super) struct DMARegisters {
     pub TCD: [TransferControlDescriptor; super::DMA_CHANNEL_COUNT],
 }
 
-pub(super) const DMA: Static<DMARegisters> = Static(0x400E_8000 as *const _);
+pub(super) const DMA: Static<DMARegisters> = Static(super::chip::DMA_ADDRESS as *const _);
 
 /// Wrapper for channel priority registers
 ///
