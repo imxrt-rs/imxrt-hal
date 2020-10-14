@@ -474,7 +474,7 @@ impl Unclocked {
     /// Enable the clocks for the DMA peripheral
     ///
     /// The return is an array of 32 channels. However, **only the first [`CHANNEL_COUNT`](constant.CHANNEL_COUNT.html) channels
-    /// are initialized to `Some(channel)`. The rest are `None`.
+    /// are initialized to `Some(channel)`. The rest are `None`.**
     ///
     /// Users may take channels as needed. The index in the array maps to the DMA channel number.
     pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; 32] {
