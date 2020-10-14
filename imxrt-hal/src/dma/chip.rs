@@ -17,22 +17,22 @@ use core::fmt::{self, Display};
 
 /// The number of DMA channels
 #[cfg(feature = "imxrt1011")]
-pub const DMA_CHANNEL_COUNT: usize = 16;
+pub const CHANNEL_COUNT: usize = 16;
 
 /// The number of DMA channels
 #[cfg(not(feature = "imxrt1011"))]
-pub const DMA_CHANNEL_COUNT: usize = 32;
+pub const CHANNEL_COUNT: usize = 32;
 
 /// Helper symbol to support DMA channel initialization
 #[cfg(not(feature = "imxrt1011"))]
-pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] = [
+pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; CHANNEL_COUNT] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
 ];
 
 /// Helper symbol to support DMA channel initialization
 #[cfg(feature = "imxrt1011")]
-pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; DMA_CHANNEL_COUNT] = [
+pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; CHANNEL_COUNT] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
 ];
 

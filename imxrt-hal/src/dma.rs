@@ -160,7 +160,7 @@ pub(crate) mod peripheral;
 mod register;
 
 pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, WriteHalf};
-pub use chip::DMA_CHANNEL_COUNT;
+pub use chip::CHANNEL_COUNT;
 pub use element::Element;
 pub use memcpy::Memcpy;
 pub use peripheral::{helpers::*, Peripheral};
@@ -183,7 +183,7 @@ use register::{DMARegisters, MultiplexerRegisters, Static, DMA, MULTIPLEXER};
 /// DMA channels have very little public interface. They're best used when paired with a
 /// [`Peripheral`](struct.Peripheral.html) or a [`Memcpy`](struct.Memcpy.html).
 pub struct Channel {
-    /// Our channel number, expected to be between 0 and (DMA_CHANNEL_COUNT - 1)
+    /// Our channel number, expected to be between 0 and (CHANNEL_COUNT - 1)
     index: usize,
     /// Reference to the DMA registers
     registers: Static<DMARegisters>,
@@ -207,7 +207,7 @@ impl Channel {
 
     /// Returns the DMA channel number
     ///
-    /// Channels are unique and numbered within the half-open range `[0, DMA_CHANNEL_COUNT)`.
+    /// Channels are unique and numbered within the half-open range `[0, CHANNEL_COUNT)`.
     pub fn channel(&self) -> usize {
         self.index
     }
@@ -459,7 +459,7 @@ pub enum Error<P> {
 /// let channel_27 = dma_channels[27].take().unwrap();
 /// let channel_0 = dma_channels[0].take().unwrap();
 /// ```
-pub struct Unclocked([Option<Channel>; DMA_CHANNEL_COUNT]);
+pub struct Unclocked([Option<Channel>; CHANNEL_COUNT]);
 impl Unclocked {
     pub(crate) fn new(dma: ral::dma0::Instance, mux: ral::dmamux::Instance) -> Self {
         // Explicitly dropping instances
@@ -473,9 +473,9 @@ impl Unclocked {
     }
     /// Enable the clocks for the DMA peripheral
     ///
-    /// The return is `DMA_CHANNEL_COUNT` channels, each being initialized as `Some(Channel)`. Users may take channels as needed.
+    /// The return is `CHANNEL_COUNT` channels, each being initialized as `Some(Channel)`. Users may take channels as needed.
     /// The index in the array maps to the DMA channel number.
-    pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; DMA_CHANNEL_COUNT] {
+    pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; CHANNEL_COUNT] {
         let (ccm, _) = ccm.raw();
         ral::modify_reg!(ral::ccm, ccm, CCGR5, CG3: 0x03);
         for (idx, channel) in self.0.iter_mut().enumerate() {
