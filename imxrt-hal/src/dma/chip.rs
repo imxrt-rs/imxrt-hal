@@ -16,23 +16,25 @@ use core::fmt::{self, Display};
 //
 
 /// The number of DMA channels
+///
+/// This varies depending on the i.MX RT processor variant. Consult your
+/// reference manual for more information.
 #[cfg(feature = "imxrt1011")]
 pub const CHANNEL_COUNT: usize = 16;
 
 /// The number of DMA channels
+///
+/// This varies depending on the i.MX RT processor variant. Consult your
+/// reference manual for more information.
 #[cfg(not(feature = "imxrt1011"))]
 pub const CHANNEL_COUNT: usize = 32;
 
 /// Helper symbol to support DMA channel initialization
-#[cfg(not(feature = "imxrt1011"))]
-pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; CHANNEL_COUNT] = [
+///
+/// We always provide users with an array of 32 channels. But, only the first `CHANNEL_COUNT`
+/// channels are initialized.
+pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; 32] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-];
-
-/// Helper symbol to support DMA channel initialization
-#[cfg(feature = "imxrt1011")]
-pub(crate) const DMA_CHANNEL_INIT: [Option<super::Channel>; CHANNEL_COUNT] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
 ];
 

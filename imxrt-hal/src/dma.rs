@@ -473,12 +473,14 @@ impl Unclocked {
     }
     /// Enable the clocks for the DMA peripheral
     ///
-    /// The return is `CHANNEL_COUNT` channels, each being initialized as `Some(Channel)`. Users may take channels as needed.
-    /// The index in the array maps to the DMA channel number.
-    pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; CHANNEL_COUNT] {
+    /// The return is an array of 32 channels. However, **only the first [`CHANNEL_COUNT`](constant.CHANNEL_COUNT.html) channels
+    /// are initialized to `Some(channel)`. The rest are `None`.
+    ///
+    /// Users may take channels as needed. The index in the array maps to the DMA channel number.
+    pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; 32] {
         let (ccm, _) = ccm.raw();
         ral::modify_reg!(ral::ccm, ccm, CCGR5, CG3: 0x03);
-        for (idx, channel) in self.0.iter_mut().enumerate() {
+        for (idx, channel) in self.0.iter_mut().take(CHANNEL_COUNT).enumerate() {
             *channel = Some(Channel::new(idx));
         }
         self.0
