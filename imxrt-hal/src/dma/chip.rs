@@ -92,6 +92,6 @@ impl Display for ErrorStatus {
 //
 
 /// Address to the DMA multiplexer registers
-pub(crate) const DMA_MULTIPLEXER_ADDRESS: u32 = 0x400E_C000;
+pub(crate) const DMA_MULTIPLEXER_ADDRESS: *const u32 = 0x400E_C000 as *const _;
 /// Address to the DMA peripheral registers
-pub(crate) const DMA_ADDRESS: u32 = 0x400E_8000;
+pub(crate) const DMA_ADDRESS: *const u32 = 0x400E_8000 as *const _;
