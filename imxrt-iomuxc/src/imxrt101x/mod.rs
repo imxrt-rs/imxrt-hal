@@ -89,6 +89,7 @@
 //! ```
 
 mod i2c;
+mod spi;
 mod uart;
 
 include!(concat!(env!("OUT_DIR"), "/imxrt101x.rs"));
