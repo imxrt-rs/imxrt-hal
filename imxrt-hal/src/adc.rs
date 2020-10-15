@@ -11,13 +11,17 @@
 //! let (adc1_builder, _) = peripherals.adc.clock(&mut peripherals.ccm.handle);
 //!
 //! let mut adc1 = adc1_builder.build(adc::ClockSelect::default(), adc::ClockDivision::default());
-//! let mut a1 = adc::AnalogInput::new(peripherals.iomuxc.ad_b1.p02, &adc1);
+//! let mut a1 = adc::AnalogInput::new(peripherals.iomuxc.ad_b1.p02);
 //!
 //! let reading: u16 = adc1.read(&mut a1).unwrap();
 //!```
+//!
+//! The ADC starts out with a default configuration of 4 hardware samples, a conversion speed of
+//! medium, a resolution of 10 bits, and low power mode disabled. It's also pre-calibrated using
+//! 32 averages and a slow conversion speed.
 
 use crate::ccm;
-use crate::iomuxc::adc::{prepare_adc_pin, Pin, ADC1, ADC2};
+use crate::iomuxc::adc::{prepare, Pin, ADC1, ADC2};
 use crate::iomuxc::{adc, consts::Unsigned};
 use crate::ral;
 use core::marker::PhantomData;
@@ -25,13 +29,15 @@ use embedded_hal::adc::{Channel, OneShot};
 
 /// The clock input for an ADC
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClockSelect {
-    IPG,   // IPG clock
-    IPG_2, // IPG clock / 2
-    ADACK, // Asynchronous clock
+    IPG(super::ccm::IPGFrequency),   // IPG clock
+    IPG_2(super::ccm::IPGFrequency), // IPG clock / 2
+    ADACK,                           // Asynchronous clock
 }
 
 /// How much to divide the clock input
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClockDivision {
     Div1, // Input clock / 1
     Div2, // Input clock / 2
@@ -52,6 +58,7 @@ impl ClockDivision {
 }
 
 /// Conversion speeds done by clock cycles
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConversionSpeed {
     Slow,     // 25 ADC clock cycles (24 on imxrt102x)
     Medium,   // 17 ADC clock cycles (16 on imxrt102x)
@@ -60,6 +67,7 @@ pub enum ConversionSpeed {
 }
 
 /// Denotes how much hardware averaging to do
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AveragingCount {
     Avg1,
     Avg4,
@@ -69,6 +77,7 @@ pub enum AveragingCount {
 }
 
 // Specifies the resolution the ADC
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolutionBits {
     Res8,
     Res10,
@@ -78,7 +87,7 @@ pub enum ResolutionBits {
 /// A pin representing an analog input for a particular ADC
 pub struct AnalogInput<ADCx, P> {
     _module: PhantomData<ADCx>,
-    _pin: P,
+    pin: P,
 }
 
 impl<P, ADCx> Channel<ADCx> for AnalogInput<ADCx, P>
@@ -99,12 +108,18 @@ where
     ADCx: adc::ADC,
 {
     /// Creates a new analog input pin
-    pub fn new(mut pin: P, _adc: &ADC<ADCx>) -> Self {
-        prepare_adc_pin(&mut pin);
+    pub fn new(mut pin: P) -> Self {
+        prepare(&mut pin);
         Self {
             _module: PhantomData,
-            _pin: pin,
+            pin,
         }
+    }
+
+    /// Release the ADC input, returning the underlying hardware pin. This pin is in an
+    /// unspecified state
+    pub fn release(self) -> P {
+        self.pin
     }
 }
 
@@ -115,7 +130,7 @@ pub struct ADC<ADCx> {
 
 impl<ADCx> ADC<ADCx> {
     fn new(reg: ral::adc::Instance) -> Self {
-        let inst = Self {
+        let mut inst = Self {
             _module: PhantomData,
             reg,
         };
@@ -136,7 +151,7 @@ impl<ADCx> ADC<ADCx> {
     }
 
     /// Sets the resolution that analog reads return, in bits
-    pub fn set_resolution(&self, bits: ResolutionBits) {
+    pub fn set_resolution(&mut self, bits: ResolutionBits) {
         ral::modify_reg!(ral::adc, self.reg, CFG, MODE: match bits {
             ResolutionBits::Res8 => MODE_0,
             ResolutionBits::Res10 => MODE_1,
@@ -145,7 +160,7 @@ impl<ADCx> ADC<ADCx> {
     }
 
     /// Sets the number of hardware averages taken by the ADC
-    pub fn set_averaging(&self, avg: AveragingCount) {
+    pub fn set_averaging(&mut self, avg: AveragingCount) {
         ral::modify_reg!(ral::adc, self.reg, GC, AVGE: match avg {
             AveragingCount::Avg1 => AVGE_0,
             _ => AVGE_1
@@ -159,7 +174,7 @@ impl<ADCx> ADC<ADCx> {
     }
 
     /// Sets the conversion speed for this ADC, see ConversionSpeed for clock cycle counts.
-    pub fn set_conversion_speed(&self, conversion_speed: ConversionSpeed) {
+    pub fn set_conversion_speed(&mut self, conversion_speed: ConversionSpeed) {
         ral::modify_reg!(ral::adc, self.reg, CFG,
             ADSTS: match conversion_speed {
                 ConversionSpeed::Slow => ADSTS_3,
@@ -178,12 +193,12 @@ impl<ADCx> ADC<ADCx> {
 
     /// Enables or disables the low power configuration in the ADC. This does limit the
     /// ADACK clock frequency (<= 20MHz)
-    pub fn set_low_power_mode(&self, state: bool) {
+    pub fn set_low_power_mode(&mut self, state: bool) {
         ral::modify_reg!(ral::adc, self.reg, CFG, ADLPC: if state { ADLPC_1 } else { ADLPC_0 });
     }
 
     /// Calibrates the ADC, will wait for finish
-    pub fn calibrate(&self) {
+    pub fn calibrate(&mut self) {
         ral::modify_reg!(ral::adc, self.reg, GC, CAL: 0b1);
         while (ral::read_reg!(ral::adc, self.reg, CAL, CAL_CODE) != 0) {}
     }
@@ -196,7 +211,7 @@ where
     WORD: From<u16>,
     P: Pin<ADCx>,
 {
-    type Error = ();
+    type Error = core::convert::Infallible;
 
     /// Read an ADC value from an AnalogInput. This should always return a good result
     fn read(&mut self, _pin: &mut AnalogInput<ADCx, P>) -> nb::Result<WORD, Self::Error> {
@@ -219,8 +234,8 @@ pub struct Unclocked {
 }
 
 impl Unclocked {
-    pub fn clock(self, handle: &mut ccm::Handle) -> (Builder<ADC1>, Builder<ADC2>) {
-        let (ccm, _) = handle.raw();
+    pub fn clock(self, ccm_handle: &mut ccm::Handle) -> (Builder<ADC1>, Builder<ADC2>) {
+        let (ccm, _) = ccm_handle.raw();
         ral::modify_reg!(ral::ccm, ccm, CCGR1, CG8: 0b11); // adc1_clk_enable
         ral::modify_reg!(ral::ccm, ccm, CCGR1, CG4: 0b11); // adc2_clk_enable
 
@@ -246,7 +261,8 @@ where
     }
 
     /// Builds an ADC peripheral with a certain clock selection. The ADC starts at
-    /// a 10-bit resolution w/ 4 hardware averaging samples
+    /// a 10-bit resolution w/ 4 hardware averaging samples, at medium speed, and
+    /// with low power mode disabled.
     pub fn build(self, clock: ClockSelect, division: ClockDivision) -> ADC<ADCx> {
         // Enable asynchronous clock if applicable
         ral::modify_reg!(ral::adc, self.reg, GC, ADACKEN: match clock {
@@ -257,8 +273,8 @@ where
         // Select the clock selection, division, and enable ADHSC if applicable
         ral::modify_reg!(ral::adc, self.reg, CFG,
             ADICLK: match clock {
-                ClockSelect::IPG => ADICLK_0,
-                ClockSelect::IPG_2 => ADICLK_1,
+                ClockSelect::IPG(_ipg_frequency) => ADICLK_0,
+                ClockSelect::IPG_2(_ipg_frequency) => ADICLK_1,
                 ClockSelect::ADACK => ADICLK_3
             },
             ADIV: match division {

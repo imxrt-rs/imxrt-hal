@@ -33,7 +33,7 @@ pub trait Pin<ADCx: ADC>: super::gpio::Pin {
 ///
 /// Due to a requirement in the ADC module, `prepare` will disable the pull/keeper
 /// on the pin. The configuration change will not affect any other settings.
-pub fn prepare_adc_pin<ADCx: ADC, P: Pin<ADCx>>(pin: &mut P) {
+pub fn prepare<ADCx: ADC, P: Pin<ADCx>>(pin: &mut P) {
     // See the note in the ADC section of the reference manual
     // (using iMXRT1060, rev 2). ADC input signals connect to
     // GPIO, and we need to disable the keeper to prevent signal
