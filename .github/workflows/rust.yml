@@ -30,21 +30,18 @@ jobs:
     - name: Run tests (${{ matrix.feature }}) for RAL
       run: cd imxrt-ral && cargo test --verbose --features ${{ matrix.feature }}
 
-  build-hal:
+  build-hals:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        feature: ["imxrt1062"]
     steps:
     - uses: actions/checkout@v2
-    - name: Build imxrt-hal for (${{ matrix.feature }}) HAL
-      run: cd imxrt-hal && cargo build --verbose --features ${{ matrix.feature }}
-    - name: Run tests (${{ matrix.feature }}) for HAL
-      run: cd imxrt-hal && cargo test --verbose --features ${{ matrix.feature }}
-    - name: Check format (${{ matrix.feature }}) for HAL
-      run: cd imxrt-hal && cargo fmt --all -- --check
-    - name: Run clippy (${{ matrix.feature }}) for HAL
-      run: cd imxrt-hal && cargo clippy --features ${{ matrix.feature }} -- -D warnings
+    - name: Build HAL(s)
+      run: cd imxrt1062-hal && cargo build --verbose
+    - name: Run HAL(s) tests
+      run: cargo test --verbose
+    - name: Check format for HAL(s)
+      run: cargo fmt --all -- --check
+    - name: Run clippy for HAL(s)
+      run: cargo clippy -- -D warnings
 
   build-iomuxc:
     runs-on: ubuntu-latest

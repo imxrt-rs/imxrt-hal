@@ -21,7 +21,7 @@ use core::{
 /// `Buffer`s should store arrays of `u8`, `u16`, or `u32` elements.
 ///
 /// ```
-/// use imxrt_hal::dma;
+/// use imxrt1062_hal::dma;
 /// static UART2_DMA_RX: dma::Buffer<[u8; 256]> = dma::Buffer::new([0; 256]);
 /// ```
 ///
@@ -47,7 +47,7 @@ impl<B> Buffer<B> {
     /// May be used to allocate a `static` buffer.
     ///
     /// ```
-    /// use imxrt_hal::dma;
+    /// use imxrt1062_hal::dma;
     /// static UART2_DMA_RX: dma::Buffer<[u8; 256]> = dma::Buffer::new([0; 256]);
     /// ```
     pub const fn new(memory: B) -> Self {
@@ -75,7 +75,7 @@ impl<B> Buffer<B> {
 /// the same buffer.
 ///
 /// ```
-/// use imxrt_hal::dma;
+/// use imxrt1062_hal::dma;
 ///
 /// static DMA1_BUFFER: dma::Buffer<[u8; 256]> = dma::Buffer::new([0; 256]);
 ///
@@ -150,7 +150,7 @@ where
     /// that there are no other mutable references to this memory.
     ///
     /// ```
-    /// use imxrt_hal::dma;
+    /// use imxrt1062_hal::dma;
     ///
     /// let mut my_buffer: [u32; 128] = [0; 128];
     /// // my_buffer is stack-allocated, so we need to ensure that the lifetime of
@@ -270,7 +270,7 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// # Example
 ///
 /// ```
-/// use imxrt_hal::dma;
+/// use imxrt1062_hal::dma;
 ///
 /// // A newtype to enforce the required alignment
 /// #[repr(align(1024))] // 512 * 2 for size of u16
@@ -304,7 +304,7 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// circular DMA queue:
 ///
 /// ```
-/// # use imxrt_hal::dma;
+/// # use imxrt1062_hal::dma;
 /// #[repr(align(64))]
 /// struct Align(dma::Buffer<[u16; 30]>);
 /// static BUFFER: Align = Align(dma::Buffer::new([0; 30]));
@@ -316,7 +316,7 @@ unsafe impl<E: Element> Send for Linear<E> {}
 /// If the alignment is not a multiple of the size, we cannot create a circular DMA queue:
 ///
 /// ```no_run
-/// # use imxrt_hal::dma;
+/// # use imxrt1062_hal::dma;
 /// #[repr(align(256))] // Should be 1024 to account for u32 size
 /// struct Align(dma::Buffer<[u32; 256]>);
 /// static BUFFER: Align = Align(dma::Buffer::new([0; 256]));
@@ -411,7 +411,7 @@ impl<E: Element> Circular<E> {
     /// the memory. Caller must ensure that there are no other mutable references to this memory.
     ///
     /// ```
-    /// use imxrt_hal::dma;
+    /// use imxrt1062_hal::dma;
     ///
     /// #[repr(align(64))]
     /// struct Align([u8; 64]);
@@ -456,7 +456,7 @@ impl<E: Element> Circular<E> {
     /// Clears the readable contents from the queue
     ///
     /// ```
-    /// # use imxrt_hal::dma;
+    /// # use imxrt1062_hal::dma;
     /// # #[repr(align(64))]
     /// # struct Align(dma::Buffer<[u16; 32]>);
     /// # static BUFFER: Align = Align(dma::Buffer::new([0; 32]));
@@ -504,7 +504,7 @@ impl<E: Element> Circular<E> {
     /// `insert` may *not* insert all the elements into the buffer.
     ///
     /// ```
-    /// use imxrt_hal::dma;
+    /// use imxrt1062_hal::dma;
     ///
     /// #[repr(align(64))]
     /// struct Align(dma::Buffer<[u16; 32]>);
@@ -558,7 +558,7 @@ impl<E: Element> Circular<E> {
     /// elements remain in the queue.
     ///
     /// ```
-    /// # use imxrt_hal::dma;
+    /// # use imxrt1062_hal::dma;
     /// # #[repr(align(64))]
     /// # struct Align(dma::Buffer<[u16; 32]>);
     /// # static BUFFER: Align = Align(dma::Buffer::new([0; 32]));
