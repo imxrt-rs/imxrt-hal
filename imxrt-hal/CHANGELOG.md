@@ -6,6 +6,8 @@
 
 - Basic support for the secure real time clock (SRTC) peripheral, which
   continues to track time while the SNVS low-power domain remains powered.
+- Add ADC channels. The channels implement the `embedded-hal::adc::Oneshot`
+  trait.
 
 ## [0.4.1] 2020-09-23
 

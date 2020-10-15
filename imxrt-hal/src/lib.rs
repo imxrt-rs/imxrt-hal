@@ -26,6 +26,7 @@ pub mod iomuxc {
     }
 }
 
+pub mod adc;
 pub mod ccm;
 pub mod dma;
 pub mod gpio;
@@ -48,6 +49,7 @@ pub mod dcdc {
 }
 
 pub struct Peripherals {
+    pub adc: adc::Unclocked,
     pub iomuxc: iomuxc::Pads,
     pub ccm: ccm::CCM,
     pub pit: pit::UnclockedPIT,
@@ -75,6 +77,10 @@ impl Peripherals {
     /// peripherals.
     pub unsafe fn steal() -> Self {
         Peripherals {
+            adc: adc::Unclocked {
+                adc1: ral::adc::ADC1::steal(),
+                adc2: ral::adc::ADC2::steal(),
+            },
             iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::steal()),
             ccm: ccm::CCM::new(ral::ccm::CCM::steal(), ral::ccm_analog::CCM_ANALOG::steal()),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::steal()),
@@ -118,6 +124,10 @@ impl Peripherals {
     /// near the start of your program.
     pub fn take() -> Option<Self> {
         let p = Peripherals {
+            adc: adc::Unclocked {
+                adc1: ral::adc::ADC1::take()?,
+                adc2: ral::adc::ADC2::take()?,
+            },
             iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::take()?),
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::take()?),
