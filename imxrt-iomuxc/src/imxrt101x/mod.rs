@@ -88,6 +88,7 @@
 //! uart_new(gpio_10, gpio_13, 115_200);
 //! ```
 
+mod i2c;
 mod uart;
 
 include!(concat!(env!("OUT_DIR"), "/imxrt101x.rs"));
