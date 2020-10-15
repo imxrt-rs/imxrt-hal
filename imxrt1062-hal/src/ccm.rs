@@ -57,10 +57,6 @@ impl PLL1 {
         PLL1(())
     }
 
-    #[cfg(any(feature = "imxrt1011", feature = "imxrt1015"))]
-    pub const ARM_HZ: u32 = 500_000_000;
-
-    #[cfg(any(feature = "imxrt1064", feature = "imxrt1062", feature = "imxrt1061"))]
     pub const ARM_HZ: u32 = 600_000_000;
 
     /// Set the clock speed for the ARM core. This represents the base processor frequency.
@@ -925,30 +921,6 @@ pub mod spi {
         LPSPI_PODF_6 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_6,
         /// 0b0111: divide by 8
         LPSPI_PODF_7 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_7,
-        /// 0b1000: divide by 9
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_8 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_8,
-        /// 0b1001: divide by 10
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_9 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_9,
-        /// 0b1010: divide by 11
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_10 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_10,
-        /// 0b1011: divide by 12
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_11 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_11,
-        /// 0b1100: divide by 13
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_12 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_12,
-        /// 0b1101: divide by 14
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_13 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_13,
-        /// 0b1110: divide by 15
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_14 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_14,
-        /// 0b1111: divide by 16
-        #[cfg(features = "imxrt1011")]
-        LPSPI_PODF_15 = ccm::CBCMR::LPSPI_PODF::RW::LPSPI_PODF_15,
     }
 
     impl From<ClockSelect> for Frequency {

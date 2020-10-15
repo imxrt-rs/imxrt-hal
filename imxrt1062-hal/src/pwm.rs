@@ -16,16 +16,16 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt_hal;
-//! use imxrt_hal::pwm::Channel;
+//! use imxrt1062_hal;
+//! use imxrt1062_hal::pwm::Channel;
 //! use embedded_hal::Pwm;
 //!
-//! let mut p = imxrt_hal::Peripherals::take().unwrap();
+//! let mut p = imxrt1062_hal::Peripherals::take().unwrap();
 //!
 //! let (_, ipg_hz) =
 //!     p.ccm
 //!         .pll1
-//!         .set_arm_clock(imxrt_hal::ccm::PLL1::ARM_HZ, &mut p.ccm.handle, &mut p.dcdc);
+//!         .set_arm_clock(imxrt1062_hal::ccm::PLL1::ARM_HZ, &mut p.ccm.handle, &mut p.dcdc);
 //!
 //! let mut pwm2 = p.pwm2.clock(&mut p.ccm.handle);
 //!
@@ -35,9 +35,9 @@
 //!         &mut pwm2.handle,
 //!         p.iomuxc.b0.p10,
 //!         p.iomuxc.b0.p11,
-//!         imxrt_hal::pwm::Timing {
-//!             clock_select: imxrt_hal::ccm::pwm::ClockSelect::IPG(ipg_hz),
-//!             prescalar: imxrt_hal::ccm::pwm::Prescalar::PRSC_5,
+//!         imxrt1062_hal::pwm::Timing {
+//!             clock_select: imxrt1062_hal::ccm::pwm::ClockSelect::IPG(ipg_hz),
+//!             prescalar: imxrt1062_hal::ccm::pwm::Prescalar::PRSC_5,
 //!             switching_period: core::time::Duration::from_micros(1000),
 //!         },
 //!     )

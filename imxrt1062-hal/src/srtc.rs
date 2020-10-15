@@ -10,9 +10,9 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt_hal;
+//! use imxrt1062_hal;
 //!
-//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
 //!
 //! let mut srtc = peripherals.srtc.enable_and_set(&mut peripherals.ccm.handle, 1600000000, 0);
 //! // Interpreted as Unix time: Sep 13 2020 12:26:40.000
