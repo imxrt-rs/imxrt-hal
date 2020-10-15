@@ -88,6 +88,7 @@
 //! uart_new(ad_b1_02, ad_b0_13, 115_200);
 //! ```
 
+mod adc;
 mod i2c;
 mod pwm;
 mod spi;
