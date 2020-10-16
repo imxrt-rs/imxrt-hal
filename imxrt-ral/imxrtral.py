@@ -1867,7 +1867,7 @@ def main():
             device.special = True
             cortex_family.devices.append(device)
         else:
-            device_family = device.name[:8].lower()
+            device_family = device.name[:5].lower()
             if device_family not in [f.name for f in crate.families]:
                 crate.families.append(Family(device_family))
             family = [f for f in crate.families if f.name == device_family][0]

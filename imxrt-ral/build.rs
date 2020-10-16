@@ -6,21 +6,21 @@ fn main() {
         let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());
         println!("cargo:rustc-link-search={}", out.display());
         let device_file = if env::var_os("CARGO_FEATURE_IMXRT1011").is_some() {
-            "src/imxrt101/imxrt1011/device.x"
+            "src/imxrt/imxrt1011/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1015").is_some() {
-            "src/imxrt101/imxrt1015/device.x"
+            "src/imxrt/imxrt1015/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1021").is_some() {
-            "src/imxrt102/imxrt1021/device.x"
+            "src/imxrt/imxrt1021/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1051").is_some() {
-            "src/imxrt105/imxrt1051/device.x"
+            "src/imxrt/imxrt1051/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1052").is_some() {
-            "src/imxrt105/imxrt1052/device.x"
+            "src/imxrt/imxrt1052/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1061").is_some() {
-            "src/imxrt106/imxrt1061/device.x"
+            "src/imxrt/imxrt1061/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1062").is_some() {
-            "src/imxrt106/imxrt1062/device.x"
+            "src/imxrt/imxrt1062/device.x"
         } else if env::var_os("CARGO_FEATURE_IMXRT1064").is_some() {
-            "src/imxrt106/imxrt1064/device.x"
+            "src/imxrt/imxrt1064/device.x"
         } else {
             panic!("No device features selected");
         };
