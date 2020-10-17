@@ -1,6 +1,6 @@
 [package]
 name = "imxrt-iomuxc"
-version = "0.1.1"
+version = "0.2.0" # Bumped when changing "imxrt106x" => "imxrt1060", "imxrt101x" => "imxrt1010"
 authors = ["Ian McIntyre <ianpmcintyre@gmail.com>"]
 edition = "2018"
 description = """Pad configuration interface for NXP i.MX RT processors.

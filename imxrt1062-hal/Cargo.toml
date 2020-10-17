@@ -30,7 +30,7 @@ path = "../imxrt-ral"
 features = ["imxrt1062"]
 
 [dependencies.imxrt-iomuxc]
-version = "0.1.0"
+version = "0.2.0"
 path = "../imxrt-iomuxc"
 features = ["imxrt1060"]
 
