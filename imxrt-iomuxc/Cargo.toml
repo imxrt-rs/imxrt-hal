@@ -19,8 +19,8 @@ typenum = "1.12.0"
 imxrt-iomuxc-build = { version = "0.1.0", path = "imxrt-iomuxc-build" }
 
 [features]
-imxrt106x = []
-imxrt101x = []
+imxrt1060 = []
+imxrt1010 = []
 
 [package.metadata.docs.rs]
 all-features = true

@@ -1,6 +1,6 @@
-//! Pads for the i.MX RT 106x processor family
+//! Pads for the i.MX RT 1010 processor family
 //!
-//! The module exports all of the i.MX RT 106x processor's pads. Pads that can support peripheral
+//! The module exports all of the i.MX RT 1010 processor's pads. Pads that can support peripheral
 //! functions are tagged with `imxrt-iomuxc` traits.
 //!
 //! # Example
@@ -36,10 +36,10 @@
 //!     # UART
 //! }
 //!
-//! # let ad_b0_13 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_13::new() };
-//! # let ad_b0_12 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_12::new() };
-//! // AD_B0_13 and AD_B0_12 are a suitable pair of UART pins
-//! uart_new(ad_b0_12, ad_b0_13, 115_200);
+//! # let sd_12 = unsafe { imxrt_iomuxc::imxrt1010::sd::SD_12::new() };
+//! # let sd_11 = unsafe { imxrt_iomuxc::imxrt1010::sd::SD_11::new() };
+//! // SD_12 and SD_11 are a suitable pair of UART pins
+//! uart_new(sd_12, sd_11, 115_200);
 //! ```
 //!
 //! Specifically, the trait bounds guard against non-UART pins:
@@ -59,10 +59,10 @@
 //! #     }
 //! #     UART
 //! # }
-//! # let ad_b0_10 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_10::new() };
-//! # let ad_b0_11 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_11::new() };
+//! # let ad_10 = unsafe { imxrt_iomuxc::imxrt1010::ad::AD_10::new() };
+//! # let ad_11 = unsafe { imxrt_iomuxc::imxrt1010::ad::AD_11::new() };
 //! // Neither pad is a valid UART pin
-//! uart_new(ad_b0_10, ad_b0_11, 115_200);
+//! uart_new(ad_10, ad_11, 115_200);
 //! ```
 //!
 //! It also guards against mismatched UART pins:
@@ -82,27 +82,21 @@
 //! #     }
 //! #     UART
 //! # }
-//! # let ad_b0_13 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B0_13::new() };
-//! # let ad_b1_02 = unsafe { imxrt_iomuxc::imxrt106x::ad_b0::AD_B1_02::new() };
-//! // AD_B1_02 is a UART2 TX pin, but AD_B0_13 is a UART1 RX pin
-//! uart_new(ad_b1_02, ad_b0_13, 115_200);
+//! # let gpio_09 = unsafe { imxrt_iomuxc::imxrt1010::gpio::GPIO_09::new() };
+//! # let gpio_13 = unsafe { imxrt_iomuxc::imxrt1010::gpio::GPIO_13::new() };
+//! // GPIO_10 is a UART1 TX pin, and GPIO_13 is a UART2 RX pin
+//! uart_new(gpio_10, gpio_13, 115_200);
 //! ```
 
-mod adc;
 mod i2c;
-mod pwm;
 mod spi;
 mod uart;
 
-include!(concat!(env!("OUT_DIR"), "/imxrt106x.rs"));
+include!(concat!(env!("OUT_DIR"), "/imxrt1010.rs"));
 pub use pads::*;
 
 mod bases {
-    define_base!(EMC, 0x401F_8014, 0x401F_8204);
-    define_base!(AD_B0, 0x401F_80BC, 0x401F_82AC);
-    define_base!(AD_B1, 0x401F_80FC, 0x401F_82EC);
-    define_base!(B0, 0x401F_813C, 0x401F_832C);
-    define_base!(B1, 0x401F_817C, 0x401F_836C);
-    define_base!(SD_B0, 0x401F_81BC, 0x401F_83AC);
-    define_base!(SD_B1, 0x401F_81D4, 0x401F_83C4);
+    define_base!(AD, 0x401F_8010, 0x401F_80C0);
+    define_base!(SD, 0x401F_804C, 0x401F_80FC);
+    define_base!(GPIO, 0x401F_8088, 0x401F_8138);
 }

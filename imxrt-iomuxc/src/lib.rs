@@ -11,8 +11,8 @@
 //! the processor's pads for HAL users. The approach lets users treat pads as resources
 //! which will be consumed and used by processor peripherals.
 //!
-//! Processor pads may be enabled using feature flags. For example, the `imxrt106x` feature
-//! flag exposes an `imxrt106x` module that defines all i.MX RT 106x processor pads.
+//! Processor pads may be enabled using feature flags. For example, the `imxrt1060` feature
+//! flag exposes an `imxrt1060` module that defines all i.MX RT 1060 processor pads.
 //!
 //! # Design Guidance
 //!
@@ -109,8 +109,8 @@ pub use config::{
 ///     // Re-export common modules and types
 ///     pub use imxrt_iomuxc::prelude::*;
 ///     // Conditionally re-export chip-specific pads
-///     #[cfg(feature = "imxrt106x")]
-///     pub use imxrt_iomuxc::imxrt106x::*;
+///     #[cfg(feature = "imxrt1060")]
+///     pub use imxrt_iomuxc::imxrt1060::*;
 /// }
 /// ```
 pub mod prelude {
@@ -190,13 +190,13 @@ macro_rules! define_base {
 // Listing the processor modules here, since they may depend on the
 // above `define_base!()` macro...
 //
-#[cfg(feature = "imxrt101x")]
-#[cfg_attr(docsrs, doc(cfg(feature = "imxrt101x")))]
-pub mod imxrt101x;
+#[cfg(feature = "imxrt1010")]
+#[cfg_attr(docsrs, doc(cfg(feature = "imxrt1010")))]
+pub mod imxrt1010;
 
-#[cfg(feature = "imxrt106x")]
-#[cfg_attr(docsrs, doc(cfg(feature = "imxrt106x")))]
-pub mod imxrt106x;
+#[cfg(feature = "imxrt1060")]
+#[cfg_attr(docsrs, doc(cfg(feature = "imxrt1060")))]
+pub mod imxrt1060;
 
 /// An IOMUXC-capable pad which can support I/O multiplexing
 ///
