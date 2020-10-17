@@ -4,17 +4,17 @@ use std::{env, fs, io, path::PathBuf};
 fn main() -> io::Result<()> {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
-    #[cfg(feature = "imxrt101x")]
-    imxrt101x(fs::File::create(out_dir.join("imxrt101x.rs"))?)?;
+    #[cfg(feature = "imxrt1010")]
+    imxrt1010(fs::File::create(out_dir.join("imxrt1010.rs"))?)?;
 
-    #[cfg(feature = "imxrt106x")]
-    imxrt106x(fs::File::create(out_dir.join("imxrt106x.rs"))?)?;
+    #[cfg(feature = "imxrt1060")]
+    imxrt1060(fs::File::create(out_dir.join("imxrt1060.rs"))?)?;
 
     Ok(())
 }
 
-#[cfg(feature = "imxrt101x")]
-fn imxrt101x<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
+#[cfg(feature = "imxrt1010")]
+fn imxrt1010<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
     use imxrt_iomuxc_build as build;
 
     let ad = build::PadRange::new("AD", 0..16);
@@ -36,8 +36,8 @@ fn imxrt101x<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "imxrt106x")]
-fn imxrt106x<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
+#[cfg(feature = "imxrt1060")]
+fn imxrt1060<W: io::Write>(mut pads_rs: W) -> io::Result<()> {
     use imxrt_iomuxc_build as build;
 
     let emc = build::PadRange::new("EMC", 0..42);

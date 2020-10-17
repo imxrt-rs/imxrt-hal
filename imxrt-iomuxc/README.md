@@ -21,7 +21,7 @@ i.MX RT pad definitions and pin configuration.
   to treat pads as resources. Without any feature flags, the `imxrt-iomuxc` provides
   the general pin configuration interface. There are no processor-specific APIs in
   the default build.
-- `imxrt-iomuxc` feature flags, like `imxrt106x`, enable processor-specific pad
+- `imxrt-iomuxc` feature flags, like `imxrt1060`, enable processor-specific pad
   definitions and pin implementations.
 - `imxrt-iomuxc-build` provides **build-time** support for defining pads. It's
   used to simply generate all of the pads. It also implements simple, common
@@ -42,8 +42,8 @@ their code for different i.MX RT variants enable more feature flags.
 ## Comparison to Variant-Specific IOMUXC Crates
 
 A previous approach separated the `imxrt-iomuxc` interface and implementations
-across crates. Rather than having an `imxrt106x` feature in a single `imxrt-iomuxc`
-crate, we had separate crates, named like `imxrt106x-iomuxc`, that implemented the
+across crates. Rather than having an `imxrt1060` feature in a single `imxrt-iomuxc`
+crate, we had separate crates, named like `imxrt1060-iomuxc`, that implemented the
 `imxrt-iomuxc` interfaces. We decided to use feature flags after realizing it was
 not only easier to maintain, but also equivalent to the multi-crate approach. This
 section compares the maintenance and equivalence of the two approaches.
@@ -70,38 +70,38 @@ A single crate with feature flags is equivalent to an interface crate and separa
 implementation crates. Consider a user who wants to use the IOMUXC pin configuration
 interfaces. That user would depend on `imxrt-iomuxc`, regardless of the approach.
 
-Now, consider a user who wants to use their code on an i.MX RT 106x processor variant.
-Under the old approach, that user would include the `imxrt106x-iomuxc` crate, which
+Now, consider a user who wants to use their code on an i.MX RT 1060 processor variant.
+Under the old approach, that user would include the `imxrt1060-iomuxc` crate, which
 includes the `imxrt-iomuxc` crate:
 
 ```toml
 [dependencies]
-imxrt106x-iomuxc = "0.1"
+imxrt1060-iomuxc = "0.1"
 # imxrt-iomuxc = "0.1" - implicit dependency
 ```
 
-When using feature flags, the user enables the `imxrt106x` feature:
+When using feature flags, the user enables the `imxrt1060` feature:
 
 ```toml
 [dependencies]
-imxrt-iomuxc = { version = "0.1", features = ["imxrt106x"] }
+imxrt-iomuxc = { version = "0.1", features = ["imxrt1060"] }
 ```
 
 Both approaches result in the same changes to the dependency graph: the graph now includes code
-for i.MX RT 106x processor pads.
+for i.MX RT 1060 processor pads.
 
 Since features are additive,  users who want to support more processors enable more feature flags.
 This would have translated to the user explicitly including more crates:
 
 ```toml
 [dependencies]
-imxrt-iomuxc = { version = "0.1", features = ["imxrt102x", "imxrt106x"] }
+imxrt-iomuxc = { version = "0.1", features = ["imxrt102x", "imxrt1060"] }
 
 # Equivalent:
 
 [dependencies]
 imxrt102x-iomuxc = "0.1"
-imxrt106x-iomuxc = "0.1"
+imxrt1060-iomuxc = "0.1"
 # imxrt-iomuxc = "0.1" - implicit dependency
 ```
 
