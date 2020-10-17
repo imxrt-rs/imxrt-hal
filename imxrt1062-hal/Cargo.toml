@@ -1,7 +1,12 @@
 [package]
-name = "imxrt1062-hal"
+name = "imxrt1060-hal"
 authors = ["Tom Burdick <tom.burdick@electromatic.us>", "Ian McIntyre <ianpmcintyre@gmail.com>"]
-description = "Hardware abstraction layer for all NXP i.MX RT microcontrollers"
+description = """
+Hardware abstraction layer for NXP i.MX RT 1060 microcontrollers, including
+
+- i.MX RT 1061
+- i.MX RT 1062
+"""
 repository = "https://github.com/imxrt-rs/imxrt-rs"
 readme = "README.md"
 keywords = ["imxrt", "nxp", "embedded", "no_std"]
@@ -27,7 +32,7 @@ features = ["imxrt1062"]
 [dependencies.imxrt-iomuxc]
 version = "0.1.0"
 path = "../imxrt-iomuxc"
-features = ["imxrt106x"]
+features = ["imxrt1060"]
 
 [lib]
 bench = false

@@ -1,7 +1,7 @@
 //! NXP iMXRT hardware abstraction layer
 //!
 //! An [`embedded-hal`](https://crates.io/crates/embedded-hal) implementation
-//! targeting processors in NXP's IMXRT106x family.
+//! targeting processors in NXP's IMXRT1060 family.
 //!
 //! See the module-level documentation for more information and examples.
 
@@ -15,8 +15,7 @@ pub use imxrt_ral as ral;
 /// This module re-exports that crate, along with a chip-specific IOMUXC crate.
 pub mod iomuxc {
     pub use imxrt_iomuxc::*;
-
-    pub use imxrt_iomuxc::imxrt106x::*;
+    pub use imxrt_iomuxc::imxrt1060::*;
 
     /// Use this function to acquire the IOMUXC pads. It requires that you have an
     /// instance to the RAL's IOMUXC instance.
