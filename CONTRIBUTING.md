@@ -2,7 +2,7 @@
 
 Thanks for helping us build embedded Rust support for NXP's i.MX RT processors! Please open an issue if
 
-- you find a bug in the HAL, RAL, or IOMUXC crates
+- you find a bug in any chip HAL, the RAL, or IOMUXC crates
 - you have an idea for a feature
 - something isn't clear in our documentation
 
@@ -35,12 +35,12 @@ If everything went well, you should find that the `imxrt-ral/src` directory is p
 
 If you add a SVD patch, or if you change something in `imxrtral.py`, you'll need to re-generate the RAL to realize the change.
 
-### HAL
+### Chip specific HAL(s), for example imxrt1062-hal
 
-Make sure you've generated the RAL (see above). When developing the HAL, specify a feature flag from the command line. To check the HAL for `imxrt1062` processors, `cd imxrt-hal`, then
+Make sure you've generated the RAL (see above). When developing the HAL(s) a quick way to check everything compiles, in the project root
 
 ```
-cargo check --features imxrt1062 --target thumbv7em-none-eabihf
+cargo check --target thumbv7em-none-eabihf
 ```
 
 ### IOMUXC
@@ -58,7 +58,7 @@ To modify the RAL, you'll need to describe your change as an SVD patch. If you'd
 
 ### Testing
 
-Our CI system ensures that the RAL and HAL builds for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt-hal` include
+Our CI system ensures that the RAL and HAL(s) build for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL(s) using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt1062-hal` include
 
 - [the `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp)
 - [the `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs)
