@@ -635,7 +635,7 @@ const DMA_TX_REQUEST_LOOKUP: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
 /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
 const DMA_RX_REQUEST_LOOKUP: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
 
-impl<M> dma::peripheral::Source<u8> for UART<M>
+unsafe impl<M> dma::peripheral::Source<u8> for UART<M>
 where
     M: Unsigned,
 {
@@ -656,7 +656,7 @@ where
     }
 }
 
-impl<M> dma::peripheral::Source<u8> for Rx<M>
+unsafe impl<M> dma::peripheral::Source<u8> for Rx<M>
 where
     M: Unsigned,
 {
@@ -673,7 +673,7 @@ where
     }
 }
 
-impl<M> dma::peripheral::Destination<u8> for UART<M>
+unsafe impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
     M: Unsigned,
 {
@@ -693,7 +693,7 @@ where
     }
 }
 
-impl<M> dma::peripheral::Destination<u8> for Tx<M>
+unsafe impl<M> dma::peripheral::Destination<u8> for Tx<M>
 where
     M: Unsigned,
 {

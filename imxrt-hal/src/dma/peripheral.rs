@@ -15,97 +15,16 @@
 //! See the [Rust API guidelines on future-proofing](https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed)
 //! to learn about the 'Sealed' pattern. Use the UART peripheral as an example.
 
-use super::{
-    buffer, Channel, Circular, Element, Error, ErrorStatus, ReadHalf, Transfer, WriteHalf,
-};
+use super::{buffer, Channel, Circular, Element, Error, ReadHalf, Transfer, WriteHalf};
 use core::sync::atomic::{compiler_fence, Ordering};
-
-/// Describes a peripheral that can be the source of DMA data
-///
-/// By 'source,' we mean that it provides data for a DMA transfer.
-/// A 'source,' would be a hardware device sending data into our
-/// memory.
-///
-/// This trait may only be implemented by HAL authors. Users will find
-/// that [HAL peripherals already implement `Source`](trait.Source.html#implementors).
-pub trait Source<E: Element>: private::Sealed {
-    type Error;
-    /// Peripheral source request signal
-    ///
-    /// See Table 4-3 of the reference manual. A source probably
-    /// has something like 'receive' in the name.
-    const SOURCE_REQUEST_SIGNAL: u32;
-    /// Returns a pointer to the register from which the DMA channel
-    /// reads data
-    ///
-    /// This is the register that software reads to acquire data from
-    /// a device. The type of the pointer describes the type of reads
-    /// the DMA channel performs when transferring data.
-    ///
-    /// This memory is assumed to be static.
-    fn source(&self) -> *const E;
-    /// Perform any actions necessary to enable DMA transfers
-    ///
-    /// Callers use this method to put the peripheral in a state where
-    /// it can supply the DMA channel with data.
-    fn enable_source(&mut self) -> Result<(), Self::Error>;
-    /// Perform any actions necessary to disable or cancel DMA transfers
-    ///
-    /// This may include undoing the actions in `enable_source()`.
-    fn disable_source(&mut self);
-}
-
-/// Describes a peripheral that can be the destination for DMA data
-///
-/// By 'destination,' we mean that it receives data from a DMA transfer.
-/// Software is sending data from memory to a device using DMA.
-///
-/// The trait may only be implemented by HAL authors. Users will find
-/// that [HAL peripherals already implement `Destination`](trait.Destination.html#implementors).
-pub trait Destination<E: Element>: private::Sealed {
-    type Error;
-    /// Peripheral destination request signal
-    ///
-    /// See Table 4-3 of the reference manual. A destination probably
-    /// has something like 'transfer' in the name.
-    const DESTINATION_REQUEST_SIGNAL: u32;
-    /// Returns a pointer to the register into which the DMA channel
-    /// writes data
-    ///
-    /// This is the register that software writes to when sending data to a
-    /// device. The type of the pointer describes the type of reads the
-    /// DMA channel performs when transferring data.
-    fn destination(&self) -> *const E;
-    /// Perform any actions necessary to enable DMA transfers
-    ///
-    /// Callers use this method to put the peripheral into a state where
-    /// it can accept transfers from a DMA channel.
-    fn enable_destination(&mut self) -> Result<(), Self::Error>;
-    /// Perform any actions necessary to disable or cancel DMA transfers
-    ///
-    /// This may include undoing the actions in `enable_destination()`.
-    fn disable_destination(&mut self);
-}
-
-/// Preventing crate users from implementing `Source` and `Destination`
-/// for arbitrary types.
-mod private {
-    pub trait Sealed {}
-
-    use crate::uart;
-    impl<M> Sealed for uart::UART<M> where M: crate::iomuxc::consts::Unsigned {}
-    impl<M> Sealed for uart::Rx<M> where M: crate::iomuxc::consts::Unsigned {}
-    impl<M> Sealed for uart::Tx<M> where M: crate::iomuxc::consts::Unsigned {}
-
-    use crate::spi;
-    impl<M> Sealed for spi::SPI<M> where M: crate::iomuxc::consts::Unsigned {}
-}
 
 impl<P> From<P> for Error<P> {
     fn from(error: P) -> Self {
         Error::Peripheral(error)
     }
 }
+
+pub use imxrt_dma::{Destination, Source};
 
 /// A DMA-capable peripheral
 ///
@@ -167,7 +86,7 @@ where
         // this crate. We may study those implementations to show that the
         // pointers point to valid memory.
         unsafe {
-            channel.set_source_transfer(Transfer::hardware(self.peripheral.source()));
+            channel.set_source_transfer(&Transfer::hardware(self.peripheral.source()));
         }
         channel.set_disable_on_completion(true);
         self.rx_channel = Some(channel);
@@ -187,17 +106,17 @@ where
         let dst = buffer.destination();
 
         unsafe {
-            rx_channel.set_destination_transfer(dst);
+            rx_channel.set_destination_transfer(&dst);
         }
         rx_channel.set_minor_loop_elements::<E>(1);
-        rx_channel.set_transfer_iterations(dst.len() as u16);
+        rx_channel.set_transfer_iterations(buffer.destination_len() as u16);
 
         buffer.prepare_destination();
 
         compiler_fence(Ordering::Release);
         rx_channel.set_enable(true);
         if rx_channel.is_error() {
-            let es = ErrorStatus::new(rx_channel.error_status());
+            let es = rx_channel.error_status();
             rx_channel.clear_error();
             Err((buffer, Error::Setup(es)))
         } else {
@@ -306,7 +225,7 @@ where
         // this crate. We may study those implementations to show that the pointers
         // point to valid memory.
         unsafe {
-            channel.set_destination_transfer(Transfer::hardware(self.peripheral.destination()));
+            channel.set_destination_transfer(&Transfer::hardware(self.peripheral.destination()));
         }
         channel.set_disable_on_completion(true);
         self.tx_channel = Some(channel);
@@ -326,17 +245,17 @@ where
         let src = buffer.source();
 
         unsafe {
-            tx_channel.set_source_transfer(src);
+            tx_channel.set_source_transfer(&src);
         }
         tx_channel.set_minor_loop_elements::<E>(1);
-        tx_channel.set_transfer_iterations(src.len() as u16);
+        tx_channel.set_transfer_iterations(buffer.source_len() as u16);
 
         buffer.prepare_source();
 
         compiler_fence(Ordering::Release);
         tx_channel.set_enable(true);
         if tx_channel.is_error() {
-            let es = ErrorStatus::new(tx_channel.error_status());
+            let es = tx_channel.error_status();
             tx_channel.clear_error();
             Err((buffer, Error::Setup(es)))
         } else {

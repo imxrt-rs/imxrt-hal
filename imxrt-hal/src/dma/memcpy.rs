@@ -1,6 +1,6 @@
 //! DMA-powered memory copy
 
-use super::{buffer, Channel, Element, Error, ErrorStatus};
+use super::{buffer, Channel, Element, Error};
 use core::{
     marker::PhantomData,
     sync::atomic::{compiler_fence, Ordering},
@@ -95,14 +95,14 @@ where
         let dst = destination.destination();
 
         unsafe {
-            self.channel.set_source_transfer(src);
-            self.channel.set_destination_transfer(dst);
+            self.channel.set_source_transfer(&src);
+            self.channel.set_destination_transfer(&dst);
         }
 
         source.prepare_source();
         destination.prepare_destination();
 
-        let length = src.len().min(dst.len()) as u16;
+        let length = source.source_len().min(destination.destination_len()) as u16;
 
         self.channel.set_minor_loop_elements::<E>(1);
         self.channel.set_transfer_iterations(length);
@@ -111,7 +111,7 @@ where
         self.channel.set_enable(true);
         self.channel.start();
         if self.channel.is_error() {
-            let es = ErrorStatus::new(self.channel.error_status());
+            let es = self.channel.error_status();
             self.channel.clear_error();
             Err((source, destination, Error::Setup(es)))
         } else {
