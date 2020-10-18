@@ -21,8 +21,8 @@
 //! let source: [u32; 32] = [5; 32];
 //! let destination: [u32; 32] = [0; 32];
 //!
-//! let tx = Transfer::buffer_linear(source.as_ptr(), source.len());
-//! let rx = Transfer::buffer_linear(destination.as_ptr(), destination.len());
+//! let tx = Transfer::buffer_linear(source.as_ptr());
+//! let rx = Transfer::buffer_linear(destination.as_ptr());
 //!
 //! channel.set_always_on();
 //! channel.set_disable_on_completion(true);

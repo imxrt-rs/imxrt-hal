@@ -350,15 +350,15 @@ impl<E: Element> Transfer<E> {
     ///
     /// `ptr` points to the starting element of the buffer. `len` indicates how many elements
     /// you intend on transferring.
-    pub fn buffer_linear(ptr: *const E, len: usize) -> Self {
-        // TODO drop `len`, and leave the last address adjustment as zero.
-        // The implementation will always specifying the starting address,
-        // so last address adjustment doesn't matter.
+    pub fn buffer_linear(ptr: *const E) -> Self {
         Transfer {
             address: ptr,
             offset: core::mem::size_of::<E>() as i16,
             modulo: 0,
-            last_address_adjustment: ((len * mem::size_of::<E>()) as i32).wrapping_neg(),
+            // This crate's API doesn't guarantee that we'll reset the pointer.
+            // Callers will always need to re-call `set_[source|destination]_transfer`
+            // to specify a starting addess.
+            last_address_adjustment: 0,
         }
     }
 

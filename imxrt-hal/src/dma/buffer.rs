@@ -742,7 +742,7 @@ mod private {
 
 impl<E: Element> Source<E> for Linear<E> {
     fn source(&self) -> Transfer<E> {
-        Transfer::buffer_linear(self.ptr, self.len)
+        Transfer::buffer_linear(self.ptr)
     }
     fn source_len(&self) -> usize {
         self.len
@@ -753,7 +753,7 @@ impl<E: Element> Source<E> for Linear<E> {
 
 impl<E: Element> Destination<E> for Linear<E> {
     fn destination(&self) -> Transfer<E> {
-        Transfer::buffer_linear(self.ptr, self.len)
+        Transfer::buffer_linear(self.ptr)
     }
     fn destination_len(&self) -> usize {
         self.len
