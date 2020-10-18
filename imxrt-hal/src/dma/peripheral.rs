@@ -93,7 +93,7 @@ where
         if rx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
         }
-
+        self.peripheral.enable_source();
         let dst = buffer.destination();
 
         unsafe {
@@ -232,7 +232,7 @@ where
         if tx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
         }
-
+        self.peripheral.enable_destination();
         let src = buffer.source();
 
         unsafe {
