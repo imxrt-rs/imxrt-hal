@@ -6,8 +6,11 @@ use super::Element;
 /// A 'source,' would be a hardware device sending data into our
 /// memory.
 ///
-/// This trait may only be implemented by HAL authors. Users will find
-/// that [HAL peripherals already implement `Source`](trait.Source.html#implementors).
+/// # Safety
+///
+/// `Source` should only be implemented on peripherals that are
+/// DMA capable. This trait should be implemented by HAL authors
+/// who are exposing DMA capable peripherals.
 pub unsafe trait Source<E: Element> {
     type Error;
     /// Peripheral source request signal
@@ -22,7 +25,8 @@ pub unsafe trait Source<E: Element> {
     /// a device. The type of the pointer describes the type of reads
     /// the DMA channel performs when transferring data.
     ///
-    /// This memory is assumed to be static.
+    /// This memory is assumed to be static. Repeated `source` calls
+    /// should always return the same address.
     fn source(&self) -> *const E;
     /// Perform any actions necessary to enable DMA transfers
     ///
@@ -40,8 +44,11 @@ pub unsafe trait Source<E: Element> {
 /// By 'destination,' we mean that it receives data from a DMA transfer.
 /// Software is sending data from memory to a device using DMA.
 ///
-/// The trait may only be implemented by HAL authors. Users will find
-/// that [HAL peripherals already implement `Destination`](trait.Destination.html#implementors).
+/// # Safety
+///
+/// `Destination` should only be implemented on peripherals that are
+/// DMA capable. This trait should be implemented by HAL authors
+/// who are exposing DMA capable peripherals.
 pub unsafe trait Destination<E: Element> {
     type Error;
     /// Peripheral destination request signal

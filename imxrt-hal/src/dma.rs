@@ -154,7 +154,8 @@ mod buffer;
 mod memcpy;
 pub(crate) mod peripheral;
 
-pub use imxrt_dma::{Channel, Element, ErrorStatus, Transfer, CHANNEL_COUNT};
+pub use imxrt_dma::{Channel, Element, ErrorStatus, CHANNEL_COUNT};
+use imxrt_dma::Transfer;
 
 pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, WriteHalf};
 pub use memcpy::Memcpy;

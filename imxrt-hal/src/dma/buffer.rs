@@ -742,7 +742,7 @@ mod private {
 
 impl<E: Element> Source<E> for Linear<E> {
     fn source(&self) -> Transfer<E> {
-        unsafe { Transfer::buffer_linear(self.ptr, self.len) }
+        Transfer::buffer_linear(self.ptr, self.len)
     }
     fn source_len(&self) -> usize {
         self.len
@@ -753,7 +753,7 @@ impl<E: Element> Source<E> for Linear<E> {
 
 impl<E: Element> Destination<E> for Linear<E> {
     fn destination(&self) -> Transfer<E> {
-        unsafe { Transfer::buffer_linear(self.ptr, self.len) }
+        Transfer::buffer_linear(self.ptr, self.len)
     }
     fn destination_len(&self) -> usize {
         self.len
@@ -769,7 +769,7 @@ impl<E: Element> Destination<E> for Linear<E> {
 impl<E: Element> Source<E> for Circular<E> {
     fn source(&self) -> Transfer<E> {
         // upwrap OK; always power of two
-        unsafe { Transfer::buffer_circular(self.read_ptr(), self.cap).unwrap() }
+        Transfer::buffer_circular(self.read_ptr(), self.cap).unwrap()
     }
     fn source_len(&self) -> usize {
         self.len()
@@ -785,7 +785,7 @@ impl<E: Element> Source<E> for Circular<E> {
 impl<E: Element> Destination<E> for Circular<E> {
     fn destination(&self) -> Transfer<E> {
         // unwrap OK; always power of two
-        unsafe { Transfer::buffer_circular(self.write_ptr(), self.cap).unwrap() }
+        Transfer::buffer_circular(self.write_ptr(), self.cap).unwrap()
     }
     fn destination_len(&self) -> usize {
         self.reserved

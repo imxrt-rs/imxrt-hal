@@ -9,6 +9,9 @@ use crate::{
 };
 
 /// A DMA channel
+///
+/// You should rely on your HAL to allocate `Channel`s. If your HAL does not allocate channels,
+/// or if you're desigining the HAL, use [`new`](#method.new) to create a new DMA channel.
 pub struct Channel {
     /// Our channel number, expected to be between 0 to (CHANNEL_COUNT - 1)
     index: usize,
@@ -41,12 +44,21 @@ impl Channel {
     /// # Safety
     ///
     /// This will create a handle that may alias global, mutable state.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is greater than or equal to [`CHANNEL_COUNT`](constant.CHANNEL_COUNT.html).
     #[inline(always)]
-    pub const unsafe fn new(index: usize) -> Self {
-        Channel {
-            index,
-            registers: DMA,
-            multiplexer: MULTIPLEXER,
+    pub unsafe fn new(index: usize) -> Self {
+        // TODO consider breaking the API and return `Option<Channel>`
+        if index < super::CHANNEL_COUNT {
+            Channel {
+                index,
+                registers: DMA,
+                multiplexer: MULTIPLEXER,
+            }
+        } else {
+            panic!("DMA channel index {} exceeds CHANNEL_COUNT", index);
         }
     }
 
@@ -67,7 +79,8 @@ impl Channel {
     ///
     /// # Safety
     ///
-    /// Address pointer must be valid for lifetime of the transfer.
+    /// User must ensure that the memory described by `Transfer` is valid for the lifetime of
+    /// the DMA transaction.
     pub unsafe fn set_source_transfer<E: Element>(&mut self, transfer: &Transfer<E>) {
         let tcd = self.tcd();
         write_reg!(crate::ral::tcd, tcd, SADDR, transfer.address as u32);
@@ -85,7 +98,8 @@ impl Channel {
     ///
     /// # Safety
     ///
-    /// Address pointer must be valid for lifetime of the transfer.
+    /// User must ensure that the memory described by `Transfer` is valid for the lifetime of
+    /// the DMA transaction.
     pub unsafe fn set_destination_transfer<E: Element>(&mut self, transfer: &Transfer<E>) {
         let tcd = self.tcd();
         write_reg!(crate::ral::tcd, tcd, DADDR, transfer.address as u32);
@@ -261,6 +275,10 @@ impl Channel {
 /// - an element buffer that's treated as a circular buffer
 ///
 /// A transfer that uses a circular buffer requires that the buffer size is a power of two.
+///
+/// It's always safe to create a `Transfer`, because the struct is inert. But, it's generally
+/// unsafe to use `Transfer` in other methods. You must make sure that the memory described by
+/// `Transfer` is valid for the lifetime of the DMA transaction.
 #[derive(Debug)]
 pub struct Transfer<E: Element> {
     /// The starting address for the DMA transfer
@@ -304,9 +322,19 @@ pub struct Transfer<E: Element> {
     last_address_adjustment: i32,
 }
 
+/// Describes an error when creating a transfer for a circular buffer
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CircularError {
+    /// The size of the memory is not a power of two
+    NotPowerOfTwo,
+    /// The alignment of the buffer must be a multiple of the buffer's
+    /// size, which includes both element type, and the length of the buffer.
+    IncorrectAlignment,
+}
+
 impl<E: Element> Transfer<E> {
     /// Defines a transfer that reads from a hardware register at `address`
-    pub unsafe fn hardware(address: *const E) -> Self {
+    pub fn hardware(address: *const E) -> Self {
         Transfer {
             address,
             // Don't move the address pointer
@@ -318,8 +346,14 @@ impl<E: Element> Transfer<E> {
         }
     }
 
-    /// Defines a transfer that can read from `buffer`
-    pub unsafe fn buffer_linear(ptr: *const E, len: usize) -> Self {
+    /// Defines a transfer that can read from or write to `buffer`
+    ///
+    /// `ptr` points to the starting element of the buffer. `len` indicates how many elements
+    /// you intend on transferring.
+    pub fn buffer_linear(ptr: *const E, len: usize) -> Self {
+        // TODO drop `len`, and leave the last address adjustment as zero.
+        // The implementation will always specifying the starting address,
+        // so last address adjustment doesn't matter.
         Transfer {
             address: ptr,
             offset: core::mem::size_of::<E>() as i16,
@@ -328,13 +362,19 @@ impl<E: Element> Transfer<E> {
         }
     }
 
-    /// Defines a transfer that can read from the circular buffer
-    pub unsafe fn buffer_circular(start: *const E, capacity: usize) -> Option<Self> {
+    /// Defines a transfer that can read from or write to the circular buffer
+    ///
+    /// `start` points to the first element that will be used in the transfer. `capacity`
+    /// is the total size of the allocated memory region for the transfer; it is **not**
+    /// the number of elements to transfer.
+    pub fn buffer_circular(start: *const E, capacity: usize) -> Result<Self, CircularError> {
         if !capacity.is_power_of_two() {
-            return None;
+            return Err(CircularError::NotPowerOfTwo);
+        } else if (start as usize) % (capacity * mem::size_of::<E>()) != 0 {
+            return Err(CircularError::IncorrectAlignment);
         }
         let modulo = 31 - (capacity * mem::size_of::<E>()).leading_zeros() as u16;
-        Some(Transfer {
+        Ok(Transfer {
             address: start,
             offset: core::mem::size_of::<E>() as i16,
             modulo,
