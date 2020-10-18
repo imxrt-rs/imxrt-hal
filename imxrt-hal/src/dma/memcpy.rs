@@ -104,8 +104,10 @@ where
         self.channel.set_transfer_iterations(length);
 
         compiler_fence(Ordering::Release);
-        self.channel.set_enable(true);
-        self.channel.start();
+        unsafe {
+            self.channel.enable();
+            self.channel.start();
+        }
         if self.channel.is_error() {
             let es = self.channel.error_status();
             self.channel.clear_error();
@@ -157,7 +159,7 @@ where
                 destination.complete_destination();
                 Ok((source, destination))
             } else {
-                self.channel.set_enable(false);
+                self.channel.disable();
                 self.channel.clear_complete();
                 Err((source, destination))
             }

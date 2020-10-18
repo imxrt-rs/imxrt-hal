@@ -12,6 +12,9 @@ use crate::{
 ///
 /// You should rely on your HAL to allocate `Channel`s. If your HAL does not allocate channels,
 /// or if you're desigining the HAL, use [`new`](#method.new) to create a new DMA channel.
+///
+/// You must always specify the source and destination transfer descriptors before enabling the
+/// transfer.
 pub struct Channel {
     /// Our channel number, expected to be between 0 to (CHANNEL_COUNT - 1)
     index: usize,
@@ -172,17 +175,22 @@ impl Channel {
         self.registers.HRS.read() & (1 << self.index) != 0
     }
 
-    /// Enable or disable the DMA's multiplexer request
+    /// Enable the DMA multiplexer request, which signals that the transfer is
+    /// ready
     ///
-    /// In this DMA implementation, all peripheral transfers and memcpy requests
-    /// go through the DMA multiplexer. So, this needs to be set for the multiplexer
-    /// to service the channel.
-    pub fn set_enable(&mut self, enable: bool) {
-        if enable {
-            self.registers.SERQ.write(self.index as u8);
-        } else {
-            self.registers.CERQ.write(self.index as u8);
-        }
+    /// # Safety
+    ///
+    /// This could initiate a DMA transaction that uses an invalid source or destination.
+    /// Caller must ensure that the source and destination transfer descriptors are valid.
+    /// See [`set_source_transfer`](#method.set_source_transfer) and
+    /// [`set_destination_transfer`](#method.set_destination_transfer) for more information.
+    pub unsafe fn enable(&mut self) {
+        self.registers.SERQ.write(self.index as u8);
+    }
+
+    /// Disable the DMA channel, preventing any DMA transfers
+    pub fn disable(&mut self) {
+        self.registers.CERQ.write(self.index as u8);
     }
 
     /// Returns `true` if this DMA channel generated an interrupt
@@ -260,7 +268,14 @@ impl Channel {
     /// to request DMA service.
     ///
     /// Flag is automatically cleared by hardware after it's asserted.
-    pub fn start(&mut self) {
+    ///
+    /// # Safety
+    ///
+    /// This could initiate a DMA transaction that uses an invalid source or destination.
+    /// Caller must ensure that the source and destination transfer descriptors are valid.
+    /// See [`set_source_transfer`](#method.set_source_transfer) and
+    /// [`set_destination_transfer`](#method.set_destination_transfer) for more information.
+    pub unsafe fn start(&mut self) {
         self.registers.SSRT.write(self.index as u8);
     }
 }

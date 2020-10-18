@@ -105,7 +105,9 @@ where
         buffer.prepare_destination();
 
         compiler_fence(Ordering::Release);
-        rx_channel.set_enable(true);
+        unsafe {
+            rx_channel.enable();
+        }
         if rx_channel.is_error() {
             let es = rx_channel.error_status();
             rx_channel.clear_error();
@@ -156,7 +158,7 @@ where
         while rx_channel.is_hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
-        rx_channel.set_enable(false);
+        rx_channel.disable();
         compiler_fence(Ordering::Acquire);
         self.destination_buffer.take()
     }
@@ -242,7 +244,9 @@ where
         buffer.prepare_source();
 
         compiler_fence(Ordering::Release);
-        tx_channel.set_enable(true);
+        unsafe {
+            tx_channel.enable();
+        }
         if tx_channel.is_error() {
             let es = tx_channel.error_status();
             tx_channel.clear_error();
@@ -293,7 +297,7 @@ where
         while tx_channel.is_hardware_signaling() {
             core::sync::atomic::spin_loop_hint();
         }
-        tx_channel.set_enable(false);
+        tx_channel.disable();
         compiler_fence(Ordering::Acquire);
         self.source_buffer.take()
     }

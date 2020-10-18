@@ -35,8 +35,10 @@
 //! channel.set_minor_loop_elements::<u32>(1);
 //! channel.set_transfer_iterations(source.len() as u16);
 //!
-//! channel.set_enable(true);
-//! channel.start();
+//! unsafe {
+//!     channel.enable();
+//!     channel.start();
+//! }
 //!
 //! if channel.is_error() {
 //!     panic!("Transaction failed!");
