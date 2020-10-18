@@ -8,6 +8,17 @@
 //! This DMA driver may be re-exported from a HAL. If it is, you should consider
 //! using the safer APIs provided by your HAL, instead of this lower-level API.
 //!
+//! # Features
+//!
+//! The table below describes the feature flags that this driver supports:
+//!
+//! |  Feature flag   | Description             | Default? |
+//! | --------------- | ----------------------- | -------- |
+//! | `"channels-32"` | Support 32 DMA channels |     ✓    |
+//!
+//! Most i.MX RT processors support 32 DMA channels. If your chip does not support
+//! 32 DMA channels, you should disable the default features.
+//!
 //! # Example
 //!
 //! Use DMA channel 7 to perform a DMA-powered memory copy.
