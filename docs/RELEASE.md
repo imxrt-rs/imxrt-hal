@@ -4,7 +4,7 @@ From a clean repository, at the root:
 
 1. Update the `imxrt-iomuxc` crate versions.
 2. Update the `imxrt-ral` crate version in `imxrt-ral/imxrtral.py`.
-3. In `imxrt-hal/Cargo.toml`, update both
+3. In each HAL such as imxrt1062-hal/Cargo.toml`, update both
     - the version of the HAL
     - the HAL's dependency of the RAL
 4. Generate the RAL: `make -C imxrt-ral`
@@ -18,9 +18,9 @@ From a clean repository, at the root:
     ```
     cargo publish --manifest-path imxrt-ral/Cargo.toml
     ```
-8. Publish the HAL:
+8. Publish the HAL(s):
     ```
-    cargo publish --manifest-path imxrt-hal/Cargo.toml --features imxrt1062
+    cargo publish --manifest-path imxrt1062-hal/Cargo.toml
     ```
 
 ## Maintaining older releases
