@@ -217,7 +217,11 @@ impl Unclocked {
         let (ccm, _) = ccm.raw();
         ral::modify_reg!(ral::ccm, ccm, CCGR5, CG3: 0x03);
         for (idx, channel) in self.0.iter_mut().take(CHANNEL_COUNT).enumerate() {
-            *channel = Some(unsafe { Channel::new(idx) });
+            // Safety: because we have the DMA instance, we assume that we own the DMA
+            // peripheral. That means we own all the DMA channels.
+            let mut chan = unsafe { Channel::new(idx) };
+            chan.reset();
+            *channel = Some(chan);
         }
         self.0
     }
