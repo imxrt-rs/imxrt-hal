@@ -82,11 +82,7 @@ where
     ///
     /// The number of elements transferred is the minimum size of the two
     /// buffers.
-    pub fn transfer(
-        &mut self,
-        mut source: S,
-        mut destination: D,
-    ) -> Result<(), (S, D, Error<void::Void>)> {
+    pub fn transfer(&mut self, mut source: S, mut destination: D) -> Result<(), (S, D, Error)> {
         if self.buffers.is_some() || self.channel.is_enabled() {
             return Err((source, destination, Error::ScheduledTransfer));
         }

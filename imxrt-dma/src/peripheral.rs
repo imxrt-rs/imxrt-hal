@@ -12,7 +12,6 @@ use super::Element;
 /// DMA capable. This trait should be implemented by HAL authors
 /// who are exposing DMA capable peripherals.
 pub unsafe trait Source<E: Element> {
-    type Error;
     /// Peripheral source request signal
     ///
     /// See Table 4-3 of the reference manual. A source probably
@@ -32,7 +31,7 @@ pub unsafe trait Source<E: Element> {
     ///
     /// Callers use this method to put the peripheral in a state where
     /// it can supply the DMA channel with data.
-    fn enable_source(&mut self) -> Result<(), Self::Error>;
+    fn enable_source(&mut self);
     /// Perform any actions necessary to disable or cancel DMA transfers
     ///
     /// This may include undoing the actions in `enable_source()`.
@@ -50,7 +49,6 @@ pub unsafe trait Source<E: Element> {
 /// DMA capable. This trait should be implemented by HAL authors
 /// who are exposing DMA capable peripherals.
 pub unsafe trait Destination<E: Element> {
-    type Error;
     /// Peripheral destination request signal
     ///
     /// See Table 4-3 of the reference manual. A destination probably
@@ -67,7 +65,7 @@ pub unsafe trait Destination<E: Element> {
     ///
     /// Callers use this method to put the peripheral into a state where
     /// it can accept transfers from a DMA channel.
-    fn enable_destination(&mut self) -> Result<(), Self::Error>;
+    fn enable_destination(&mut self);
     /// Perform any actions necessary to disable or cancel DMA transfers
     ///
     /// This may include undoing the actions in `enable_destination()`.

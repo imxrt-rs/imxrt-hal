@@ -17,13 +17,6 @@
 
 use super::{buffer, Channel, Circular, Element, Error, ReadHalf, Transfer, WriteHalf};
 use core::sync::atomic::{compiler_fence, Ordering};
-
-impl<P> From<P> for Error<P> {
-    fn from(error: P) -> Self {
-        Error::Peripheral(error)
-    }
-}
-
 pub use imxrt_dma::{Destination, Source};
 
 /// A DMA-capable peripheral
@@ -95,12 +88,10 @@ where
     /// Start a DMA transfer that transfers data from the peripheral into the supplied buffer
     ///
     /// A complete transfer is signaled by `is_receive_complete()`, and possibly an interrupt.
-    pub fn start_receive(&mut self, mut buffer: D) -> Result<(), (D, Error<P::Error>)> {
+    pub fn start_receive(&mut self, mut buffer: D) -> Result<(), (D, Error)> {
         let rx_channel = self.rx_channel.as_mut().unwrap();
         if rx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
-        } else if let Err(error) = self.peripheral.enable_source() {
-            return Err((buffer, Error::Peripheral(error)));
         }
 
         let dst = buffer.destination();
@@ -234,12 +225,10 @@ where
     /// Start a DMA transfer that transfers data from the supplied buffer to the peripheral
     ///
     /// A complete transfer is signaled by `is_transfer_complete()`, and possibly an interrupt.
-    pub fn start_transfer(&mut self, mut buffer: S) -> Result<(), (S, Error<P::Error>)> {
+    pub fn start_transfer(&mut self, mut buffer: S) -> Result<(), (S, Error)> {
         let tx_channel = self.tx_channel.as_mut().unwrap();
         if tx_channel.is_enabled() {
             return Err((buffer, Error::ScheduledTransfer));
-        } else if let Err(error) = self.peripheral.enable_destination() {
-            return Err((buffer, Error::Peripheral(error)));
         }
 
         let src = buffer.source();
@@ -426,7 +415,7 @@ pub mod helpers {
         rx: Channel,
     ) -> Peripheral<P, u8, S, D>
     where
-        P: Source<u8, Error = <P as Destination<u8>>::Error> + Destination<u8>,
+        P: Source<u8> + Destination<u8>,
         S: buffer::Source<u8>,
         D: buffer::Destination<u8>,
     {
@@ -441,7 +430,7 @@ pub mod helpers {
         rx: Channel,
     ) -> Peripheral<P, u16, S, D>
     where
-        P: Source<u16, Error = <P as Destination<u16>>::Error> + Destination<u16>,
+        P: Source<u16> + Destination<u16>,
         S: buffer::Source<u16>,
         D: buffer::Destination<u16>,
     {

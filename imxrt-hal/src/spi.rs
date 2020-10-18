@@ -491,14 +491,12 @@ unsafe impl<M> dma::peripheral::Source<u8> for SPI<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u8 {
         &self.reg.RDR as *const _ as *const u8
     }
-    fn enable_source(&mut self) -> Result<(), Self::Error> {
+    fn enable_source(&mut self) {
         self.enable_dma_source::<u8>();
-        Ok(())
     }
     fn disable_source(&mut self) {
         self.disable_dma_source();
@@ -509,14 +507,12 @@ unsafe impl<M> dma::peripheral::Destination<u8> for SPI<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u8 {
         &self.reg.TDR as *const _ as *const u8
     }
-    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+    fn enable_destination(&mut self) {
         self.enable_dma_destination::<u8>();
-        Ok(())
     }
     fn disable_destination(&mut self) {
         self.disable_dma_destination();
@@ -527,14 +523,12 @@ unsafe impl<M> dma::peripheral::Source<u16> for SPI<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u16 {
         &self.reg.RDR as *const _ as *const u16
     }
-    fn enable_source(&mut self) -> Result<(), Self::Error> {
+    fn enable_source(&mut self) {
         self.enable_dma_source::<u16>();
-        Ok(())
     }
     fn disable_source(&mut self) {
         self.disable_dma_source();
@@ -545,14 +539,12 @@ unsafe impl<M> dma::peripheral::Destination<u16> for SPI<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u16 {
         &self.reg.TDR as *const _ as *const u16
     }
-    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+    fn enable_destination(&mut self) {
         self.enable_dma_destination::<u16>();
-        Ok(())
     }
     fn disable_destination(&mut self) {
         self.disable_dma_destination();

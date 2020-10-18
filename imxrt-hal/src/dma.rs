@@ -154,8 +154,8 @@ mod buffer;
 mod memcpy;
 pub(crate) mod peripheral;
 
-pub use imxrt_dma::{Channel, Element, ErrorStatus, CHANNEL_COUNT};
 use imxrt_dma::Transfer;
+pub use imxrt_dma::{Channel, Element, ErrorStatus, CHANNEL_COUNT};
 
 pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, WriteHalf};
 pub use memcpy::Memcpy;
@@ -166,13 +166,11 @@ use crate::{ccm, ral};
 /// An error when preparing a transfer
 #[derive(Debug)]
 #[non_exhaustive]
-pub enum Error<P> {
+pub enum Error {
     /// There is already a scheduled transfer
     ///
     /// Cancel the transfer and try again.
     ScheduledTransfer,
-    /// The peripheral returned an error
-    Peripheral(P),
     /// Error setting up the DMA transfer
     Setup(ErrorStatus),
 }

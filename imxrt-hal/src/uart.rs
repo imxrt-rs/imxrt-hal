@@ -639,15 +639,13 @@ unsafe impl<M> dma::peripheral::Source<u8> for UART<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
-    fn enable_source(&mut self) -> Result<(), Self::Error> {
+    fn enable_source(&mut self) {
         self.clear_status();
         ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
-        Ok(())
     }
     fn disable_source(&mut self) {
         while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
@@ -660,12 +658,11 @@ unsafe impl<M> dma::peripheral::Source<u8> for Rx<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     fn source(&self) -> *const u8 {
         self.0.source()
     }
-    fn enable_source(&mut self) -> Result<(), Self::Error> {
+    fn enable_source(&mut self) {
         self.0.enable_source()
     }
     fn disable_source(&mut self) {
@@ -677,14 +674,12 @@ unsafe impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
-    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+    fn enable_destination(&mut self) {
         ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
-        Ok(())
     }
     fn disable_destination(&mut self) {
         while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
@@ -697,12 +692,11 @@ unsafe impl<M> dma::peripheral::Destination<u8> for Tx<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
     const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
     fn destination(&self) -> *const u8 {
         self.0.destination()
     }
-    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+    fn enable_destination(&mut self) {
         self.0.enable_destination()
     }
     fn disable_destination(&mut self) {
