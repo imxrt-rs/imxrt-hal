@@ -169,3 +169,101 @@ impl Debug for ErrorStatus {
         write!(f, "DMA_ES({:#010X})", self.es)
     }
 }
+
+use core::sync::atomic;
+
+/// Schedule a DMA transfer from memory (`source`) to a peripheral (`destination`)
+///
+/// Assumes that there is not already an active transfer. Caller is responsible for
+/// setting up any other channel state, including
+///
+/// - disable on completion
+/// - interrupt on half / complete
+///
+/// `peripheral_transfer` will not block. When the transfer completes, caller will
+/// be responsible for disabling the channel and the peripheral.
+///
+/// # Safety
+///
+/// An `Ok(())` return indicates that the transfer was scheduled. You must ensure that
+/// `source` is valid for the lifetime of the transfer. An error indicates that there
+/// was an error scheduling the transfer, and that it is safe to invalidate `source`.
+pub unsafe fn peripheral_transfer<P, E>(
+    channel: &mut Channel,
+    source: &[E],
+    destination: &mut P,
+) -> Result<(), ErrorStatus>
+where
+    P: Destination<E>,
+    E: Element,
+{
+    let tx = Transfer::buffer_linear(source.as_ptr(), source.len());
+    let rx = Transfer::hardware(destination.destination());
+
+    destination.enable_destination();
+    channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
+    channel.set_source_transfer(&tx);
+    channel.set_destination_transfer(&rx);
+    channel.set_minor_loop_elements::<E>(1);
+    channel.set_transfer_iterations(source.len() as u16);
+
+    atomic::compiler_fence(atomic::Ordering::Release);
+
+    channel.enable();
+    if channel.is_error() {
+        channel.disable();
+        let es = channel.error_status();
+        channel.clear_error();
+        Err(es)
+    } else {
+        Ok(())
+    }
+}
+
+/// Schedule to receive data from a peripheral (`source`) into memory (`destination`)
+///
+/// Assumes that there is not already an active transfer. Caller is responsible for
+/// setting up any other channel state, including
+///
+/// - disable on completion
+/// - interrupt on half / complete
+///
+/// `peripheral_receive` will not block. When the transfer completes, caller will be
+/// responsible for disabling the channel and the peripheral.
+///
+/// # Safety
+///
+/// An `Ok(())` return indicates that the transfer was scheduled. You must ensure that
+/// `destination` is valid for the lifetime of the transfer. An error indicates that there
+/// was an error scheduling the transfer, and that it is safe to invalidate `destination`.
+pub unsafe fn peripheral_receive<P, E>(
+    channel: &mut Channel,
+    source: &mut P,
+    destination: &mut [E],
+) -> Result<(), ErrorStatus>
+where
+    P: Source<E>,
+    E: Element,
+{
+    let tx = Transfer::hardware(source.source());
+    let rx = Transfer::buffer_linear(destination.as_ptr(), destination.len());
+
+    source.enable_source();
+    channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
+    channel.set_source_transfer(&tx);
+    channel.set_destination_transfer(&rx);
+    channel.set_minor_loop_elements::<E>(1);
+    channel.set_transfer_iterations(destination.len() as u16);
+
+    atomic::compiler_fence(atomic::Ordering::Release);
+
+    channel.enable();
+    if channel.is_error() {
+        channel.disable();
+        let es = channel.error_status();
+        channel.clear_error();
+        Err(es)
+    } else {
+        Ok(())
+    }
+}
