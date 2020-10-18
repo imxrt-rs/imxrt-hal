@@ -1,12 +1,12 @@
 //! Direct Memory Access (DMA) driver for i.MX RT processors
 //!
-//! `imxrt-dma` is a lower-level DMA driver for all i.MX RT processors
+//! `imxrt-dma` is a lower-level DMA driver for all i.MX RT processors.
 //! It provides an `unsafe` interface for allocating DMA channels, and for
 //! scheduling DMA transactions. `imxrt-dma` also provides some traits and
-//! abscractions that provides simple transfer mechanisms.
+//! abstractions that help to coordinate DMA transfers.
 //!
 //! This DMA driver may be re-exported from a HAL. If it is, you should consider
-//! using the safer APIs provided by your HAL, instead of this lower-level API.
+//! using the safer APIs provided by your HAL.
 //!
 //! # Features
 //!
