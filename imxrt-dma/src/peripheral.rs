@@ -16,7 +16,14 @@ pub unsafe trait Source<E: Element> {
     ///
     /// See Table 4-3 of the reference manual. A source probably
     /// has something like 'receive' in the name.
-    const SOURCE_REQUEST_SIGNAL: u32;
+    const SOURCE_REQUEST_SIGNAL: u32 = 0; // TODO REMOVE
+    /// Peripheral source request signal
+    ///
+    /// See Table 4-3 of the reference manual. A source probably
+    /// has something like 'receive' in the name.
+    fn source_signal(&self) -> u32 {
+        Self::SOURCE_REQUEST_SIGNAL
+    }
     /// Returns a pointer to the register from which the DMA channel
     /// reads data
     ///
@@ -31,11 +38,11 @@ pub unsafe trait Source<E: Element> {
     ///
     /// Callers use this method to put the peripheral in a state where
     /// it can supply the DMA channel with data.
-    fn enable_source(&mut self);
+    fn enable_source(&self);
     /// Perform any actions necessary to disable or cancel DMA transfers
     ///
     /// This may include undoing the actions in `enable_source()`.
-    fn disable_source(&mut self);
+    fn disable_source(&self);
 }
 
 /// Describes a peripheral that can be the destination for DMA data
@@ -53,7 +60,14 @@ pub unsafe trait Destination<E: Element> {
     ///
     /// See Table 4-3 of the reference manual. A destination probably
     /// has something like 'transfer' in the name.
-    const DESTINATION_REQUEST_SIGNAL: u32;
+    const DESTINATION_REQUEST_SIGNAL: u32 = 0; // TODO REMOVE
+    /// Peripheral destination request signal
+    ///
+    /// See Table 4-3 of the reference manual. A destination probably
+    /// has something like 'transfer' in the name.
+    fn destination_signal(&self) -> u32 {
+        Self::DESTINATION_REQUEST_SIGNAL
+    }
     /// Returns a pointer to the register into which the DMA channel
     /// writes data
     ///
@@ -65,9 +79,9 @@ pub unsafe trait Destination<E: Element> {
     ///
     /// Callers use this method to put the peripheral into a state where
     /// it can accept transfers from a DMA channel.
-    fn enable_destination(&mut self);
+    fn enable_destination(&self);
     /// Perform any actions necessary to disable or cancel DMA transfers
     ///
     /// This may include undoing the actions in `enable_destination()`.
-    fn disable_destination(&mut self);
+    fn disable_destination(&self);
 }
