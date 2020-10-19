@@ -133,7 +133,7 @@ mod element;
 mod peripheral;
 mod ral;
 
-pub use channel::{Channel, CircularError, Transfer};
+pub use channel::{Channel, Transfer};
 pub use chip::CHANNEL_COUNT;
 pub use element::Element;
 pub use peripheral::{Destination, Source};

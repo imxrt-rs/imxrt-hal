@@ -742,7 +742,9 @@ mod private {
 
 impl<E: Element> Source<E> for Linear<E> {
     fn source(&self) -> Transfer<E> {
-        Transfer::buffer_linear(self.ptr, self.usable)
+        // Safety: pointer to buffer is always valid; usable is within
+        // bounds of the buffer.
+        unsafe { Transfer::buffer_linear(self.ptr, self.usable) }
     }
     fn source_len(&self) -> usize {
         self.usable
@@ -753,7 +755,9 @@ impl<E: Element> Source<E> for Linear<E> {
 
 impl<E: Element> Destination<E> for Linear<E> {
     fn destination(&self) -> Transfer<E> {
-        Transfer::buffer_linear(self.ptr, self.usable)
+        // Safety: pointer to buffer is always valid; usable is within
+        // bounds of the buffer.
+        unsafe { Transfer::buffer_linear(self.ptr, self.usable) }
     }
     fn destination_len(&self) -> usize {
         self.usable
@@ -768,8 +772,11 @@ impl<E: Element> Destination<E> for Linear<E> {
 
 impl<E: Element> Source<E> for Circular<E> {
     fn source(&self) -> Transfer<E> {
-        // upwrap OK; always power of two
-        Transfer::buffer_circular(self.read_ptr(), self.cap).unwrap()
+        // Safety: Circular API enforces that buffer is aligned, and
+        // capacity is a power of two.
+        //
+        // Unwrap OK: power of two
+        unsafe { Transfer::buffer_circular(self.read_ptr(), self.cap).unwrap() }
     }
     fn source_len(&self) -> usize {
         self.len()
@@ -784,8 +791,11 @@ impl<E: Element> Source<E> for Circular<E> {
 
 impl<E: Element> Destination<E> for Circular<E> {
     fn destination(&self) -> Transfer<E> {
-        // unwrap OK; always power of two
-        Transfer::buffer_circular(self.write_ptr(), self.cap).unwrap()
+        // Safety: Circular API enforces that buffer is aligned, and
+        // capacity is a power of two.
+        //
+        // Unwrap OK: power of two
+        unsafe { Transfer::buffer_circular(self.write_ptr(), self.cap).unwrap() }
     }
     fn destination_len(&self) -> usize {
         self.reserved

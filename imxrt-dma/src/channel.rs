@@ -337,19 +337,14 @@ pub struct Transfer<E: Element> {
     last_address_adjustment: i32,
 }
 
-/// Describes an error when creating a transfer for a circular buffer
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CircularError {
-    /// The size of the memory is not a power of two
-    NotPowerOfTwo,
-    /// The alignment of the buffer must be a multiple of the buffer's
-    /// size, which includes both element type, and the length of the buffer.
-    IncorrectAlignment,
-}
-
 impl<E: Element> Transfer<E> {
     /// Defines a transfer that reads from a hardware register at `address`
-    pub fn hardware(address: *const E) -> Self {
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that `address` is a memory location that can accept
+    /// reads or writes from the DMA controller.
+    pub unsafe fn hardware(address: *const E) -> Self {
         Transfer {
             address,
             // Don't move the address pointer
@@ -364,8 +359,12 @@ impl<E: Element> Transfer<E> {
     /// Defines a transfer that can read from or write to `buffer`
     ///
     /// `ptr` points to the starting element of the buffer. `len` indicates how many elements
-    /// you intend on transferring.
-    pub fn buffer_linear(ptr: *const E, len: usize) -> Self {
+    /// you will transfer
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that the memory starting at `ptr` is valid for `len` elements.
+    pub unsafe fn buffer_linear(ptr: *const E, len: usize) -> Self {
         // TODO drop `len`, and leave the last address adjustment as zero.
         // The implementation will always specifying the starting address,
         // so last address adjustment doesn't matter.
@@ -381,15 +380,21 @@ impl<E: Element> Transfer<E> {
     ///
     /// `start` points to the first element that will be used in the transfer. `capacity`
     /// is the total size of the allocated memory region for the transfer; it is **not**
-    /// the number of elements to transfer.
-    pub fn buffer_circular(start: *const E, capacity: usize) -> Result<Self, CircularError> {
+    /// the number of elements to transfer. `capacity` will be converted into the DMA
+    /// transfer modulus value.
+    ///
+    /// # Safety
+    ///
+    /// `start` is a pointer somewhere in a linear buffer. The *alignment* of the that
+    /// complete buffer must be a multiple of the buffer's size, in bytes. You must take
+    /// care of buffer alignment.
+    pub unsafe fn buffer_circular(start: *const E, capacity: usize) -> Option<Self> {
         if !capacity.is_power_of_two() {
-            return Err(CircularError::NotPowerOfTwo);
-        } else if (start as usize) % (capacity * mem::size_of::<E>()) != 0 {
-            return Err(CircularError::IncorrectAlignment);
+            return None;
         }
+
         let modulo = 31 - (capacity * mem::size_of::<E>()).leading_zeros() as u16;
-        Ok(Transfer {
+        Some(Transfer {
             address: start,
             offset: core::mem::size_of::<E>() as i16,
             modulo,
