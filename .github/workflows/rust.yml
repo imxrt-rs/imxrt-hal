@@ -35,7 +35,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build HAL(s)
-      run: cd imxrt1062-hal && cargo build --verbose
+      run: cd imxrt1060-hal && cargo build --verbose
     - name: Run HAL(s) tests
       run: cargo test --verbose
     - name: Check format for HAL(s)
