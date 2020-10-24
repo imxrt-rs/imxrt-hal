@@ -34,7 +34,7 @@
 //! handler, since we're enabling an interrupt when the receive completes.
 //!
 //! ```no_run
-//! use imxrt1062_hal::dma::{Circular, Buffer, Linear, Peripheral, bidirectional_u16};
+//! use imxrt1060_hal::dma::{Circular, Buffer, Linear, Peripheral, bidirectional_u16};
 //!
 //! // Circular buffers have alignment requirements
 //! #[repr(align(512))]
@@ -44,7 +44,7 @@
 //! static RX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
 //! static TX_BUFFER: Align = Align(Buffer::new([0; 256]));
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //!
 //! //
 //! // SPI setup...
@@ -52,8 +52,8 @@
 //!
 //! let (_, _, _, spi4_builder) = peripherals.spi.clock(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1062_hal::ccm::spi::ClockSelect::Pll2,
-//!     imxrt1062_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
+//!     imxrt1060_hal::ccm::spi::ClockSelect::Pll2,
+//!     imxrt1060_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
 //! );
 //!
 //! let mut spi4 = spi4_builder.build(
@@ -453,7 +453,7 @@ pub enum Error<P> {
 /// Use [`clock()`](struct.Unclocked.html#method.clock) to initialize and acquire all DMA channels
 ///
 /// ```no_run
-/// let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+/// let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 ///
 /// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
 /// let channel_27 = dma_channels[27].take().unwrap();
