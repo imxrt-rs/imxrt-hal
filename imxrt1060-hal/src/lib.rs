@@ -14,8 +14,8 @@ pub use imxrt_ral as ral;
 /// See the `imxrt_iomuxc` crate documentation for more information on this module.
 /// This module re-exports that crate, along with a chip-specific IOMUXC crate.
 pub mod iomuxc {
-    pub use imxrt_iomuxc::*;
     pub use imxrt_iomuxc::imxrt1060::*;
+    pub use imxrt_iomuxc::*;
 
     /// Use this function to acquire the IOMUXC pads. It requires that you have an
     /// instance to the RAL's IOMUXC instance.
