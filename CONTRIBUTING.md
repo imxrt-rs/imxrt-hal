@@ -35,9 +35,14 @@ If everything went well, you should find that the `imxrt-ral/src` directory is p
 
 If you add a SVD patch, or if you change something in `imxrtral.py`, you'll need to re-generate the RAL to realize the change.
 
-### Chip specific HAL(s), for example imxrt1062-hal
+### Chip-specific HAL(s)
 
-Make sure you've generated the RAL (see above). When developing the HAL(s) a quick way to check everything compiles, in the project root
+We support one HAL crate per i.MX RT processor family. A "processor family" is described by an NXP datasheet and reference manual. For example, the `imxrt1060-hal` supports the [i.MX RT1060 Crossover Processors](https://www.nxp.com/docs/en/nxp/data-sheets/IMXRT1060CEC.pdf), which includes the following processors:
+
+- i.MX RT 1061
+- i.MX RT 1062
+
+When developing the HAL(s) a quick way to check everything compiles, in the project root
 
 ```
 cargo check --target thumbv7em-none-eabihf

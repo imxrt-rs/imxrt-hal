@@ -1,22 +1,18 @@
-# imxrt-hal
+# imxrt1060-hal
 
-This project provides a Rust HAL (hardware abstraction layer) for all NXP i.MX RT
-microcontrollers based on the imxrt-ral crate.
+`imxrt1060-hal` is a Rust hardware abstraction layer that's specific to i.MX
+RT 1060 processors. This includes some of the following processor parts:
 
-A feature flag needs to be set for any of the supported i.MX RT SoC.
+- i.MX RT 1061
+- i.MX RT 1062
 
-## What is it?
+It is the successor to `imxrt-hal`, version 0.4, with `feature = "imxrt1062"`.
 
-imxrt-hal is an experiment into a lightweight hardware abstraction layer. It
-provides access to some of the peripherals of the i.MX RT series processors
-from NXP using embedded-hal and other community driven hardware APIs.
+## Features
 
-The main aims are fast compilation, compactness, and simplicity.
+The table below describes the optional features supported by `imxrt1060-hal`.
 
-Please consider trying it out and contributing or leaving feedback!
-
-## Goals
-
-* Simple to use and hard to use incorrectly
-* All peripherals and busses supported
-* Support the entire i.MX RT Series with a single crate to maximize code reuse
+| Feature  | Description                        |
+| -------- | ---------------------------------- |
+| `"rt"`   | Runtime support with `cortex-m-rt` |
+| `"rtic"` | Support for RTIC                   |

@@ -31,11 +31,11 @@ If you want to develop Rust libraries and applications for an i.MX RT-based syst
 - read and write serial data (UART)
 - send and receive data over SPI
 
-The HAL is on [crates.io](https://crates.io/crates/imxrt-hal). Include the HAL in your Rust library or binary:
+The publicly-supported HAL is on [crates.io](https://crates.io/crates/imxrt-hal). Include the HAL in your Rust library or binary:
 
 ```toml
 [dependencies.imxrt-hal]
-version = "0.2.1"
+version = "0.4"
 features = ["imxrt1062", "rt"] # "rt" flag optional
 ```
 
@@ -49,6 +49,10 @@ The `"rt"` feature flag is recommended for users who are
 - creating board support packages (BSP), or higher-level libraries, for i.MX RT systems
 
 Enabling the `"rt"` feature-flag will link in the i.MX RT interrupt table. If you're familiar with crates that are generated from `svd2rust`, [the `"rt"` feature](https://docs.rs/svd2rust/0.17.0/svd2rust/#the-rt-feature) has the same behaviors in the `imxrt-hal` as it does in `svd2rust`-generated crates.
+
+#### Future of the HAL
+
+Follow #56 to understand how we're breaking `imxrt-hal` into separate crates. If you'd like to try the new HAL crate(s), depend on `imxrt1060-hal`, and skip the feature flag that describes your i.MX RT variant.
 
 ### RAL
 
