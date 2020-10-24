@@ -18,12 +18,12 @@ use core::{
 /// # Example
 ///
 /// ```no_run
-/// use imxrt1062_hal::dma;
+/// use imxrt1060_hal::dma;
 ///
 /// static SOURCE: dma::Buffer<[u8; 32]> = dma::Buffer::new([0; 32]);
 /// static DESTINATION: dma::Buffer<[u8; 64]> = dma::Buffer::new([0; 64]);
 ///
-/// let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+/// let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 /// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
 /// let mut dma_channel = dma_channels[7].take().unwrap();
 /// dma_channel.set_interrupt_on_completion(false);

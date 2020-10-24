@@ -16,15 +16,15 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1062_hal;
+//! use imxrt1060_hal;
 //! use embedded_hal::blocking::spi::Transfer;
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //!
 //! let (_, _, _, spi4_builder) = peripherals.spi.clock(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1062_hal::ccm::spi::ClockSelect::Pll2,
-//!     imxrt1062_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
+//!     imxrt1060_hal::ccm::spi::ClockSelect::Pll2,
+//!     imxrt1060_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
 //! );
 //!
 //! let mut spi4 = spi4_builder.build(
@@ -35,7 +35,7 @@
 //!
 //! spi4.enable_chip_select_0(peripherals.iomuxc.b0.p00);
 //!
-//! spi4.set_clock_speed(imxrt1062_hal::spi::ClockSpeed(1_000_000)).unwrap();
+//! spi4.set_clock_speed(imxrt1060_hal::spi::ClockSpeed(1_000_000)).unwrap();
 //!
 //! let mut buffer: [u8; 3] = [1, 2, 3];
 //! spi4.transfer(&mut buffer).unwrap();

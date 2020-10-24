@@ -3,21 +3,21 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1062_hal;
+//! use imxrt1060_hal;
 //! use embedded_hal::timer::CountDown;
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //!
 //! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
-//!     imxrt1062_hal::ccm::PLL1::ARM_HZ,
+//!     imxrt1060_hal::ccm::PLL1::ARM_HZ,
 //!     &mut peripherals.ccm.handle,
 //!     &mut peripherals.dcdc,
 //! );
 //!
 //! let mut cfg = peripherals.ccm.perclk.configure(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1062_hal::ccm::perclk::PODF::DIVIDE_3,
-//!     imxrt1062_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
+//!     imxrt1060_hal::ccm::perclk::PODF::DIVIDE_3,
+//!     imxrt1060_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
 //! );
 //!
 //! let (_, _, _, mut timer) = peripherals.pit.clock(&mut cfg);

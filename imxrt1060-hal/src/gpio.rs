@@ -10,9 +10,9 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1062_hal::{self, gpio::GPIO};
+//! use imxrt1060_hal::{self, gpio::GPIO};
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //! let input = GPIO::new(peripherals.iomuxc.ad_b0.p11);
 //!
 //! assert!(!input.is_set());

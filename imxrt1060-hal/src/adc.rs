@@ -4,10 +4,10 @@
 //!
 //! # Example
 //! ```no_run
-//! use imxrt1062_hal::{self, adc};
+//! use imxrt1060_hal::{self, adc};
 //! use embedded_hal::adc::OneShot;
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //! let (adc1_builder, _) = peripherals.adc.clock(&mut peripherals.ccm.handle);
 //!
 //! let mut adc1 = adc1_builder.build(adc::ClockSelect::default(), adc::ClockDivision::default());

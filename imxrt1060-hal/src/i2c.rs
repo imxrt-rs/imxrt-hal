@@ -3,16 +3,16 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1062_hal;
-//! use imxrt1062_hal::i2c::ClockSpeed;
+//! use imxrt1060_hal;
+//! use imxrt1060_hal::i2c::ClockSpeed;
 //! use embedded_hal::blocking::i2c::WriteRead;
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //!
 //! let (_, _, i2c3_builder, _) = peripherals.i2c.clock(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1062_hal::ccm::i2c::ClockSelect::OSC, // 24MHz clock...
-//!     imxrt1062_hal::ccm::i2c::PrescalarSelect::DIVIDE_3, // Divide by 3
+//!     imxrt1060_hal::ccm::i2c::ClockSelect::OSC, // 24MHz clock...
+//!     imxrt1060_hal::ccm::i2c::PrescalarSelect::DIVIDE_3, // Divide by 3
 //! );
 //!
 //! let mut i2c3 = i2c3_builder.build(

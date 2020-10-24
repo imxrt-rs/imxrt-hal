@@ -9,15 +9,15 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1062_hal;
+//! use imxrt1060_hal;
 //! use embedded_hal::serial::{Read, Write};
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //!
 //! let uarts = peripherals.uart.clock(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1062_hal::ccm::uart::ClockSelect::OSC,
-//!     imxrt1062_hal::ccm::uart::PrescalarSelect::DIVIDE_1,
+//!     imxrt1060_hal::ccm::uart::ClockSelect::OSC,
+//!     imxrt1060_hal::ccm::uart::PrescalarSelect::DIVIDE_1,
 //! );
 //!
 //! let mut uart = uarts
@@ -31,7 +31,7 @@
 //!
 //! uart.set_tx_fifo(core::num::NonZeroU8::new(3));
 //! uart.set_rx_fifo(true);
-//! uart.set_parity(Some(imxrt1062_hal::uart::Parity::Even));
+//! uart.set_parity(Some(imxrt1060_hal::uart::Parity::Even));
 //! uart.set_rx_inversion(true);
 //! uart.set_tx_inversion(false);
 //!

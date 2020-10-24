@@ -87,33 +87,33 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1062_hal;
+//! use imxrt1060_hal;
 //!
-//! let mut peripherals = imxrt1062_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 //!
 //! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
-//!     imxrt1062_hal::ccm::PLL1::ARM_HZ,
+//!     imxrt1060_hal::ccm::PLL1::ARM_HZ,
 //!     &mut peripherals.ccm.handle,
 //!     &mut peripherals.dcdc,
 //! );
 //!
 //! let mut cfg = peripherals.ccm.perclk.configure(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1062_hal::ccm::perclk::PODF::DIVIDE_3,
-//!     imxrt1062_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
+//!     imxrt1060_hal::ccm::perclk::PODF::DIVIDE_3,
+//!     imxrt1060_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
 //! );
 //!
 //! let mut gpt1 = peripherals.gpt1.clock(&mut cfg);
 //!
 //! gpt1.set_output_interrupt_on_compare(
-//!     imxrt1062_hal::gpt::OutputCompareRegister::Three,
+//!     imxrt1060_hal::gpt::OutputCompareRegister::Three,
 //!     true,
 //! );
 //! gpt1.set_wait_mode_enable(true);
-//! gpt1.set_mode(imxrt1062_hal::gpt::Mode::FreeRunning);
+//! gpt1.set_mode(imxrt1060_hal::gpt::Mode::FreeRunning);
 //!
 //! gpt1.set_output_compare_duration(
-//!     imxrt1062_hal::gpt::OutputCompareRegister::Three,
+//!     imxrt1060_hal::gpt::OutputCompareRegister::Three,
 //!     core::time::Duration::from_micros(765),
 //! );
 //! ```
