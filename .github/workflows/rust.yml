@@ -42,14 +42,3 @@ jobs:
       run: cargo fmt --all -- --check
     - name: Run clippy for HAL(s)
       run: cargo clippy -- -D warnings
-
-  build-iomuxc:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Check formatting
-      run: cd imxrt-iomuxc && cargo fmt -- --check
-    - name: Run tests
-      run: cd imxrt-iomuxc && cargo test --all-features
-    - name: Run clippy
-      run: cd imxrt-iomuxc && cargo clippy --all-features
