@@ -191,7 +191,7 @@ use core::sync::atomic;
 pub unsafe fn peripheral_transfer<P, E>(
     channel: &mut Channel,
     source: &[E],
-    destination: &mut P,
+    destination: &P,
 ) -> Result<(), ErrorStatus>
 where
     P: Destination<E>,
@@ -201,7 +201,7 @@ where
     let rx = Transfer::hardware(destination.destination());
 
     destination.enable_destination();
-    channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
+    channel.set_trigger_from_hardware(Some(destination.destination_signal()));
     channel.set_source_transfer(&tx);
     channel.set_destination_transfer(&rx);
     channel.set_minor_loop_elements::<E>(1);
@@ -238,7 +238,7 @@ where
 /// was an error scheduling the transfer, and that it is safe to invalidate `destination`.
 pub unsafe fn peripheral_receive<P, E>(
     channel: &mut Channel,
-    source: &mut P,
+    source: &P,
     destination: &mut [E],
 ) -> Result<(), ErrorStatus>
 where
@@ -249,7 +249,7 @@ where
     let rx = Transfer::buffer_linear(destination.as_ptr(), destination.len());
 
     source.enable_source();
-    channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
+    channel.set_trigger_from_hardware(Some(source.source_signal()));
     channel.set_source_transfer(&tx);
     channel.set_destination_transfer(&rx);
     channel.set_minor_loop_elements::<E>(1);

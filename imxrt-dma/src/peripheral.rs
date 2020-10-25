@@ -16,14 +16,7 @@ pub unsafe trait Source<E: Element> {
     ///
     /// See Table 4-3 of the reference manual. A source probably
     /// has something like 'receive' in the name.
-    const SOURCE_REQUEST_SIGNAL: u32 = 0; // TODO REMOVE
-    /// Peripheral source request signal
-    ///
-    /// See Table 4-3 of the reference manual. A source probably
-    /// has something like 'receive' in the name.
-    fn source_signal(&self) -> u32 {
-        Self::SOURCE_REQUEST_SIGNAL
-    }
+    fn source_signal(&self) -> u32;
     /// Returns a pointer to the register from which the DMA channel
     /// reads data
     ///
@@ -60,14 +53,7 @@ pub unsafe trait Destination<E: Element> {
     ///
     /// See Table 4-3 of the reference manual. A destination probably
     /// has something like 'transfer' in the name.
-    const DESTINATION_REQUEST_SIGNAL: u32 = 0; // TODO REMOVE
-    /// Peripheral destination request signal
-    ///
-    /// See Table 4-3 of the reference manual. A destination probably
-    /// has something like 'transfer' in the name.
-    fn destination_signal(&self) -> u32 {
-        Self::DESTINATION_REQUEST_SIGNAL
-    }
+    fn destination_signal(&self) -> u32;
     /// Returns a pointer to the register into which the DMA channel
     /// writes data
     ///
