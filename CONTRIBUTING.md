@@ -2,7 +2,7 @@
 
 Thanks for helping us build embedded Rust support for NXP's i.MX RT processors! Please open an issue if
 
-- you find a bug in any chip HAL, the RAL, or IOMUXC crates
+- you find a bug in any chip HAL, or the RAL
 - you have an idea for a feature
 - something isn't clear in our documentation
 
@@ -46,15 +46,6 @@ When developing the HAL(s) a quick way to check everything compiles, in the proj
 
 ```
 cargo check --target thumbv7em-none-eabihf
-```
-
-### IOMUXC
-
-The `imxrt-iomuxc` crate family does not require any feature flags, and it will build for your host. Consider using `--package` flags to build and test the crate family in one command:
-
-```
-cargo build --package=imxrt-iomuxc --package=imxrt-iomuxc-build
-cargo test -p imxrt-iomuxc -p imxrt-iomuxc-build
 ```
 
 ### SVD Patches
