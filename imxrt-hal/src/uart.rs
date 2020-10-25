@@ -466,7 +466,13 @@ where
         Ok(())
     }
 
-    fn clear_status(&mut self) {
+    /// Clear the UART status flags
+    ///
+    /// # Safety
+    ///
+    /// Performs writes behind an immutable receiver. Caller must ensure
+    /// that the operation is atomic.
+    unsafe fn clear_status(&self) {
         ral::modify_reg!(
             ral::lpuart,
             self.reg,
@@ -601,7 +607,11 @@ where
             flags.set(ReadErrorFlags::NOISY, data & NOISY::mask != 0);
 
             let raw = (data & 0xFF) as u8;
-            self.clear_status();
+            // Safety: called with mutable receiver; caller is ensuring that this
+            // entire read() operation occurs atomically.
+            unsafe {
+                self.clear_status();
+            }
 
             if flags.is_empty() {
                 Ok(raw)
@@ -643,14 +653,19 @@ where
     fn source(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
-    fn enable_source(&mut self) {
-        self.clear_status();
-        ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
+    fn enable_source(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: mutability is atomic
+            self.clear_status();
+            ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
+        });
     }
-    fn disable_source(&mut self) {
-        while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
-            ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 0);
-        }
+    fn disable_source(&self) {
+        cortex_m::interrupt::free(|_| {
+            while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
+                ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 0);
+            }
+        });
     }
 }
 
@@ -662,10 +677,10 @@ where
     fn source(&self) -> *const u8 {
         self.0.source()
     }
-    fn enable_source(&mut self) {
+    fn enable_source(&self) {
         self.0.enable_source()
     }
-    fn disable_source(&mut self) {
+    fn disable_source(&self) {
         self.0.disable_source()
     }
 }
@@ -678,13 +693,17 @@ where
     fn destination(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
-    fn enable_destination(&mut self) {
-        ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
+    fn enable_destination(&self) {
+        cortex_m::interrupt::free(|_| {
+            ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
+        });
     }
-    fn disable_destination(&mut self) {
-        while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
-            ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
-        }
+    fn disable_destination(&self) {
+        cortex_m::interrupt::free(|_| {
+            while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
+                ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
+            }
+        });
     }
 }
 
@@ -696,10 +715,10 @@ where
     fn destination(&self) -> *const u8 {
         self.0.destination()
     }
-    fn enable_destination(&mut self) {
+    fn enable_destination(&self) {
         self.0.enable_destination()
     }
-    fn disable_destination(&mut self) {
+    fn disable_destination(&self) {
         self.0.disable_destination()
     }
 }

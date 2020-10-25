@@ -351,8 +351,11 @@ where
         }
     }
 
+    /// # Safety
+    ///
+    /// Interior mutability must be atomic
     #[inline(always)]
-    fn set_frame_size<Word>(&mut self) {
+    unsafe fn set_frame_size<Word>(&self) {
         ral::modify_reg!(ral::lpspi, self.reg, TCR, FRAMESZ: ((core::mem::size_of::<Word>() * 8 - 1) as u32));
     }
 
@@ -362,7 +365,9 @@ where
 
         let sr = self.check_errors()?;
         self.clear_status();
-        self.set_frame_size::<Word>();
+        // Safety: user provided mutable reference to SPI, so they are ensuring that
+        // we can safely change this.
+        unsafe { self.set_frame_size::<Word>() };
 
         if (sr & MBF::mask != 0) || (sr & TDF::mask == 0) {
             return Err(nb::Error::WouldBlock);
@@ -390,30 +395,44 @@ where
     }
 
     /// Perform common actions for enabling a DMA source
+    ///
+    /// # Safety
+    ///
+    /// Interior mutability must be atomic
     #[inline(always)]
-    fn enable_dma_source<W>(&mut self) {
+    unsafe fn enable_dma_source<W>(&self) {
         self.set_frame_size::<W>();
         ral::modify_reg!(ral::lpspi, self.reg, FCR, RXWATER: 0); // No watermarks; affects DMA signaling
         ral::modify_reg!(ral::lpspi, self.reg, DER, RDDE: 1);
     }
 
     /// Perform common actions for disabling a DMA source
+    ///
+    /// # Safety
+    ///
+    /// Performs writes behind an immutable receiver. Interior mutability must be atomic.
     #[inline(always)]
-    fn disable_dma_source(&mut self) {
+    unsafe fn disable_dma_source(&self) {
         while ral::read_reg!(ral::lpspi, self.reg, DER, RDDE == 1) {
             ral::modify_reg!(ral::lpspi, self.reg, DER, RDDE: 0);
         }
     }
 
+    /// # Safety
+    ///
+    /// Performs writes behind an immutable receiver. Interior mutability must be atomic.
     #[inline(always)]
-    fn enable_dma_destination<W>(&mut self) {
+    unsafe fn enable_dma_destination<W>(&self) {
         self.set_frame_size::<W>();
         ral::modify_reg!(ral::lpspi, self.reg, FCR, TXWATER: 0); // No watermarks; affects DMA signaling
         ral::modify_reg!(ral::lpspi, self.reg, DER, TDDE: 1);
     }
 
+    /// # Safety
+    ///
+    /// Performs writes behind an immutable receiver. Interior mutability must be atomic.
     #[inline(always)]
-    fn disable_dma_destination(&mut self) {
+    unsafe fn disable_dma_destination(&self) {
         while ral::read_reg!(ral::lpspi, self.reg, DER, TDDE == 1) {
             ral::modify_reg!(ral::lpspi, self.reg, DER, TDDE: 0);
         }
@@ -495,11 +514,17 @@ where
     fn source(&self) -> *const u8 {
         &self.reg.RDR as *const _ as *const u8
     }
-    fn enable_source(&mut self) {
-        self.enable_dma_source::<u8>();
+    fn enable_source(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.enable_dma_source::<u8>();
+        });
     }
-    fn disable_source(&mut self) {
-        self.disable_dma_source();
+    fn disable_source(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.disable_dma_source();
+        });
     }
 }
 
@@ -511,11 +536,17 @@ where
     fn destination(&self) -> *const u8 {
         &self.reg.TDR as *const _ as *const u8
     }
-    fn enable_destination(&mut self) {
-        self.enable_dma_destination::<u8>();
+    fn enable_destination(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.enable_dma_destination::<u8>();
+        });
     }
-    fn disable_destination(&mut self) {
-        self.disable_dma_destination();
+    fn disable_destination(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.disable_dma_destination();
+        });
     }
 }
 
@@ -527,11 +558,17 @@ where
     fn source(&self) -> *const u16 {
         &self.reg.RDR as *const _ as *const u16
     }
-    fn enable_source(&mut self) {
-        self.enable_dma_source::<u16>();
+    fn enable_source(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.enable_dma_source::<u16>();
+        });
     }
-    fn disable_source(&mut self) {
-        self.disable_dma_source();
+    fn disable_source(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.disable_dma_source();
+        });
     }
 }
 
@@ -543,10 +580,16 @@ where
     fn destination(&self) -> *const u16 {
         &self.reg.TDR as *const _ as *const u16
     }
-    fn enable_destination(&mut self) {
-        self.enable_dma_destination::<u16>();
+    fn enable_destination(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.enable_dma_destination::<u16>();
+        });
     }
-    fn disable_destination(&mut self) {
-        self.disable_dma_destination();
+    fn disable_destination(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: atomic operation
+            self.disable_dma_destination();
+        });
     }
 }
