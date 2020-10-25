@@ -16,7 +16,11 @@ pub mod dmamux;
 mod register;
 pub mod tcd;
 
-use super::chip::{CHANNEL_COUNT, DMA_ADDRESS, DMA_MULTIPLEXER_ADDRESS};
+/// Address to the DMA multiplexer registers
+const DMA_MULTIPLEXER_ADDRESS: *const u32 = 0x400E_C000 as *const _;
+/// Address to the DMA peripheral registers
+const DMA_ADDRESS: *const u32 = 0x400E_8000 as *const _;
+
 pub(super) const MULTIPLEXER: Static<dmamux::RegisterBlock> =
     Static(DMA_MULTIPLEXER_ADDRESS as *const _);
 

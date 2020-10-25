@@ -155,13 +155,17 @@ mod memcpy;
 pub(crate) mod peripheral;
 
 use imxrt_dma::Transfer;
-pub use imxrt_dma::{Channel, Element, ErrorStatus, CHANNEL_COUNT};
+pub use imxrt_dma::{Channel, Element, ErrorStatus};
 
 pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, WriteHalf};
 pub use memcpy::Memcpy;
 pub use peripheral::{helpers::*, Peripheral};
 
 use crate::{ccm, ral};
+
+#[cfg(feature = "imxrt1062")]
+/// The number of DMA channels
+pub const CHANNEL_COUNT: usize = 32;
 
 /// An error when preparing a transfer
 #[derive(Debug)]

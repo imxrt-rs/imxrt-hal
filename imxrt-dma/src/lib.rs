@@ -8,16 +8,13 @@
 //! This DMA driver may be re-exported from a HAL. If it is, you should consider
 //! using the safer APIs provided by your HAL.
 //!
-//! # Features
+//! # Portability
 //!
-//! The table below describes the feature flags that this driver supports:
-//!
-//! |  Feature flag   | Description             | Default? |
-//! | --------------- | ----------------------- | -------- |
-//! | `"channels-32"` | Support 32 DMA channels |     ✓    |
-//!
-//! Most i.MX RT processors support 32 DMA channels. If your chip does not support
-//! 32 DMA channels, you should disable the default features.
+//! This DMA driver works across all considered i.MX RT variants (1010 and 1060
+//! family). You must make sure that the DMA channel you're creating is valid for
+//! your i.MX RT processor. This only matters on i.MX RT 1010 processors, which
+//! only support 16 DMA channels. Creating an invalid channel for your 1010 processor
+//! will result in a channel that references reserved memory.
 //!
 //! # Example
 //!
@@ -128,18 +125,17 @@ macro_rules! read_reg {
 }
 
 mod channel;
-mod chip;
 mod element;
 mod peripheral;
 mod ral;
 
 pub use channel::{Channel, Transfer};
-pub use chip::CHANNEL_COUNT;
 pub use element::Element;
 pub use peripheral::{Destination, Source};
 pub use ral::tcd::BandwidthControl;
 
-use core::fmt::{self, Debug};
+use core::fmt::{self, Debug, Display};
+use core::sync::atomic;
 
 /// A wrapper around a DMA error status value
 ///
@@ -170,7 +166,26 @@ impl Debug for ErrorStatus {
     }
 }
 
-use core::sync::atomic;
+impl Display for ErrorStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,
+             "DMA_ES: VLD {vld} ECX {ecx} GPE {gpe} CPE {cpe} ERRCHN {errchn} SAE {sae} SOE {soe} DAE {dae} DOE {doe} NCE {nce} SGE {sge} SBE {sbe} DBE {dbe}",
+             vld = (self.es >> 31) & 0x1,
+             ecx = (self.es >> 16) & 0x1,
+             gpe = (self.es >> 15) & 0x1,
+             cpe = (self.es >> 14) & 0x1,
+             errchn = (self.es >> 8) & 0x1F,
+             sae = (self.es >> 7) & 0x1,
+             soe = (self.es >> 6) & 0x1,
+             dae = (self.es >> 5) & 0x1,
+             doe = (self.es >> 4) & 0x1,
+             nce = (self.es >> 3) & 0x1,
+             sge = (self.es >> 2) & 0x1,
+             sbe = (self.es >> 1) & 0x1,
+             dbe = self.es & 0x1
+         )
+    }
+}
 
 /// Schedule a DMA transfer from memory (`source`) to a peripheral (`destination`)
 ///

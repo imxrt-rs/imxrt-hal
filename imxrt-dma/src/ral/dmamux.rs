@@ -1,12 +1,12 @@
 //! DMA multiplexer
 
-use super::{register::RWRegister, CHANNEL_COUNT};
+use super::register::RWRegister;
 
 /// DMA multiplexer configuration registers
 #[repr(C)]
 pub struct RegisterBlock {
     /// Multiplexer configuration registers, one per channel
-    pub chcfg: [RWRegister<u32>; CHANNEL_COUNT],
+    pub chcfg: [RWRegister<u32>; 32],
 }
 
 impl RegisterBlock {

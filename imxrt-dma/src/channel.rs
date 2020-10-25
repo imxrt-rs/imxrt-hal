@@ -42,19 +42,23 @@ impl Channel {
         self.index
     }
 
-    /// Creates a DMA channel
+    /// Creates the DMA channel described by `index`
     ///
     /// # Safety
     ///
     /// This will create a handle that may alias global, mutable state.
     ///
+    /// You must make sure that `index` describes a valid DMA channel for your system.
+    /// If you're using this driver on a i.MX RT 1010 processor, you must make sure
+    /// that `index` is less than 16.
+    ///
     /// # Panics
     ///
-    /// Panics if `index` is greater than or equal to [`CHANNEL_COUNT`](constant.CHANNEL_COUNT.html).
+    /// Panics if `index` is greater than 32.
     #[inline(always)]
     pub unsafe fn new(index: usize) -> Self {
         // TODO consider breaking the API and return `Option<Channel>`
-        if index < super::CHANNEL_COUNT {
+        if index < 32 {
             Channel {
                 index,
                 registers: DMA,

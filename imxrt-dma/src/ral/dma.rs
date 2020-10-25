@@ -2,7 +2,7 @@
 
 use super::{
     register::{RORegister, RWRegister, WORegister},
-    tcd, CHANNEL_COUNT,
+    tcd,
 };
 
 use core::ops::Index;
@@ -53,7 +53,7 @@ pub struct RegisterBlock {
     pub DCHPRI: ChannelPriorityRegisters,
     _reserved8: [u32; 952],
     /// Transfer Control Descriptors
-    pub TCD: [tcd::RegisterBlock; CHANNEL_COUNT],
+    pub TCD: [tcd::RegisterBlock; 32],
 }
 
 /// Wrapper for channel priority registers
@@ -64,7 +64,7 @@ pub struct RegisterBlock {
 /// the channel number to a reference to the priority
 /// register.
 #[repr(transparent)]
-pub struct ChannelPriorityRegisters([RWRegister<u8>; CHANNEL_COUNT]);
+pub struct ChannelPriorityRegisters([RWRegister<u8>; 32]);
 
 impl Index<usize> for ChannelPriorityRegisters {
     type Output = RWRegister<u8>;

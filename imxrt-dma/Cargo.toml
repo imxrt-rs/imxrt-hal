@@ -3,12 +3,3 @@ name = "imxrt-dma"
 version = "0.1.0"
 authors = ["Ian McIntyre <ianpmcintyre@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["channels-32"]
-# All i.MX RT variants have 32 channels, except for chips in the 1010 family, which have 16 channels.
-# i.MX RT 1010 users should disable the channels-32 feature, which will cause the library to fall
-# back to 16 channels.
-channels-32 = []
