@@ -71,15 +71,6 @@ The `imxrt-ral` supports all i.MX RT processors:
 
 As with the HAL, the RAL also **requires** a feature flag to specify the processor variant. The RAL is [on crates.io](https://crates.io/crates/imxrt-ral). The RAL provides the `"rt"` feature flag, and the interrupt table definition, that's used by the HAL.
 
-### IOMUXC
-
-The `imxrt-iomuxc` crate family
-
-- defines the i.MX RT pad configuration interface, and
-- implements pad definitions for i.MX RT chip variants
-
-The interface is re-exported in the HAL, but maintained in a separate collection of crates. Use the `imxrt-iomuxc` crate family if you'd like to build your own HAL, and you don't want to re-implement all of the code necessary to define and configure processor pads. Use the `imxrt-iomuxc` interfaces if you're creating a driver, and that driver treats processor pads as owned resources.
-
 ## Q/A
 
 #### *Are there any board support packages (BSP) that use the `imxrt-hal` crate?*
