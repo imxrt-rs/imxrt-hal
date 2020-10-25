@@ -74,7 +74,7 @@ where
     }
 
     fn init_receive(&mut self, mut channel: Channel) {
-        channel.set_trigger_from_hardware(Some(P::SOURCE_REQUEST_SIGNAL));
+        channel.set_trigger_from_hardware(Some(self.peripheral.source_signal()));
         // Safety: Source trait is only implemented on peripherals within
         // this crate. We may study those implementations to show that the
         // pointers point to valid memory.
@@ -213,7 +213,7 @@ where
     }
 
     fn init_transfer(&mut self, mut channel: Channel) {
-        channel.set_trigger_from_hardware(Some(P::DESTINATION_REQUEST_SIGNAL));
+        channel.set_trigger_from_hardware(Some(self.peripheral.destination_signal()));
         // Safety: Destination trait is only implemented on peripherals within
         // this crate. We may study those implementations to show that the pointers
         // point to valid memory.

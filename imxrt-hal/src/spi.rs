@@ -235,6 +235,9 @@ impl<M> SPI<M>
 where
     M: Unsigned,
 {
+    const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+
     fn new(source_clock: ccm::Frequency, reg: ral::lpspi::Instance) -> Self {
         let mut spi = SPI {
             reg,
@@ -510,7 +513,9 @@ unsafe impl<M> dma::peripheral::Source<u8> for SPI<M>
 where
     M: Unsigned,
 {
-    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn source_signal(&self) -> u32 {
+        Self::DMA_SOURCE_REQUEST_SIGNAL
+    }
     fn source(&self) -> *const u8 {
         &self.reg.RDR as *const _ as *const u8
     }
@@ -532,7 +537,9 @@ unsafe impl<M> dma::peripheral::Destination<u8> for SPI<M>
 where
     M: Unsigned,
 {
-    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn destination_signal(&self) -> u32 {
+        Self::DMA_DESTINATION_REQUEST_SIGNAL
+    }
     fn destination(&self) -> *const u8 {
         &self.reg.TDR as *const _ as *const u8
     }
@@ -554,7 +561,9 @@ unsafe impl<M> dma::peripheral::Source<u16> for SPI<M>
 where
     M: Unsigned,
 {
-    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn source_signal(&self) -> u32 {
+        Self::DMA_SOURCE_REQUEST_SIGNAL
+    }
     fn source(&self) -> *const u16 {
         &self.reg.RDR as *const _ as *const u16
     }
@@ -576,7 +585,9 @@ unsafe impl<M> dma::peripheral::Destination<u16> for SPI<M>
 where
     M: Unsigned,
 {
-    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn destination_signal(&self) -> u32 {
+        Self::DMA_DESTINATION_REQUEST_SIGNAL
+    }
     fn destination(&self) -> *const u16 {
         &self.reg.TDR as *const _ as *const u16
     }

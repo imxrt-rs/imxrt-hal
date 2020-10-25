@@ -302,6 +302,9 @@ impl<M> UART<M>
 where
     M: Unsigned,
 {
+    const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+
     fn start(
         reg: ral::lpuart::Instance,
         effective_clock: ccm::Frequency,
@@ -649,7 +652,9 @@ unsafe impl<M> dma::peripheral::Source<u8> for UART<M>
 where
     M: Unsigned,
 {
-    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn source_signal(&self) -> u32 {
+        Self::DMA_SOURCE_REQUEST_SIGNAL
+    }
     fn source(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
@@ -673,7 +678,9 @@ unsafe impl<M> dma::peripheral::Source<u8> for Rx<M>
 where
     M: Unsigned,
 {
-    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn source_signal(&self) -> u32 {
+        UART::<M>::DMA_SOURCE_REQUEST_SIGNAL
+    }
     fn source(&self) -> *const u8 {
         self.0.source()
     }
@@ -689,7 +696,9 @@ unsafe impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
     M: Unsigned,
 {
-    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn destination_signal(&self) -> u32 {
+        Self::DMA_DESTINATION_REQUEST_SIGNAL
+    }
     fn destination(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
@@ -711,7 +720,9 @@ unsafe impl<M> dma::peripheral::Destination<u8> for Tx<M>
 where
     M: Unsigned,
 {
-    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn destination_signal(&self) -> u32 {
+        UART::<M>::DMA_DESTINATION_REQUEST_SIGNAL
+    }
     fn destination(&self) -> *const u8 {
         self.0.destination()
     }
