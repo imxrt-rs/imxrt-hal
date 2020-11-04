@@ -10,16 +10,13 @@ abstractions that help to coordinate DMA transfers.
 This DMA driver may be re-exported from a HAL. If it is, you should consider
 using the safer APIs provided by your HAL.
 
-## Features
+## Portability
 
-The table below describes the feature flags that this driver supports:
-
-|  Feature flag   | Description             | Default? |
-| --------------- | ----------------------- | -------- |
-| `"channels-32"` | Support 32 DMA channels |     ✓    |
-
-Most i.MX RT processors support 32 DMA channels. If your chip does not support
-32 DMA channels, you should disable the default features.
+This DMA driver works across all considered i.MX RT variants (1010 and 1060
+family). You must make sure that the DMA channel you're creating is valid for
+your i.MX RT processor. This only matters on i.MX RT 1010 processors, which
+only support 16 DMA channels. Creating an invalid channel for your 1010 processor
+will result in a channel that references reserved memory.
 
 ## Example
 
