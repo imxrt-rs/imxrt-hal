@@ -22,7 +22,7 @@ log = "0.4.8"
 
 [dependencies.imxrt-dma]
 version = "0.1"
-path = "../imxrt-dma"
+path = "../../dma"
 
 [dependencies.imxrt-iomuxc]
 version = "0.1.0"

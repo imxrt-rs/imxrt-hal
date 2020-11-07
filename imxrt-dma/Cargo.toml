@@ -1,5 +1,0 @@
-[package]
-name = "imxrt-dma"
-version = "0.1.0"
-authors = ["Ian McIntyre <ianpmcintyre@gmail.com>"]
-edition = "2018"
