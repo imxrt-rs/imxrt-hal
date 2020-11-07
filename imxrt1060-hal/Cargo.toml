@@ -26,7 +26,8 @@ log = "0.4.8"
 
 [dependencies.imxrt-dma]
 version = "0.1"
-path = "../../dma"
+rev = "a825d22"
+git = "https://github.com/imxrt-rs/imxrt-dma" 
 
 [dependencies.imxrt-ral]
 version = "0.4.0"
