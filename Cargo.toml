@@ -1,8 +1,4 @@
 [workspace]
 members = [
-    "imxrt-ral",
-    "imxrt-hal",
-
-    "imxrt-iomuxc",
-    "imxrt-iomuxc/imxrt-iomuxc-build",
+    "imxrt1060-hal",
 ]

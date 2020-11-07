@@ -2,7 +2,7 @@
 
 Thanks for helping us build embedded Rust support for NXP's i.MX RT processors! Please open an issue if
 
-- you find a bug in the HAL, RAL, or IOMUXC crates
+- you find a bug in any chip HAL, or the RAL
 - you have an idea for a feature
 - something isn't clear in our documentation
 
@@ -35,21 +35,17 @@ If everything went well, you should find that the `imxrt-ral/src` directory is p
 
 If you add a SVD patch, or if you change something in `imxrtral.py`, you'll need to re-generate the RAL to realize the change.
 
-### HAL
+### Chip-specific HAL(s)
 
-Make sure you've generated the RAL (see above). When developing the HAL, specify a feature flag from the command line. To check the HAL for `imxrt1062` processors, `cd imxrt-hal`, then
+We support one HAL crate per i.MX RT processor family. A "processor family" is described by an NXP datasheet and reference manual. For example, the `imxrt1060-hal` supports the [i.MX RT1060 Crossover Processors](https://www.nxp.com/docs/en/nxp/data-sheets/IMXRT1060CEC.pdf), which includes the following processors:
 
-```
-cargo check --features imxrt1062 --target thumbv7em-none-eabihf
-```
+- i.MX RT 1061
+- i.MX RT 1062
 
-### IOMUXC
-
-The `imxrt-iomuxc` crate family does not require any feature flags, and it will build for your host. Consider using `--package` flags to build and test the crate family in one command:
+When developing the HAL(s) a quick way to check everything compiles, in the project root
 
 ```
-cargo build --package=imxrt-iomuxc --package=imxrt-iomuxc-build
-cargo test -p imxrt-iomuxc -p imxrt-iomuxc-build
+cargo check --target thumbv7em-none-eabihf
 ```
 
 ### SVD Patches
@@ -58,7 +54,7 @@ To modify the RAL, you'll need to describe your change as an SVD patch. If you'd
 
 ### Testing
 
-Our CI system ensures that the RAL and HAL builds for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt-hal` include
+Our CI system ensures that the RAL and HAL(s) build for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL(s) using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt1062-hal` include
 
 - [the `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp)
 - [the `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs)
