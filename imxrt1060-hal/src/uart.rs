@@ -302,6 +302,9 @@ impl<M> UART<M>
 where
     M: Unsigned,
 {
+    const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+
     fn start(
         reg: ral::lpuart::Instance,
         effective_clock: ccm::Frequency,
@@ -466,7 +469,13 @@ where
         Ok(())
     }
 
-    fn clear_status(&mut self) {
+    /// Clear the UART status flags
+    ///
+    /// # Safety
+    ///
+    /// Performs writes behind an immutable receiver. Caller must ensure
+    /// that the operation is atomic.
+    unsafe fn clear_status(&self) {
         ral::modify_reg!(
             ral::lpuart,
             self.reg,
@@ -601,7 +610,11 @@ where
             flags.set(ReadErrorFlags::NOISY, data & NOISY::mask != 0);
 
             let raw = (data & 0xFF) as u8;
-            self.clear_status();
+            // Safety: called with mutable receiver; caller is ensuring that this
+            // entire read() operation occurs atomically.
+            unsafe {
+                self.clear_status();
+            }
 
             if flags.is_empty() {
                 Ok(raw)
@@ -635,77 +648,88 @@ const DMA_TX_REQUEST_LOOKUP: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
 /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
 const DMA_RX_REQUEST_LOOKUP: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
 
-impl<M> dma::peripheral::Source<u8> for UART<M>
+unsafe impl<M> dma::peripheral::Source<u8> for UART<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn source_signal(&self) -> u32 {
+        Self::DMA_SOURCE_REQUEST_SIGNAL
+    }
     fn source(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
-    fn enable_source(&mut self) -> Result<(), Self::Error> {
-        self.clear_status();
-        ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
-        Ok(())
+    fn enable_source(&self) {
+        cortex_m::interrupt::free(|_| unsafe {
+            // Safety: mutability is atomic
+            self.clear_status();
+            ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
+        });
     }
-    fn disable_source(&mut self) {
-        while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
-            ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 0);
-        }
+    fn disable_source(&self) {
+        cortex_m::interrupt::free(|_| {
+            while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
+                ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 0);
+            }
+        });
     }
 }
 
-impl<M> dma::peripheral::Source<u8> for Rx<M>
+unsafe impl<M> dma::peripheral::Source<u8> for Rx<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
-    const SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn source_signal(&self) -> u32 {
+        UART::<M>::DMA_SOURCE_REQUEST_SIGNAL
+    }
     fn source(&self) -> *const u8 {
         self.0.source()
     }
-    fn enable_source(&mut self) -> Result<(), Self::Error> {
+    fn enable_source(&self) {
         self.0.enable_source()
     }
-    fn disable_source(&mut self) {
+    fn disable_source(&self) {
         self.0.disable_source()
     }
 }
 
-impl<M> dma::peripheral::Destination<u8> for UART<M>
+unsafe impl<M> dma::peripheral::Destination<u8> for UART<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn destination_signal(&self) -> u32 {
+        Self::DMA_DESTINATION_REQUEST_SIGNAL
+    }
     fn destination(&self) -> *const u8 {
         &self.reg.DATA as *const _ as *const u8
     }
-    fn enable_destination(&mut self) -> Result<(), Self::Error> {
-        ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
-        Ok(())
+    fn enable_destination(&self) {
+        cortex_m::interrupt::free(|_| {
+            ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
+        });
     }
-    fn disable_destination(&mut self) {
-        while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
-            ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
-        }
+    fn disable_destination(&self) {
+        cortex_m::interrupt::free(|_| {
+            while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
+                ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
+            }
+        });
     }
 }
 
-impl<M> dma::peripheral::Destination<u8> for Tx<M>
+unsafe impl<M> dma::peripheral::Destination<u8> for Tx<M>
 where
     M: Unsigned,
 {
-    type Error = void::Void;
-    const DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    fn destination_signal(&self) -> u32 {
+        UART::<M>::DMA_DESTINATION_REQUEST_SIGNAL
+    }
     fn destination(&self) -> *const u8 {
         self.0.destination()
     }
-    fn enable_destination(&mut self) -> Result<(), Self::Error> {
+    fn enable_destination(&self) {
         self.0.enable_destination()
     }
-    fn disable_destination(&mut self) {
+    fn disable_destination(&self) {
         self.0.disable_destination()
     }
 }

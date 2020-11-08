@@ -5,7 +5,7 @@
 //! - A normal, statically-allocated array, which we call [`Linear`](struct.Linear.html)
 //! - A circular buffer, called [`Circular`](struct.Circular.html)
 
-use super::Element;
+use super::{Element, Transfer};
 
 use as_slice::{AsMutSlice, AsSlice};
 use core::{
@@ -612,13 +612,6 @@ impl<E: Element> Circular<E> {
     fn mark_written(&mut self, size: usize) {
         self.write = (self.write + size) & (self.cap - 1)
     }
-
-    /// Computes the modulo value that describes the circular buffer
-    ///
-    /// See the DMA `Transfer` struct members for more information.
-    fn modulo(&self) -> u16 {
-        31 - (self.cap * mem::size_of::<E>()).leading_zeros() as u16
-    }
 }
 
 // OK to send; pointer assumed to be pointing at static memory. We're
@@ -699,48 +692,13 @@ impl<'a, E: Element> ReadHalf<'a, E> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct Description<E: Element> {
-    /// Starting address for the transfer to / from the buffer
-    address: *const E,
-    /// Number of usable elements (number of `E`s) in the buffer
-    length: usize,
-    /// Modulus value for the buffer
-    ///
-    /// See the (internal) `Transfer` struct for more details
-    modulo: u16,
-}
-
-impl<E: Element> Description<E> {
-    /// Returns the number of usable elemens (number of `E`s) in the buffer
-    pub fn len(&self) -> usize {
-        self.length
-    }
-}
-
-impl<E: Element> From<Description<E>> for super::Transfer<E> {
-    fn from(desc: Description<E>) -> Self {
-        Self {
-            address: desc.address,
-            // Increment sizeof(E) bytes for every read or write
-            offset: mem::size_of::<E>() as i16,
-            modulo: desc.modulo,
-            // If this is a circular buffer, do not perform any last address changes. Otherwise,
-            // reset the address back to the beginning
-            last_address_adjustment: if desc.modulo != 0 {
-                0
-            } else {
-                ((desc.length * mem::size_of::<E>()) as i32).wrapping_neg()
-            },
-        }
-    }
-}
-
 /// A buffer that can be used as the source of a DMA transfer
 pub trait Source<E: Element>: private::Sealed {
     /// Returns a buffer [`Description`](struct.Description.html) that describes
     /// this source buffer.
-    fn source(&self) -> Description<E>;
+    fn source(&self) -> Transfer<E>;
+    /// Returns the usable number of elements in the source
+    fn source_len(&self) -> usize;
     /// Prepare the buffer to be used as a source of a DMA transfer
     ///
     /// Use this to perform any state capture or setup before a transfer starts.
@@ -756,7 +714,9 @@ pub trait Source<E: Element>: private::Sealed {
 pub trait Destination<E: Element>: private::Sealed {
     /// Returns a buffer [`Description`](struct.Description.html) that describes this
     /// destination buffer.
-    fn destination(&self) -> Description<E>;
+    fn destination(&self) -> Transfer<E>;
+    /// Returns the usable number of elements in the destination
+    fn destination_len(&self) -> usize;
     /// Prepare the buffer to be used as the destination for a DMA transfer
     ///
     /// Use this to perform any state capture or setup before a transfer starts.
@@ -781,24 +741,26 @@ mod private {
 //
 
 impl<E: Element> Source<E> for Linear<E> {
-    fn source(&self) -> Description<E> {
-        Description {
-            address: self.ptr,
-            length: self.usable,
-            modulo: 0u16,
-        }
+    fn source(&self) -> Transfer<E> {
+        // Safety: pointer to buffer is always valid; usable is within
+        // bounds of the buffer.
+        unsafe { Transfer::buffer_linear(self.ptr, self.usable) }
+    }
+    fn source_len(&self) -> usize {
+        self.usable
     }
     fn prepare_source(&mut self) {}
     fn complete_source(&mut self) {}
 }
 
 impl<E: Element> Destination<E> for Linear<E> {
-    fn destination(&self) -> Description<E> {
-        Description {
-            address: self.ptr,
-            length: self.usable,
-            modulo: 0u16,
-        }
+    fn destination(&self) -> Transfer<E> {
+        // Safety: pointer to buffer is always valid; usable is within
+        // bounds of the buffer.
+        unsafe { Transfer::buffer_linear(self.ptr, self.usable) }
+    }
+    fn destination_len(&self) -> usize {
+        self.usable
     }
     fn prepare_destination(&mut self) {}
     fn complete_destination(&mut self) {}
@@ -809,12 +771,15 @@ impl<E: Element> Destination<E> for Linear<E> {
 //
 
 impl<E: Element> Source<E> for Circular<E> {
-    fn source(&self) -> Description<E> {
-        Description {
-            address: self.read_ptr(),
-            length: self.len(),
-            modulo: self.modulo(),
-        }
+    fn source(&self) -> Transfer<E> {
+        // Safety: Circular API enforces that buffer is aligned, and
+        // capacity is a power of two.
+        //
+        // Unwrap OK: power of two
+        unsafe { Transfer::buffer_circular(self.read_ptr(), self.cap).unwrap() }
+    }
+    fn source_len(&self) -> usize {
+        self.len()
     }
     fn prepare_source(&mut self) {
         self.reserved = self.len();
@@ -825,12 +790,15 @@ impl<E: Element> Source<E> for Circular<E> {
 }
 
 impl<E: Element> Destination<E> for Circular<E> {
-    fn destination(&self) -> Description<E> {
-        Description {
-            address: self.write_ptr(),
-            length: self.reserved,
-            modulo: self.modulo(),
-        }
+    fn destination(&self) -> Transfer<E> {
+        // Safety: Circular API enforces that buffer is aligned, and
+        // capacity is a power of two.
+        //
+        // Unwrap OK: power of two
+        unsafe { Transfer::buffer_circular(self.write_ptr(), self.cap).unwrap() }
+    }
+    fn destination_len(&self) -> usize {
+        self.reserved
     }
     fn prepare_destination(&mut self) {}
     fn complete_destination(&mut self) {

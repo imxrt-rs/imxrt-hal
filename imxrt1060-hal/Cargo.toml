@@ -24,6 +24,11 @@ nb = "0.1.2"
 void = { version = "1.0.2", default-features = false }
 log = "0.4.8"
 
+[dependencies.imxrt-dma]
+version = "0.1"
+rev = "a825d22"
+git = "https://github.com/imxrt-rs/imxrt-dma" 
+
 [dependencies.imxrt-ral]
 version = "0.4.0"
 path = "../imxrt-ral"

@@ -1,6 +1,6 @@
 //! DMA-powered memory copy
 
-use super::{buffer, Channel, Element, Error, ErrorStatus};
+use super::{buffer, Channel, Element, Error};
 use core::{
     marker::PhantomData,
     sync::atomic::{compiler_fence, Ordering},
@@ -82,11 +82,7 @@ where
     ///
     /// The number of elements transferred is the minimum size of the two
     /// buffers.
-    pub fn transfer(
-        &mut self,
-        mut source: S,
-        mut destination: D,
-    ) -> Result<(), (S, D, Error<void::Void>)> {
+    pub fn transfer(&mut self, mut source: S, mut destination: D) -> Result<(), (S, D, Error)> {
         if self.buffers.is_some() || self.channel.is_enabled() {
             return Err((source, destination, Error::ScheduledTransfer));
         }
@@ -95,23 +91,25 @@ where
         let dst = destination.destination();
 
         unsafe {
-            self.channel.set_source_transfer(src);
-            self.channel.set_destination_transfer(dst);
+            self.channel.set_source_transfer(&src);
+            self.channel.set_destination_transfer(&dst);
         }
 
         source.prepare_source();
         destination.prepare_destination();
 
-        let length = src.len().min(dst.len()) as u16;
+        let length = source.source_len().min(destination.destination_len()) as u16;
 
         self.channel.set_minor_loop_elements::<E>(1);
         self.channel.set_transfer_iterations(length);
 
         compiler_fence(Ordering::Release);
-        self.channel.set_enable(true);
-        self.channel.start();
+        unsafe {
+            self.channel.enable();
+            self.channel.start();
+        }
         if self.channel.is_error() {
-            let es = ErrorStatus::new(self.channel.error_status());
+            let es = self.channel.error_status();
             self.channel.clear_error();
             Err((source, destination, Error::Setup(es)))
         } else {
@@ -161,7 +159,7 @@ where
                 destination.complete_destination();
                 Ok((source, destination))
             } else {
-                self.channel.set_enable(false);
+                self.channel.disable();
                 self.channel.clear_complete();
                 Err((source, destination))
             }
