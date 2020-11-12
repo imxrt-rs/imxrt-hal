@@ -31,7 +31,8 @@ git = "https://github.com/imxrt-rs/imxrt-dma"
 
 [dependencies.imxrt-ral]
 version = "0.4.0"
-path = "../imxrt-ral"
+rev = "aae64342e2cb7491707776fd9cc70b100f8d00c9"
+git = "https://github.com/imxrt-rs/imxrt-ral"
 features = ["imxrt1062"]
 
 [dependencies.imxrt-iomuxc]

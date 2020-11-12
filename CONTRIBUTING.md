@@ -2,7 +2,7 @@
 
 Thanks for helping us build embedded Rust support for NXP's i.MX RT processors! Please open an issue if
 
-- you find a bug in any chip HAL, or the RAL
+- you find a bug in any chip HAL
 - you have an idea for a feature
 - something isn't clear in our documentation
 
@@ -20,21 +20,6 @@ You'll need
 ```bash
 rustup target add thumbv7em-none-eabihf
 ```
-
-### RAL
-
-The `imxrt-ral` crate is auto-generated from the checked-in SVD files, available in `imxrt-ral/svd`. It's checked into git, and you should always have whatever represents the latest auto-generated RAL. Generally, you should **not** manually change RAL source files; rather, you should describe changes in `imxrtral.py`, the Python script that auto-generates the RAL.
-
-To generate the RAL,
-
-- Install Python 3. You'll need at least Python 3.6.
-- Install the Python dependencies needed to generate the RAL: `pip3 install --user svdtools`. Alternatively, use the rules in the RAL's `Makefile` to create a virtual environment with the necessary dependencies: `make venv update-venv && source venv/bin/activate`.
-- Run `make` in the `imxrt-ral` directory: `make -C imxrt-ral`. The auto-generation script might generate warnings; that's OK.
-
-If everything went well, you should find that the `imxrt-ral/src` directory is populated with Rust files. If you made changes in `imxrtral.py`, you should see those changes reflected in the Rust files. The RAL can build by itself: `cd imxrt-ral && cargo check --features imxrt1062 --target thumbv7em-none-eabihf`.
-
-If you add a SVD patch, or if you change something in `imxrtral.py`, you'll need to re-generate the RAL to realize the change.
-
 ### Chip-specific HAL(s)
 
 We support one HAL crate per i.MX RT processor family. A "processor family" is described by an NXP datasheet and reference manual. For example, the `imxrt1060-hal` supports the [i.MX RT1060 Crossover Processors](https://www.nxp.com/docs/en/nxp/data-sheets/IMXRT1060CEC.pdf), which includes the following processors:
@@ -48,13 +33,9 @@ When developing the HAL(s) a quick way to check everything compiles, in the proj
 cargo check --target thumbv7em-none-eabihf
 ```
 
-### SVD Patches
-
-To modify the RAL, you'll need to describe your change as an SVD patch. If you'd like to add patches to the i.MX RT SVD files, learn about [svdtools](https://github.com/stm32-rs/svdtools). Use some of the existing SVD patches as a guide.
-
 ### Testing
 
-Our CI system ensures that the RAL and HAL(s) build for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL(s) using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt1062-hal` include
+Our CI system ensures that the RAL and HAL(s) build for all processor variants. But, we can't automatically test against hardware! To test your changes on hardware, you'll need to test the RAL and the HAL(s) using another project, like a Rust BSP crate. Some BSP crates that use the `imxrt1060-hal` include
 
 - [the `imxrt1060evk-bsp` crate](https://github.com/imxrt-rs/imxrt1060evk-bsp)
 - [the `teensy4-bsp` crate](https://github.com/mciantyre/teensy4-rs)

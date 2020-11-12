@@ -1,9 +1,0 @@
-.check
-.deps
-venv
-cortex_m/*.patched
-cortex_m/*.formatted
-svd/*.patched
-svd/*.formatted
-target
-Cargo.lock
