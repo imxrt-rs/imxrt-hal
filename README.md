@@ -1,6 +1,6 @@
-# imxrt-rs
+# imxrt-hal
 
-A Rust hardware abstraction layer (HAL), register access layer (RAL), and SVD patches for NXP i.MX RT processors.
+A Rust hardware abstraction layer (HAL) for NXP i.MX RT processors.
 
 [![All Checks][all-checks-badge]][all-checks-url] [![Crates.io][imxrt-hal-badge]][imxrt-hal-url]
 
@@ -12,7 +12,7 @@ A Rust hardware abstraction layer (HAL), register access layer (RAL), and SVD pa
 ## Goals
 
 - Create *the* collaborative group to support using Rust on NXP's i.MX RT series.
-- Simple but useful register level access. It compiles quickly, and it's intuitive for existing embedded developers.
+- Simple but useful register level access. It compiles quickly, and it's intuitive for existing embedded developers. Every hal republishes the RAL.
 - Embedded HAL support.
 - RTIC support.
 - NXP EVK board support
@@ -54,22 +54,6 @@ Enabling the `"rt"` feature-flag will link in the i.MX RT interrupt table. If yo
 
 Follow #56 to understand how we're breaking `imxrt-hal` into separate crates. If you'd like to try the new HAL crate(s), depend on `imxrt1060-hal`, and skip the feature flag that describes your i.MX RT variant.
 
-### RAL
-
-If you prefer a lower-level interface for i.MX RT processor registers, consider using the `imxrt-ral`. The `imxrt-ral` is modeled after the [`stm32ral` crate](https://github.com/adamgreig/stm32ral). It provides direct access to the processor's registers. Use the `imxrt-ral` if you'd like to create your own hardware abstraction layer, or a custom driver.
-
-The `imxrt-ral` supports all i.MX RT processors:
-
-- [x] `"imxrt1011"`
-- [x] `"imxrt1015"`
-- [x] `"imxrt1021"`
-- [x] `"imxrt1051"`
-- [x] `"imxrt1052"`
-- [x] `"imxrt1061"`
-- [x] `"imxrt1062"`
-- [x] `"imxrt1064"`
-
-As with the HAL, the RAL also **requires** a feature flag to specify the processor variant. The RAL is [on crates.io](https://crates.io/crates/imxrt-ral). The RAL provides the `"rt"` feature flag, and the interrupt table definition, that's used by the HAL.
 
 ## Q/A
 
