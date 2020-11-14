@@ -1,4 +1,4 @@
-//! True Random Number Generator
+//! True Random Number Generator (TRNG)
 //!
 //! Provides basic support for the True Random Number Generator. The TRNG generates truly random
 //! data and is intended for use as a generator of entropy.
@@ -7,6 +7,29 @@
 //! should only be used to generate a relatively small amount of entropy for a cryptographic
 //! algorithm. Occasionally retrieving entropy from it won't necessarily need to block, as
 //! this driver retrieves 512 bits at a time.
+//!
+//! ## RngCore Support
+//!
+//! When the crate feature `rand_core` is enabled, the TRNG can be wrapped in a struct that
+//! implements [`rand_core`][rand_core]'s `RngCore` trait (via `into_rng()`). The [`rand`][rand]
+//! crate's `Rng` trait automatically implements high-level functions on top of `RngCore`.
+//!
+//! This feature is opt-in because Cargo's current feature resolution may trigger a build failure
+//! (or require the use of an [unstable Cargo feature][nfr]) if any dev-dependency has enabled the
+//! `std` feature of `rand_core`.
+//!
+//! Note that only the `try_fill_bytes` function of `RngCore` allows reporting an error. The others
+//! will panic if the TRNG reports an error. Errors appear to be extremely rare in the default
+//! configuration (none were seen over 3GB of data), but it's possible they will be more common in
+//! certain situations, such as extreme temperatures or an inconsistent power supply. The non-public
+//! Security Reference Manual may have more information.
+//!
+//! If you intend to use the `RngCore` wrapper, you should increase the
+//! [retry count](Unclocked::set_retry_count) before clocking the TRNG.
+//!
+//! [rand_core]: https://crates.io/crates/rand_core
+//! [rand]: https://crates.io/crates/rand
+//! [nfr]: https://github.com/rust-lang/cargo/issues/7916
 
 use core::fmt;
 
@@ -227,6 +250,72 @@ impl TRNG {
         // need to wait for TSTOP_OK before disabling clock or the ring oscillator will keep running
         modify_reg!(ral::ccm, ccm, CCGR6, CG6: 0); // disable trng clock
         Unclocked::new(self.reg)
+    }
+
+    /// Wrap the TRNG in a struct that implements `rand_core`'s `RngCore` trait.
+    #[cfg(feature = "rand_core")]
+    pub fn into_rng(self) -> RngCoreWrapper {
+        RngCoreWrapper(self)
+    }
+}
+
+/// Wrapper struct around [`TRNG`] that implements `RngCore`.
+#[cfg(feature = "rand_core")]
+pub struct RngCoreWrapper(TRNG);
+
+#[cfg(feature = "rand_core")]
+impl RngCoreWrapper {
+    /// Deconstruct this wrapper and return the TRNG struct.
+    pub fn into_inner(self) -> TRNG {
+        self.0
+    }
+}
+
+#[cfg(feature = "rand_core")]
+impl rand_core::RngCore for RngCoreWrapper {
+    /// Return the next random `u32`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the TRNG returns an error.
+    fn next_u32(&mut self) -> u32 {
+        let mut bytes = [0; 4];
+        self.fill_bytes(&mut bytes);
+        u32::from_be_bytes(bytes)
+    }
+
+    /// Return the next random `u64`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the TRNG returns an error.
+    fn next_u64(&mut self) -> u64 {
+        let mut bytes = [0; 8];
+        self.fill_bytes(&mut bytes);
+        u64::from_be_bytes(bytes)
+    }
+
+    /// Fill `dest` with random data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the TRNG returns an error.
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        self.try_fill_bytes(dest).expect("TRNG returned an error")
+    }
+
+    /// Fill `dest` with random data.
+    ///
+    /// If an error occurs, the error's `code` will be identical to the [`ErrorFlags`] that this
+    /// driver would have reported. If none of them were set, the `code` will have only the highest
+    /// bit set (which does not correspond to any flag).
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
+        // defer to Read implementation, converting error to rand_core's Error
+        self.0.read(dest).map_err(|e| {
+            let code = if e.0.bits == 0 { 1 << 31 } else { e.0.bits };
+            // Safety: Highest bit is set above if no flags were set.
+            unsafe { core::num::NonZeroU32::new_unchecked(code).into() }
+        })
     }
 }
 
