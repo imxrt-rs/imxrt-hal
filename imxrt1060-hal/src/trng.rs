@@ -68,7 +68,7 @@ impl Unclocked {
             self.retry_count = retry_count;
             Ok(())
         } else {
-            Err(InvalidRetryCountError)
+            Err(InvalidRetryCountError(()))
         }
     }
 
@@ -133,6 +133,19 @@ pub enum SampleMode {
     Raw = trng::MCTL::SAMP_MODE::RW::SAMP_MODE_1,
     /// von Neumann data in entropy shifter, raw data in statistical checks
     VonNeumannRaw = trng::MCTL::SAMP_MODE::RW::SAMP_MODE_2,
+}
+
+impl SampleMode {
+    /// Convert the register value to the enum. Not using std TryFrom to avoid making this public;
+    /// users shouldn't need this.
+    fn try_from_reg(value: u32) -> Option<SampleMode> {
+        match value {
+            trng::MCTL::SAMP_MODE::RW::SAMP_MODE_0 => Some(Self::VonNeumann),
+            trng::MCTL::SAMP_MODE::RW::SAMP_MODE_1 => Some(Self::Raw),
+            trng::MCTL::SAMP_MODE::RW::SAMP_MODE_2 => Some(Self::VonNeumannRaw),
+            _ => None,
+        }
+    }
 }
 
 impl Default for SampleMode {
@@ -241,6 +254,8 @@ impl TRNG {
     }
 
     /// Disable the TRNG and its clock.
+    ///
+    /// This should preserve any previously set retry count and sample mode.
     pub fn disable(self, ccm: &mut ccm::Handle) -> Unclocked {
         let (ccm, _) = ccm.raw();
         modify_reg!(trng, self.reg, MCTL, PRGM: 1);
@@ -248,8 +263,13 @@ impl TRNG {
             core::sync::atomic::spin_loop_hint();
         }
         // need to wait for TSTOP_OK before disabling clock or the ring oscillator will keep running
+        let sample_mode = read_reg!(trng, self.reg, MCTL, SAMP_MODE);
+        let retry_count = read_reg!(trng, self.reg, SCMISC, RTY_CT);
+        let mut unclocked = Unclocked::new(self.reg);
+        unclocked.sample_mode = SampleMode::try_from_reg(sample_mode).unwrap_or_default();
+        unclocked.retry_count = retry_count; // RTY_CT is 4 bits, all values valid
         modify_reg!(ral::ccm, ccm, CCGR6, CG6: 0); // disable trng clock
-        Unclocked::new(self.reg)
+        unclocked
     }
 
     /// Wrap the TRNG in a struct that implements `rand_core`'s `RngCore` trait.
@@ -393,10 +413,19 @@ impl fmt::Display for Error {
 
 /// The specified retry count was outside of the valid range of `1..=15`.
 #[derive(Copy, Clone, Debug)]
-pub struct InvalidRetryCountError;
+pub struct InvalidRetryCountError(());
 
 impl fmt::Display for InvalidRetryCountError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("The specified retry count was outside of the valid range of 1..=15")
     }
 }
+
+/// InvalidRetryCountError was accidentally constructible. Test to ensure it isn't.
+/// ```compile_fail
+/// use imxrt1060_hal as hal;
+/// use hal::trng::InvalidRetryCountError;
+/// let err = InvalidRetryCountError;
+/// ```
+#[cfg(doctest)]
+struct UnconstructibleError;
