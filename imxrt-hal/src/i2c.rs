@@ -244,15 +244,15 @@ pub struct I2C<M> {
 /// Indicates an error when computing the parameters that control
 /// the clock speed.
 #[derive(Debug)]
-pub struct ClockSpeedError;
+pub struct ClockSpeedError(());
 /// Indicates an error when computing the parameters that control
 /// the pin low timeout
 #[derive(Debug)]
-pub struct PinLowTimeoutError;
+pub struct PinLowTimeoutError(());
 /// Indicates an error when computing the parameters that control
 /// the bus idle timeout
 #[derive(Debug)]
-pub struct BusIdleTimeoutError;
+pub struct BusIdleTimeoutError(());
 
 const RETRIES: usize = 100_000;
 
@@ -314,7 +314,7 @@ where
             .into_iter()
             .next()
             .filter(|ticks| *ticks <= 0x0FFFu16)
-            .ok_or(PinLowTimeoutError)?;
+            .ok_or(PinLowTimeoutError(()))?;
         log::debug!("PINLOW = 0x{:X}", pin_low_ticks);
         self.with_master_disabled(|| {
             ral::modify_reg!(
@@ -344,7 +344,7 @@ where
             .into_iter()
             .next()
             .filter(|ticks| *ticks <= 0xFFFu16)
-            .ok_or(BusIdleTimeoutError)?;
+            .ok_or(BusIdleTimeoutError(()))?;
         log::debug!("BUSIDLE = 0x{:X}", bus_idle_ticks);
         self.with_master_disabled(|| {
             ral::modify_reg!(
