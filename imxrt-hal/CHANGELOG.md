@@ -12,12 +12,15 @@
   `rng::Read` trait. Includes support for `rand_core::RngCore` behind the
   optional `"rand_core"` feature.
 
+### Fixed
+
+- Ensure that I2C and SPI errors can only be created by the HAL crate, and not by end users.
+
 ## [0.4.1] 2020-09-23
 
 ### Fix
 
 - Maintain GPIO input/output configuration when enabling or disabling high-speed mode.
-- Ensure that I2C and SPI errors can only be created by the HAL crate, and not by end users.
 
 ## [0.4.0] 2020-08-29
 
