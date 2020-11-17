@@ -8,6 +8,9 @@
   continues to track time while the SNVS low-power domain remains powered.
 - Add ADC channels. The channels implement the `embedded-hal::adc::Oneshot`
   trait.
+- Preliminary support for the TRNG, with an implementation of embedded_hal's
+  `rng::Read` trait. Includes support for `rand_core::RngCore` behind the
+  optional `"rand_core"` feature.
 
 ## [0.4.1] 2020-09-23
 
