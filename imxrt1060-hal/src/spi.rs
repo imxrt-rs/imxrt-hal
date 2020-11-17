@@ -212,22 +212,22 @@ pub struct SPI<M> {
 /// Indicates an error when computing the parameters that control
 /// the clock speed.
 #[derive(Debug)]
-pub struct ClockSpeedError;
+pub struct ClockSpeedError(());
 
 /// Indicates an error when computing the parameters that control
 /// the mode.
 #[derive(Debug)]
-pub struct ModeError;
+pub struct ModeError(());
 
 /// Indicates an error when computing the parameters that control
 /// the pin low timeout
 #[derive(Debug)]
-pub struct PinLowTimeoutError;
+pub struct PinLowTimeoutError(());
 
 /// Indicates an error when computing the parameters that control
 /// the bus idle timeout
 #[derive(Debug)]
-pub struct BusIdleTimeoutError;
+pub struct BusIdleTimeoutError(());
 
 const RETRIES: usize = 100_000;
 
