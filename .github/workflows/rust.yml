@@ -3,33 +3,6 @@ name: All Checks
 on: [push, pull_request]
 
 jobs:
-  gen-ral:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install virtualenv
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.7
-      - name: Install Python dependencies
-        run: cd imxrt-ral && pip install -U -r requirements.txt
-      - name: Generate RAL
-        run: make -C imxrt-ral ci
-      - name: Ensure RAL is consistent with checked-in code
-        run: git update-index --refresh && git diff-index --quiet HEAD
-
-  build-ral:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        feature: ["imxrt1011", "imxrt1015", "imxrt1021", "imxrt1051", "imxrt1052", "imxrt1061", "imxrt1062", "imxrt1064"]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build imxrt-ral for (${{ matrix.feature }}) RAL
-      run: cd imxrt-ral && cargo build --verbose --features ${{ matrix.feature }}
-    - name: Run tests (${{ matrix.feature }}) for RAL
-      run: cd imxrt-ral && cargo test --verbose --features ${{ matrix.feature }}
-
   build-hal:
     runs-on: ubuntu-latest
     strategy:

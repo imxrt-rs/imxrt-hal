@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "imxrt-ral",
     "imxrt-hal",
 
     "imxrt-iomuxc",
