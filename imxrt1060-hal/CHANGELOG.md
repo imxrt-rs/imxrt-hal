@@ -14,6 +14,7 @@
 ### Fix
 
 - Maintain GPIO input/output configuration when enabling or disabling high-speed mode.
+- Ensure that I2C and SPI errors can only be created by the HAL crate, and not by end users.
 
 ## [0.4.0] 2020-08-29
 
