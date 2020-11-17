@@ -267,7 +267,7 @@ impl TRNG {
         let retry_count = read_reg!(trng, self.reg, SCMISC, RTY_CT);
         let mut unclocked = Unclocked::new(self.reg);
         unclocked.sample_mode = SampleMode::try_from_reg(sample_mode).unwrap_or_default();
-        unclocked.retry_count = retry_count; // RTY_CT is 4 bits, all values valid
+        unclocked.retry_count = retry_count.max(1); // RTY_CT is 4 bits, 0 is invalid
         modify_reg!(ral::ccm, ccm, CCGR6, CG6: 0); // disable trng clock
         unclocked
     }
