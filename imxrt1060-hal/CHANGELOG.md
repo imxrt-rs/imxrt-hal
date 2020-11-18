@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.2] 2020-11-23
+
 ### Added
 
 - Basic support for the secure real time clock (SRTC) peripheral, which
@@ -178,7 +180,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.1...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.2...HEAD
+[0.4.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.4.0
 [0.3.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.3.1
