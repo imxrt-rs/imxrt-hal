@@ -87,23 +87,16 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1060_hal;
+//! use imxrt1060_hal as hal;
+//! use hal::ral::{ccm, gpt};
+//! use hal::{ccm::{CCM, ClockGate}, gpt::GPT};
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
-//!
-//! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
-//!     imxrt1060_hal::ccm::PLL1::ARM_HZ,
-//!     &mut peripherals.ccm.handle,
-//!     &mut peripherals.dcdc,
-//! );
-//!
-//! let mut cfg = peripherals.ccm.perclk.configure(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt1060_hal::ccm::perclk::PODF::DIVIDE_3,
-//!     imxrt1060_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
-//! );
-//!
-//! let mut gpt1 = peripherals.gpt1.clock(&mut cfg);
+//! let mut ccm = ccm::CCM::take().map(CCM::from_ral).unwrap();
+//! let mut perclock = ccm.perclock.enable(&mut ccm.handle);
+//! let mut gpt1 = gpt::GPT1::take().map(|mut gpt| {
+//!     perclock.set_clock_gate_gpt(&mut gpt, ClockGate::On);
+//!     GPT::new(gpt, &perclock)
+//! }).unwrap();
 //!
 //! gpt1.set_output_interrupt_on_compare(
 //!     imxrt1060_hal::gpt::OutputCompareRegister::Three,
@@ -127,34 +120,17 @@
 //!   match the counter, the GPT can generate a signal on an output
 //!   pin.
 
-use crate::{
-    ccm::{perclk, ticks},
-    ral,
-};
+use crate::ral;
 
 use core::time::Duration;
 
-/// An unclocked GPT
-///
-/// Each GPT starts in an unclocked state. By supplying
-/// a proper clock configuration, the GPT will clock
-/// itself and prepare for operation.
-pub struct Unclocked {
-    registers: ral::gpt::Instance,
-    instance: Instance,
-}
-
-/// GPT instance
-///
-/// Used for runtime selection of GPT-specific configurations
-enum Instance {
-    One,
-    Two,
-}
-
 /// Prescaler applied to each GPT's input clock.
 ///
-/// See comments at usage for justification.
+/// The 24MHz prescaler register can't be non-zero. Not sure why.
+/// The reference manual says its OK, but it doesn't work. The
+/// se4L project noted the same issue in their kernel.
+/// So, this means that there's a divider of 2 when using the
+/// crystal oscillator.
 const DEFAULT_PRESCALER: u32 = 2;
 
 /// A general purpose timer
@@ -163,83 +139,14 @@ const DEFAULT_PRESCALER: u32 = 2;
 /// matches the value of the counter, the GPT may trigger an interrupt.
 ///
 /// By default, the timer runs in wait mode.
-pub struct GPT {
+pub struct GPT<N> {
     /// Registers for this GPT instance
-    registers: ral::gpt::Instance,
+    registers: ral::gpt::Instance<N>,
     /// The effective clock frequency that controls
     /// the counter.
     ///
     /// The value accounts for all prescalers and dividers.
     clock_hz: u32,
-}
-
-impl Unclocked {
-    /// Create an unclocked GPT1
-    pub(crate) fn one(registers: ral::gpt::Instance) -> Self {
-        Unclocked {
-            registers,
-            instance: Instance::One,
-        }
-    }
-
-    /// Create an unclocked GPT2
-    pub(crate) fn two(registers: ral::gpt::Instance) -> Self {
-        Unclocked {
-            registers,
-            instance: Instance::Two,
-        }
-    }
-
-    /// Enable the clocks to the GPT, returning a GPT timer
-    ///
-    /// `configured` is a handle describing the clocks and clock
-    /// configuration for the GPT. See the `ccm` module for more
-    /// information.
-    pub fn clock(self, configured: &mut perclk::Configured) -> GPT {
-        let (freq, div) = match self.instance {
-            Instance::One => configured.enable_gpt1_clock_gates(),
-            Instance::Two => configured.enable_gpt2_clock_gates(),
-        };
-
-        match configured.clock_selection() {
-            perclk::CLKSEL::OSC => {
-                ral::write_reg!(
-                    ral::gpt,
-                    self.registers,
-                    CR,
-                    EN_24M: 1, // Enable crystal oscillator
-                    CLKSRC: 0b101 // Crystal Oscillator
-                );
-                // The 24MHz prescaler register can't be non-zero. Not sure why.
-                // The reference manual says its OK, but it doesn't work. The
-                // se4L project noted the same issue in their kernel.
-                // So, this means that there's a divider of 2 when using the
-                // crystal oscillator.
-                ral::write_reg!(ral::gpt, self.registers, PR, PRESCALER24M: (DEFAULT_PRESCALER - 1));
-            }
-            perclk::CLKSEL::IPG(_) => {
-                ral::write_reg!(
-                    ral::gpt,
-                    self.registers,
-                    CR,
-                    EN_24M: 0, // No crystal oscillator
-                    CLKSRC: 0b001 // Peripheral Clock
-                );
-                // See the above comment about needing a prescaler for the other
-                // clock. This is for consistency, so that we can implement the
-                // "divide by two" behavior.
-                ral::write_reg!(ral::gpt, self.registers, PR, PRESCALER: (DEFAULT_PRESCALER - 1));
-            }
-        }
-
-        // Clear all statuses
-        ral::write_reg!(ral::gpt, self.registers, SR, 0b11_1111);
-
-        GPT {
-            registers: self.registers,
-            clock_hz: (freq / div).0 / DEFAULT_PRESCALER,
-        }
-    }
 }
 
 /// An output compare register (OCR)
@@ -265,7 +172,27 @@ pub enum Mode {
     FreeRunning,
 }
 
-impl GPT {
+impl<N> GPT<N> {
+    pub fn new(gpt: ral::gpt::Instance<N>, clock: &crate::ccm::PerClock) -> Self {
+        ral::write_reg!(
+            ral::gpt,
+            gpt,
+            CR,
+            EN_24M: 1, // Enable crystal oscillator
+            CLKSRC: 0b101 // Crystal Oscillator
+        );
+        ral::write_reg!(ral::gpt, gpt, PR, PRESCALER24M: DEFAULT_PRESCALER - 1);
+
+        // Clear all statuses
+        ral::write_reg!(ral::gpt, gpt, SR, 0b11_1111);
+
+        let hz = clock.frequency() / DEFAULT_PRESCALER;
+        GPT {
+            registers: gpt,
+            clock_hz: hz,
+        }
+    }
+
     /// Returns the current mode of the GPT
     pub fn mode(&self) -> Mode {
         if ral::read_reg!(ral::gpt, self.registers, CR, FRR == 0) {
@@ -371,13 +298,23 @@ impl GPT {
         output: OutputCompareRegister,
         duration: Duration,
     ) {
-        let counts: u32 = ticks(duration, self.clock_hz, 1).unwrap_or(u32::max_value());
+        use core::convert::TryFrom;
+
+        let period_ns = 1_000_000_000 / self.clock_hz;
+        let delay_ns = u32::try_from(duration.as_nanos()).unwrap_or(u32::max_value());
+        let counts = delay_ns
+            .checked_div(period_ns)
+            .unwrap_or(0)
+            .saturating_sub(1);
         let next_count = self.count().wrapping_add(counts);
         self.set_output_compare_count(output, next_count);
     }
 
     /// Returns a handle that can query and modify the output compare status for the provided output
-    pub fn output_compare_status(&mut self, output: OutputCompareRegister) -> OutputCompareStatus {
+    pub fn output_compare_status(
+        &mut self,
+        output: OutputCompareRegister,
+    ) -> OutputCompareStatus<N> {
         OutputCompareStatus { gpt: self, output }
     }
 
@@ -469,7 +406,7 @@ impl GPT {
     /// The adapter assumes the current GPT's mode. User is responsible
     /// for making sure that this mode is sensible for the qualities of
     /// the timer.
-    pub fn count_down(&mut self, output: OutputCompareRegister) -> CountDown {
+    pub fn count_down(&mut self, output: OutputCompareRegister) -> CountDown<N> {
         CountDown(Timer::oneshot(self, output))
     }
 
@@ -482,7 +419,7 @@ impl GPT {
     ///
     /// The adapter assumes the current GPT's mode. User is responsible for
     /// making sure this mode is sensible for the qualities of the timer.
-    pub fn periodic(&mut self, output: OutputCompareRegister) -> Periodic {
+    pub fn periodic(&mut self, output: OutputCompareRegister) -> Periodic<N> {
         Periodic(Timer::periodic(self, output))
     }
 
@@ -516,12 +453,12 @@ impl GPT {
 }
 
 /// A handle to evaluate and modify the output compare status
-pub struct OutputCompareStatus<'a> {
-    gpt: &'a mut GPT,
+pub struct OutputCompareStatus<'a, N> {
+    gpt: &'a mut GPT<N>,
     output: OutputCompareRegister,
 }
 
-impl<'a> OutputCompareStatus<'a> {
+impl<'a, N> OutputCompareStatus<'a, N> {
     /// Returns true if this output compare has triggered
     pub fn is_set(&self) -> bool {
         let sr = ral::read_reg!(ral::gpt, self.gpt.registers, SR);
@@ -547,15 +484,15 @@ enum Policy {
 }
 
 /// Shared implementation for `embedded_hal` traits
-struct Timer<'a> {
-    gpt: &'a mut GPT,
+struct Timer<'a, N> {
+    gpt: &'a mut GPT<N>,
     output: OutputCompareRegister,
     policy: Policy,
 }
 
-impl<'a> Timer<'a> {
+impl<'a, N> Timer<'a, N> {
     /// Constructs a timer that implements oneshot behavior (not periodic)
-    fn oneshot(gpt: &'a mut GPT, output: OutputCompareRegister) -> Self {
+    fn oneshot(gpt: &'a mut GPT<N>, output: OutputCompareRegister) -> Self {
         Timer {
             gpt,
             output,
@@ -564,7 +501,7 @@ impl<'a> Timer<'a> {
     }
 
     /// Constructs a timer that implements periodic behavior
-    fn periodic(gpt: &'a mut GPT, output: OutputCompareRegister) -> Self {
+    fn periodic(gpt: &'a mut GPT<N>, output: OutputCompareRegister) -> Self {
         Timer {
             gpt,
             output,
@@ -611,9 +548,9 @@ impl<'a> Timer<'a> {
 /// remain active while the GPT is borrowed.
 ///
 /// [docs]: https://docs.rs/embedded-hal/0.2.3/embedded_hal/timer/trait.CountDown.html
-pub struct CountDown<'a>(Timer<'a>);
+pub struct CountDown<'a, N>(Timer<'a, N>);
 
-impl<'a> embedded_hal::timer::CountDown for CountDown<'a> {
+impl<'a, N> embedded_hal::timer::CountDown for CountDown<'a, N> {
     type Time = Duration;
 
     fn start<T: Into<Duration>>(&mut self, duration: T) {
@@ -633,9 +570,9 @@ impl<'a> embedded_hal::timer::CountDown for CountDown<'a> {
 /// while the GPT is borrowed.
 ///
 /// [docs]: https://docs.rs/embedded-hal/0.2.3/embedded_hal/timer/trait.Periodic.html
-pub struct Periodic<'a>(Timer<'a>);
+pub struct Periodic<'a, N>(Timer<'a, N>);
 
-impl<'a> embedded_hal::timer::CountDown for Periodic<'a> {
+impl<'a, N> embedded_hal::timer::CountDown for Periodic<'a, N> {
     type Time = Duration;
 
     fn start<T: Into<Duration>>(&mut self, duration: T) {
@@ -647,4 +584,4 @@ impl<'a> embedded_hal::timer::CountDown for Periodic<'a> {
     }
 }
 
-impl<'a> embedded_hal::timer::Periodic for Periodic<'a> {}
+impl<'a, N> embedded_hal::timer::Periodic for Periodic<'a, N> {}
