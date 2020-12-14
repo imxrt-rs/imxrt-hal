@@ -16,140 +16,40 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1060_hal;
+//! use imxrt1060_hal as hal;
 //! use embedded_hal::blocking::spi::Transfer;
+//! use hal::{ccm::{self, ClockGate}, iomuxc, spi::{SPI, Pins}};
+//! use hal::ral::{
+//!     ccm::CCM, iomuxc::IOMUXC, lpspi::LPSPI4,
+//! };
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
+//! let pads = IOMUXC::take().map(iomuxc::new).unwrap();
 //!
-//! let (_, _, _, spi4_builder) = peripherals.spi.clock(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt1060_hal::ccm::spi::ClockSelect::Pll2,
-//!     imxrt1060_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
+//! let mut ccm = CCM::take().map(ccm::CCM::from_ral).unwrap();
+//!
+//! let mut spi_clock = ccm.spi_clock.enable(&mut ccm.handle);
+//! let spi_pins = Pins {
+//!     sdo: pads.b0.p02,
+//!     sdi: pads.b0.p01,
+//!     sck: pads.b0.p03,
+//!     pcs0: pads.b0.p00,
+//! };
+//! let mut spi4 = LPSPI4::take().unwrap();
+//! spi_clock.set_clock_gate(&mut spi4, ClockGate::On);
+//! let mut spi = SPI::new(
+//!     spi4,
+//!     spi_pins,
+//!     &spi_clock,
 //! );
 //!
-//! let mut spi4 = spi4_builder.build(
-//!     peripherals.iomuxc.b0.p02,
-//!     peripherals.iomuxc.b0.p01,
-//!     peripherals.iomuxc.b0.p03,
-//! );
-//!
-//! spi4.enable_chip_select_0(peripherals.iomuxc.b0.p00);
-//!
-//! spi4.set_clock_speed(imxrt1060_hal::spi::ClockSpeed(1_000_000)).unwrap();
+//! spi.set_clock_speed(hal::spi::ClockSpeed(1_000_000)).unwrap();
 //!
 //! let mut buffer: [u8; 3] = [1, 2, 3];
-//! spi4.transfer(&mut buffer).unwrap();
+//! spi.transfer(&mut buffer).unwrap();
 //! ```
 
-use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
-
-use crate::ccm;
-use crate::iomuxc::spi;
+use crate::iomuxc::{consts::Unsigned, spi};
 use crate::ral;
-use core::marker::PhantomData;
-
-/// Unclocked SPI modules
-///
-/// The `Unclocked` struct represents all four unconfigured SPI peripherals.
-/// Once clocked, you'll have the ability to build SPI peripherals from the
-/// compatible processor pins.
-pub struct Unclocked {
-    pub(crate) spi1: ral::lpspi::Instance,
-    pub(crate) spi2: ral::lpspi::Instance,
-    pub(crate) spi3: ral::lpspi::Instance,
-    pub(crate) spi4: ral::lpspi::Instance,
-}
-
-impl Unclocked {
-    /// Enable clocks to all SPI modules, returning a builder for the four SPI modules.
-    pub fn clock(
-        self,
-        handle: &mut ccm::Handle,
-        clock_select: ccm::spi::ClockSelect,
-        divider: ccm::spi::PrescalarSelect,
-    ) -> (Builder<U1>, Builder<U2>, Builder<U3>, Builder<U4>) {
-        let (ccm, _) = handle.raw();
-        // First, disable clocks
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR1,
-            CG0: 0,
-            CG1: 0,
-            CG2: 0,
-            CG3: 0
-        );
-
-        let clk_sel = match clock_select {
-            ccm::spi::ClockSelect::Pll2 => ral::ccm::CBCMR::LPSPI_CLK_SEL::RW::LPSPI_CLK_SEL_2,
-        };
-
-        // Select clock, and commit prescalar
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CBCMR,
-            LPSPI_PODF: (divider as u32),
-            LPSPI_CLK_SEL: clk_sel
-        );
-
-        // Enable clocks
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR1,
-            CG0: 0b11,
-            CG1: 0b11,
-            CG2: 0b11,
-            CG3: 0b11
-        );
-
-        let source_clock = ccm::Frequency::from(clock_select) / ccm::Divider::from(divider);
-        (
-            Builder::new(source_clock, self.spi1),
-            Builder::new(source_clock, self.spi2),
-            Builder::new(source_clock, self.spi3),
-            Builder::new(source_clock, self.spi4),
-        )
-    }
-}
-
-/// A SPI builder that can build a SPI peripheral
-pub struct Builder<M> {
-    _module: PhantomData<M>,
-    reg: ral::lpspi::Instance,
-    /// Frequency of the LPSPI source clock. This
-    /// accounts for the divider.
-    source_clock: ccm::Frequency,
-}
-
-impl<M> Builder<M>
-where
-    M: Unsigned,
-{
-    fn new(source_clock: ccm::Frequency, reg: ral::lpspi::Instance) -> Self {
-        Builder {
-            _module: PhantomData,
-            reg,
-            source_clock,
-        }
-    }
-
-    /// Builds a SPI peripheral from the SDO, SDI and SCK pins. The return
-    /// is a configured SPI master running at 8MHz.
-    pub fn build<SDO, SDI, SCK>(self, mut sdo: SDO, mut sdi: SDI, mut sck: SCK) -> SPI<M>
-    where
-        SDO: spi::Pin<Module = M, Signal = spi::SDO>,
-        SDI: spi::Pin<Module = M, Signal = spi::SDI>,
-        SCK: spi::Pin<Module = M, Signal = spi::SCK>,
-    {
-        crate::iomuxc::spi::prepare(&mut sdo);
-        crate::iomuxc::spi::prepare(&mut sdi);
-        crate::iomuxc::spi::prepare(&mut sck);
-
-        SPI::new(self.source_clock, self.reg)
-    }
-}
 
 /// SPI Clock speed, in Hz
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -169,16 +69,16 @@ impl ClockSpeed {
     ///
     /// The function touches SPI registers that should only be touched
     /// while the SPI master is disabled.
-    unsafe fn set(self, source_clock: ccm::Frequency, reg: &ral::lpspi::Instance) {
+    unsafe fn set(self, source_clock: u32, reg: &ral::lpspi::RegisterBlock) {
         log::debug!(
             "SPI baud rate = {:?}, source clock = {:?}",
             self,
             source_clock
         );
 
-        let mut div = source_clock.0 / self.0;
+        let mut div = source_clock / self.0;
 
-        if source_clock.0 / div > self.0 {
+        if source_clock / div > self.0 {
             div += 1;
         }
 
@@ -202,11 +102,11 @@ impl ClockSpeed {
 ///
 /// By default, the SPI master runs at 8Mhz, Use `set_clock_speed` to vary
 /// the SPI bus speed.
-pub struct SPI<M> {
-    reg: ral::lpspi::Instance,
-    _module: PhantomData<M>,
+pub struct SPI<M, P> {
+    reg: ral::lpspi::Instance<M>,
     /// LPSPI effective input clock frequency
-    source_clock: ccm::Frequency,
+    source_clock: u32,
+    pins: P,
 }
 
 /// Indicates an error when computing the parameters that control
@@ -231,18 +131,66 @@ pub struct BusIdleTimeoutError(());
 
 const RETRIES: usize = 100_000;
 
-impl<M> SPI<M>
+/// Pins for a SPI device
+///
+/// Consider using type aliases to simplify your [`SPI`] usage:
+///
+/// ```no_run
+/// use imxrt1060_hal as hal;
+/// use hal::iomuxc::b0::*;
+///
+/// // SPI pins used in my application
+/// type SPIPins = hal::spi::Pins<
+///     B0_02,
+///     B0_01,
+///     B0_03,
+///     B0_00,
+/// >;
+///
+/// // Helper type for your SPI peripheral
+/// type SPI<M> = hal::spi::SPI<M, SPIPins>;
+/// ```
+pub struct Pins<SDO, SDI, SCK, PCS0> {
+    /// Serial data out
+    ///
+    /// Data travels from the SPI host controller to the SPI device.
+    pub sdo: SDO,
+    /// Serial data in
+    ///
+    /// Data travels from the SPI device to the SPI host controller.
+    pub sdi: SDI,
+    /// Serial clock
+    pub sck: SCK,
+    /// Chip select 0
+    ///
+    /// (PCSx) convention matches the hardware.
+    pub pcs0: PCS0,
+}
+
+impl<M, SDO, SDI, SCK, PCS0> SPI<M, Pins<SDO, SDI, SCK, PCS0>>
 where
     M: Unsigned,
+    SDO: spi::Pin<Module = M, Signal = spi::SDO>,
+    SDI: spi::Pin<Module = M, Signal = spi::SDI>,
+    SCK: spi::Pin<Module = M, Signal = spi::SCK>,
+    PCS0: spi::Pin<Module = M, Signal = spi::PCS0>,
 {
-    const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
-    const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+    /// Create a new SPI driver from the RAL SPI instance, a set of SPI pins, and
+    /// an initialized SPI clock
+    pub fn new(
+        reg: ral::lpspi::Instance<M>,
+        mut pins: Pins<SDO, SDI, SCK, PCS0>,
+        clock: &crate::ccm::SPIClock,
+    ) -> Self {
+        spi::prepare(&mut pins.sdo);
+        spi::prepare(&mut pins.sdi);
+        spi::prepare(&mut pins.sck);
+        spi::prepare(&mut pins.pcs0);
 
-    fn new(source_clock: ccm::Frequency, reg: ral::lpspi::Instance) -> Self {
         let mut spi = SPI {
             reg,
-            _module: PhantomData,
-            source_clock,
+            source_clock: clock.frequency(),
+            pins,
         };
         ral::write_reg!(ral::lpspi, spi.reg, CR, RST: RST_1);
         ral::write_reg!(ral::lpspi, spi.reg, CR, RST: RST_0);
@@ -258,6 +206,19 @@ where
         ral::write_reg!(ral::lpspi, spi.reg, FCR, RXWATER: 0xF, TXWATER: 0xF);
         ral::write_reg!(ral::lpspi, spi.reg, CR, MEN: MEN_1);
         spi
+    }
+}
+
+impl<M, P> SPI<M, P>
+where
+    M: Unsigned,
+{
+    const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
+    const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
+
+    /// Release the SPI peripheral components
+    pub fn release(self) -> (ral::lpspi::Instance<M>, P) {
+        (self.reg, self.pins)
     }
 
     fn with_master_disabled<F: FnMut() -> R, R>(&self, mut act: F) -> R {
@@ -455,7 +416,7 @@ pub enum Error {
     WaitTimeout,
 }
 
-impl<M> embedded_hal::spi::FullDuplex<u8> for SPI<M>
+impl<M, P> embedded_hal::spi::FullDuplex<u8> for SPI<M, P>
 where
     M: Unsigned,
 {
@@ -470,11 +431,11 @@ where
     }
 }
 
-impl<M> embedded_hal::blocking::spi::write::Default<u8> for SPI<M> where M: Unsigned {}
-impl<M> embedded_hal::blocking::spi::transfer::Default<u8> for SPI<M> where M: Unsigned {}
-impl<M> embedded_hal::blocking::spi::write_iter::Default<u8> for SPI<M> where M: Unsigned {}
+impl<M, P> embedded_hal::blocking::spi::write::Default<u8> for SPI<M, P> where M: Unsigned {}
+impl<M, P> embedded_hal::blocking::spi::transfer::Default<u8> for SPI<M, P> where M: Unsigned {}
+impl<M, P> embedded_hal::blocking::spi::write_iter::Default<u8> for SPI<M, P> where M: Unsigned {}
 
-impl<M> embedded_hal::spi::FullDuplex<u16> for SPI<M>
+impl<M, P> embedded_hal::spi::FullDuplex<u16> for SPI<M, P>
 where
     M: Unsigned,
 {
@@ -489,9 +450,9 @@ where
     }
 }
 
-impl<M> embedded_hal::blocking::spi::write::Default<u16> for SPI<M> where M: Unsigned {}
-impl<M> embedded_hal::blocking::spi::transfer::Default<u16> for SPI<M> where M: Unsigned {}
-impl<M> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M> where M: Unsigned {}
+impl<M, P> embedded_hal::blocking::spi::write::Default<u16> for SPI<M, P> where M: Unsigned {}
+impl<M, P> embedded_hal::blocking::spi::transfer::Default<u16> for SPI<M, P> where M: Unsigned {}
+impl<M, P> embedded_hal::blocking::spi::write_iter::Default<u16> for SPI<M, P> where M: Unsigned {}
 
 //
 // DMA peripheral support
@@ -509,7 +470,7 @@ const DMA_RX_REQUEST_LOOKUP: [u32; 4] = [13, 77, 15, 79];
 /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
 const DMA_TX_REQUEST_LOOKUP: [u32; 4] = [14, 78, 16, 80];
 
-unsafe impl<M> dma::peripheral::Source<u8> for SPI<M>
+unsafe impl<M, P> dma::peripheral::Source<u8> for SPI<M, P>
 where
     M: Unsigned,
 {
@@ -533,7 +494,7 @@ where
     }
 }
 
-unsafe impl<M> dma::peripheral::Destination<u8> for SPI<M>
+unsafe impl<M, P> dma::peripheral::Destination<u8> for SPI<M, P>
 where
     M: Unsigned,
 {
@@ -557,7 +518,7 @@ where
     }
 }
 
-unsafe impl<M> dma::peripheral::Source<u16> for SPI<M>
+unsafe impl<M, P> dma::peripheral::Source<u16> for SPI<M, P>
 where
     M: Unsigned,
 {
@@ -581,7 +542,7 @@ where
     }
 }
 
-unsafe impl<M> dma::peripheral::Destination<u16> for SPI<M>
+unsafe impl<M, P> dma::peripheral::Destination<u16> for SPI<M, P>
 where
     M: Unsigned,
 {

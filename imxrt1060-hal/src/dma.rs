@@ -34,7 +34,8 @@
 //! handler, since we're enabling an interrupt when the receive completes.
 //!
 //! ```no_run
-//! use imxrt1060_hal::dma::{Circular, Buffer, Linear, Peripheral, bidirectional_u16};
+//! use imxrt1060_hal as hal;
+//! use hal::{dma::{Circular, Buffer, Linear, Peripheral, bidirectional_u16}, ral};
 //!
 //! // Circular buffers have alignment requirements
 //! #[repr(align(512))]
@@ -44,25 +45,28 @@
 //! static RX_BUFFER: Buffer<[u16; 256]> = Buffer::new([0; 256]);
 //! static TX_BUFFER: Align = Align(Buffer::new([0; 256]));
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
-//!
 //! //
 //! // SPI setup...
 //! //
 //!
-//! let (_, _, _, spi4_builder) = peripherals.spi.clock(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt1060_hal::ccm::spi::ClockSelect::Pll2,
-//!     imxrt1060_hal::ccm::spi::PrescalarSelect::LPSPI_PODF_5,
-//! );
+//! let pads = ral::iomuxc::IOMUXC::take().map(hal::iomuxc::new).unwrap();
 //!
-//! let mut spi4 = spi4_builder.build(
-//!     peripherals.iomuxc.b0.p02,
-//!     peripherals.iomuxc.b0.p01,
-//!     peripherals.iomuxc.b0.p03,
-//! );
+//! let mut ccm = ral::ccm::CCM::take().map(hal::ccm::CCM::from_ral).unwrap();
 //!
-//! spi4.enable_chip_select_0(peripherals.iomuxc.b0.p00);
+//! let mut spi_clock = ccm.spi_clock.enable(&mut ccm.handle);
+//! let spi_pins = hal::spi::Pins {
+//!     sdo: pads.b0.p02,
+//!     sdi: pads.b0.p01,
+//!     sck: pads.b0.p03,
+//!     pcs0: pads.b0.p00,
+//! };
+//! let mut spi4 = ral::lpspi::LPSPI4::take().unwrap();
+//! spi_clock.set_clock_gate(&mut spi4, hal::ccm::ClockGate::On);
+//! let mut spi = hal::spi::SPI::new(
+//!     spi4,
+//!     spi_pins,
+//!     &spi_clock,
+//! );
 //!
 //! // Set the SPI clock speed, if desired...
 //!
@@ -70,7 +74,12 @@
 //! // DMA setup
 //! //
 //!
-//! let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
+//! let mut dma = ral::dma0::DMA0::take().unwrap();
+//! ccm.handle.set_clock_gate_dma(&mut *dma, hal::ccm::ClockGate::On);
+//! let mut dma_channels = hal::dma::channels(
+//!     dma,
+//!     ral::dmamux::DMAMUX::take().unwrap(),
+//! );
 //!
 //! // i.MX RT DMA interrupt handlers manage pairs of DMA channels. There's one
 //! // interrupt for DMA channel 9 and channel 25. By selecting these two
@@ -87,7 +96,7 @@
 //! // The peripheral will transfer and receive u16 elements.
 //! // It takes ownership of the SPI object, and the two DMA channels.
 //! let mut peripheral = bidirectional_u16(
-//!     spi4,
+//!     spi,
 //!     tx_channel,
 //!     rx_channel,
 //! );
@@ -161,7 +170,7 @@ pub use buffer::{Buffer, Circular, CircularError, Drain, Linear, ReadHalf, Write
 pub use memcpy::Memcpy;
 pub use peripheral::{helpers::*, Peripheral};
 
-use crate::{ccm, ral};
+use crate::ral;
 
 /// The number of DMA channels
 pub const CHANNEL_COUNT: usize = 32;
@@ -178,54 +187,50 @@ pub enum Error {
     Setup(ErrorStatus),
 }
 
-/// Helper symbol to support DMA channel initialization
+/// Initialize and acquire the DMA channels
 ///
-/// We always provide users with an array of 32 channels. But, only the first `CHANNEL_COUNT`
-/// channels are initialized.
-const DMA_CHANNEL_INIT: [Option<Channel>; 32] = [
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-];
-
-/// Unclocked, uninitialized DMA channels
+/// The return is 32 channels. However, **only the first [`CHANNEL_COUNT`] channels
+/// are initialized to `Some(channel)`. The rest are `None`**.
 ///
-/// Use [`clock()`](struct.Unclocked.html#method.clock) to initialize and acquire all DMA channels
+/// You should enable the clock gates before calling `channels`. See
+/// [`ccm::Handle::clock_gate_dma`](super::ccm::Handle::set_clock_gate_dma()) for more information.
+///
+/// # Example
+///
+/// Initialize and acquire the DMA channels, and move channel 7 to another function:
 ///
 /// ```no_run
-/// let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
+/// use imxrt1060_hal as hal;
+/// use hal::{ccm::{CCM, ClockGate}, dma};
+/// use hal::ral::{dma0, dmamux, ccm};
 ///
-/// let mut dma_channels = peripherals.dma.clock(&mut peripherals.ccm.handle);
-/// let channel_27 = dma_channels[27].take().unwrap();
-/// let channel_0 = dma_channels[0].take().unwrap();
+/// fn prepare_peripheral(channel: dma::Channel) { /* ... */ }
+///
+/// let mut ccm = ccm::CCM::take().map(CCM::from_ral).unwrap();
+/// let mut dma = dma0::DMA0::take().unwrap();
+/// ccm.handle.set_clock_gate_dma(&mut *dma, ClockGate::On);
+/// let mut channels = dma::channels(
+///     dma,
+///     dmamux::DMAMUX::take().unwrap(),
+/// );
+///
+/// prepare_peripheral(channels[7].take().unwrap());
 /// ```
-pub struct Unclocked([Option<Channel>; CHANNEL_COUNT]);
-impl Unclocked {
-    pub(crate) fn new(dma: ral::dma0::Instance, mux: ral::dmamux::Instance) -> Self {
-        // Explicitly dropping instances
-        //
-        // Users should see these as "taken" by the HAL's DMA module, although they're not
-        // used in the implementation.
-        drop(dma);
-        drop(mux);
+pub fn channels(dma: ral::dma0::Instance, mux: ral::dmamux::Instance) -> [Option<Channel>; 32] {
+    drop(dma);
+    drop(mux);
 
-        Unclocked(DMA_CHANNEL_INIT)
+    let mut channels = [
+        None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+        None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+        None, None,
+    ];
+
+    for (idx, channel) in channels.iter_mut().take(CHANNEL_COUNT).enumerate() {
+        let mut c = unsafe { Channel::new(idx) };
+        c.reset();
+        *channel = Some(c);
     }
-    /// Enable the clocks for the DMA peripheral
-    ///
-    /// The return is an array of 32 channels. However, **only the first [`CHANNEL_COUNT`](constant.CHANNEL_COUNT.html) channels
-    /// are initialized to `Some(channel)`. The rest are `None`.**
-    ///
-    /// Users may take channels as needed. The index in the array maps to the DMA channel number.
-    pub fn clock(mut self, ccm: &mut ccm::Handle) -> [Option<Channel>; 32] {
-        let (ccm, _) = ccm.raw();
-        ral::modify_reg!(ral::ccm, ccm, CCGR5, CG3: 0x03);
-        for (idx, channel) in self.0.iter_mut().take(CHANNEL_COUNT).enumerate() {
-            // Safety: because we have the DMA instance, we assume that we own the DMA
-            // peripheral. That means we own all the DMA channels.
-            let mut chan = unsafe { Channel::new(idx) };
-            chan.reset();
-            *channel = Some(chan);
-        }
-        self.0
-    }
+
+    channels
 }

@@ -19,20 +19,20 @@ pub mod iomuxc {
 
     /// Use this function to acquire the IOMUXC pads. It requires that you have an
     /// instance to the RAL's IOMUXC instance.
-    pub fn pads(_: crate::ral::iomuxc::Instance) -> Pads {
+    pub fn new(_: crate::ral::iomuxc::Instance) -> Pads {
         unsafe { Pads::new() }
     }
 }
 
 // pub mod adc;
 pub mod ccm;
-// pub mod dma;
+pub mod dma;
 // pub mod gpio;
 pub mod gpt;
 // pub mod i2c;
 // pub mod pit;
 // pub mod pwm;
-// pub mod spi;
+pub mod spi;
 // pub mod srtc;
 // pub mod trng;
 // pub mod uart;
