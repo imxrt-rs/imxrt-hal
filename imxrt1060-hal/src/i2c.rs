@@ -3,113 +3,43 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1060_hal;
-//! use imxrt1060_hal::i2c::ClockSpeed;
+//! use imxrt1060_hal as hal;
+//! use hal::{
+//!     ccm, iomuxc, i2c::{I2C, ClockSpeed},
+//!     ral::{ccm::CCM, iomuxc::IOMUXC, lpi2c::LPI2C3},
+//! };
 //! use embedded_hal::blocking::i2c::WriteRead;
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
+//! let mut pads = IOMUXC::take()
+//!     .map(iomuxc::new)
+//!     .unwrap();
 //!
-//! let (_, _, i2c3_builder, _) = peripherals.i2c.clock(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt1060_hal::ccm::i2c::ClockSelect::OSC, // 24MHz clock...
-//!     imxrt1060_hal::ccm::i2c::PrescalarSelect::DIVIDE_3, // Divide by 3
-//! );
+//! let mut ccm = CCM::take().map(ccm::CCM::from_ral).unwrap();
+//! let mut i2c_clock = ccm.i2c_clock.enable(&mut ccm.handle);
+//! let mut i2c3 = LPI2C3::take().unwrap();
+//! i2c_clock.set_clock_gate(&mut i2c3, ccm::ClockGate::On);
 //!
-//! let mut i2c3 = i2c3_builder.build(
-//!     peripherals.iomuxc.ad_b1.p07,
-//!     peripherals.iomuxc.ad_b1.p06,
-//! );
+//! let mut i2c = I2C::new(i2c3, pads.ad_b1.p07, pads.ad_b1.p06, &i2c_clock);
+//! i2c.set_clock_speed(ClockSpeed::KHz400).unwrap();
 //!
-//! i2c3.set_bus_idle_timeout(core::time::Duration::from_micros(200)).unwrap();
-//! i2c3.set_pin_low_timeout(core::time::Duration::from_millis(1)).unwrap();
-//! i2c3.set_clock_speed(ClockSpeed::KHz400).unwrap();
+//! i2c.set_bus_idle_timeout(200).unwrap();
+//! i2c.set_pin_low_timeout(1_000).unwrap();
+//! i2c.set_clock_speed(ClockSpeed::KHz400).unwrap();
 //!
 //! let mut input = [0; 3];
 //! let output = [0x74];
 //! # const MY_SLAVE_ADDRESS: u8 = 0;
 //!
-//! i2c3.write_read(MY_SLAVE_ADDRESS, &output, &mut input).unwrap();
+//! i2c.write_read(MY_SLAVE_ADDRESS, &output, &mut input).unwrap();
 //! ```
 
-use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4};
+use crate::iomuxc::consts::Unsigned;
 
 use crate::ccm;
 use crate::iomuxc::i2c;
 use crate::ral;
-use core::marker::PhantomData;
+use core::{convert::TryFrom, marker::PhantomData};
 use embedded_hal::blocking;
-
-/// Unclocked I2C modules
-///
-/// The `Unclocked` struct represents all four unconfigured I2C peripherals.
-/// Once clocked, you'll have the ability to build I2C peripherals from the
-/// compatible processor pins.
-pub struct Unclocked {
-    pub(crate) i2c1: ral::lpi2c::Instance,
-    pub(crate) i2c2: ral::lpi2c::Instance,
-    pub(crate) i2c3: ral::lpi2c::Instance,
-    pub(crate) i2c4: ral::lpi2c::Instance,
-}
-impl Unclocked {
-    /// Enable clocks to all I2C modules, returning a builder for the four I2C modules.
-    pub fn clock(
-        self,
-        handle: &mut ccm::Handle,
-        clock_select: ccm::i2c::ClockSelect,
-        divider: ccm::i2c::PrescalarSelect,
-    ) -> (Builder<U1>, Builder<U2>, Builder<U3>, Builder<U4>) {
-        let (ccm, _) = handle.raw();
-        // First, disable clocks
-        ral::modify_reg!(ral::ccm, ccm, CCGR2, CG3: 0, CG4: 0, CG5: 0);
-        ral::modify_reg!(ral::ccm, ccm, CCGR6, CG12: 0);
-        // Select clock, and commit prescalar
-        ral::modify_reg!(ral::ccm, ccm, CSCDR2, LPI2C_CLK_PODF: (divider as u32), LPI2C_CLK_SEL: (clock_select as u32));
-        // Enable clocks
-        ral::modify_reg!(ral::ccm, ccm, CCGR2, CG3: 0b11, CG4: 0b11, CG5: 0b11);
-        ral::modify_reg!(ral::ccm, ccm, CCGR6, CG12: 0b11);
-        let source_clock = ccm::Frequency::from(clock_select) / ccm::Divider::from(divider);
-        (
-            Builder::new(source_clock, self.i2c1),
-            Builder::new(source_clock, self.i2c2),
-            Builder::new(source_clock, self.i2c3),
-            Builder::new(source_clock, self.i2c4),
-        )
-    }
-}
-
-/// An I2C builder that can build and I2C peripheral
-pub struct Builder<M> {
-    _module: PhantomData<M>,
-    reg: ral::lpi2c::Instance,
-    /// Frequency of the LPI2C source clock. This
-    /// accounts for the divider.
-    source_clock: ccm::Frequency,
-}
-
-impl<M> Builder<M>
-where
-    M: Unsigned,
-{
-    fn new(source_clock: ccm::Frequency, reg: ral::lpi2c::Instance) -> Self {
-        Builder {
-            _module: PhantomData,
-            reg,
-            source_clock,
-        }
-    }
-
-    /// Builds an I2C peripheral from the SCL and SDA pins. The return
-    /// is a configured I2C master running at 100KHz.
-    pub fn build<SCL, SDA>(self, mut scl: SCL, mut sda: SDA) -> I2C<M>
-    where
-        SCL: i2c::Pin<Module = M, Signal = i2c::SCL>,
-        SDA: i2c::Pin<Module = M, Signal = i2c::SDA>,
-    {
-        crate::iomuxc::i2c::prepare(&mut scl);
-        crate::iomuxc::i2c::prepare(&mut sda);
-        I2C::new(self.source_clock, self.reg)
-    }
-}
 
 /// I2C Clock speed
 #[derive(Clone, Copy, Debug)]
@@ -135,7 +65,7 @@ impl ClockSpeed {
     ///
     /// The function touches I2C registers that should only be touched
     /// while the I2C master is disabled.
-    unsafe fn set(self, source_clock: ccm::Frequency, reg: &ral::lpi2c::Instance) {
+    unsafe fn set(self, source_clock: u32, reg: &ral::lpi2c::RegisterBlock) {
         // Baud rate = (source_clock/2^prescale)/(CLKLO+1+CLKHI+1 + FLOOR((2+FILTSCL)/2^prescale)
         // Assume CLKLO = 2*CLKHI, SETHOLD = CLKHI, DATAVD = CLKHI/2, FILTSCL = FILTSDA = 0,
         // and that risetime is negligible (less than 1 cycle).
@@ -147,7 +77,6 @@ impl ClockSpeed {
             self,
             source_clock
         );
-        let source_clock = source_clock.0;
         const PRESCALARS: [u32; 8] = [
             PRESCALE_0, PRESCALE_1, PRESCALE_2, PRESCALE_3, PRESCALE_4, PRESCALE_5, PRESCALE_6,
             PRESCALE_7,
@@ -234,11 +163,12 @@ impl ClockSpeed {
 ///
 /// By default, the I2C master runs at 100KHz, Use `set_clock_speed` to vary
 /// the I2C bus speed.
-pub struct I2C<M> {
-    reg: ral::lpi2c::Instance,
+pub struct I2C<M, SCL, SDA> {
+    reg: ral::lpi2c::Instance<M>,
     _module: PhantomData<M>,
     /// LPI2C effective input clock frequency
-    source_clock: ccm::Frequency,
+    source_clock: u32,
+    _pins: (SCL, SDA),
 }
 
 /// Indicates an error when computing the parameters that control
@@ -256,15 +186,29 @@ pub struct BusIdleTimeoutError(());
 
 const RETRIES: usize = 100_000;
 
-impl<M> I2C<M>
+impl<M, SCL, SDA> I2C<M, SCL, SDA>
 where
     M: Unsigned,
+    SCL: i2c::Pin<Signal = i2c::SCL, Module = M>,
+    SDA: i2c::Pin<Signal = i2c::SDA, Module = M>,
 {
-    fn new(source_clock: ccm::Frequency, reg: ral::lpi2c::Instance) -> Self {
+    /// Create an I2C driver from an I2C instance and a pair of I2C pins
+    ///
+    /// The I2C clock speed of the returned `I2C` driver is unspecified and may not be valid.
+    /// Use [`set_clock_speed`](I2C::set_clock_speed()) to select a valid I2C clock speed.
+    pub fn new(
+        i2c: crate::ral::lpi2c::Instance<M>,
+        mut scl: SCL,
+        mut sda: SDA,
+        clock: &crate::ccm::I2CClock,
+    ) -> Self {
+        i2c::prepare(&mut scl);
+        i2c::prepare(&mut sda);
         let mut i2c = I2C {
-            reg,
+            reg: i2c,
             _module: PhantomData,
-            source_clock,
+            source_clock: clock.frequency(),
+            _pins: (scl, sda),
         };
         ral::write_reg!(ral::lpi2c, i2c.reg, MCR, RST: RST_1);
 
@@ -273,7 +217,12 @@ where
         ral::write_reg!(ral::lpi2c, i2c.reg, MFCR, RXWATER: 0b01, TXWATER: 0b01);
         i2c
     }
+}
 
+impl<M, SCL, SDA> I2C<M, SCL, SDA>
+where
+    M: Unsigned,
+{
     fn with_master_disabled<F: FnMut() -> R, R>(&self, mut act: F) -> R {
         // Note that we should really specify the 'instance module'. This approach
         // assumes that the reset values for all instance modules are the same, which
@@ -297,24 +246,18 @@ where
         })
     }
 
-    /// Set the pin low timeout
+    /// Set the pin low timeout (microseconds)
     ///
     /// If SCL or, either SCL or SDA, is low for longer than the specified duration, then the
     /// I2C hardware indicates an error. If the timeout is `0`, then the detection is disabled.
     ///
     /// If the number of cycles required to represent the duration is too large, returns a
     /// `PinLowTimeoutError`. Try using a smaller duration.
-    pub fn set_pin_low_timeout(
-        &mut self,
-        timeout: core::time::Duration,
-    ) -> Result<(), PinLowTimeoutError> {
+    pub fn set_pin_low_timeout(&mut self, timeout_us: u32) -> Result<(), PinLowTimeoutError> {
         let divider = 1 << ral::read_reg!(ral::lpi2c, self.reg, MCFGR1, PRESCALE);
-        let pin_low_ticks: u16 = ccm::ticks(timeout, self.source_clock.0, divider)
-            .map(|ticks: u16| ticks / 256)
-            .into_iter()
-            .next()
-            .filter(|ticks| *ticks <= 0x0FFFu16)
-            .ok_or(PinLowTimeoutError(()))?;
+        let pin_low_ticks: u32 = ccm::ticks(timeout_us, self.source_clock / divider);
+        let pin_low_ticks = u16::try_from(pin_low_ticks).map_err(|_| PinLowTimeoutError(()))?;
+
         log::debug!("PINLOW = 0x{:X}", pin_low_ticks);
         self.with_master_disabled(|| {
             ral::modify_reg!(
@@ -327,7 +270,7 @@ where
         })
     }
 
-    /// Set the bus idle timeout
+    /// Set the bus idle timeout (microseconds)
     ///
     /// If both SCL and SDA are high for longer than the timeout, then the I2C bus is assumed to be
     /// idle and the master can generate a START condition. If the timeout is `0`, then the idle is
@@ -335,16 +278,10 @@ where
     ///
     /// If the number of cycles required to represent the duration is too large, returns a
     /// `BusIdleTimeoutError`. Try using a smaller timeout.
-    pub fn set_bus_idle_timeout(
-        &mut self,
-        timeout: core::time::Duration,
-    ) -> Result<(), BusIdleTimeoutError> {
+    pub fn set_bus_idle_timeout(&mut self, timeout_us: u32) -> Result<(), BusIdleTimeoutError> {
         let divider = 1 << ral::read_reg!(ral::lpi2c, self.reg, MCFGR1, PRESCALE);
-        let bus_idle_ticks: u16 = ccm::ticks(timeout, self.source_clock.0, divider)
-            .into_iter()
-            .next()
-            .filter(|ticks| *ticks <= 0xFFFu16)
-            .ok_or(BusIdleTimeoutError(()))?;
+        let bus_idle_ticks: u32 = ccm::ticks(timeout_us, self.source_clock / divider);
+        let bus_idle_ticks = u16::try_from(bus_idle_ticks).map_err(|_| BusIdleTimeoutError(()))?;
         log::debug!("BUSIDLE = 0x{:X}", bus_idle_ticks);
         self.with_master_disabled(|| {
             ral::modify_reg!(
@@ -436,7 +373,7 @@ macro_rules! target_fn {
     };
 }
 
-impl<M> blocking::i2c::Write for I2C<M>
+impl<M, SCL, SDA> blocking::i2c::Write for I2C<M, SCL, SDA>
 where
     M: Unsigned,
 {
@@ -476,7 +413,7 @@ where
     }
 }
 
-impl<M> blocking::i2c::WriteRead for I2C<M>
+impl<M, SCL, SDA> blocking::i2c::WriteRead for I2C<M, SCL, SDA>
 where
     M: Unsigned,
 {
@@ -579,7 +516,7 @@ where
     }
 }
 
-impl<M> blocking::i2c::Read for I2C<M>
+impl<M, SCL, SDA> blocking::i2c::Read for I2C<M, SCL, SDA>
 where
     M: Unsigned,
 {
