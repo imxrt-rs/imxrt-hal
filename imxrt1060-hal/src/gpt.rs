@@ -285,6 +285,20 @@ impl<N> GPT<N> {
         }
     }
 
+    /// Set an output compare register to trigger when the specified microseconds elapses
+    ///
+    /// This is a convenience for an operation that resembles
+    ///
+    /// 1. compute the number of counts represented in the microseconds, based on the clock frequency
+    /// 2. acquire the current GPT count
+    /// 3. add the number of counts from 1 to the count of 2, accounting for wrap-around
+    /// 4. set the value for the OCR
+    pub fn set_output_compare_us(&mut self, output: OutputCompareRegister, microseconds: u32) {
+        let counts = crate::ccm::ticks(microseconds, self.clock_hz);
+        let next_count = self.count().wrapping_add(counts);
+        self.set_output_compare_count(output, next_count);
+    }
+
     /// Set an output compare register to trigger when the specified duration elapses
     ///
     /// This is a convenience for an operation that resembles
@@ -299,15 +313,10 @@ impl<N> GPT<N> {
         duration: Duration,
     ) {
         use core::convert::TryFrom;
-
-        let period_ns = 1_000_000_000 / self.clock_hz;
-        let delay_ns = u32::try_from(duration.as_nanos()).unwrap_or(u32::max_value());
-        let counts = delay_ns
-            .checked_div(period_ns)
-            .unwrap_or(0)
-            .saturating_sub(1);
-        let next_count = self.count().wrapping_add(counts);
-        self.set_output_compare_count(output, next_count);
+        self.set_output_compare_us(
+            output,
+            u32::try_from(duration.as_micros()).unwrap_or(u32::max_value()),
+        );
     }
 
     /// Returns a handle that can query and modify the output compare status for the provided output
