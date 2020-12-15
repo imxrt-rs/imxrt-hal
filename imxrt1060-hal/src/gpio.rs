@@ -1,6 +1,11 @@
-//! GPIOs
+//! GPIO inputs and outputs
 //!
 //! This GPIO driver supports the `embedded_hal`'s `v2` digital traits.
+//!
+//! # Usage
+//!
+//! 1. Construct a [`GPIO`] register from a RAL GPIO instance.
+//! 2. Use the `GPIO` register to convert IOMUXC pads into [`GPIOPin`]s.
 //!
 //! # Fast and Normal GPIOs
 //!
@@ -10,10 +15,11 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1060_hal::{self, gpio::GPIO};
+//! use imxrt1060_hal::{self, gpio::GPIO, iomuxc, ral};
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
-//! let input = GPIO::new(peripherals.iomuxc.ad_b0.p11);
+//! let pads = ral::iomuxc::IOMUXC::take().map(iomuxc::new).unwrap();
+//! let register = ral::gpio::GPIO2::take().map(GPIO::new).unwrap();
+//! let input = register.pin(pads.b0.p03);
 //!
 //! assert!(!input.is_set());
 //! let mut output = input.output();
@@ -41,12 +47,45 @@ pub enum Input {}
 /// Denotes that a pin is configured as an output
 pub enum Output {}
 
-pub struct GPIO<P, D> {
+/// A GPIO register for allocating [`GPIOPin`]s
+///
+/// `GPIO` supports input / output pin construction. Construct a `GPIO` using [`new`](GPIO::new),
+/// and supply a RAL GPIO instance. Then, use [`pin`](GPIO::pin) to allocate GPIO pins.
+pub struct GPIO<N>(ral::gpio::Instance<N>);
+
+impl<N> GPIO<N>
+where
+    N: Unsigned,
+{
+    /// Create a GPIO register for pin allocation
+    pub fn new(instance: ral::gpio::Instance<N>) -> Self {
+        GPIO(instance)
+    }
+    /// Create a GPIO from a pad
+    ///
+    /// All pads may be used as a GPIO, so this should always work.
+    pub fn pin<P>(&self, mut pin: P) -> GPIOPin<P, Input>
+    where
+        P: Pin<Module = N>,
+    {
+        crate::iomuxc::gpio::prepare(&mut pin);
+        GPIOPin {
+            pin,
+            dir: PhantomData,
+        }
+    }
+}
+
+/// A GPIO pin
+///
+/// Create a `GPIOPin` using [`GPIO::pin`]. The pin may be used to drive GPIO outputs,
+/// or read GPIO inputs.
+pub struct GPIOPin<P, D> {
     pin: P,
     dir: PhantomData<D>,
 }
 
-impl<P, D> GPIO<P, D>
+impl<P, D> GPIOPin<P, D>
 where
     P: Pin,
 {
@@ -161,25 +200,14 @@ where
     }
 }
 
-impl<P> GPIO<P, Input>
+impl<P> GPIOPin<P, Input>
 where
     P: Pin,
 {
-    /// Create a GPIO from a pad that supports a GPIO configuration
-    ///
-    /// All pads may be used as a GPIO, so this should always work.
-    pub fn new(mut pin: P) -> Self {
-        crate::iomuxc::gpio::prepare(&mut pin);
-        Self {
-            pin,
-            dir: PhantomData,
-        }
-    }
-
     /// Set the GPIO as an output
-    pub fn output(self) -> GPIO<P, Output> {
+    pub fn output(self) -> GPIOPin<P, Output> {
         cortex_m::interrupt::free(|cs| self.set_output(cs));
-        GPIO {
+        GPIOPin {
             pin: self.pin,
             dir: PhantomData,
         }
@@ -192,14 +220,14 @@ where
     }
 }
 
-impl<P> GPIO<P, Output>
+impl<P> GPIOPin<P, Output>
 where
     P: Pin,
 {
     /// Transition the pin back to an input
-    pub fn input(self) -> GPIO<P, Input> {
+    pub fn input(self) -> GPIOPin<P, Input> {
         cortex_m::interrupt::free(|cs| self.set_input(cs));
-        GPIO {
+        GPIOPin {
             pin: self.pin,
             dir: PhantomData,
         }
@@ -232,7 +260,7 @@ where
 
 use embedded_hal::digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 
-impl<P> OutputPin for GPIO<P, Output>
+impl<P> OutputPin for GPIOPin<P, Output>
 where
     P: Pin,
 {
@@ -249,7 +277,7 @@ where
     }
 }
 
-impl<P> StatefulOutputPin for GPIO<P, Output>
+impl<P> StatefulOutputPin for GPIOPin<P, Output>
 where
     P: Pin,
 {
@@ -261,18 +289,18 @@ where
     }
 }
 
-impl<P> ToggleableOutputPin for GPIO<P, Output>
+impl<P> ToggleableOutputPin for GPIOPin<P, Output>
 where
     P: Pin,
 {
     type Error = core::convert::Infallible;
     fn toggle(&mut self) -> Result<(), Self::Error> {
-        GPIO::<P, Output>::toggle(self);
+        GPIOPin::<P, Output>::toggle(self);
         Ok(())
     }
 }
 
-impl<P> InputPin for GPIO<P, Input>
+impl<P> InputPin for GPIOPin<P, Input>
 where
     P: Pin,
 {
