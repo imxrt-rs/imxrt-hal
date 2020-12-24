@@ -3,26 +3,33 @@
 //! This ADC driver supports `embedded_hal`'s ADC traits
 //!
 //! # Example
+//!
 //! ```no_run
-//! use imxrt1060_hal::{self, adc};
+//! use imxrt1060_hal as hal;
+//! use hal::{adc, ral};
 //! use embedded_hal::adc::OneShot;
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
-//! let (adc1_builder, _) = peripherals.adc.clock(&mut peripherals.ccm.handle);
+//! let mut pads = ral::iomuxc::IOMUXC::take()
+//!     .map(hal::iomuxc::new)
+//!     .unwrap();
 //!
-//! let mut adc1 = adc1_builder.build(adc::ClockSelect::default(), adc::ClockDivision::default());
-//! let mut a1 = adc::AnalogInput::new(peripherals.iomuxc.ad_b1.p02);
+//! let mut adc1 = ral::adc::ADC1::take()
+//!     .map(|inst| adc::ADC::new(inst, Default::default(), Default::default()))
+//!     .unwrap();
+//! let mut a1 = adc::AnalogInput::new(pads.ad_b1.p02);
 //!
 //! let reading: u16 = adc1.read(&mut a1).unwrap();
-//!```
+//! ```
 //!
 //! The ADC starts out with a default configuration of 4 hardware samples, a conversion speed of
 //! medium, a resolution of 10 bits, and low power mode disabled. It's also pre-calibrated using
 //! 32 averages and a slow conversion speed.
 
-use crate::ccm;
-use crate::iomuxc::adc::{prepare, Pin, ADC1, ADC2};
-use crate::iomuxc::{adc, consts::Unsigned};
+use crate::iomuxc::adc::{prepare, Pin};
+use crate::iomuxc::{
+    adc,
+    consts::{Unsigned, U1, U2},
+};
 use crate::ral;
 use core::marker::PhantomData;
 use embedded_hal::adc::{Channel, OneShot};
@@ -31,9 +38,12 @@ use embedded_hal::adc::{Channel, OneShot};
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClockSelect {
-    IPG(super::ccm::IPGFrequency),   // IPG clock
-    IPG_2(super::ccm::IPGFrequency), // IPG clock / 2
-    ADACK,                           // Asynchronous clock
+    /// IPG clock
+    IPG,
+    /// IPG clock / 2
+    IPG_2,
+    /// ADC Asynchronous clock
+    ADACK,
 }
 
 /// How much to divide the clock input
@@ -45,14 +55,14 @@ pub enum ClockDivision {
     Div8, // Input clock / 8
 }
 
-impl ClockSelect {
-    pub fn default() -> Self {
+impl Default for ClockSelect {
+    fn default() -> Self {
         ClockSelect::ADACK
     }
 }
 
-impl ClockDivision {
-    pub fn default() -> Self {
+impl Default for ClockDivision {
+    fn default() -> Self {
         ClockDivision::Div2
     }
 }
@@ -123,17 +133,36 @@ where
     }
 }
 
-pub struct ADC<ADCx> {
-    _module: PhantomData<ADCx>,
-    reg: ral::adc::Instance,
+pub struct ADC<N> {
+    reg: ral::adc::Instance<N>,
 }
 
-impl<ADCx> ADC<ADCx> {
-    fn new(reg: ral::adc::Instance) -> Self {
-        let mut inst = Self {
-            _module: PhantomData,
-            reg,
-        };
+impl<N> ADC<N> {
+    /// Constuct an ADC from a RAL ADC instance
+    pub fn new(reg: ral::adc::Instance<N>, clock: ClockSelect, division: ClockDivision) -> Self {
+        // Enable asynchronous clock if applicable
+        ral::modify_reg!(ral::adc, reg, GC, ADACKEN: match clock {
+            ClockSelect::ADACK => ADACKEN_1,
+            _ => ADACKEN_0
+        });
+
+        // Select the clock selection, division, and enable ADHSC if applicable
+        ral::modify_reg!(ral::adc, reg, CFG,
+            ADICLK: match clock {
+                ClockSelect::IPG => ADICLK_0,
+                ClockSelect::IPG_2 => ADICLK_1,
+                ClockSelect::ADACK => ADICLK_3
+            },
+            ADIV: match division {
+                ClockDivision::Div1 => ADIV_0,
+                ClockDivision::Div2 => ADIV_1,
+                ClockDivision::Div4 => ADIV_2,
+                ClockDivision::Div8 => ADIV_3
+            },
+            ADHSC: ADHSC_1
+        );
+
+        let mut inst = Self { reg };
 
         inst.set_resolution(ResolutionBits::Res10);
         inst.set_low_power_mode(false);
@@ -204,88 +233,101 @@ impl<ADCx> ADC<ADCx> {
     }
 }
 
-/// Implement embedded-hal traits
-impl<ADCx, WORD, P> OneShot<ADCx, WORD, AnalogInput<ADCx, P>> for ADC<ADCx>
+impl<WORD, P> OneShot<adc::ADC1, WORD, AnalogInput<adc::ADC1, P>> for ADC<U1>
 where
-    ADCx: adc::ADC,
     WORD: From<u16>,
-    P: Pin<ADCx>,
+    P: Pin<adc::ADC1>,
 {
     type Error = core::convert::Infallible;
 
     /// Read an ADC value from an AnalogInput. This should always return a good result
-    fn read(&mut self, _pin: &mut AnalogInput<ADCx, P>) -> nb::Result<WORD, Self::Error> {
-        let channel = <P as Pin<ADCx>>::Input::U32;
-        ral::modify_reg!(ral::adc, self.reg, HC0, |_| channel);
-        while (ral::read_reg!(ral::adc, self.reg, HS, COCO0) == 0) {}
-
-        Ok((ral::read_reg!(ral::adc, self.reg, R0) as u16).into())
+    fn read(&mut self, _pin: &mut AnalogInput<adc::ADC1, P>) -> nb::Result<WORD, Self::Error> {
+        read(self, _pin).map(|r0| r0.into())
     }
 }
 
-/// Unclocked ADC modules
-///
-/// The `Unclocked` struct represents both unconfigured ADC peripherals.
-/// Once clocked, you'll have the ability to use either the ADC1 or ADC2
-/// peripherals.
-pub struct Unclocked {
-    pub(crate) adc1: ral::adc::Instance,
-    pub(crate) adc2: ral::adc::Instance,
-}
+impl<WORD, P> OneShot<adc::ADC2, WORD, AnalogInput<adc::ADC2, P>> for ADC<U2>
+where
+    WORD: From<u16>,
+    P: Pin<adc::ADC2>,
+{
+    type Error = core::convert::Infallible;
 
-impl Unclocked {
-    pub fn clock(self, ccm_handle: &mut ccm::Handle) -> (Builder<ADC1>, Builder<ADC2>) {
-        let (ccm, _) = ccm_handle.raw();
-        ral::modify_reg!(ral::ccm, ccm, CCGR1, CG8: 0b11); // adc1_clk_enable
-        ral::modify_reg!(ral::ccm, ccm, CCGR1, CG4: 0b11); // adc2_clk_enable
-
-        (Builder::new(self.adc1), Builder::new(self.adc2))
+    /// Read an ADC value from an AnalogInput. This should always return a good result
+    fn read(&mut self, _pin: &mut AnalogInput<adc::ADC2, P>) -> nb::Result<WORD, Self::Error> {
+        read(self, _pin).map(|r0| r0.into())
     }
 }
 
-/// An ADC builder than can build an ADC1 or ADC2 module
-pub struct Builder<ADCx> {
-    _module: PhantomData<ADCx>,
-    reg: ral::adc::Instance,
-}
-
-impl<ADCx> Builder<ADCx>
+#[inline(always)]
+fn read<N, ADCx, P>(
+    adc: &mut ADC<N>,
+    _: &mut AnalogInput<ADCx, P>,
+) -> nb::Result<u16, core::convert::Infallible>
 where
     ADCx: adc::ADC,
+    P: Pin<ADCx>,
 {
-    fn new(reg: ral::adc::Instance) -> Self {
-        Self {
-            _module: PhantomData,
-            reg,
-        }
-    }
+    let channel = <P as Pin<ADCx>>::Input::U32;
+    ral::modify_reg!(ral::adc, adc.reg, HC0, |_| channel);
+    while (ral::read_reg!(ral::adc, adc.reg, HS, COCO0) == 0) {}
 
-    /// Builds an ADC peripheral with a certain clock selection. The ADC starts at
-    /// a 10-bit resolution w/ 4 hardware averaging samples, at medium speed, and
-    /// with low power mode disabled.
-    pub fn build(self, clock: ClockSelect, division: ClockDivision) -> ADC<ADCx> {
-        // Enable asynchronous clock if applicable
-        ral::modify_reg!(ral::adc, self.reg, GC, ADACKEN: match clock {
-            ClockSelect::ADACK => ADACKEN_1,
-            _ => ADACKEN_0
-        });
-
-        // Select the clock selection, division, and enable ADHSC if applicable
-        ral::modify_reg!(ral::adc, self.reg, CFG,
-            ADICLK: match clock {
-                ClockSelect::IPG(_ipg_frequency) => ADICLK_0,
-                ClockSelect::IPG_2(_ipg_frequency) => ADICLK_1,
-                ClockSelect::ADACK => ADICLK_3
-            },
-            ADIV: match division {
-                ClockDivision::Div1 => ADIV_0,
-                ClockDivision::Div2 => ADIV_1,
-                ClockDivision::Div4 => ADIV_2,
-                ClockDivision::Div8 => ADIV_3
-            },
-            ADHSC: ADHSC_1
-        );
-
-        ADC::new(self.reg)
-    }
+    Ok(ral::read_reg!(ral::adc, adc.reg, R0) as u16)
 }
+
+/// ```compile_fail
+/// use imxrt1060_hal as hal;
+/// use hal::{adc, ral};
+/// use embedded_hal::adc::OneShot;
+///
+/// let mut pads = ral::iomuxc::IOMUXC::take()
+///     .map(hal::iomuxc::new)
+///     .unwrap();
+///
+/// let mut adc1 = ral::adc::ADC1::take()
+///     .map(|inst| adc::ADC::new(inst, Default::default(), Default::default()))
+///     .unwrap();
+/// let mut adc2_pin = adc::AnalogInput::new(pads.ad_b1.p12);
+///
+/// let reading: u16 = adc1.read(&mut adc2_pin).unwrap();
+/// ```
+#[cfg(doctest)]
+struct Adc1Pin2Mismatch;
+
+/// ```no_run
+/// use imxrt1060_hal as hal;
+/// use hal::{adc, ral};
+/// use embedded_hal::adc::OneShot;
+///
+/// let mut pads = ral::iomuxc::IOMUXC::take()
+///     .map(hal::iomuxc::new)
+///     .unwrap();
+///
+/// let mut adc2 = ral::adc::ADC2::take()
+///     .map(|inst| adc::ADC::new(inst, adc::ClockSelect::default(), adc::ClockDivision::default()))
+///     .unwrap();
+/// let mut adc2_pin = adc::AnalogInput::new(pads.ad_b1.p12);
+///
+/// let reading: u16 = adc2.read(&mut adc2_pin).unwrap();
+/// ```
+#[cfg(doctest)]
+struct Adc2Pin2;
+
+/// ```compile_fail
+/// use imxrt1060_hal as hal;
+/// use hal::{adc, ral};
+/// use embedded_hal::adc::OneShot;
+///
+/// let mut pads = ral::iomuxc::IOMUXC::take()
+///     .map(hal::iomuxc::new)
+///     .unwrap();
+///
+/// let mut adc2 = ral::adc::ADC2::take()
+///     .map(|inst| adc::ADC::new(inst, Default::default(), Default::default()))
+///     .unwrap();
+/// let mut adc2_pin = adc::AnalogInput::new(pads.ad_b0.p13);
+///
+/// let reading: u16 = adc2.read(&mut adc2_pin).unwrap();
+/// ```
+#[cfg(doctest)]
+struct Adc2Pin1Mismatch;

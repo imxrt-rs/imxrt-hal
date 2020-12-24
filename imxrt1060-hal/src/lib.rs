@@ -24,7 +24,7 @@ pub mod iomuxc {
     }
 }
 
-// pub mod adc;
+pub mod adc;
 pub mod ccm;
 pub mod dma;
 pub mod gpio;
