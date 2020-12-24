@@ -30,6 +30,19 @@
 //! [rand_core]: https://crates.io/crates/rand_core
 //! [rand]: https://crates.io/crates/rand
 //! [nfr]: https://github.com/rust-lang/cargo/issues/7916
+//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt1060_hal as hal;
+//!
+//! let mut peripherals = hal::Peripherals::take().unwrap();
+//! peripherals.trng.set_sample_mode(hal::trng::SampleMode::VonNeumannRaw);
+//! peripherals.trng.set_retry_count(10).unwrap();
+//!
+//! let mut trng = peripherals.trng.clock(&mut peripherals.ccm.handle);
+//! let random_data = trng.next_u32().unwrap();
+//! ```
 
 use core::fmt;
 
