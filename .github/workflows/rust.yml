@@ -15,3 +15,30 @@ jobs:
       run: cargo fmt --all -- --check
     - name: Run clippy for HAL(s)
       run: cargo clippy -- -D warnings
+
+  # imxrt1060-hal feature checks
+  imxrt1060-features:
+    strategy:
+      matrix:
+        features: ["rand_core", "rtic", "rt", "rand_core,rtic,rt"]
+    env:
+      RUSTFLAGS: -D warnings
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: thumbv7em-none-eabihf
+        override: true
+        profile: minimal
+    - name: Check imxrt1060-hal with features '${{ matrix.features }}'
+      uses: actions-rs/cargo@v1
+      with:
+        command: check
+        args: >
+          --features=${{ matrix.features }}
+          --manifest-path=imxrt1060-hal/Cargo.toml
+          --target=thumbv7em-none-eabihf
+          --verbose
+
