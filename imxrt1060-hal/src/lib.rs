@@ -35,7 +35,7 @@ pub mod i2c;
 pub mod spi;
 // pub mod srtc;
 // pub mod trng;
-// pub mod uart;
+pub mod uart;
 
 // pub mod dcdc {
 //     use imxrt_ral as ral;

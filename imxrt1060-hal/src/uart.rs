@@ -9,29 +9,34 @@
 //! # Example
 //!
 //! ```no_run
-//! use imxrt1060_hal;
+//! use imxrt1060_hal as hal;
+//! use hal::{ccm::{self, ClockGate}, iomuxc};
+//! use hal::ral::{
+//!     ccm::CCM, lpuart::LPUART2,
+//!     iomuxc::IOMUXC,
+//! };
 //! use embedded_hal::serial::{Read, Write};
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
+//! let pads = IOMUXC::take().map(iomuxc::new).unwrap();
 //!
-//! let uarts = peripherals.uart.clock(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt1060_hal::ccm::uart::ClockSelect::OSC,
-//!     imxrt1060_hal::ccm::uart::PrescalarSelect::DIVIDE_1,
+//! let mut ccm = CCM::take().map(ccm::CCM::from_ral).unwrap();
+//! let mut uart2 = LPUART2::take().unwrap();
+//!
+//! let mut uart_clock = ccm.uart_clock.enable(&mut ccm.handle);
+//! uart_clock.set_clock_gate(&mut uart2, ClockGate::On);
+//!
+//! let mut uart = hal::uart::UART::new(
+//!     uart2,
+//!     pads.ad_b1.p02, // TX
+//!     pads.ad_b1.p03, // RX
+//!     &uart_clock,
 //! );
 //!
-//! let mut uart = uarts
-//!     .uart2
-//!     .init(
-//!         peripherals.iomuxc.ad_b1.p02,
-//!         peripherals.iomuxc.ad_b1.p03,
-//!         115_200,
-//!     )
-//!     .unwrap();
+//! uart.set_baud(9600).unwrap();
 //!
 //! uart.set_tx_fifo(core::num::NonZeroU8::new(3));
 //! uart.set_rx_fifo(true);
-//! uart.set_parity(Some(imxrt1060_hal::uart::Parity::Even));
+//! uart.set_parity(Some(hal::uart::Parity::Even));
 //! uart.set_rx_inversion(true);
 //! uart.set_tx_inversion(false);
 //!
@@ -42,231 +47,18 @@
 //! let (tx, rx) = uart.split();
 //! ```
 
-use crate::ccm;
-use crate::iomuxc::consts::{Unsigned, U1, U2, U3, U4, U5, U6, U7, U8};
+use crate::iomuxc::consts::Unsigned;
 use crate::iomuxc::uart;
-use crate::ral;
+use crate::ral::{self, lpuart::RegisterBlock};
 use core::marker::PhantomData;
-
-/// An uninitialized UART peripheral
-///
-/// Call `init()` to initialize the peripheral
-pub struct Uninit<M: Unsigned> {
-    effective_clock: ccm::Frequency,
-    _module: PhantomData<M>,
-    reg: ral::lpuart::Instance,
-}
-
-impl<M: Unsigned> Uninit<M> {
-    fn new(effective_clock: ccm::Frequency, reg: ral::lpuart::Instance) -> Self {
-        Uninit {
-            effective_clock,
-            _module: PhantomData,
-            reg,
-        }
-    }
-}
-
-/// All available UARTs
-///
-/// All UARTs are uninitialized. Call `init()` to take and initialize the
-/// peripheral.
-pub struct UARTs {
-    pub uart1: Uninit<U1>,
-    pub uart2: Uninit<U2>,
-    pub uart3: Uninit<U3>,
-    pub uart4: Uninit<U4>,
-    pub uart5: Uninit<U5>,
-    pub uart6: Uninit<U6>,
-    pub uart7: Uninit<U7>,
-    pub uart8: Uninit<U8>,
-}
-
-/// Unclocked UART peripherals
-///
-/// The `Unclocked` UART represents all UART peripherals
-/// that do not have an activated clock. In order to obtain
-/// any UART peripheral, the `Unclocked` type must be clocked.
-#[allow(dead_code)] // Remove once all UARTs peripherals are implemented
-pub struct Unclocked {
-    pub(crate) uart1: ral::lpuart::Instance,
-    pub(crate) uart2: ral::lpuart::Instance,
-    pub(crate) uart3: ral::lpuart::Instance,
-    pub(crate) uart4: ral::lpuart::Instance,
-    pub(crate) uart5: ral::lpuart::Instance,
-    pub(crate) uart6: ral::lpuart::Instance,
-    pub(crate) uart7: ral::lpuart::Instance,
-    pub(crate) uart8: ral::lpuart::Instance,
-}
-impl Unclocked {
-    /// Enable all clocks for the UART peripherals. Returns a collection
-    /// of UART peripherals.
-    pub fn clock(
-        self,
-        ccm: &mut ccm::Handle,
-        clock_select: ccm::uart::ClockSelect,
-        prescalar: ccm::uart::PrescalarSelect,
-    ) -> UARTs {
-        let (ccm, _) = ccm.raw();
-
-        //
-        // See table 13-4 for clock gating registers
-        //
-
-        // -----------------------------------------
-        // Disable clocks before modifying selection
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR5,
-            CG12: 0,    // UART1
-            CG13: 0     // UART7
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR0,
-            CG14: 0,    // UART2
-            CG6: 0      // UART3
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR1,
-            CG12: 0     // UART4
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR3,
-            CG1: 0,     // UART5
-            CG3: 0      // UART6
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR6,
-            CG7: 0      // UART8
-        );
-        // -----------------------------------------
-
-        // -------------------------
-        // Select clocks & prescalar
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CSCDR1,
-            UART_CLK_SEL: (clock_select as u32),
-            UART_CLK_PODF: (prescalar as u32)
-        );
-        // -------------------------
-
-        // -------------
-        // Enable clocks
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR5,
-            CG12: 0b11,    // UART1
-            CG13: 0b11     // UART7
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR0,
-            CG14: 0b11,    // UART2
-            CG6: 0b11      // UART3
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR1,
-            CG12: 0b11     // UART4
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR3,
-            CG1: 0b11,     // UART5
-            CG3: 0b11      // UART6
-        );
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR6,
-            CG7: 0b11      // UART8
-        );
-
-        // -------------
-
-        let effective_clock = ccm::Frequency::from(clock_select) / ccm::Divider::from(prescalar);
-        UARTs {
-            uart1: Uninit::new(effective_clock, self.uart1),
-            uart2: Uninit::new(effective_clock, self.uart2),
-            uart3: Uninit::new(effective_clock, self.uart3),
-            uart4: Uninit::new(effective_clock, self.uart4),
-            uart5: Uninit::new(effective_clock, self.uart5),
-            uart6: Uninit::new(effective_clock, self.uart6),
-            uart7: Uninit::new(effective_clock, self.uart7),
-            uart8: Uninit::new(effective_clock, self.uart8),
-        }
-    }
-}
-
-trait ModuleExtension {
-    unsafe fn steal() -> ral::lpuart::Instance;
-}
-
-impl<U> ModuleExtension for U
-where
-    U: Unsigned,
-{
-    unsafe fn steal() -> ral::lpuart::Instance {
-        match U::USIZE {
-            1 => ral::lpuart::LPUART1::steal(),
-            2 => ral::lpuart::LPUART2::steal(),
-            3 => ral::lpuart::LPUART3::steal(),
-            4 => ral::lpuart::LPUART4::steal(),
-            5 => ral::lpuart::LPUART5::steal(),
-            6 => ral::lpuart::LPUART6::steal(),
-            7 => ral::lpuart::LPUART7::steal(),
-            8 => ral::lpuart::LPUART8::steal(),
-            _ => unreachable!("there are only eight UART peripherals"),
-        }
-    }
-}
-
-impl<M> Uninit<M>
-where
-    M: Unsigned,
-{
-    /// Initializes a UART on the `tx` and `rx` pins. Specify the initial
-    /// baud rate of the bus with `baud`. Returns the configured UART
-    /// peripheral, or an error that indicates we could not configure the
-    /// baud rate.
-    pub fn init<TX, RX>(
-        self,
-        mut tx: TX,
-        mut rx: RX,
-        baud: u32,
-    ) -> Result<UART<M>, ccm::uart::TimingsError>
-    where
-        TX: uart::Pin<Direction = uart::TX, Module = M>,
-        RX: uart::Pin<Direction = uart::RX, Module = M>,
-    {
-        crate::iomuxc::uart::prepare(&mut tx);
-        crate::iomuxc::uart::prepare(&mut rx);
-        UART::start(self.reg, self.effective_clock, baud)
-    }
-}
 
 /// An initialized UART peripheral
 ///
 /// Call `read()` or `write()` to transmit bytes.
-pub struct UART<M: Unsigned> {
-    reg: ral::lpuart::Instance,
-    effective_clock: ccm::Frequency,
-    _module: PhantomData<M>,
+pub struct UART<M: Unsigned, TX, RX> {
+    reg: ral::lpuart::Instance<M>,
+    effective_clock: u32,
+    _pins: (TX, RX),
 }
 
 /// A UART transfer half
@@ -274,14 +66,22 @@ pub struct UART<M: Unsigned> {
 /// `Tx` is capable of writing data, and nothing else. To configure
 /// a transfer half, configure the [`UART`](struct.UART.html) peripheral
 /// before calling [`split()`](struct.UART.html#method.split).
-pub struct Tx<M: Unsigned>(UART<M>);
+pub struct Tx<M: Unsigned, P> {
+    reg: ral::lpuart::Instance<M>,
+    effective_clock: u32,
+    _tx: P,
+}
 
 /// A UART receive half
 ///
 /// `Rx` is capable of receiving data, and nothing else. To configure
 /// a receive half, configure the [`UART`](struct.UART.html) peripheral
 /// before calling [`split()`](struct.UART.html#method.split).
-pub struct Rx<M: Unsigned>(UART<M>);
+pub struct Rx<M: Unsigned, P> {
+    reg: *const RegisterBlock,
+    _module: PhantomData<M>,
+    _rx: P,
+}
 
 /// Parity selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -298,50 +98,71 @@ impl Parity {
     }
 }
 
-impl<M> UART<M>
+impl<M, TX, RX> UART<M, TX, RX>
+where
+    M: Unsigned,
+{
+    /// Create a new `UART` from a UART instance, TX and RX pins
+    ///
+    /// The baud rate of the returned `UART` is unspecified. Make sure you use [`set_baud`](UART::set_baud())
+    /// to properly configure the driver.
+    pub fn new(
+        instance: ral::lpuart::Instance<M>,
+        mut tx: TX,
+        mut rx: RX,
+        clock: &crate::ccm::UARTClock,
+    ) -> UART<M, TX, RX>
+    where
+        TX: uart::Pin<Direction = uart::TX, Module = M>,
+        RX: uart::Pin<Direction = uart::RX, Module = M>,
+    {
+        crate::iomuxc::uart::prepare(&mut tx);
+        crate::iomuxc::uart::prepare(&mut rx);
+        let uart = UART {
+            reg: instance,
+            effective_clock: clock.frequency(),
+            _pins: (tx, rx),
+        };
+        ral::modify_reg!(ral::lpuart, uart.reg, CTRL, TE: TE_1, RE: RE_1);
+        uart
+    }
+}
+
+impl<M, TX, RX> UART<M, TX, RX>
 where
     M: Unsigned,
 {
     const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[M::USIZE - 1];
     const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[M::USIZE - 1];
 
-    fn start(
-        reg: ral::lpuart::Instance,
-        effective_clock: ccm::Frequency,
-        baud: u32,
-    ) -> Result<Self, ccm::uart::TimingsError> {
-        let mut uart = UART {
-            reg,
-            effective_clock,
-            _module: PhantomData,
-        };
-        uart.set_baud(baud)?;
-        ral::modify_reg!(ral::lpuart, uart.reg, CTRL, TE: TE_1, RE: RE_1);
-        Ok(uart)
-    }
-
     /// Split the UART peripheral into its transfer and receive half
     ///
     /// Ensure your UART peripheral is configured before calling
     /// `split()`.
-    pub fn split(self) -> (Tx<M>, Rx<M>) {
-        let rx_half = UART {
-            reg: unsafe { M::steal() },
-            effective_clock: self.effective_clock,
-            _module: self._module,
+    pub fn split(self) -> (Tx<M, TX>, Rx<M, RX>) {
+        let (tx_pin, rx_pin) = self._pins;
+        let rx = Rx {
+            reg: &*self.reg,
+            _rx: rx_pin,
+            _module: PhantomData,
         };
-        (Tx(self), Rx(rx_half))
+        let tx = Tx {
+            reg: self.reg,
+            _tx: tx_pin,
+            effective_clock: self.effective_clock,
+        };
+        (tx, rx)
     }
 
     /// Re-combine the transfer and receive halves to create a full UART peripheral
     ///
     /// `join()` will let you re-configure a UART peripheral if theres a need to change
     /// settings.
-    pub fn join(tx: Tx<M>, _rx: Rx<M>) -> Self {
+    pub fn join(tx: Tx<M, TX>, rx: Rx<M, RX>) -> Self {
         UART {
-            reg: tx.0.reg,
-            effective_clock: tx.0.effective_clock,
-            _module: tx.0._module,
+            reg: tx.reg,
+            effective_clock: tx.effective_clock,
+            _pins: (tx._tx, rx._rx),
         }
     }
 
@@ -449,13 +270,11 @@ where
         res
     }
 
-    /// Set the baud rate for the UART bus. Returns a `TimingsError` if there was
-    /// an error computing the values that describe the baud rate.
+    /// Set the serial baud rate
     ///
-    /// Calling this method temporarily disables the peripheral, flusing all data
-    /// from *both* TX and RX FIFOs.
-    pub fn set_baud(&mut self, baud: u32) -> Result<(), ccm::uart::TimingsError> {
-        let timings = ccm::uart::timings(self.effective_clock, baud)?;
+    /// If there is an error, the error is [`Error::Clock`](Error::Clock).
+    pub fn set_baud(&mut self, baud: u32) -> Result<(), Error> {
+        let timings = timings(self.effective_clock, baud)?;
         self.while_disabled(|this| {
             ral::modify_reg!(
                 ral::lpuart,
@@ -467,25 +286,6 @@ where
             );
         });
         Ok(())
-    }
-
-    /// Clear the UART status flags
-    ///
-    /// # Safety
-    ///
-    /// Performs writes behind an immutable receiver. Caller must ensure
-    /// that the operation is atomic.
-    unsafe fn clear_status(&self) {
-        ral::modify_reg!(
-            ral::lpuart,
-            self.reg,
-            STAT,
-            IDLE: IDLE_1,
-            OR: OR_1,
-            NF: NF_1,
-            FE: FE_1,
-            PF: PF_1
-        );
     }
 
     /// Enable the receiver interrupt associated with this UART
@@ -529,39 +329,96 @@ where
 
 use embedded_hal::serial;
 
-impl<M> serial::Write<u8> for UART<M>
+impl<M, TX, RX> serial::Write<u8> for UART<M, TX, RX>
 where
     M: Unsigned,
 {
     type Error = core::convert::Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
-        self.flush()?;
-        ral::write_reg!(ral::lpuart, self.reg, DATA, word as u32);
-        Ok(())
+        unsafe { write(&*self.reg, word) }
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        if ral::read_reg!(ral::lpuart, self.reg, STAT, TDRE == TDRE_0) {
-            Err(nb::Error::WouldBlock)
+        flush(&*self.reg)
+    }
+}
+
+/// Clear the UART status flags
+///
+/// # Safety
+///
+/// Performs writes behind an immutable receiver. Caller must ensure
+/// that the operation is atomic.
+#[inline(always)]
+unsafe fn clear_status(reg: &RegisterBlock) {
+    ral::modify_reg!(
+        ral::lpuart,
+        reg,
+        STAT,
+        IDLE: IDLE_1,
+        OR: OR_1,
+        NF: NF_1,
+        FE: FE_1,
+        PF: PF_1
+    );
+}
+
+#[inline(always)]
+unsafe fn read(reg: &RegisterBlock) -> nb::Result<u8, ReadError> {
+    use ral::lpuart::DATA::*;
+    let data = ral::read_reg!(ral::lpuart, reg, DATA);
+    if data & RXEMPT::mask != 0 {
+        Err(nb::Error::WouldBlock)
+    } else {
+        let mut flags = ReadErrorFlags::empty();
+        flags.set(
+            ReadErrorFlags::OVERRUN,
+            ral::read_reg!(ral::lpuart, reg, STAT, OR == OR_1),
+        );
+        flags.set(ReadErrorFlags::PARITY, data & PARITYE::mask != 0);
+        flags.set(ReadErrorFlags::FRAME_ERROR, data & FRETSC::mask != 0);
+        flags.set(ReadErrorFlags::NOISY, data & NOISY::mask != 0);
+
+        let raw = (data & 0xFF) as u8;
+        clear_status(reg);
+
+        if flags.is_empty() {
+            Ok(raw)
         } else {
-            Ok(())
+            Err(nb::Error::Other(ReadError { flags, raw }))
         }
     }
 }
 
-impl<M> serial::Write<u8> for Tx<M>
+#[inline(always)]
+unsafe fn write(reg: &RegisterBlock, word: u8) -> nb::Result<(), core::convert::Infallible> {
+    flush(reg)?;
+    ral::write_reg!(ral::lpuart, reg, DATA, word as u32);
+    Ok(())
+}
+
+#[inline(always)]
+fn flush(reg: &RegisterBlock) -> nb::Result<(), core::convert::Infallible> {
+    if ral::read_reg!(ral::lpuart, reg, STAT, TDRE == TDRE_0) {
+        Err(nb::Error::WouldBlock)
+    } else {
+        Ok(())
+    }
+}
+
+impl<M, P> serial::Write<u8> for Tx<M, P>
 where
     M: Unsigned,
 {
     type Error = core::convert::Infallible;
 
     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
-        self.0.write(word)
+        unsafe { write(&*self.reg, word) }
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        self.0.flush()
+        flush(&*self.reg)
     }
 }
 
@@ -588,51 +445,25 @@ pub struct ReadError {
     pub raw: u8,
 }
 
-impl<M> serial::Read<u8> for UART<M>
+impl<M, TX, RX> serial::Read<u8> for UART<M, TX, RX>
 where
     M: Unsigned,
 {
     type Error = ReadError;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
-        use ral::lpuart::DATA::*;
-        let data = ral::read_reg!(ral::lpuart, self.reg, DATA);
-        if data & RXEMPT::mask != 0 {
-            Err(nb::Error::WouldBlock)
-        } else {
-            let mut flags = ReadErrorFlags::empty();
-            flags.set(
-                ReadErrorFlags::OVERRUN,
-                ral::read_reg!(ral::lpuart, self.reg, STAT, OR == OR_1),
-            );
-            flags.set(ReadErrorFlags::PARITY, data & PARITYE::mask != 0);
-            flags.set(ReadErrorFlags::FRAME_ERROR, data & FRETSC::mask != 0);
-            flags.set(ReadErrorFlags::NOISY, data & NOISY::mask != 0);
-
-            let raw = (data & 0xFF) as u8;
-            // Safety: called with mutable receiver; caller is ensuring that this
-            // entire read() operation occurs atomically.
-            unsafe {
-                self.clear_status();
-            }
-
-            if flags.is_empty() {
-                Ok(raw)
-            } else {
-                Err(nb::Error::Other(ReadError { flags, raw }))
-            }
-        }
+        unsafe { read(&*self.reg) }
     }
 }
 
-impl<M> serial::Read<u8> for Rx<M>
+impl<M, P> serial::Read<u8> for Rx<M, P>
 where
     M: Unsigned,
 {
     type Error = ReadError;
 
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
-        self.0.read()
+        unsafe { read(&*self.reg) }
     }
 }
 
@@ -648,7 +479,30 @@ const DMA_TX_REQUEST_LOOKUP: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
 /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
 const DMA_RX_REQUEST_LOOKUP: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
 
-unsafe impl<M> dma::peripheral::Source<u8> for UART<M>
+#[inline(always)]
+fn dma_source(reg: &RegisterBlock) -> *const u8 {
+    &reg.DATA as *const _ as *const u8
+}
+
+#[inline(always)]
+fn dma_enable_source(reg: &RegisterBlock) {
+    cortex_m::interrupt::free(|_| unsafe {
+        // Safety: mutability is atomic
+        clear_status(reg);
+        ral::modify_reg!(ral::lpuart, reg, BAUD, RDMAE: 1);
+    });
+}
+
+#[inline(always)]
+fn dma_disable_source(reg: &RegisterBlock) {
+    cortex_m::interrupt::free(|_| {
+        while ral::read_reg!(ral::lpuart, reg, BAUD, RDMAE == 1) {
+            ral::modify_reg!(ral::lpuart, reg, BAUD, RDMAE: 0);
+        }
+    });
+}
+
+unsafe impl<M, TX, RX> dma::peripheral::Source<u8> for UART<M, TX, RX>
 where
     M: Unsigned,
 {
@@ -656,43 +510,59 @@ where
         Self::DMA_SOURCE_REQUEST_SIGNAL
     }
     fn source(&self) -> *const u8 {
-        &self.reg.DATA as *const _ as *const u8
+        dma_source(&*self.reg)
     }
     fn enable_source(&self) {
-        cortex_m::interrupt::free(|_| unsafe {
-            // Safety: mutability is atomic
-            self.clear_status();
-            ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 1);
-        });
+        dma_enable_source(&*self.reg);
     }
     fn disable_source(&self) {
-        cortex_m::interrupt::free(|_| {
-            while ral::read_reg!(ral::lpuart, self.reg, BAUD, RDMAE == 1) {
-                ral::modify_reg!(ral::lpuart, self.reg, BAUD, RDMAE: 0);
-            }
-        });
+        dma_disable_source(&*self.reg);
     }
 }
 
-unsafe impl<M> dma::peripheral::Source<u8> for Rx<M>
+unsafe impl<M, P> dma::peripheral::Source<u8> for Rx<M, P>
 where
     M: Unsigned,
 {
     fn source_signal(&self) -> u32 {
-        UART::<M>::DMA_SOURCE_REQUEST_SIGNAL
+        UART::<M, P, P>::DMA_SOURCE_REQUEST_SIGNAL
     }
     fn source(&self) -> *const u8 {
-        self.0.source()
+        // Safety: deref is OK; memory valid
+        unsafe { dma_source(&*self.reg) }
     }
     fn enable_source(&self) {
-        self.0.enable_source()
+        // Safety: deref is OK; memory valid
+        unsafe { dma_enable_source(&*self.reg) };
     }
     fn disable_source(&self) {
-        self.0.disable_source()
+        // Safety: deref is OK; memory valid
+        unsafe { dma_disable_source(&*self.reg) };
     }
 }
 
-unsafe impl<M> dma::peripheral::Destination<u8> for UART<M>
+#[inline(always)]
+fn dma_destination(reg: &RegisterBlock) -> *const u8 {
+    &reg.DATA as *const _ as *const u8
+}
+
+#[inline(always)]
+fn dma_enable_destination(reg: &RegisterBlock) {
+    cortex_m::interrupt::free(|_| {
+        ral::modify_reg!(ral::lpuart, reg, BAUD, TDMAE: 1);
+    });
+}
+
+#[inline(always)]
+fn dma_disable_destination(reg: &RegisterBlock) {
+    cortex_m::interrupt::free(|_| {
+        while ral::read_reg!(ral::lpuart, reg, BAUD, TDMAE == 1) {
+            ral::modify_reg!(ral::lpuart, reg, BAUD, TDMAE: 0);
+        }
+    });
+}
+
+unsafe impl<M, TX, RX> dma::peripheral::Destination<u8> for UART<M, TX, RX>
 where
     M: Unsigned,
 {
@@ -700,41 +570,95 @@ where
         Self::DMA_DESTINATION_REQUEST_SIGNAL
     }
     fn destination(&self) -> *const u8 {
-        &self.reg.DATA as *const _ as *const u8
+        dma_destination(&*self.reg)
     }
     fn enable_destination(&self) {
-        cortex_m::interrupt::free(|_| {
-            ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 1);
-        });
+        dma_enable_destination(&*self.reg);
     }
     fn disable_destination(&self) {
-        cortex_m::interrupt::free(|_| {
-            while ral::read_reg!(ral::lpuart, self.reg, BAUD, TDMAE == 1) {
-                ral::modify_reg!(ral::lpuart, self.reg, BAUD, TDMAE: 0);
-            }
-        });
+        dma_disable_destination(&*self.reg);
     }
 }
 
-unsafe impl<M> dma::peripheral::Destination<u8> for Tx<M>
+unsafe impl<M, P> dma::peripheral::Destination<u8> for Tx<M, P>
 where
     M: Unsigned,
 {
     fn destination_signal(&self) -> u32 {
-        UART::<M>::DMA_DESTINATION_REQUEST_SIGNAL
+        UART::<M, P, P>::DMA_DESTINATION_REQUEST_SIGNAL
     }
     fn destination(&self) -> *const u8 {
-        self.0.destination()
+        dma_destination(&*self.reg)
     }
     fn enable_destination(&self) {
-        self.0.enable_destination()
+        dma_enable_destination(&*self.reg);
     }
     fn disable_destination(&self) {
-        self.0.disable_destination()
+        dma_disable_destination(&*self.reg);
     }
 }
 
 use embedded_hal::blocking::serial::write::Default as BlockingWrite;
 
-impl<M> BlockingWrite<u8> for UART<M> where M: Unsigned {}
-impl<M> BlockingWrite<u8> for Tx<M> where M: Unsigned {}
+impl<M, TX, RX> BlockingWrite<u8> for UART<M, TX, RX> where M: Unsigned {}
+impl<M, P> BlockingWrite<u8> for Tx<M, P> where M: Unsigned {}
+
+/// An opaque type that describes timing configurations
+struct Timings {
+    /// OSR register value. Accounts for the -1. May be written
+    /// directly to the register
+    osr: u8,
+    /// True if we need to set BOTHEDGE given the OSR value
+    both_edge: bool,
+    /// SBR value;
+    sbr: u16,
+}
+
+/// Errors propagated from a [`UART`] device
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum Error {
+    /// There was an error when preparing the baud rate or clocks
+    Clock,
+}
+
+/// Compute timings for a UART peripheral. Returns the timings,
+/// or a string describing an error.
+fn timings(effective_clock: u32, baud: u32) -> Result<Timings, Error> {
+    //        effective_clock
+    // baud = ---------------
+    //         (OSR+1)(SBR)
+    //
+    // Solve for SBR:
+    //
+    //       effective_clock
+    // SBR = ---------------
+    //        (OSR+1)(baud)
+    //
+    // After selecting SBR, calculate effective baud.
+    // Minimize the error over all OSRs.
+
+    let base_clock: u32 = effective_clock.checked_div(baud).ok_or(Error::Clock)?;
+    let mut error = u32::max_value();
+    let mut best_osr = 16;
+    let mut best_sbr = 1;
+
+    for osr in 4..=32 {
+        let sbr = base_clock.checked_div(osr).ok_or(Error::Clock)?;
+        let sbr = sbr.max(1).min(8191);
+        let effective_baud = effective_clock.checked_div(osr * sbr).ok_or(Error::Clock)?;
+        let err = effective_baud.max(baud) - effective_baud.min(baud);
+        if err < error {
+            best_osr = osr;
+            best_sbr = sbr;
+            error = err
+        }
+    }
+
+    use core::convert::TryFrom;
+    Ok(Timings {
+        osr: u8::try_from(best_osr - 1).map_err(|_| Error::Clock)?,
+        sbr: u16::try_from(best_sbr).map_err(|_| Error::Clock)?,
+        both_edge: best_osr < 8,
+    })
+}
