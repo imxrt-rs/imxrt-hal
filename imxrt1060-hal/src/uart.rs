@@ -44,7 +44,12 @@
 //! let byte = uart.read().unwrap();
 //!
 //! // Split the peripheral into transfer and receive halves
-//! let (tx, rx) = uart.split();
+//! let (mut tx, mut rx) = uart.split();
+//! tx.write(0xAD).unwrap();
+//! let byte = rx.read().unwrap();
+//!
+//! // Combine the two back together
+//! let uart = hal::uart::UART::join(tx, rx);
 //! ```
 
 use crate::iomuxc::consts::Unsigned;
