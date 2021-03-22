@@ -16,7 +16,7 @@ pub use imxrt_ral as ral;
 pub mod iomuxc {
     pub use imxrt_iomuxc::*;
 
-    #[cfg(any(feature = "imxrt1062", feature = "imxrt1064"))]
+    #[cfg(any(feature = "imxrt1061", feature = "imxrt1062", feature = "imxrt1064",))]
     pub use imxrt_iomuxc::imxrt106x::*;
 
     /// Use this function to acquire the IOMUXC pads. It requires that you have an
