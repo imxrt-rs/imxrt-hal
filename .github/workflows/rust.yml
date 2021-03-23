@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        feature: ["imxrt1062"]
+        feature: ["imxrt1061", "imxrt1062", "imxrt1064"]
     steps:
     - uses: actions/checkout@v2
     - name: Build imxrt-hal for (${{ matrix.feature }}) HAL
