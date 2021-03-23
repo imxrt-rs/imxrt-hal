@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+Two new HAL features, `"imxrt1061"` and `"imxrt1064"`, let you build the HAL
+for iMXRT1061 and iMXRT1064 MCUs, respectively. The features enable the
+relevant features in the `imxrt-ral` register access layer. Use these features
+to ensure the best compatibility with your iMXRT processor.
+
 ## [0.4.2] 2020-11-23
 
 ### Added
