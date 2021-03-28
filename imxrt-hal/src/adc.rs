@@ -223,6 +223,64 @@ where
     }
 }
 
+/// Internal trait for determining what DMA request signal to use for
+/// ADC1 or ADC2.
+#[doc(hidden)]
+pub trait AdcDmaSource {
+    /// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
+    const SOURCE_REQUEST_SIGNAL: u32;
+}
+
+impl AdcDmaSource for ADC1 {
+    const SOURCE_REQUEST_SIGNAL: u32 = 24;
+}
+
+impl AdcDmaSource for ADC2 {
+    const SOURCE_REQUEST_SIGNAL: u32 = 88;
+}
+
+/// Streaming DMA source for ADCs
+pub struct AdcSource<ADCx, P> {
+    adc: ADC<ADCx>,
+    pin: AnalogInput<ADCx, P>,
+}
+
+impl<ADCx, P> AdcSource<ADCx, P>
+where
+    ADCx: adc::ADC + AdcDmaSource,
+    P: Pin<ADCx>,
+{
+    /// Create a DMA Source object tieing the ADC to the given pin.
+    pub fn new(adc: ADC<ADCx>, pin: AnalogInput<ADCx, P>) -> Self {
+        AdcSource { adc, pin }
+    }
+}
+
+impl<ADCx, P> crate::dma::peripheral::Source<u16> for AdcSource<ADCx, P>
+where
+    ADCx: adc::ADC + AdcDmaSource,
+    P: Pin<ADCx>,
+{
+    type Error = ();
+
+    const SOURCE_REQUEST_SIGNAL: u32 = ADCx::SOURCE_REQUEST_SIGNAL;
+
+    fn source(&self) -> *const u16 {
+        &self.adc.reg.R0 as *const _ as *const u16
+    }
+
+    fn enable_source(&mut self) -> Result<(), Self::Error> {
+        let channel = <P as Pin<ADCx>>::Input::U32;
+        ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 1, DMAEN: 1);
+        ral::modify_reg!(ral::adc, self.adc.reg, HC0, |_| channel);
+        Ok(())
+    }
+
+    fn disable_source(&mut self) {
+        ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 0, DMAEN: 0);
+    }
+}
+
 /// Unclocked ADC modules
 ///
 /// The `Unclocked` struct represents both unconfigured ADC peripherals.

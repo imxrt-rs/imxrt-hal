@@ -97,6 +97,9 @@ mod private {
     impl<M> Sealed for uart::Rx<M> where M: crate::iomuxc::consts::Unsigned {}
     impl<M> Sealed for uart::Tx<M> where M: crate::iomuxc::consts::Unsigned {}
 
+    use crate::adc;
+    impl<ADCx, P> Sealed for adc::AdcSource<ADCx, P> {}
+
     use crate::spi;
     impl<M> Sealed for spi::SPI<M> where M: crate::iomuxc::consts::Unsigned {}
 }
