@@ -44,6 +44,7 @@ pub fn set_arm_clock(
         // reg3_trg fits in 5 bits.
         modify_reg!(ral::dcdc, dcdc, REG3, TRG: reg3_trg_mv);
         while read_reg!(ral::dcdc, dcdc, REG0, STS_DC_OK) == 0 {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
     }
@@ -93,6 +94,7 @@ pub fn set_arm_clock(
                LOCK: 0
     );
     while read_reg!(ral::ccm_analog, ccm_analog, PLL_ARM, LOCK) == 0 {
+        #[allow(deprecated)]
         core::sync::atomic::spin_loop_hint();
     }
     log::debug!(
@@ -102,10 +104,12 @@ pub fn set_arm_clock(
 
     write_reg!(ral::ccm, ccm, CACRR, ARM_PODF: (div_arm - 1));
     while read_reg!(ral::ccm, ccm, CDHIPR, ARM_PODF_BUSY) > 0 {
+        #[allow(deprecated)]
         core::sync::atomic::spin_loop_hint();
     }
     modify_reg!(ral::ccm, ccm, CBCDR, AHB_PODF: (div_ahb - 1));
     while read_reg!(ral::ccm, ccm, CDHIPR, ARM_PODF_BUSY) > 0 {
+        #[allow(deprecated)]
         core::sync::atomic::spin_loop_hint();
     }
 
@@ -114,6 +118,7 @@ pub fn set_arm_clock(
     modify_reg!(ral::ccm, ccm, CBCDR, IPG_PODF: (div_ipg - 1));
     modify_reg!(ral::ccm, ccm, CBCDR, PERIPH_CLK_SEL: 0);
     while read_reg!(ral::ccm, ccm, CDHIPR, PERIPH_CLK_SEL_BUSY) > 0 {
+        #[allow(deprecated)]
         core::sync::atomic::spin_loop_hint();
     }
 
@@ -123,6 +128,7 @@ pub fn set_arm_clock(
         log::debug!("Decreasing voltage to {}mv", millivolts);
         modify_reg!(ral::dcdc, dcdc, REG3, TRG: reg3_trg_mv);
         while read_reg!(ral::dcdc, dcdc, REG0, STS_DC_OK) == 0 {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
     }
@@ -169,11 +175,13 @@ fn select_alt_clock(ccm: &ral::ccm::Instance, ccm_analog: &ral::ccm_analog::Inst
         modify_reg!(ral::ccm, ccm, CBCDR, PERIPH_CLK2_PODF: div);
         modify_reg!(ral::ccm, ccm, CBCMR, PERIPH_CLK2_SEL: sel);
         while read_reg!(ral::ccm, ccm, CDHIPR, PERIPH2_CLK_SEL_BUSY) > 0 {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
 
         modify_reg!(ral::ccm, ccm, CBCDR, PERIPH_CLK_SEL: 1);
         while read_reg!(ral::ccm, ccm, CDHIPR, PERIPH_CLK_SEL_BUSY) > 0 {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
     } else {
