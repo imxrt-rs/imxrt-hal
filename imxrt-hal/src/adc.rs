@@ -242,6 +242,8 @@ impl AdcDmaSource for ADC2 {
 /// Streaming DMA source for ADCs
 pub struct AdcSource<ADCx, P> {
     adc: ADC<ADCx>,
+    #[allow(unused)]
+    // Placeholder for a future implementation; remove this allow when using the pin!
     pin: AnalogInput<ADCx, P>,
 }
 
