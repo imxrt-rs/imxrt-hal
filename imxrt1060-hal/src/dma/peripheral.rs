@@ -156,6 +156,7 @@ where
         self.peripheral.disable_source();
         let rx_channel = self.rx_channel.as_mut().unwrap();
         while rx_channel.is_hardware_signaling() {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
         rx_channel.disable();
@@ -295,6 +296,7 @@ where
         self.peripheral.disable_destination();
         let tx_channel = self.tx_channel.as_mut().unwrap();
         while tx_channel.is_hardware_signaling() {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
         tx_channel.disable();

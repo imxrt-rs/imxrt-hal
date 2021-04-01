@@ -273,6 +273,7 @@ impl TRNG {
         let (ccm, _) = ccm.raw();
         modify_reg!(trng, self.reg, MCTL, PRGM: 1);
         while read_reg!(trng, self.reg, MCTL, TSTOP_OK) == 0 {
+            #[allow(deprecated)]
             core::sync::atomic::spin_loop_hint();
         }
         // need to wait for TSTOP_OK before disabling clock or the ring oscillator will keep running

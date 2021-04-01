@@ -155,6 +155,7 @@ fn disable(snvs: &mut Instance) {
     // SRTC locking is not implemented, so if it's locked then the user did it manually.
     ral::modify_reg!(ral::snvs, snvs, LPCR, SRTC_ENV: SRTC_ENV_0); // disable SRTC
     while is_enabled(snvs) {
+        #[allow(deprecated)]
         core::sync::atomic::spin_loop_hint();
     } // wait until SRTC turns off
 }
@@ -174,6 +175,7 @@ fn set(snvs: &mut Instance, time: u32, ticks: u16) {
 fn enable(snvs: &mut Instance) {
     ral::modify_reg!(ral::snvs, snvs, LPCR, SRTC_ENV: SRTC_ENV_1); // enable SRTC
     while !is_enabled(snvs) {
+        #[allow(deprecated)]
         core::sync::atomic::spin_loop_hint();
     } // wait until SRTC turns on
 }
