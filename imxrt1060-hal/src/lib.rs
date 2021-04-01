@@ -6,6 +6,7 @@
 //! See the module-level documentation for more information and examples.
 
 #![no_std]
+#![allow(clippy::upper_case_acronyms)] // Established pattern in the 0.4 HAL; should be addressed later
 
 pub use imxrt_ral as ral;
 
