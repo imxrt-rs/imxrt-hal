@@ -9,6 +9,9 @@ for iMXRT1061 and iMXRT1064 MCUs, respectively. The features enable the
 relevant features in the `imxrt-ral` register access layer. Use these features
 to ensure the best compatibility with your iMXRT processor.
 
+ADC pins may be used as DMA peripherals. Use the `AdcSource` API to receive
+analog data with a DMA transfer.
+
 ## [0.4.2] 2020-11-23
 
 ### Added
