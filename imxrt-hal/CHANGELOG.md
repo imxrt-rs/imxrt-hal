@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.3] 2020-04-12
+
 ### Added
 
 Two new HAL features, `"imxrt1061"` and `"imxrt1064"`, let you build the HAL
@@ -191,6 +193,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.2...HEAD
+[0.4.3]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.2...0.4.3
 [0.4.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/imxrt-rs/imxrt-rs/compare/0.3.0...0.4.0
