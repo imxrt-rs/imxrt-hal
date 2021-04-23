@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+Added calls to set pin muxing in the PWM driver. This fixes a regression in
+the PWM driver that was introduced in the 0.4 HAL release.
+
 ## [0.4.3] 2020-04-12
 
 ### Added
