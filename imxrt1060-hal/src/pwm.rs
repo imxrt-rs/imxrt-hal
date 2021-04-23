@@ -166,14 +166,16 @@ macro_rules! submodule_outputs {
             pub fn outputs<A, B>(
                 self,
                 handle: &mut Handle<M>,
-                pin_a: A,
-                pin_b: B,
+                mut pin_a: A,
+                mut pin_b: B,
                 timing: Timing,
             ) -> Option<Pins<A, B>>
             where
                 A: Pin<Module = M, Submodule = $SUBMODULE, Output = pwm::A>,
                 B: Pin<Module = M, Submodule = $SUBMODULE, Output = pwm::B>,
             {
+                crate::iomuxc::pwm::prepare(&mut pin_a);
+                crate::iomuxc::pwm::prepare(&mut pin_b);
                 let clk_sel: u16 = match timing.clock_select {
                     ccm::pwm::ClockSelect::IPG(_) => ral::pwm::SMCTRL20::CLK_SEL::RW::CLK_SEL_0 as u16,
                 };
