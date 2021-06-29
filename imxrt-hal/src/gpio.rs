@@ -65,8 +65,9 @@ where
         REGISTER_BLOCKS[self.module().wrapping_sub(1)]
     }
 
+    /// Returns the bitmask for this GPIO
     #[inline(always)]
-    fn offset(&self) -> u32 {
+    fn mask(&self) -> u32 {
         1u32 << <P as Pin>::Offset::USIZE
     }
 
@@ -96,7 +97,7 @@ where
         // Safety: MMIO valid per gpr() function.
         // Read is atomic
         self.gpr()
-            .map(|gpr| unsafe { core::ptr::read_volatile(gpr) & self.offset() != 0 })
+            .map(|gpr| unsafe { core::ptr::read_volatile(gpr) & self.mask() != 0 })
             .unwrap_or(false)
     }
 
@@ -117,9 +118,9 @@ where
                     let was_output = self.is_output();
 
                     if fast {
-                        core::ptr::write_volatile(gpr, v | self.offset());
+                        core::ptr::write_volatile(gpr, v | self.mask());
                     } else {
-                        core::ptr::write_volatile(gpr, v & !self.offset());
+                        core::ptr::write_volatile(gpr, v & !self.mask());
                     }
 
                     // At this point, calls to set_output / set_input will refer to the 'fast'
@@ -139,7 +140,7 @@ where
     /// Returns `true` if the pin is configured as an output pin
     fn is_output(&self) -> bool {
         // Safety: atomic read
-        unsafe { ral::read_reg!(ral::gpio, self.register_block(), GDIR) & self.offset() != 0 }
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), GDIR) & self.mask() != 0 }
     }
 
     /// Configure the GPIO as an output
@@ -147,7 +148,7 @@ where
         // Safety: critical section, enforced by API, ensures consistency
         unsafe {
             ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
-                | self.offset());
+                | self.mask());
         }
     }
 
@@ -156,7 +157,7 @@ where
         // Safety: critical section, enforced by API, ensures consistency
         unsafe {
             ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
-                & !self.offset());
+                & !self.mask());
         }
     }
 }
@@ -188,7 +189,7 @@ where
     /// Returns `true` if this input pin is high
     pub fn is_set(&self) -> bool {
         // Safety: read is atomic
-        unsafe { ral::read_reg!(ral::gpio, self.register_block(), PSR) & self.offset() != 0 }
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), PSR) & self.mask() != 0 }
     }
 }
 
@@ -208,25 +209,25 @@ where
     /// Set the GPIO high
     pub fn set(&mut self) {
         // Safety: atomic write
-        unsafe { ral::write_reg!(ral::gpio, self.register_block(), DR_SET, self.offset()) };
+        unsafe { ral::write_reg!(ral::gpio, self.register_block(), DR_SET, self.mask()) };
     }
 
     /// Set the GPIO low
     pub fn clear(&mut self) {
         // Safety: atomic write
-        unsafe { ral::write_reg!(ral::gpio, self.register_block(), DR_CLEAR, self.offset()) };
+        unsafe { ral::write_reg!(ral::gpio, self.register_block(), DR_CLEAR, self.mask()) };
     }
 
     /// Returns `true` if the pin is high
     pub fn is_set(&self) -> bool {
         // Safety: atomic read
-        unsafe { ral::read_reg!(ral::gpio, self.register_block(), DR) & self.offset() != 0u32 }
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), DR) & self.mask() != 0u32 }
     }
 
     /// Alternate the state of the pin
     pub fn toggle(&mut self) {
         // Safety: atomic write
-        unsafe { ral::write_reg!(ral::gpio, self.register_block(), DR_TOGGLE, self.offset()) }
+        unsafe { ral::write_reg!(ral::gpio, self.register_block(), DR_TOGGLE, self.mask()) }
     }
 }
 
