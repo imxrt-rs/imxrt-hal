@@ -112,10 +112,10 @@ where
     pub fn set_fast(&mut self, fast: bool) -> bool {
         self.gpr()
             .map(|gpr| {
-                cortex_m::interrupt::free(|cs| unsafe {
+                cortex_m::interrupt::free(|_| unsafe {
                     let v = core::ptr::read_volatile(gpr);
 
-                    let was_output = self.is_output();
+                    let from = self.register_block();
 
                     if fast {
                         core::ptr::write_volatile(gpr, v | self.mask());
@@ -123,13 +123,8 @@ where
                         core::ptr::write_volatile(gpr, v & !self.mask());
                     }
 
-                    // At this point, calls to set_output / set_input will refer to the 'fast'
-                    // or 'slow' GPIO register block.
-                    if was_output {
-                        self.set_output(cs);
-                    } else {
-                        self.set_input(cs);
-                    }
+                    let to = self.register_block();
+                    self.copy_settings(from, to);
 
                     true
                 })
@@ -137,10 +132,34 @@ where
             .unwrap_or(false)
     }
 
-    /// Returns `true` if the pin is configured as an output pin
-    fn is_output(&self) -> bool {
-        // Safety: atomic read
-        unsafe { ral::read_reg!(ral::gpio, self.register_block(), GDIR) & self.mask() != 0 }
+    /// Copies the settings for one GPIO register block, `from`, to another register block, `to`.
+    ///
+    /// This method runs when changing from a normal to a fast GPIO, or a fast to a normal GPIO.
+    /// The goal is to make the switch seamless for the end user. You must only copy the settings
+    /// for the current GPIO pin.
+    ///
+    /// # Safety
+    ///
+    /// This method must run in a critical section, since it performs reads and writes across
+    /// multiple register blocks which are shared across multiple pins.
+    unsafe fn copy_settings(&self, from: *const RegisterBlock, to: *const RegisterBlock) {
+        macro_rules! copy_bits {
+            ($REG:ident, $mask:expr) => {{
+                let source_register = ral::read_reg!(ral::gpio, from, $REG);
+                let target_bits = $mask & source_register;
+
+                ral::modify_reg!(ral::gpio, to, $REG, |mut destination| {
+                    // Set the bit low...
+                    destination &= !$mask;
+                    // OR in the previous setting...
+                    destination | target_bits
+                });
+            }};
+        }
+
+        // The input / output direction. When switching across fast / normal, keep the
+        // same direction.
+        copy_bits!(GDIR, self.mask());
     }
 
     /// Configure the GPIO as an output
