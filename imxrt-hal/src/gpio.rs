@@ -71,6 +71,13 @@ where
         1u32 << <P as Pin>::Offset::USIZE
     }
 
+    /// Returns the ICR field offset for this GPIO
+    ///
+    /// ICR is "Interrupt Clear Register"
+    fn icr_offset(&self) -> usize {
+        (<P as Pin>::Offset::USIZE % 16) * 2
+    }
+
     /// The return is a non-zero number, since the GPIO identifiers
     /// start with '1.'
     #[inline(always)]
@@ -209,6 +216,84 @@ where
     pub fn is_set(&self) -> bool {
         // Safety: read is atomic
         unsafe { ral::read_reg!(ral::gpio, self.register_block(), PSR) & self.mask() != 0 }
+    }
+}
+
+/// GPIO input interrupt configurations.
+///
+/// These configurations do not take effect until
+/// GPIO input interrupts are enabled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum InterruptConfiguration {
+    // TODO isn't it a bit repetitive to have "Sensitive" on all here?
+    LowLevelSensitive = 0,
+    HighLevelSensitive = 1,
+    RisingEdgeSensitive = 2,
+    FallingEdgeSensitive = 3,
+    EitherEdgeSensitive = 4,
+}
+
+impl<P> GPIO<P, Input>
+where
+    P: Pin,
+{
+    /// Enable (`true`) or disable (`false`) interrupts for this GPIO input.
+    pub fn set_interrupt_enable(&mut self, enable: bool) {
+        cortex_m::interrupt::free(|_| unsafe {
+            ral::modify_reg!(ral::gpio, self.register_block(), IMR, |imr| if enable {
+                imr | self.mask()
+            } else {
+                imr & !self.mask()
+            })
+        });
+    }
+
+    /// Indicates if interrupts are (`true`) or are not (`false`) enabled for this GPIO input.
+    pub fn is_interrupt_enabled(&self) -> bool {
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), IMR) & self.mask() != 0u32 }
+    }
+
+    /// Set the interrupt configuration for this GPIO input.
+    pub fn set_interrupt_configuration(&mut self, interrupt_configuration: InterruptConfiguration) {
+        if InterruptConfiguration::EitherEdgeSensitive == interrupt_configuration {
+            unsafe {
+                ral::modify_reg!(ral::gpio, self.register_block(), EDGE_SEL, |edge_sel| {
+                    edge_sel | self.mask()
+                });
+            }
+        } else {
+            unsafe {
+                ral::modify_reg!(ral::gpio, self.register_block(), EDGE_SEL, |edge_sel| {
+                    edge_sel & !self.mask()
+                });
+            }
+            // TODO is it ok to assume the numeric value of the enum is the icr?
+            let icr = interrupt_configuration as u32;
+            let icr_offset = self.icr_offset();
+            let icr_modify = |reg| reg & !(0b11 << icr_offset) | (icr << icr_offset);
+            if <P as Pin>::Offset::USIZE < 16 {
+                unsafe {
+                    ral::modify_reg!(ral::gpio, self.register_block(), ICR1, icr_modify);
+                }
+            } else {
+                unsafe {
+                    ral::modify_reg!(ral::gpio, self.register_block(), ICR2, icr_modify);
+                }
+            }
+        }
+    }
+
+    /// Indicates whether this GPIO input triggered an interrupt.
+    pub fn is_interrupt_status(&self) -> bool {
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), ISR) & self.mask() != 032 }
+    }
+
+    /// Clear the interrupt status flag.
+    pub fn clear_interrupt_status(&mut self) {
+        // TODO is it okay to unconditonally write to clear, or do we need to
+        // check it's actually set first?
+        unsafe { ral::write_reg!(ral::gpio, self.register_block(), ISR, self.mask()) }
     }
 }
 
