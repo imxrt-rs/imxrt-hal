@@ -73,7 +73,7 @@ where
 
     /// Returns the ICR field offset for this GPIO
     ///
-    /// ICR is "Interrupt Clear Register"
+    /// ICR is "Interrupt Configuration Register"
     fn icr_offset(&self) -> usize {
         (<P as Pin>::Offset::USIZE % 16) * 2
     }
