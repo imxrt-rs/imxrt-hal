@@ -167,6 +167,15 @@ where
         // The input / output direction. When switching across fast / normal, keep the
         // same direction.
         copy_bits!(GDIR, self.mask());
+
+        // Interrupt configuration is preserved when switching fast / normal.
+        if <P as Pin>::Offset::USIZE < 16 {
+            copy_bits!(ICR1, self.mask());
+        } else {
+            copy_bits!(ICR2, self.mask());
+        }
+        copy_bits!(EDGE_SEL, self.mask());
+        copy_bits!(IMR, self.mask());
     }
 
     /// Configure the GPIO as an output
