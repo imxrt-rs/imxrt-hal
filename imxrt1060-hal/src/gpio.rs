@@ -182,6 +182,11 @@ where
     fn set_output(&self, _: &cortex_m::interrupt::CriticalSection) {
         // Safety: critical section, enforced by API, ensures consistency
         unsafe {
+            // Turn off interrupts for pin.
+            ral::modify_reg!(ral::gpio, self.register_block(), IMR, |imr| imr
+                & !self.mask());
+
+            // Change direction
             ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
                 | self.mask());
         }
@@ -212,7 +217,10 @@ where
         }
     }
 
-    /// Set the GPIO as an output
+    /// Set the GPIO as an output.
+    ///
+    /// Any interrupt configuration will be cleared and needs redoing if the pin is transitioned
+    /// back to an input.
     pub fn output(self) -> GPIO<P, Output> {
         cortex_m::interrupt::free(|cs| self.set_output(cs));
         GPIO {
