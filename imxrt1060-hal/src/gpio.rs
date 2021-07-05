@@ -296,7 +296,7 @@ where
 
     /// Indicates whether this GPIO input triggered an interrupt.
     pub fn is_interrupt_status(&self) -> bool {
-        unsafe { ral::read_reg!(ral::gpio, self.register_block(), ISR) & self.mask() != 032 }
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), ISR) & self.mask() != 0u32 }
     }
 
     /// Clear the interrupt status flag.
