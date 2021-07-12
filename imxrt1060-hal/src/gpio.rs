@@ -71,6 +71,13 @@ where
         1u32 << <P as Pin>::Offset::USIZE
     }
 
+    /// Returns the ICR field offset for this GPIO
+    ///
+    /// ICR is "Interrupt Configuration Register"
+    fn icr_offset(&self) -> usize {
+        (<P as Pin>::Offset::USIZE % 16) * 2
+    }
+
     /// The return is a non-zero number, since the GPIO identifiers
     /// start with '1.'
     #[inline(always)]
@@ -160,12 +167,26 @@ where
         // The input / output direction. When switching across fast / normal, keep the
         // same direction.
         copy_bits!(GDIR, self.mask());
+
+        // Interrupt configuration is preserved when switching fast / normal.
+        if <P as Pin>::Offset::USIZE < 16 {
+            copy_bits!(ICR1, 0b11 << self.icr_offset());
+        } else {
+            copy_bits!(ICR2, 0b11 << self.icr_offset());
+        }
+        copy_bits!(EDGE_SEL, self.mask());
+        copy_bits!(IMR, self.mask());
     }
 
     /// Configure the GPIO as an output
     fn set_output(&self, _: &cortex_m::interrupt::CriticalSection) {
         // Safety: critical section, enforced by API, ensures consistency
         unsafe {
+            // Turn off interrupts for pin.
+            ral::modify_reg!(ral::gpio, self.register_block(), IMR, |imr| imr
+                & !self.mask());
+
+            // Change direction
             ral::modify_reg!(ral::gpio, self.register_block(), GDIR, |gdir| gdir
                 | self.mask());
         }
@@ -196,7 +217,10 @@ where
         }
     }
 
-    /// Set the GPIO as an output
+    /// Set the GPIO as an output.
+    ///
+    /// Any interrupt configuration will be cleared and needs redoing if the pin is transitioned
+    /// back to an input.
     pub fn output(self) -> GPIO<P, Output> {
         cortex_m::interrupt::free(|cs| self.set_output(cs));
         GPIO {
@@ -209,6 +233,75 @@ where
     pub fn is_set(&self) -> bool {
         // Safety: read is atomic
         unsafe { ral::read_reg!(ral::gpio, self.register_block(), PSR) & self.mask() != 0 }
+    }
+}
+
+/// GPIO input interrupt configurations.
+///
+/// These configurations do not take effect until
+/// GPIO input interrupts are enabled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum InterruptConfiguration {
+    LowLevel = 0,
+    HighLevel = 1,
+    RisingEdge = 2,
+    FallingEdge = 3,
+    EitherEdge = 4,
+}
+
+impl<P> GPIO<P, Input>
+where
+    P: Pin,
+{
+    /// Enable (`true`) or disable (`false`) interrupts for this GPIO input.
+    pub fn set_interrupt_enable(&mut self, enable: bool) {
+        cortex_m::interrupt::free(|_| unsafe {
+            ral::modify_reg!(ral::gpio, self.register_block(), IMR, |imr| if enable {
+                imr | self.mask()
+            } else {
+                imr & !self.mask()
+            })
+        });
+    }
+
+    /// Indicates if interrupts are (`true`) or are not (`false`) enabled for this GPIO input.
+    pub fn is_interrupt_enabled(&self) -> bool {
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), IMR) & self.mask() != 0u32 }
+    }
+
+    /// Set the interrupt configuration for this GPIO input.
+    pub fn set_interrupt_configuration(&mut self, interrupt_configuration: InterruptConfiguration) {
+        // Safety: These modify_reg! must be completed as one unit, or we get an inconsistent state.
+        cortex_m::interrupt::free(|_| unsafe {
+            if InterruptConfiguration::EitherEdge == interrupt_configuration {
+                ral::modify_reg!(ral::gpio, self.register_block(), EDGE_SEL, |edge_sel| {
+                    edge_sel | self.mask()
+                });
+            } else {
+                ral::modify_reg!(ral::gpio, self.register_block(), EDGE_SEL, |edge_sel| {
+                    edge_sel & !self.mask()
+                });
+                let icr = interrupt_configuration as u32;
+                let icr_offset = self.icr_offset();
+                let icr_modify = |reg| reg & !(0b11 << icr_offset) | (icr << icr_offset);
+                if <P as Pin>::Offset::USIZE < 16 {
+                    ral::modify_reg!(ral::gpio, self.register_block(), ICR1, icr_modify);
+                } else {
+                    ral::modify_reg!(ral::gpio, self.register_block(), ICR2, icr_modify);
+                }
+            }
+        });
+    }
+
+    /// Indicates whether this GPIO input triggered an interrupt.
+    pub fn is_interrupt_status(&self) -> bool {
+        unsafe { ral::read_reg!(ral::gpio, self.register_block(), ISR) & self.mask() != 0u32 }
+    }
+
+    /// Clear the interrupt status flag.
+    pub fn clear_interrupt_status(&mut self) {
+        unsafe { ral::write_reg!(ral::gpio, self.register_block(), ISR, self.mask()) }
     }
 }
 
