@@ -170,9 +170,9 @@ where
 
         // Interrupt configuration is preserved when switching fast / normal.
         if <P as Pin>::Offset::USIZE < 16 {
-            copy_bits!(ICR1, self.mask());
+            copy_bits!(ICR1, 0b11 << self.icr_offset());
         } else {
-            copy_bits!(ICR2, self.mask());
+            copy_bits!(ICR2, 0b11 << self.icr_offset());
         }
         copy_bits!(EDGE_SEL, self.mask());
         copy_bits!(IMR, self.mask());
