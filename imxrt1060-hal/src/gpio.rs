@@ -28,6 +28,80 @@
 //! output.toggle();
 //! assert!(output.is_set());
 //! ```
+//!
+//! # Interrupts
+//!
+//! GPIO inputs can generate interrupts on edge or level triggers. See
+//! [`InterruptConfiguration`](crate::gpio::InterruptConfiguration) to
+//! understand the available configurations.
+//!
+//! Before selecting a GPIO interrupt vector, you need to know which GPIO
+//! port and pin is associated with your pad. There's two ways to correlate
+//! a pad to a GPIO:
+//!
+//! - Check the reference manual. Chapter 10 of the i.MX RT 1060 reference manual has a table that associates
+//!   pads to peripheral functions.
+//! - Use the `imxrt-iomuxc` crate's documentation. Browse to [the `gpio::Pin` documentation](https://docs.rs/imxrt-iomuxc/0.1.3/imxrt_iomuxc/gpio/trait.Pin.html),
+//!   and scroll down to see the implementors. Example: expand the implementation for [B0_06](https://docs.rs/imxrt-iomuxc/0.1.3/imxrt_iomuxc/gpio/trait.Pin.html#impl-Pin-38),
+//!   and it reveals the GPIO port and pin (`GPIO2_6`).
+//!
+//! Depending on your specific i.MX RT variant, there may be various GPIO interrupt
+//! vectors. To implement the most portable code, consider using the
+//!
+//! - `GPIO[X]_Combined_0_15`
+//! - `GPIO[X]_Combined_16_31`
+//!
+//! interrupts, replacing `[X]` with your GPIO port number. These two interrupts handle
+//! GPIO pins 0 through 15, and GPIO pins 16 through 31, respectively.
+//!
+//! To define the interrupt, use the APIs from [the `cortex-m-rt` crate](https://docs.rs/cortex-m-rt/0.7.0/cortex_m_rt/).
+//!
+//! The snippet below demonstrates a function that defines an interrupt. The interrupt
+//! invokes a user's callback when input pin detects a rising edge.
+//!
+//! ```no_run
+//! use imxrt1060_hal as hal;
+//! use hal::{
+//!     gpio::{GPIO, Input, InterruptConfiguration},
+//!     iomuxc::imxrt1060::b0::B0_10,
+//! };
+//! use cortex_m::interrupt::Mutex;
+//! use core::cell::RefCell;
+//! use hal::ral::interrupt;
+//!
+//! /// B0_10 => GPIO2_6, so we need to register
+//! /// the GPIO2_Combined_0_15 interrupt.
+//! type InputPin = GPIO<B0_10, Input>;
+//! /// The response when the interrupt fires.
+//! /// The callback runs within a critical section.
+//! type InterruptCallback = fn(&cortex_m::interrupt::CriticalSection);
+//!
+//! fn setup_gpio_interrupt(mut pin: InputPin, callback: InterruptCallback) {
+//!     struct SharedState { pin: InputPin, callback: InterruptCallback }
+//!     static SHARED_STATE: Mutex<RefCell<Option<SharedState>>> = Mutex::new(RefCell::new(None));
+//!
+//!     #[cortex_m_rt::interrupt]
+//!     fn GPIO2_Combined_0_15() {
+//!         cortex_m::interrupt::free(|cs| {
+//!             SHARED_STATE.borrow(cs).borrow_mut().as_mut().map(|state| {
+//!                 if state.pin.is_interrupt_status() {
+//!                     state.pin.clear_interrupt_status();
+//!                     (state.callback)(cs);
+//!                 }
+//!             });
+//!         });
+//!     }
+//!
+//!     cortex_m::interrupt::free(|cs| {
+//!         pin.set_interrupt_configuration(InterruptConfiguration::RisingEdge);
+//!         pin.set_interrupt_enable(true);
+//!
+//!         *SHARED_STATE.borrow(cs).borrow_mut() = Some(SharedState{ pin, callback });
+//!         // Safety: shared state is set within a critical section.
+//!         unsafe { cortex_m::peripheral::NVIC::unmask(interrupt::GPIO2_Combined_0_15) };
+//!     });
+//! }
+//! ```
 
 use crate::iomuxc::{consts::Unsigned, gpio::Pin};
 use crate::ral::{
