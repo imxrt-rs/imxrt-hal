@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+You can now configure GPIO inputs to trigger interrupts. See the GPIO
+documentation for the new API.
+
 ## [0.4.4] 2021-04-23
 
 ### Fixed
