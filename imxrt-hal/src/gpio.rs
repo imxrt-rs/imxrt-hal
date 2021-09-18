@@ -78,6 +78,11 @@ where
         (<P as Pin>::Offset::USIZE % 16) * 2
     }
 
+    /// Returns the ICR mask for this GPIO
+    fn icr_mask(&self) -> u32 {
+        0b11 << self.icr_offset()
+    }
+
     /// The return is a non-zero number, since the GPIO identifiers
     /// start with '1.'
     #[inline(always)]
@@ -170,9 +175,9 @@ where
 
         // Interrupt configuration is preserved when switching fast / normal.
         if <P as Pin>::Offset::USIZE < 16 {
-            copy_bits!(ICR1, 0b11 << self.icr_offset());
+            copy_bits!(ICR1, self.icr_mask());
         } else {
-            copy_bits!(ICR2, 0b11 << self.icr_offset());
+            copy_bits!(ICR2, self.icr_mask());
         }
         copy_bits!(EDGE_SEL, self.mask());
         copy_bits!(IMR, self.mask());
@@ -283,8 +288,7 @@ where
                     edge_sel & !self.mask()
                 });
                 let icr = interrupt_configuration as u32;
-                let icr_offset = self.icr_offset();
-                let icr_modify = |reg| reg & !(0b11 << icr_offset) | (icr << icr_offset);
+                let icr_modify = |reg| reg & !self.icr_mask() | (icr << self.icr_offset());
                 if <P as Pin>::Offset::USIZE < 16 {
                     ral::modify_reg!(ral::gpio, self.register_block(), ICR1, icr_modify);
                 } else {
