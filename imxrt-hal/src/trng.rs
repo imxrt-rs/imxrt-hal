@@ -327,14 +327,14 @@ impl rand_core::RngCore for RngCoreWrapper {
 
     /// Fill `dest` with random data.
     ///
-    /// If an error occurs, the error's `code` will be identical to the [`ErrorFlags`] that this
-    /// driver would have reported. If none of them were set, the `code` will have only the highest
-    /// bit set (which does not correspond to any flag).
+    /// If an error occurs, the error's `code` is the bits of the [`ErrorFlags`] that this driver
+    /// would have reported, ORed with [`rand_core::Error::CUSTOM_START`]. Use
+    /// [`ErrorFlags::from_bits_truncate`] to convert the `code` to the struct.
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
         // defer to Read implementation, converting error to rand_core's Error
         self.0.read(dest).map_err(|e| {
-            let code = if e.0.bits == 0 { 1 << 31 } else { e.0.bits };
-            // Safety: Highest bit is set above if no flags were set.
+            let code = e.0.bits | rand_core::Error::CUSTOM_START;
+            // Safety: Two highest bits always set.
             unsafe { core::num::NonZeroU32::new_unchecked(code).into() }
         })
     }
@@ -343,7 +343,7 @@ impl rand_core::RngCore for RngCoreWrapper {
 impl Read for TRNG {
     type Error = Error;
     // e-h RNG Read is a *blocking* trait, so no WouldBlock here
-    // Read is part of the unproven API and will likely be changed in the future
+    // Read is part of the unproven API and will be removed in version 1.0
 
     fn read(&mut self, buffer: &mut [u8]) -> Result<(), Self::Error> {
         let mut data = [0; 4];
