@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.5] 2021-12-02
+
 ### Added
 
 You can now configure GPIO inputs to trigger interrupts. See the GPIO
@@ -208,7 +210,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.4...HEAD
+[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.5...maint-v0.4
+[0.4.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.4...0.4.5
 [0.4.4]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.3...0.4.4
 [0.4.3]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.2...0.4.3
 [0.4.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.1...0.4.2
