@@ -7,6 +7,10 @@
 You can now configure GPIO inputs to trigger interrupts. See the GPIO
 documentation for the new API.
 
+### Fixed
+
+The TRNG signals a `rand_core` custom error code.
+
 ## [0.4.4] 2021-04-23
 
 ### Fixed
