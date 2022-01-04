@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+Abstraction layer for `tempmon` module. Incl. auto measurement and
+alarm interrupts (only available for `"imxrt106x"`)
+
 ## [0.4.5] 2021-12-02
 
 ### Added

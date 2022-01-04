@@ -70,7 +70,7 @@ pub struct Peripherals {
     pub dma: dma::Unclocked,
     pub srtc: srtc::Unclocked,
     #[cfg(any(feature = "imxrt1060", feature = "imxrt1062", feature = "imxrt1064"))]
-    pub tempmon: tempmon::UnInitialized,
+    pub tempmon: tempmon::Uninitialized,
     pub trng: trng::Unclocked,
 }
 
@@ -123,7 +123,7 @@ impl Peripherals {
             dma: dma::Unclocked::new(ral::dma0::DMA0::steal(), ral::dmamux::DMAMUX::steal()),
             srtc: srtc::Unclocked::new(ral::snvs::SNVS::steal()),
             #[cfg(any(feature = "imxrt1060", feature = "imxrt1062", feature = "imxrt1064"))]
-            tempmon: tempmon::UnInitialized::new(ral::tempmon::TEMPMON::steal()),
+            tempmon: tempmon::Uninitialized::new(ral::tempmon::TEMPMON::steal()),
             trng: trng::Unclocked::new(ral::trng::TRNG::steal()),
         }
     }
@@ -173,7 +173,7 @@ impl Peripherals {
             dma: dma::Unclocked::new(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?),
             srtc: srtc::Unclocked::new(ral::snvs::SNVS::take()?),
             #[cfg(any(feature = "imxrt1060", feature = "imxrt1062", feature = "imxrt1064"))]
-            tempmon: tempmon::UnInitialized::new(ral::tempmon::TEMPMON::take()?),
+            tempmon: tempmon::Uninitialized::new(ral::tempmon::TEMPMON::take()?),
             trng: trng::Unclocked::new(ral::trng::TRNG::take()?),
         };
         Some(p)

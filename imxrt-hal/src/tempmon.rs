@@ -2,16 +2,19 @@
 
 //! Temperature Monitor (TEMPMON)
 //!
-//! # Example
+//! IMPORTANT NOTE: The temperature sensor uses and assumes that the bandgap
+//! reference, 480MHz PLL and 32KHz RTC modules are properly programmed and fully
+//! settled for correct operation.
 //!
-//! Manually trigger read
+//! # Example 1
+//!
+//! Manually triggered read
 //!
 //! ```no_run
 //! use imxrt1060_hal;
 //! use embedded_hal::timer::CountDown;
 //!
 //! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
-//! usb_io::init();
 //!
 //! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
 //!     imxrt1060_hal::ccm::PLL1::ARM_HZ,
@@ -25,26 +28,83 @@
 //!     imxrt1060_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
 //! );
 //!
-//! log::debug!("init temperature monitor");
-//! let mut mon = peripherals.tempmon.init();
-//! t.set_alarm_values()
-//! UnInitialized::new(peripherals.temp)
-//! todo!()
+//! // init temperature monitor
+//! let mut temp_mon = peripherals.tempmon.init();
+//! loop {
+//!     let temperature = temp_mon.measure_temp();
+//! }
+//! ```
+//!
+//! # Example 2
+//!
+//! Non-blocking reading
+//!
+//! ```no_run
+//! // [Example 1]
+//!
+//! // Init temperature monitor with 8Hz measure freq
+//! // 0xffff = 2 Sec. Read more at `measure_freq()`
+//! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
+//! temp_mon.start();
+//!
+//! let last_temp = 0.0_f32
+//! loop {
+//!     // Get the last temperature read by the measure_freq
+//!     let temp = t.get_temp();
+//!     if last_temp != temp {
+//!         // temperature changed
+//!         last_temp = temp;
+//!     }
+//!     // do something else
+//! }
+//! ```
+//!
+//! # Example 3
+//!
+//! Low and high temperature Interrupt
+//!
+//! ```no_run
+//! // [Example 1]
+//!
+//! // init temperature monitor with 8Hz measure freq
+//! // 0xffff = 2 Sec. Read more at `measure_freq()`
+//! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
+//!
+//! // set low_alarm, high_alarm, and panic_alarm
+//! temp_mon.set_alarm_values(-5.0, 65.0, 95.0);
+//!
+//! // use values from registers if you like to compare it somewhere
+//! let (low_alarm, high_alarm, panic_alarm) = t.alarm_values();
+//!
+//! // enables interrupts for low_high_alarm and not for panic_alarm
+//! temp_mon.enable_interrupts(true, false);
+//! temp_mon.start();
+//!
+//! #[cortex_m_rt::interrupt]
+//! fn TEMP_LOW_HIGH() {
+//!     // disable the interrupt to avoid endless triggers
+//!     TempMon::disable_interrupts(true, false);
+//!
+//!     // don't forget to enable it after the temperature is back to normal
+//! }
 //! ```
 
 use crate::ral;
 
-/// An unclocked periodic interrupt timer module
+/// An Uninitialized temperature monitor module
 ///
-/// In order to activate the PIT, we must pass in the
-/// configured object returned from the CCM's perclk module.
-pub struct UnInitialized(ral::tempmon::Instance);
+/// The temperature sensor uses and assumes that the bandgap
+/// reference, 480MHz PLL and 32KHz RTC modules are properly
+/// programmed and fully settled for correct operation.
+pub struct Uninitialized(ral::tempmon::Instance);
 
-impl UnInitialized {
+impl Uninitialized {
+    /// assign the tempmon Instance to this temperature monitor wrapper.
     pub fn new(base: ral::tempmon::Instance) -> Self {
         Self(base)
     }
 
+    /// Initialize the temperature monitor.
     pub fn init(self) -> TempMon {
         let calibration = unsafe { ral::read_reg!(ral::ocotp, OCOTP, ANA1) };
 
@@ -84,27 +144,48 @@ impl UnInitialized {
 }
 
 /// A Temperature Monitor (TEMPMON)
+///
+/// # Example 1
+///
+/// ```no_run
+/// use imxrt1060_hal;
+/// use embedded_hal::timer::CountDown;
+///
+/// let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
+/// let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
+///     imxrt1060_hal::ccm::PLL1::ARM_HZ,
+///     &mut peripherals.ccm.handle,
+///     &mut peripherals.dcdc,
+/// );
+/// let mut cfg = peripherals.ccm.perclk.configure(
+///     &mut peripherals.ccm.handle,
+///     imxrt1060_hal::ccm::perclk::PODF::DIVIDE_3,
+///     imxrt1060_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
+/// );
+///
+/// // init temperature monitor
+/// // consider using init_with_measure_freq
+/// let mut temp_mon = peripherals.tempmon.init();
+/// loop {
+///     let temperature = temp_mon.measure_temp();
+/// }
+/// ```
 pub struct TempMon {
     base: ral::tempmon::Instance,
-    pub scaler: f32,
-    pub hot_count: u16,
-    pub hot_temp: f32,
+    scaler: f32,
+    hot_count: u16,
+    hot_temp: f32,
 }
 
 impl TempMon {
-    pub fn convert(&self, temp_cnt: u16) -> f32 {
+    /// converts the temp_cnt into a human readable temperature [C°]
+    fn convert(&self, temp_cnt: u16) -> f32 {
         let n_meas: f32 = (temp_cnt - self.hot_count).into();
         self.hot_temp - n_meas * self.scaler
     }
 
-    #[allow(dead_code)]
+    /// decode the temp_value into measurable bytes (f32 -> u32)
     fn decode(&self, temp_value: f32) -> u32 {
-        // let n_meas: f32 = (temp_cnt - self.hot_count).into();
-        // let value = self.hot_temp - n_meas * self.scaler;
-
-        // let temp_value - self.hot_temp =  0 - (temp_cnt - self.hot_count) * self.scaler;
-        // let ((temp_value - self.hot_temp) / self.scaler) = -temp_cnt + self.hot_count);
-        // let temp_cnt + ((temp_value - self.hot_temp) / self.scaler) = self.hot_count);
         let v: i32 = ((temp_value - self.hot_temp) / self.scaler) as i32;
         (self.hot_count as i32 - v) as u32
     }
@@ -139,7 +220,6 @@ impl TempMon {
         );
     }
 
-    #[allow(dead_code)]
     /// Stops the measurement process. This only has an effect If the measurement
     /// frequency is not zero.
     pub fn stop(&mut self) {
@@ -151,7 +231,6 @@ impl TempMon {
         );
     }
 
-    #[allow(dead_code)]
     /// This powers down the temperature sensor.
     pub fn power_down(&mut self) {
         ral::write_reg!(
@@ -162,7 +241,6 @@ impl TempMon {
         );
     }
 
-    #[allow(dead_code)]
     /// This powers up the temperature sensor.
     pub fn power_up(&mut self) {
         ral::write_reg!(
@@ -173,7 +251,6 @@ impl TempMon {
         );
     }
 
-    #[allow(dead_code)]
     /// Set the temperature that will generate a low alarm, high alarm, and panic alarm interrupt
     /// when the temperature exceeded this values.
     pub fn set_alarm_values(&mut self, low_alarm: f32, high_alarm: f32, panic_alarm: f32) {
@@ -190,8 +267,7 @@ impl TempMon {
         );
     }
 
-    #[allow(dead_code)]
-    /// queries the temperature that will generate a low alarm, high alarm, and panic alarm interrupt.
+    /// Queries the temperature that will generate a low alarm, high alarm, and panic alarm interrupt.
     ///
     /// returns (low_alarm_temp, high_alarm_temp, panic_alarm_temp)
     pub fn alarm_values(&mut self) -> (f32, f32, f32) {
@@ -210,7 +286,6 @@ impl TempMon {
         )
     }
 
-    #[allow(dead_code)]
     /// enables interrupts for the selected alarm
     ///
     /// NOTE: Make sure that you implemented the TEMP_LOW_HIGH or TEMP_PANIC interrupt handler
@@ -225,7 +300,7 @@ impl TempMon {
         }
     }
 
-    /// disable interrupts for the selected alarm
+    /// Disable interrupts for the selected alarm
     pub fn disable_interrupts(low_high_alarm: bool, panic_alarm: bool) {
         if low_high_alarm {
             cortex_m::peripheral::NVIC::mask(ral::interrupt::TEMP_LOW_HIGH);
@@ -243,7 +318,7 @@ impl TempMon {
     /// | 0x0000 | Defines a single measurement with no repeat.          |
     /// | 0x0001 | Updates the temperature value at a RTC clock rate.    |
     /// | 0x0002 | Updates the temperature value at a RTC/2 clock rate.  |
-    /// | ...    | _ |
+    /// | ...    | ... |
     /// | 0xFFFF | Determines a two second sample period with a 32.768KHz RTC clock. Exact timings depend on the accuracy of the RTC clock.|
     ///
     pub fn set_measure_frequency(&mut self, measure_freq: u16) {
