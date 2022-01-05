@@ -12,21 +12,20 @@
 //! Manually triggered read
 //!
 //! ```no_run
-//! use imxrt1060_hal;
-//! use embedded_hal::timer::CountDown;
+//! use imxrt_hal;
 //!
-//! let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
 //!
 //! let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
-//!     imxrt1060_hal::ccm::PLL1::ARM_HZ,
+//!     imxrt_hal::ccm::PLL1::ARM_HZ,
 //!     &mut peripherals.ccm.handle,
 //!     &mut peripherals.dcdc,
 //! );
 //!
 //! let mut cfg = peripherals.ccm.perclk.configure(
 //!     &mut peripherals.ccm.handle,
-//!     imxrt1060_hal::ccm::perclk::PODF::DIVIDE_3,
-//!     imxrt1060_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
+//!     imxrt_hal::ccm::perclk::PODF::DIVIDE_3,
+//!     imxrt_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
 //! );
 //!
 //! // init temperature monitor
@@ -42,7 +41,7 @@
 //!
 //! Non-blocking reading
 //!
-//! ```no_run
+//! ```ignore
 //! // [Example 1]
 //!
 //! // Init temperature monitor with 8Hz measure freq
@@ -50,7 +49,7 @@
 //! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
 //! temp_mon.start()?;
 //!
-//! let last_temp = 0i32
+//! let last_temp = 0i32;
 //! loop {
 //!     // Get the last temperature read by the measure_freq
 //!     if let Ok(temp) = t.get_temp() {
@@ -67,7 +66,7 @@
 //!
 //! Low and high temperature Interrupt
 //!
-//! ```no_run
+//! ```ignore
 //! // [Example 1]
 //!
 //! // init temperature monitor with 8Hz measure freq
@@ -78,7 +77,7 @@
 //! temp_mon.set_alarm_values(-5_000, 65_000, 95_000);
 //!
 //! // use values from registers if you like to compare it somewhere
-//! let (low_alarm, high_alarm, panic_alarm) = t.alarm_values();
+//! let (low_alarm, high_alarm, panic_alarm) = temp_mon.alarm_values();
 //!
 //! // enables interrupts for low_high_alarm and not for panic_alarm
 //! temp_mon.enable_interrupts(true, false);
@@ -164,7 +163,6 @@ impl Uninitialized {
 ///
 /// ```no_run
 /// use imxrt1060_hal;
-/// use embedded_hal::timer::CountDown;
 ///
 /// let mut peripherals = imxrt1060_hal::Peripherals::take().unwrap();
 /// let (_, ipg_hz) = peripherals.ccm.pll1.set_arm_clock(
@@ -182,8 +180,8 @@ impl Uninitialized {
 /// // consider using init_with_measure_freq
 /// let mut temp_mon = peripherals.tempmon.init();
 /// loop {
-///     if let Ok(temperature) = nb::block!(temp_mon.measure_temp()) {
-///         // temperature in mC (1°C = 1000°mC)
+///     if let Ok(_temperature) = nb::block!(temp_mon.measure_temp()) {
+///         // _temperature in mC (1°C = 1000°mC)
 ///     }
 /// }
 /// ```
