@@ -91,6 +91,13 @@
 
 use crate::ral;
 
+#[derive(Debug)]
+pub enum TempMonError {
+    /// ## The module is not powered up.
+    /// Use Self.power_up() first
+    PowerDown,
+}
+
 /// An Uninitialized temperature monitor module
 ///
 /// The temperature sensor uses and assumes that the bandgap
@@ -108,26 +115,23 @@ impl Uninitialized {
     pub fn init(self) -> TempMon {
         let calibration = unsafe { ral::read_reg!(ral::ocotp, OCOTP, ANA1) };
 
-        let n1_room_count = (calibration >> 20) as u16;
-        let t1_room_temp = 25_u16;
-        let n2_hot_count = ((calibration >> 8) & 0xFFF) as u16;
-        let t2_hot_temp = (calibration & 0xFF) as u16;
-
-        // Tmeas = T2 - (Nmeas - N2) * ((T2 – T1) / (N1 – N2))
-        let t_dif: f32 = (t2_hot_temp - t1_room_temp).into();
-        let n_dif: f32 = (n1_room_count - n2_hot_count).into();
-
-        let scaler = t_dif / n_dif;
+        let n1_room_count = (calibration >> 20) as i32;
+        let t1_room_temp = 25_000_i32;
+        let n2_hot_count = ((calibration >> 8) & 0xFFF) as i32;
+        let t2_hot_temp = (calibration & 0xFF) as i32 * 1_000;
 
         // Tmeas = HOT_TEMP - (Nmeas - HOT_COUNT) * ((HOT_TEMP - 25.0) / (ROOM_COUNT – HOT_COUNT))
+        let scaler = (t2_hot_temp - t1_room_temp) / (n1_room_count - n2_hot_count);
 
-        let t = TempMon {
+        // Tmeas = HOT_TEMP - (Nmeas - HOT_COUNT) * scaler
+
+        TempMon {
             base: self.0,
             scaler,
             hot_count: n2_hot_count,
-            hot_temp: t2_hot_temp.into(),
-        };
-        t
+            hot_temp: t2_hot_temp,
+            measurement_active: false,
+        }
     }
 
     /// Initialize the temperature monitor.
@@ -172,52 +176,87 @@ impl Uninitialized {
 /// ```
 pub struct TempMon {
     base: ral::tempmon::Instance,
-    scaler: f32,
-    hot_count: u16,
-    hot_temp: f32,
+    /// scaler * 1000
+    scaler: i32,
+    /// hot_count * 1000
+    hot_count: i32,
+    /// hot_temp * 1000
+    hot_temp: i32,
+
+    /// measurement active flag to get measure_temp unblocking
+    measurement_active: bool,
 }
 
 impl TempMon {
-    /// converts the temp_cnt into a human readable temperature [C°]
-    fn convert(&self, temp_cnt: u16) -> f32 {
-        let n_meas: f32 = (temp_cnt - self.hot_count).into();
+    /// converts the temp_cnt into a human readable temperature [°mC] (1/1000 °C)
+    fn convert(&self, temp_cnt: i32) -> i32 {
+        let n_meas = temp_cnt - self.hot_count;
         self.hot_temp - n_meas * self.scaler
     }
 
-    /// decode the temp_value into measurable bytes (f32 -> u32)
-    fn decode(&self, temp_value: f32) -> u32 {
-        let v: i32 = ((temp_value - self.hot_temp) / self.scaler) as i32;
-        (self.hot_count as i32 - v) as u32
+    /// decode the temp_value into measurable bytes
+    ///
+    /// param **temp_value_mc**: in °mC (1/1000 °C)
+    ///
+    fn decode(&self, temp_value_mc: i32) -> u32 {
+        let v = (temp_value_mc - self.hot_temp) / self.scaler;
+        (self.hot_count - v) as u32
     }
 
     /// triggers a new measurement and waits until it's finished
     ///
     /// If you configured automatically repeating, this will trigger additional measurement.
     /// Use get_temp instate to get the last read value
-    pub fn measure_temp(&self) -> f32 {
-        ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
+    /// The returning temperature in 1/1000 Celsius (255000 °mC -> 25.5 °C)
+    pub fn measure_temp(&mut self) -> nb::Result<i32, TempMonError> {
+        if !self.is_powered_up() {
+            Err(nb::Error::from(TempMonError::PowerDown))
+        } else {
+            // if no measurement is active, trigger new measurement
+            if !self.measurement_active {
+                ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
+                self.measurement_active = true;
+            }
 
-        while ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, FINISHED == 1) {}
-        let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as u16;
-        self.convert(temp_cnt)
+            // if the measurement is not finished or not started
+            // i.MX Docs: This bit should be cleared by the sensor after the start of each measurement
+            if ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, FINISHED == 0) {
+                // this could be triggered again without any effect
+                Err(nb::Error::WouldBlock)
+            } else {
+                self.measurement_active = false;
+                let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as i32;
+                Ok(self.convert(temp_cnt))
+            }
+        }
     }
 
     /// Returns the last read value from the temperature sensor
-    pub fn get_temp(&self) -> f32 {
-        while ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, FINISHED == 1) {}
-        let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as u16;
-        self.convert(temp_cnt)
+    ///
+    /// The returning temperature in 1/1000 Celsius (255000 °mC -> 25.5 °C)
+    pub fn get_temp(&self) -> nb::Result<i32, TempMonError> {
+        if self.is_powered_up() {
+            let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as i32;
+            Ok(self.convert(temp_cnt))
+        } else {
+            Err(nb::Error::from(TempMonError::PowerDown))
+        }
     }
 
     /// Starts the measurement process. If the measurement frequency is zero, this
     /// results in a single conversion.
-    pub fn start(&mut self) {
-        ral::write_reg!(
-            ral::tempmon,
-            self.base,
-            TEMPSENSE0,
-            MEASURE_TEMP: 1
-        );
+    pub fn start(&mut self) -> nb::Result<(), TempMonError> {
+        if self.is_powered_up() {
+            ral::write_reg!(
+                ral::tempmon,
+                self.base,
+                TEMPSENSE0,
+                MEASURE_TEMP: 1
+            );
+            Ok(())
+        } else {
+            Err(nb::Error::from(TempMonError::PowerDown))
+        }
     }
 
     /// Stops the measurement process. This only has an effect If the measurement
@@ -229,6 +268,11 @@ impl TempMon {
             TEMPSENSE0,
             MEASURE_TEMP: 0
         );
+    }
+
+    /// returns the true if the tempmon module is powered up.
+    pub fn is_powered_up(&self) -> bool {
+        ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, POWER_DOWN == 0)
     }
 
     /// This powers down the temperature sensor.
@@ -253,10 +297,13 @@ impl TempMon {
 
     /// Set the temperature that will generate a low alarm, high alarm, and panic alarm interrupt
     /// when the temperature exceeded this values.
-    pub fn set_alarm_values(&mut self, low_alarm: f32, high_alarm: f32, panic_alarm: f32) {
-        let low_alarm = self.decode(low_alarm);
-        let high_alarm = self.decode(high_alarm);
-        let panic_alarm = self.decode(panic_alarm);
+    ///
+    /// ## Note:
+    /// low_alarm_mc, high_alarm_mc, and panic_alarm_mc are in milli Celsius (1/1000 °C)
+    pub fn set_alarm_values(&mut self, low_alarm_mc: i32, high_alarm_mc: i32, panic_alarm_mc: i32) {
+        let low_alarm = self.decode(low_alarm_mc);
+        let high_alarm = self.decode(high_alarm_mc);
+        let panic_alarm = self.decode(panic_alarm_mc);
         ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0, ALARM_VALUE: high_alarm);
         ral::write_reg!(
             ral::tempmon,
@@ -270,7 +317,7 @@ impl TempMon {
     /// Queries the temperature that will generate a low alarm, high alarm, and panic alarm interrupt.
     ///
     /// returns (low_alarm_temp, high_alarm_temp, panic_alarm_temp)
-    pub fn alarm_values(&mut self) -> (f32, f32, f32) {
+    pub fn alarm_values(&mut self) -> (i32, i32, i32) {
         let high_alarm = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, ALARM_VALUE);
         let (low_alarm, panic_alarm) = ral::read_reg!(
             ral::tempmon,
@@ -280,9 +327,9 @@ impl TempMon {
             PANIC_ALARM_VALUE
         );
         (
-            self.convert(low_alarm as u16),
-            self.convert(high_alarm as u16),
-            self.convert(panic_alarm as u16),
+            self.convert(low_alarm as i32),
+            self.convert(high_alarm as i32),
+            self.convert(panic_alarm as i32),
         )
     }
 
