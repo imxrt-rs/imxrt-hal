@@ -1,12 +1,13 @@
 #![cfg(any(feature = "imxrt1061", feature = "imxrt1062", feature = "imxrt1064"))]
 
-//! Temperature Monitor (TEMPMON)
+//! # Temperature Monitor (TEMPMON)
 //!
-//! IMPORTANT NOTE: The temperature sensor uses and assumes that the bandgap
+//! ## IMPORTANT NOTE:
+//! The temperature sensor uses and assumes that the bandgap
 //! reference, 480MHz PLL and 32KHz RTC modules are properly programmed and fully
 //! settled for correct operation.
 //!
-//! # Example 1
+//! ## Example 1
 //!
 //! Manually triggered read
 //!
@@ -31,11 +32,13 @@
 //! // init temperature monitor
 //! let mut temp_mon = peripherals.tempmon.init();
 //! loop {
-//!     let temperature = temp_mon.measure_temp();
+//!     if let Ok(temperature) = nb::block!(temp_mon.measure_temp()) {
+//!         // temperature in mC (1°C = 1000°mC)
+//!     }
 //! }
 //! ```
 //!
-//! # Example 2
+//! ## Example 2
 //!
 //! Non-blocking reading
 //!
@@ -45,21 +48,22 @@
 //! // Init temperature monitor with 8Hz measure freq
 //! // 0xffff = 2 Sec. Read more at `measure_freq()`
 //! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
-//! temp_mon.start();
+//! temp_mon.start()?;
 //!
-//! let last_temp = 0.0_f32
+//! let last_temp = 0i32
 //! loop {
 //!     // Get the last temperature read by the measure_freq
-//!     let temp = t.get_temp();
-//!     if last_temp != temp {
-//!         // temperature changed
-//!         last_temp = temp;
+//!     if let Ok(temp) = t.get_temp() {
+//!         if last_temp != temp {
+//!             // temperature changed
+//!             last_temp = temp;
+//!         }
+//!         // do something else
 //!     }
-//!     // do something else
 //! }
 //! ```
 //!
-//! # Example 3
+//! ## Example 3
 //!
 //! Low and high temperature Interrupt
 //!
@@ -71,14 +75,19 @@
 //! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
 //!
 //! // set low_alarm, high_alarm, and panic_alarm
-//! temp_mon.set_alarm_values(-5.0, 65.0, 95.0);
+//! temp_mon.set_alarm_values(-5_000, 65_000, 95_000);
 //!
 //! // use values from registers if you like to compare it somewhere
 //! let (low_alarm, high_alarm, panic_alarm) = t.alarm_values();
 //!
 //! // enables interrupts for low_high_alarm and not for panic_alarm
 //! temp_mon.enable_interrupts(true, false);
-//! temp_mon.start();
+//!
+//! // start could fail if the module is not powered up
+//! if temp_mon.start().is_err() {
+//!     temp_mon.power_up();
+//!     temp_mon.start()?;
+//! }
 //!
 //! #[cortex_m_rt::interrupt]
 //! fn TEMP_LOW_HIGH() {
@@ -99,6 +108,8 @@ pub enum TempMonError {
 }
 
 /// An Uninitialized temperature monitor module
+///
+/// # Important note:
 ///
 /// The temperature sensor uses and assumes that the bandgap
 /// reference, 480MHz PLL and 32KHz RTC modules are properly
@@ -171,7 +182,9 @@ impl Uninitialized {
 /// // consider using init_with_measure_freq
 /// let mut temp_mon = peripherals.tempmon.init();
 /// loop {
-///     let temperature = temp_mon.measure_temp();
+///     if let Ok(temperature) = nb::block!(temp_mon.measure_temp()) {
+///         // temperature in mC (1°C = 1000°mC)
+///     }
 /// }
 /// ```
 pub struct TempMon {
@@ -196,7 +209,7 @@ impl TempMon {
 
     /// decode the temp_value into measurable bytes
     ///
-    /// param **temp_value_mc**: in °mC (1/1000 °C)
+    /// param **temp_value_mc**: in °mC (1/1000°C)
     ///
     fn decode(&self, temp_value_mc: i32) -> u32 {
         let v = (temp_value_mc - self.hot_temp) / self.scaler;
@@ -207,7 +220,10 @@ impl TempMon {
     ///
     /// If you configured automatically repeating, this will trigger additional measurement.
     /// Use get_temp instate to get the last read value
-    /// The returning temperature in 1/1000 Celsius (255000 °mC -> 25.5 °C)
+    ///
+    /// The returning temperature in 1/1000 Celsius (°mC)
+    ///
+    /// Example: 25500°mC -> 25.5°C
     pub fn measure_temp(&mut self) -> nb::Result<i32, TempMonError> {
         if !self.is_powered_up() {
             Err(nb::Error::from(TempMonError::PowerDown))
@@ -233,7 +249,9 @@ impl TempMon {
 
     /// Returns the last read value from the temperature sensor
     ///
-    /// The returning temperature in 1/1000 Celsius (255000 °mC -> 25.5 °C)
+    /// The returning temperature in 1/1000 Celsius (°mC)
+    ///
+    /// Example: 25500°mC -> 25.5°C
     pub fn get_temp(&self) -> nb::Result<i32, TempMonError> {
         if self.is_powered_up() {
             let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as i32;
