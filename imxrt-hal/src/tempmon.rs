@@ -267,7 +267,7 @@ impl TempMon {
         } else {
             // if no measurement is active, trigger new measurement
             if !self.measurement_active {
-                ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_SET, MEASURE_TEMP: 1);
+                ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
                 self.measurement_active = true;
             }
 
@@ -302,7 +302,7 @@ impl TempMon {
     /// results in a single conversion.
     pub fn start(&mut self) -> nb::Result<(), PowerDownError> {
         if self.is_powered_up() {
-            ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_SET, MEASURE_TEMP: 1);
+            ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
             Ok(())
         } else {
             Err(nb::Error::from(PowerDownError()))
@@ -312,7 +312,7 @@ impl TempMon {
     /// Stops the measurement process. This only has an effect If the measurement
     /// frequency is not zero.
     pub fn stop(&mut self) {
-        ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_SET, MEASURE_TEMP: 1);
+        ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
     }
 
     /// returns the true if the tempmon module is powered up.
@@ -322,20 +322,20 @@ impl TempMon {
 
     /// This powers down the temperature sensor.
     pub fn power_down(&mut self) {
-        ral::write_reg!(
+        ral::modify_reg!(
             ral::tempmon,
             self.base,
-            TEMPSENSE0_SET,
+            TEMPSENSE0,
             POWER_DOWN: 1
         );
     }
 
     /// This powers up the temperature sensor.
     pub fn power_up(&mut self) {
-        ral::write_reg!(
+        ral::modify_reg!(
             ral::tempmon,
             self.base,
-            TEMPSENSE0_SET,
+            TEMPSENSE0,
             POWER_DOWN: 0
         );
     }
@@ -349,12 +349,7 @@ impl TempMon {
         let low_alarm = self.decode(low_alarm_mc);
         let high_alarm = self.decode(high_alarm_mc);
         let panic_alarm = self.decode(panic_alarm_mc);
-        ral::write_reg!(
-            ral::tempmon,
-            self.base,
-            TEMPSENSE0_SET,
-            ALARM_VALUE: high_alarm
-        );
+        ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, ALARM_VALUE: high_alarm);
         ral::write_reg!(
             ral::tempmon,
             self.base,
@@ -395,7 +390,7 @@ impl TempMon {
     /// | 0xFFFF | Determines a two second sample period with a 32.768KHz RTC clock. Exact timings depend on the accuracy of the RTC clock.|
     ///
     pub fn set_measure_frequency(&mut self, measure_freq: u16) {
-        ral::write_reg!(
+        ral::modify_reg!(
             ral::tempmon,
             self.base,
             TEMPSENSE1,
