@@ -1,5 +1,3 @@
-#![cfg(any(feature = "imxrt1061", feature = "imxrt1062", feature = "imxrt1064"))]
-
 //! # Temperature Monitor (TEMPMON)
 //!
 //! ## IMPORTANT NOTE:
@@ -79,11 +77,7 @@
 //!
 //! Low and high temperature Interrupt
 //!
-//! enables interrupts for the selected alarm
-//!
-//! NOTE: Make sure that you implemented the TEMP_LOW_HIGH or TEMP_PANIC interrupt handler
-//!
-//! NOTE: TEMP_LOW_HIGH is triggered for `TempSensor low` and `TempSensor high`
+//! *NOTE*: TEMP_LOW_HIGH is triggered for `TempSensor low` and `TempSensor high`
 //!
 //! ```no_run
 //! use imxrt_hal::{self, tempmon::TempMon};
@@ -105,16 +99,15 @@
 //! // 0xffff = 2 Sec. Read more at `measure_freq()`
 //! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
 //!
-//! // set low_alarm, high_alarm, and panic_alarm
+//! // set low_alarm, high_alarm, and panic_alarm temperature
 //! temp_mon.set_alarm_values(-5_000, 65_000, 95_000);
 //!
 //! // use values from registers if you like to compare it somewhere
 //! let (low_alarm, high_alarm, panic_alarm) = temp_mon.alarm_values();
 //!
-//! // enables interrupts for low_high_alarm and not for panic_alarm
+//! // enables interrupts for low_high_alarm
 //! unsafe {
 //!     cortex_m::peripheral::NVIC::unmask(interrupt::TEMP_LOW_HIGH);
-//!     cortex_m::peripheral::NVIC::unmask(interrupt::TEMP_PANIC);
 //! }
 //!
 //! // start could fail if the module is not powered up
@@ -126,10 +119,7 @@
 //! #[cortex_m_rt::interrupt]
 //! fn TEMP_LOW_HIGH() {
 //!     // disable the interrupt to avoid endless triggers
-//!     unsafe {
-//!         cortex_m::peripheral::NVIC::mask(interrupt::TEMP_LOW_HIGH);
-//!         cortex_m::peripheral::NVIC::mask(interrupt::TEMP_PANIC);
-//!     }
+//!     cortex_m::peripheral::NVIC::mask(interrupt::TEMP_LOW_HIGH);
 //!
 //!     // don't forget to enable it after the temperature is back to normal
 //! }
@@ -142,7 +132,7 @@ use crate::ral;
 /// If you receive this error, `power_up()` the temperature monitor first,
 /// and try again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PowerDownError();
+pub struct PowerDownError(());
 
 /// An Uninitialized temperature monitor module
 ///
@@ -174,13 +164,14 @@ impl Uninitialized {
         let scaler = (t2_hot_temp - t1_room_temp) / (n1_room_count - n2_hot_count);
         // Tmeas = HOT_TEMP - (Nmeas - HOT_COUNT) * scaler
 
-        TempMon {
+        let mut t = TempMon {
             base: self.0,
             scaler,
             hot_count: n2_hot_count,
             hot_temp: t2_hot_temp,
-            measurement_active: false,
-        }
+        };
+        t.power_up();
+        t
     }
 
     /// Initialize the temperature monitor.
@@ -232,9 +223,6 @@ pub struct TempMon {
     hot_count: i32,
     /// hot_temp * 1000
     hot_temp: i32,
-
-    /// measurement active flag to get measure_temp unblocking
-    measurement_active: bool,
 }
 
 impl TempMon {
@@ -263,21 +251,23 @@ impl TempMon {
     /// Example: 25500°mC -> 25.5°C
     pub fn measure_temp(&mut self) -> nb::Result<i32, PowerDownError> {
         if !self.is_powered_up() {
-            Err(nb::Error::from(PowerDownError()))
+            Err(nb::Error::from(PowerDownError(())))
         } else {
             // if no measurement is active, trigger new measurement
-            if !self.measurement_active {
-                ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
-                self.measurement_active = true;
+            let active = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP == START);
+            if !active {
+                ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_SET, MEASURE_TEMP: START);
             }
 
-            // if the measurement is not finished or not started
+            // If the measurement is not finished or not started
             // i.MX Docs: This bit should be cleared by the sensor after the start of each measurement
-            if ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, FINISHED == 0) {
-                // this could be triggered again without any effect
+            if ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, FINISHED == INVALID) {
+                // measure_temp could be triggered again without any effect
                 Err(nb::Error::WouldBlock)
             } else {
-                self.measurement_active = false;
+                // clear MEASURE_TEMP to trigger a new measurement at the next call
+                ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_CLR, MEASURE_TEMP: START);
+
                 let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as i32;
                 Ok(self.convert(temp_cnt))
             }
@@ -294,7 +284,7 @@ impl TempMon {
             let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as i32;
             Ok(self.convert(temp_cnt))
         } else {
-            Err(nb::Error::from(PowerDownError()))
+            Err(nb::Error::from(PowerDownError(())))
         }
     }
 
@@ -302,41 +292,41 @@ impl TempMon {
     /// results in a single conversion.
     pub fn start(&mut self) -> nb::Result<(), PowerDownError> {
         if self.is_powered_up() {
-            ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
+            ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_SET, MEASURE_TEMP: START);
             Ok(())
         } else {
-            Err(nb::Error::from(PowerDownError()))
+            Err(nb::Error::from(PowerDownError(())))
         }
     }
 
     /// Stops the measurement process. This only has an effect If the measurement
     /// frequency is not zero.
     pub fn stop(&mut self) {
-        ral::modify_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP: 1);
+        ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_CLR, MEASURE_TEMP: START);
     }
 
     /// returns the true if the tempmon module is powered up.
     pub fn is_powered_up(&self) -> bool {
-        ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, POWER_DOWN == 0)
+        ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, POWER_DOWN == POWER_UP)
     }
 
     /// This powers down the temperature sensor.
     pub fn power_down(&mut self) {
-        ral::modify_reg!(
+        ral::write_reg!(
             ral::tempmon,
             self.base,
-            TEMPSENSE0,
-            POWER_DOWN: 1
+            TEMPSENSE0_SET,
+            POWER_DOWN: POWER_DOWN
         );
     }
 
     /// This powers up the temperature sensor.
     pub fn power_up(&mut self) {
-        ral::modify_reg!(
+        ral::write_reg!(
             ral::tempmon,
             self.base,
-            TEMPSENSE0,
-            POWER_DOWN: 0
+            TEMPSENSE0_CLR,
+            POWER_DOWN: POWER_DOWN
         );
     }
 
