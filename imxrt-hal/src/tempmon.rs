@@ -27,11 +27,11 @@
 //!     imxrt_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
 //! );
 //!
-//! // init temperature monitor
+//! // Init temperature monitor
 //! let mut temp_mon = peripherals.tempmon.init();
 //! loop {
 //!     if let Ok(temperature) = nb::block!(temp_mon.measure_temp()) {
-//!         // temperature in mC (1°C = 1000°mC)
+//!         // Temperature in mC (1°C = 1000°mC)
 //!     }
 //! }
 //! ```
@@ -65,10 +65,10 @@
 //!     // Get the last temperature read by the measure_freq
 //!     if let Ok(temp) = temp_mon.get_temp() {
 //!         if last_temp != temp {
-//!             // temperature changed
+//!             // Temperature changed
 //!             last_temp = temp;
 //!         }
-//!         // do something else
+//!         // Do something else
 //!     }
 //! }
 //! ```
@@ -95,22 +95,22 @@
 //! #    imxrt_hal::ccm::perclk::CLKSEL::IPG(ipg_hz),
 //! # );
 //!
-//! // init temperature monitor with 8Hz measure freq
+//! // Init temperature monitor with 8Hz measure freq
 //! // 0xffff = 2 Sec. Read more at `measure_freq()`
 //! let mut temp_mon = peripherals.tempmon.init_with_measure_freq(0x1000);
 //!
-//! // set low_alarm, high_alarm, and panic_alarm temperature
+//! // Set low_alarm, high_alarm, and panic_alarm temperature
 //! temp_mon.set_alarm_values(-5_000, 65_000, 95_000);
 //!
-//! // use values from registers if you like to compare it somewhere
+//! // Use values from registers if you like to compare it somewhere
 //! let (low_alarm, high_alarm, panic_alarm) = temp_mon.alarm_values();
 //!
-//! // enables interrupts for low_high_alarm
+//! // Enables interrupts for low_high_alarm
 //! unsafe {
 //!     cortex_m::peripheral::NVIC::unmask(interrupt::TEMP_LOW_HIGH);
 //! }
 //!
-//! // start could fail if the module is not powered up
+//! // Start could fail if the module is not powered up
 //! if temp_mon.start().is_err() {
 //!     temp_mon.power_up();
 //!     temp_mon.start();
@@ -189,7 +189,7 @@ impl Uninitialized {
 
 /// A Temperature Monitor (TEMPMON)
 ///
-/// # Example 1
+/// # Example
 ///
 /// ```no_run
 /// use imxrt_hal;
@@ -217,31 +217,36 @@ impl Uninitialized {
 /// ```
 pub struct TempMon {
     base: ral::tempmon::Instance,
-    /// scaler * 1000
+    /// Scaler
     scaler: i32,
-    /// hot_count * 1000
+    /// Hot_count
     hot_count: i32,
-    /// hot_temp * 1000
+    /// Hot_temp * 1000
     hot_temp: i32,
 }
 
 impl TempMon {
-    /// converts the temp_cnt into a human readable temperature [°mC] (1/1000 °C)
+    /// Converts the temp_cnt into a human readable temperature [°mC] (1/1000 °C)
+    ///
+    /// param **temp_cnt**: measurement value from the tempmon module
+    ///
+    /// return: Temperature in °mC (1/1000°C)
     fn convert(&self, temp_cnt: i32) -> i32 {
         let n_meas = temp_cnt - self.hot_count;
         self.hot_temp - n_meas * self.scaler
     }
 
-    /// decode the temp_value into measurable bytes
+    /// Decode the temp_value into measurable bytes
     ///
-    /// param **temp_value_mc**: in °mC (1/1000°C)
+    /// param **temp_value_mc**: temperature value in °mC (1/1000°C)
     ///
+    /// return: decoded temperature, compatible to the module internal measurements
     fn decode(&self, temp_value_mc: i32) -> u32 {
         let v = (temp_value_mc - self.hot_temp) / self.scaler;
         (self.hot_count - v) as u32
     }
 
-    /// triggers a new measurement
+    /// Triggers a new measurement
     ///
     /// If you configured automatically repeating, this will trigger additional measurement.
     /// Use get_temp instate to get the last read value
@@ -253,7 +258,7 @@ impl TempMon {
         if !self.is_powered_up() {
             Err(nb::Error::from(PowerDownError(())))
         } else {
-            // if no measurement is active, trigger new measurement
+            // If no measurement is active, trigger new measurement
             let active = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, MEASURE_TEMP == START);
             if !active {
                 ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_SET, MEASURE_TEMP: START);
@@ -265,7 +270,7 @@ impl TempMon {
                 // measure_temp could be triggered again without any effect
                 Err(nb::Error::WouldBlock)
             } else {
-                // clear MEASURE_TEMP to trigger a new measurement at the next call
+                // Clear MEASURE_TEMP to trigger a new measurement at the next call
                 ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_CLR, MEASURE_TEMP: START);
 
                 let temp_cnt = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, TEMP_CNT) as i32;
@@ -305,7 +310,7 @@ impl TempMon {
         ral::write_reg!(ral::tempmon, self.base, TEMPSENSE0_CLR, MEASURE_TEMP: START);
     }
 
-    /// returns the true if the tempmon module is powered up.
+    /// Returns the true if the tempmon module is powered up.
     pub fn is_powered_up(&self) -> bool {
         ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, POWER_DOWN == POWER_UP)
     }
@@ -351,7 +356,7 @@ impl TempMon {
 
     /// Queries the temperature that will generate a low alarm, high alarm, and panic alarm interrupt.
     ///
-    /// returns (low_alarm_temp, high_alarm_temp, panic_alarm_temp)
+    /// Returns (low_alarm_temp, high_alarm_temp, panic_alarm_temp)
     pub fn alarm_values(&self) -> (i32, i32, i32) {
         let high_alarm = ral::read_reg!(ral::tempmon, self.base, TEMPSENSE0, ALARM_VALUE);
         let (low_alarm, panic_alarm) = ral::read_reg!(
