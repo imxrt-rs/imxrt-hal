@@ -8,7 +8,8 @@ A Rust hardware abstraction layer (HAL) for NXP i.MX RT processors.
 [all-checks-url]: https://github.com/imxrt-rs/imxrt-rs/actions?query=workflow%3A%22All+Checks%22
 [imxrt-hal-badge]: https://img.shields.io/crates/v/imxrt-hal
 [imxrt-hal-url]: https://crates.io/crates/imxrt-hal
-[matrix-chat]: https://matrix.to/#/#imxrt-rs:matrix.org
+
+[matrix-chat](https://matrix.to/#/#imxrt-rs:matrix.org)
 
 ## Goals
 
