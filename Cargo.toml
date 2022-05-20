@@ -15,6 +15,10 @@ version = "0.5.0-alpha"
 [dependencies.bitflags]
 version = "1.2"
 
+[dependencies.eh02]
+package = "embedded-hal"
+version = "0.2"
+
 [dependencies.rand_core]
 version = "0.5"
 default-features = false
@@ -51,3 +55,11 @@ features = ["imxrt-ral/imxrt1062"]
 imxrt1010 = []
 imxrt1060 = []
 imxrt1064 = []
+
+################
+# Extra features
+################
+
+# Enable implementations for EH02 "unproven" traits.
+# Requires the EH02 "unproven" feature.
+eh02-unproven = []
