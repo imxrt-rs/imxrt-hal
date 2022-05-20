@@ -30,6 +30,8 @@
 //! The `"eh02-unproven"` feature will not build without the corresponding `"unproven"` feature enabled
 //! in embedded-hal 0.2.
 
+#![no_std]
+
 use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
 

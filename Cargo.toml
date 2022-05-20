@@ -63,3 +63,12 @@ imxrt1064 = []
 # Enable implementations for EH02 "unproven" traits.
 # Requires the EH02 "unproven" feature.
 eh02-unproven = []
+
+[workspace]
+members = [
+    "examples",
+    "tools",
+]
+
+[patch.crates-io.cortex-m-rt]
+path = "../../cortex-m/cortex-m-rt"

@@ -1,0 +1,51 @@
+[package]
+name = "imxrt-hal-examples"
+version = "0.1.0"
+edition = "2021"
+# Only for testing, documentation.
+publish = false
+
+[lib]
+name = "board"
+
+[dependencies.imxrt-hal]
+path = ".."
+version = "0.5.0-alpha"
+
+[dependencies.imxrt-iomuxc]
+version = "0.2"
+path = "../../iomuxc"
+
+[dependencies.imxrt-ral]
+version = "0.5"
+path = "../../ral"
+features = ["rt"]
+
+[dependencies.cortex-m]
+version = "0.7"
+
+[dependencies.cortex-m-rt]
+version = "0.7"
+features = ["device", "region-alias"]
+
+# Use existing FCB, instead of defining inline.
+[dependencies.teensy4-fcb]
+optional = true
+version = "0.3"
+
+# Other boards may choose to define their FCB inline.
+[dependencies.imxrt-boot-gen]
+optional = true
+version = "0.2"
+
+[features]
+imxrt1010evk = [
+    "imxrt-iomuxc/imxrt1010",
+    "imxrt-ral/imxrt1011",
+    "imxrt-boot-gen/imxrt1010",
+]
+teensy4 = [
+    "imxrt-iomuxc/imxrt1060",
+    "imxrt-ral/imxrt1062",
+    "teensy4-fcb",
+]

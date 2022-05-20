@@ -1,0 +1,10 @@
+[package]
+name = "imxrt-hal-tools"
+version = "0.1.0"
+edition = "2021"
+publish = false  # Project-specific tooling.
+
+[lib]
+name = "tools"
+
+[dependencies]

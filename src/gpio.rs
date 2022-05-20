@@ -35,7 +35,6 @@
 //!
 //! - Fast GPIOs
 
-
 use crate::{iomuxc, ral};
 
 /// GPIO ports.
