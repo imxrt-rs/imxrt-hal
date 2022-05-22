@@ -12,6 +12,9 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 version = "0.5.0-alpha"
 
+[dependencies.cfg-if]
+version = "1.0"
+
 [dependencies.bitflags]
 version = "1.2"
 

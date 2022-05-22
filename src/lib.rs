@@ -24,7 +24,7 @@
 //! Use these optional features to control the HAL build:
 //!
 //! | Feature           | Description                                                      |
-//! |-------------------+------------------------------------------------------------------|
+//! |-------------------|------------------------------------------------------------------|
 //! | `"eh02-unproven"` | Enable implementations for embedded-hal 0.2 `"unproven"` traits. |
 //!
 //! The `"eh02-unproven"` feature will not build without the corresponding `"unproven"` feature enabled
@@ -35,4 +35,37 @@
 use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
 
+pub mod dcdc;
 pub mod gpio;
+
+#[cfg(feature = "imxrt1010")]
+#[path = "chip/imxrt1010.rs"]
+mod chip;
+
+#[cfg(any(feature = "imxrt1060", feature = "imxrt1064"))]
+#[path = "chip/imxrt1060.rs"]
+mod chip;
+
+#[cfg(any(feature = "imxrt1010", feature = "imxrt1060", feature = "imxrt1064"))]
+pub use chip::*;
+
+/// SOC run mode.
+///
+/// Each MCU specifies its own core clock speed
+/// and power settings for these variants. They're
+/// typically follow the recommendations in the
+/// data sheet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RunMode {
+    /// The fastest, highest-power mode.
+    Overdrive,
+}
+
+/// Set the target power for the provided `run_mode`.
+pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
+    let millivolts = match run_mode {
+        RunMode::Overdrive => 1250,
+    };
+    dcdc::set_target_vdd_soc(dcdc, millivolts);
+}

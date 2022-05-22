@@ -22,4 +22,5 @@ pub fn prepare() -> super::Board {
     super::Board { led }
 }
 
+#[cfg(target_arch = "arm")]
 use teensy4_fcb as _;

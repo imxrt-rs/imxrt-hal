@@ -29,7 +29,7 @@ version = "0.7"
 features = ["device", "region-alias"]
 
 # Use existing FCB, instead of defining inline.
-[dependencies.teensy4-fcb]
+[target.thumbv7em-none-eabihf.dependencies.teensy4-fcb]
 optional = true
 version = "0.3"
 
@@ -42,10 +42,12 @@ version = "0.2"
 imxrt1010evk = [
     "imxrt-iomuxc/imxrt1010",
     "imxrt-ral/imxrt1011",
+    "imxrt-hal/imxrt1010",
     "imxrt-boot-gen/imxrt1010",
 ]
 teensy4 = [
     "imxrt-iomuxc/imxrt1060",
     "imxrt-ral/imxrt1062",
+    "imxrt-hal/imxrt1060",
     "teensy4-fcb",
 ]
