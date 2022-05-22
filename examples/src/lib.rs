@@ -32,6 +32,8 @@ pub struct Board {
     ///
     /// Use [`GPT2_FREQUENCY`] to understand its frequency.
     pub gpt2: hal::gpt::Gpt<2>,
+    /// UART console.
+    pub console: Console,
 }
 
 /// Peripheral register blocks required by the board.
@@ -40,7 +42,7 @@ pub struct Board {
 /// has ownership of all `imxrt-ral` peripheral register
 /// blocks that it requires. Use [`take()`](Peripherals::take)
 /// to safely acquire those peripherals.
-#[allow(dead_code)] // TODO remove.
+#[allow(dead_code)] // Might not be used by all boards.
 pub struct Peripherals {
     gpio1: ral::gpio::GPIO1,
     gpio2: ral::gpio::GPIO2,
@@ -48,6 +50,7 @@ pub struct Peripherals {
     gpt1: ral::gpt::GPT1,
     gpt2: ral::gpt::GPT2,
     lpuart1: ral::lpuart::LPUART1,
+    lpuart2: ral::lpuart::LPUART2,
     pit: ral::pit::PIT,
     ccm: ral::ccm::CCM,
     ccm_analog: ral::ccm_analog::CCM_ANALOG,
@@ -63,6 +66,7 @@ impl Peripherals {
             gpt1: ral::gpt::GPT1::take()?,
             gpt2: ral::gpt::GPT2::take()?,
             lpuart1: ral::lpuart::LPUART1::take()?,
+            lpuart2: ral::lpuart::LPUART2::take()?,
             pit: ral::pit::PIT::take()?,
             ccm: ral::ccm::CCM::take()?,
             ccm_analog: ral::ccm_analog::CCM_ANALOG::take()?,
@@ -81,6 +85,7 @@ impl From<ral::Peripherals> for Peripherals {
             gpt1: p.GPT1,
             gpt2: p.GPT2,
             lpuart1: p.LPUART1,
+            lpuart2: p.LPUART2,
             pit: p.PIT,
             ccm: p.CCM,
             ccm_analog: p.CCM_ANALOG,
@@ -102,6 +107,11 @@ const GPT_SELECTION: hal::gpt::ClockSource = hal::gpt::ClockSource::HighFrequenc
 pub const GPT1_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE) / GPT1_DIVIDER;
 /// The GPT2 clock frequency (Hz).
 pub const GPT2_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE) / GPT2_DIVIDER;
+
+/// The UART clock frequency (Hz).
+pub const UART_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::uart_frequency(RUN_MODE);
+/// The console baud rate: 115200bps.
+pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
 
 #[cfg(imxrt1010)]
 use iomuxc::imxrt1010::Pads;

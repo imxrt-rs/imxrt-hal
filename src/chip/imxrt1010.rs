@@ -87,3 +87,8 @@ pub mod ccm {
         use pll6_ahb::configure_ahb;
     }
 }
+
+#[path = "../dma.rs"]
+pub mod dma;
+
+pub(crate) const DMA_CHANNEL_COUNT: usize = 16;

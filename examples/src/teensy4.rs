@@ -4,6 +4,9 @@ use crate::{hal, iomuxc::imxrt1060 as iomuxc, RUN_MODE};
 
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;
+pub type Console = hal::lpuart::Lpuart<ConsolePins, 2>;
+pub type ConsolePins =
+    hal::lpuart::Pins<iomuxc::gpio_ad_b1::GPIO_AD_B1_02, iomuxc::gpio_ad_b1::GPIO_AD_B1_03>;
 
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
@@ -13,6 +16,7 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         pit,
         gpt1,
         gpt2,
+        lpuart2,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
@@ -32,11 +36,25 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
     let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER, &mut ccm);
     let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER, &mut ccm);
 
+    hal::ccm::clock_gate::lpuart::<{ Console::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
+    let mut console = hal::lpuart::Lpuart::new(
+        lpuart2,
+        hal::lpuart::Pins {
+            tx: iomuxc.gpio_ad_b1.p02,
+            rx: iomuxc.gpio_ad_b1.p03,
+        },
+    );
+    console.disable(|console| {
+        console.set_baud(&super::CONSOLE_BAUD);
+        console.set_parity(None);
+    });
+
     super::Board {
         led,
         pit,
         gpt1,
         gpt2,
+        console,
     }
 }
 

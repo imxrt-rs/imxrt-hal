@@ -4,7 +4,7 @@
 //! It supports two `embeddd-hal` versions:
 //!
 //! - [`embedded-hal` 0.2 (EH02)](https://docs.rs/embedded-hal/0.2/embedded_hal/)
-//! - [`embedded-hal` 1 (EH10)](https://docs.rs/embedded-hal/1.0/embedded_hal/)
+//! - [`embedded-hal` 1 (EH1)](https://docs.rs/embedded-hal/1.0/embedded_hal/)
 //!
 //! # Building
 //!
@@ -38,6 +38,7 @@ use imxrt_ral as ral;
 pub mod dcdc;
 pub mod gpio;
 pub mod gpt;
+pub mod lpuart;
 pub mod pit;
 
 #[cfg(feature = "imxrt1010")]
@@ -70,4 +71,15 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
         RunMode::Overdrive => 1250,
     };
     dcdc::set_target_vdd_soc(dcdc, millivolts);
+}
+
+/// Exports common DMA functions.
+///
+/// Re-exported through the `dma` module when activated through a chip family feature.
+mod dma_common {
+    pub(crate) use channel::Channel;
+    pub use imxrt_dma::{
+        block, channel, memcpy, on_error, on_interrupt, peripheral, poll_no_wake, BandwidthControl,
+        Error, Result,
+    };
 }
