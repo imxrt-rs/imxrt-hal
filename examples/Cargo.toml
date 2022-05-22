@@ -28,6 +28,10 @@ version = "0.7"
 version = "0.7"
 features = ["device", "region-alias"]
 
+[dependencies.cortex-m-rtic]
+version = "1.0"
+optional = true
+
 # Use existing FCB, instead of defining inline.
 [target.thumbv7em-none-eabihf.dependencies.teensy4-fcb]
 optional = true
@@ -51,3 +55,12 @@ teensy4 = [
     "imxrt-hal/imxrt1060",
     "teensy4-fcb",
 ]
+rtic = ["cortex-m-rtic", "imxrt-ral/rtic"]
+
+[[bin]]
+name = "rtic_gpt"
+required-features = ["rtic"]
+
+[[bin]]
+name = "rtic_pit"
+required-features = ["rtic"]

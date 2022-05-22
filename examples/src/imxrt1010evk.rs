@@ -1,25 +1,42 @@
 //! IMXRT1010EVK board configuration.
 
-use crate::{hal, iomuxc::imxrt1010 as iomuxc, ral};
+use crate::{hal, iomuxc::imxrt1010 as iomuxc, RUN_MODE};
 
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
 
 /// Prepare all board resources, and return them.
-///
-/// # Panics
-///
-/// Panics if a board resource is already taken.
-pub fn prepare() -> super::Board {
-    let iomuxc = super::take_iomuxc();
+pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
+    let super::Peripherals {
+        gpio1,
+        iomuxc,
+        pit,
+        gpt1,
+        gpt2,
+        mut ccm,
+        mut ccm_analog,
+        mut dcdc,
+        ..
+    } = peripherals.into();
 
-    let mut gpio1 = ral::gpio::GPIO1::take()
-        .map(hal::gpio::Port::new)
-        .expect("Unable to take GPIO1 peripheral");
+    let iomuxc = super::convert_iomuxc(iomuxc);
+    hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
+    hal::set_target_power(&mut dcdc, RUN_MODE);
+    hal::ccm::clock_tree::configure(RUN_MODE, &mut ccm, &mut ccm_analog);
 
+    let mut gpio1 = super::configure_gpio(gpio1, &mut ccm);
     let led = gpio1.output(iomuxc.gpio.p11);
+    let pit = super::configure_pit(pit, &mut ccm);
 
-    super::Board { led }
+    let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER, &mut ccm);
+    let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER, &mut ccm);
+
+    super::Board {
+        led,
+        pit,
+        gpt1,
+        gpt2,
+    }
 }
 
 /// Flash configuration block.

@@ -37,6 +37,8 @@ use imxrt_ral as ral;
 
 pub mod dcdc;
 pub mod gpio;
+pub mod gpt;
+pub mod pit;
 
 #[cfg(feature = "imxrt1010")]
 #[path = "chip/imxrt1010.rs"]
