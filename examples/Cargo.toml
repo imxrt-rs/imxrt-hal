@@ -61,6 +61,10 @@ teensy4 = [
 rtic = ["cortex-m-rtic", "imxrt-ral/rtic"]
 
 [[bin]]
+name = "rtic_dma_uart"
+required-features = ["rtic"]
+
+[[bin]]
 name = "rtic_gpt"
 required-features = ["rtic"]
 

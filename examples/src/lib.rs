@@ -34,6 +34,8 @@ pub struct Board {
     pub gpt2: hal::gpt::Gpt<2>,
     /// UART console.
     pub console: Console,
+    /// DMA channels.
+    pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
 }
 
 /// Peripheral register blocks required by the board.
@@ -52,6 +54,8 @@ pub struct Peripherals {
     lpuart1: ral::lpuart::LPUART1,
     lpuart2: ral::lpuart::LPUART2,
     pit: ral::pit::PIT,
+    dma: ral::dma0::DMA0,
+    dma_mux: ral::dmamux::DMAMUX,
     ccm: ral::ccm::CCM,
     ccm_analog: ral::ccm_analog::CCM_ANALOG,
     dcdc: ral::dcdc::DCDC,
@@ -68,6 +72,8 @@ impl Peripherals {
             lpuart1: ral::lpuart::LPUART1::take()?,
             lpuart2: ral::lpuart::LPUART2::take()?,
             pit: ral::pit::PIT::take()?,
+            dma: ral::dma0::DMA0::take()?,
+            dma_mux: ral::dmamux::DMAMUX::take()?,
             ccm: ral::ccm::CCM::take()?,
             ccm_analog: ral::ccm_analog::CCM_ANALOG::take()?,
             dcdc: ral::dcdc::DCDC::take()?,
@@ -87,6 +93,8 @@ impl From<ral::Peripherals> for Peripherals {
             lpuart1: p.LPUART1,
             lpuart2: p.LPUART2,
             pit: p.PIT,
+            dma: p.DMA0,
+            dma_mux: p.DMAMUX,
             ccm: p.CCM,
             ccm_analog: p.CCM_ANALOG,
             dcdc: p.DCDC,

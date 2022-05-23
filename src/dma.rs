@@ -71,7 +71,7 @@
 
 use crate::ral;
 
-pub use crate::dma_common::*;
+pub use crate::common::dma::*;
 
 /// The total number of DMA channels.
 ///

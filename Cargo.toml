@@ -12,6 +12,9 @@ license = "MIT OR Apache-2.0"
 edition = "2018"
 version = "0.5.0-alpha"
 
+[dependencies.cortex-m]
+version = "0.7"
+
 [dependencies.cfg-if]
 version = "1.0"
 
@@ -37,10 +40,6 @@ version = "0.1"
 #######################
 # imxrt-rs dependencies
 #######################
-
-[dependencies.imxrt-dma]
-version = "0.1"
-git = "https://github.com/imxrt-rs/imxrt-dma"
 
 [dependencies.imxrt-iomuxc]
 version = "0.2"

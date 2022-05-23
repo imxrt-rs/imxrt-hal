@@ -76,10 +76,6 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
 /// Exports common DMA functions.
 ///
 /// Re-exported through the `dma` module when activated through a chip family feature.
-mod dma_common {
-    pub(crate) use channel::Channel;
-    pub use imxrt_dma::{
-        block, channel, memcpy, on_error, on_interrupt, peripheral, poll_no_wake, BandwidthControl,
-        Error, Result,
-    };
+mod common {
+    pub mod dma;
 }

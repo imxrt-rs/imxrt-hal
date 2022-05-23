@@ -17,6 +17,8 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         gpt1,
         gpt2,
         lpuart2,
+        dma,
+        dma_mux,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
@@ -49,12 +51,15 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         console.set_parity(None);
     });
 
+    hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
+    let dma = hal::dma::channels(dma, dma_mux);
     super::Board {
         led,
         pit,
         gpt1,
         gpt2,
         console,
+        dma,
     }
 }
 
