@@ -41,6 +41,13 @@ mod chan16 {
         fn dma_complete(cx: dma_complete::Context) {
             cx.local.app.dma_complete();
         }
+
+        #[idle]
+        fn idle(_: idle::Context) -> ! {
+            loop {
+                rtic::export::wfi();
+            }
+        }
     }
 }
 
@@ -66,6 +73,13 @@ mod chan32 {
         #[task(binds = DMA7_DMA23, local = [app])]
         fn dma_complete(cx: dma_complete::Context) {
             cx.local.app.dma_complete();
+        }
+
+        #[idle]
+        fn idle(_: idle::Context) -> ! {
+            loop {
+                rtic::export::wfi();
+            }
         }
     }
 }
