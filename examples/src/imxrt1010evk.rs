@@ -8,6 +8,24 @@ pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
 pub type ConsolePins = crate::hal::lpuart::Pins<iomuxc::gpio::GPIO_10, iomuxc::gpio::GPIO_09>;
 
+/// Test point 34.
+///
+/// Use this for measuring your application timing (as a GPIO).
+/// Or, use it to evaluate clocks via `CCM_CLKO1`.
+pub type Tp34 = iomuxc::gpio_sd::GPIO_SD_02;
+
+/// Test point 31.
+///
+/// Use this for measuring your application timing (as a GPIO).
+/// Or, use it to evaluate clocks via `CCM_CLKO2`.
+pub type Tp31 = iomuxc::gpio_sd::GPIO_SD_01;
+
+/// Board-specific resources.
+pub struct Specifics {
+    pub tp31: Tp31,
+    pub tp34: Tp34,
+}
+
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
     let super::Peripherals {
@@ -52,6 +70,11 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
 
     hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
+
+    let specifics = Specifics {
+        tp31: iomuxc.gpio_sd.p01,
+        tp34: iomuxc.gpio_sd.p02,
+    };
     super::Board {
         led,
         pit,
@@ -59,6 +82,8 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         gpt2,
         console,
         dma,
+        ccm,
+        specifics,
     }
 }
 
@@ -115,4 +140,36 @@ mod fcb {
             .page_size(256)
             .sector_size(4096)
             .ip_cmd_serial_clk_freq(nor::SerialClockFrequency::NoChange);
+}
+
+/// Helpers for the clock_out example.
+pub mod clock_out {
+    use crate::hal::ccm::output_source::{clko1::Selection as Clko1, clko2::Selection as Clko2};
+
+    pub fn prepare_outputs(specifics: &mut super::Specifics) {
+        crate::iomuxc::ccm::prepare(&mut specifics.tp31);
+        crate::iomuxc::ccm::prepare(&mut specifics.tp34);
+    }
+
+    pub const CLKO1_SELECTIONS: [Clko1; 7] = [
+        Clko1::Pll3SwClkDiv2,
+        Clko1::Pll2Div2,
+        Clko1::EnetPllDiv2,
+        Clko1::AhbClk,
+        Clko1::IpgClk,
+        Clko1::Perclk,
+        Clko1::Pll4MainClk,
+    ];
+
+    pub const CLKO2_SELECTIONS: [Clko2; 9] = [
+        Clko2::Lpi2cClk,
+        Clko2::OscClk,
+        Clko2::LpspiClk,
+        Clko2::Sai1Clk,
+        Clko2::Sai3Clk,
+        Clko2::TracClk,
+        Clko2::FlexspiClk,
+        Clko2::UartClk,
+        Clko2::Spdif0Clk,
+    ];
 }

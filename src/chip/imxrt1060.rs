@@ -103,6 +103,19 @@ pub mod ccm {
         pub use pll1_ahb::ahb_frequency;
         use pll1_ahb::configure_ahb;
     }
+
+    // TODO
+    mod clko {
+        // #[repr(u32)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+
+        pub enum Clko1Selection {}
+
+        // #[repr(u32)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+
+        pub enum Clko2Selection {}
+    }
 }
 
 #[path = "../dma.rs"]

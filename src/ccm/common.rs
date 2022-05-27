@@ -8,6 +8,9 @@ pub mod ahb_clk;
 #[path = "clock_gate.rs"]
 pub mod clock_gate;
 
+#[path = "output_source.rs"]
+pub mod output_source;
+
 /// Frequency (Hz) of the crystal oscillator.
 pub const XTAL_OSCILLATOR_HZ: u32 = 24_000_000;
 

@@ -36,6 +36,12 @@ pub struct Board {
     pub console: Console,
     /// DMA channels.
     pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
+    /// CCM registers.
+    pub ccm: ral::ccm::CCM,
+    /// Any board-specific resouces.
+    ///
+    /// For example portability, try to minimize these.
+    pub specifics: board::Specifics,
 }
 
 /// Peripheral register blocks required by the board.

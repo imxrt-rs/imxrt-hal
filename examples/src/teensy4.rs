@@ -8,6 +8,8 @@ pub type Console = hal::lpuart::Lpuart<ConsolePins, 2>;
 pub type ConsolePins =
     hal::lpuart::Pins<iomuxc::gpio_ad_b1::GPIO_AD_B1_02, iomuxc::gpio_ad_b1::GPIO_AD_B1_03>;
 
+pub struct Specifics {}
+
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
     let super::Peripherals {
@@ -53,6 +55,7 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
 
     hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
+    let specifics = Specifics {};
     super::Board {
         led,
         pit,
@@ -60,8 +63,24 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         gpt2,
         console,
         dma,
+        ccm,
+        specifics,
     }
 }
 
 #[cfg(target_arch = "arm")]
 use teensy4_fcb as _;
+
+/// Helpers for the clock_out example.
+///
+/// The Teensy 4 does not have these outputs, so the configuration enables
+/// no functionality.
+pub mod clock_out {
+    use crate::hal::ccm::output_source::{clko1::Selection as Clko1, clko2::Selection as Clko2};
+
+    pub fn prepare_outputs(_: &mut super::Specifics) {}
+
+    pub const CLKO1_SELECTIONS: [Clko1; 0] = [];
+
+    pub const CLKO2_SELECTIONS: [Clko2; 0] = [];
+}

@@ -86,6 +86,50 @@ pub mod ccm {
         pub use pll6_ahb::ahb_frequency;
         use pll6_ahb::configure_ahb;
     }
+
+    mod clko {
+        #[repr(u32)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum Clko1Selection {
+            /// PLL3 divided by 2.
+            Pll3SwClkDiv2 = 0b0000,
+            /// PLL2 divided by 2.
+            Pll2Div2 = 0b0001,
+            /// ENET PLL divided by 2.
+            EnetPllDiv2 = 0b0010,
+            // Core clock (AHB) root.
+            AhbClk = 0b1011,
+            /// IPG clock root.
+            IpgClk = 0b1100,
+            /// PERCLK clock root.
+            Perclk = 0b1101,
+            /// PLL4 main clock root.
+            Pll4MainClk = 0b1111,
+        }
+
+        #[repr(u32)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub enum Clko2Selection {
+            /// LPI2C clock root.
+            Lpi2cClk = 0b00110,
+            /// Oscillator clock root.
+            OscClk = 0b01110,
+            /// LPSPI clock root.
+            LpspiClk = 0b10000,
+            /// SAI1 clock root.
+            Sai1Clk = 0b10010,
+            /// SAI3 clock root.
+            Sai3Clk = 0b10100,
+            /// Trace clock root.
+            TracClk = 0b10110,
+            /// FlexSPI clock root.
+            FlexspiClk = 0b11011,
+            /// UART clock root.
+            UartClk = 0b11100,
+            /// SPDIF0 clock root.
+            Spdif0Clk = 0b11101,
+        }
+    }
 }
 
 #[path = "../dma.rs"]

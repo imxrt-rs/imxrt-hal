@@ -45,6 +45,9 @@ version = "0.3"
 optional = true
 version = "0.2"
 
+[dependencies.menu]
+version = "0.3.2"
+
 [features]
 imxrt1010evk = [
     "imxrt-iomuxc/imxrt1010",

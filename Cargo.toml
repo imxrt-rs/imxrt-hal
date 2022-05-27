@@ -78,3 +78,19 @@ members = [
 
 [patch.crates-io.cortex-m-rt]
 path = "../../cortex-m/cortex-m-rt"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+panic = "abort"
+
+[profile.dev.build-override]
+opt-level = 0
+codegen-units = 256
+
+[profile.release.build-override]
+opt-level = 0
+codegen-units = 256
