@@ -36,7 +36,7 @@ pub mod ccm {
         use super::clock_gate;
 
         /// All clock gates downstream of the PERCLK root clock.
-        pub const PERCLK_CLOCK_GATES: &[&'static clock_gate::Locator] = &[
+        pub const PERCLK_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::pit(),
             clock_gate::gpt_bus::<1>(),
             clock_gate::gpt_bus::<2>(),
@@ -45,7 +45,7 @@ pub mod ccm {
         ];
 
         /// All clock gates downstream of the UART root clock.
-        pub const UART_CLOCK_GATES: &[&'static clock_gate::Locator] = &[
+        pub const UART_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::lpuart::<1>(),
             clock_gate::lpuart::<2>(),
             clock_gate::lpuart::<3>(),
@@ -57,7 +57,7 @@ pub mod ccm {
         ];
 
         /// All clock gates downstream of the LPSPI root clock.
-        pub const LPSPI_CLOCK_GATES: &[&'static clock_gate::Locator] = &[
+        pub const LPSPI_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::lpspi::<1>(),
             clock_gate::lpspi::<2>(),
             clock_gate::lpspi::<3>(),
@@ -65,7 +65,7 @@ pub mod ccm {
         ];
 
         /// All clock gates downstream of the LPI2C root clock.
-        pub const LPI2C_CLOCK_GATES: &[&'static clock_gate::Locator] = &[
+        pub const LPI2C_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::lpi2c::<1>(),
             clock_gate::lpi2c::<2>(),
             clock_gate::lpi2c::<3>(),
@@ -73,7 +73,7 @@ pub mod ccm {
         ];
 
         /// All clock gates downstream of the IPG root clock.
-        pub const IPG_CLOCK_GATES: &[&'static clock_gate::Locator] = &[
+        pub const IPG_CLOCK_GATES: &[clock_gate::Locator] = &[
             // TODO ADC.
             clock_gate::dma(),
             clock_gate::flexpwm::<1>(),

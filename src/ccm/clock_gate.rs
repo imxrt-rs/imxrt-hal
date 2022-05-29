@@ -95,7 +95,7 @@ impl Setting {
 }
 
 /// Clock gating register.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
 enum Register {
@@ -139,6 +139,7 @@ use Gate::*;
 impl Gate {
     /// Compute the bitshift required to access this gate field
     /// in the register.
+    #[inline(always)]
     const fn shift(self) -> usize {
         self as usize * 2
     }
@@ -148,7 +149,7 @@ impl Gate {
 ///
 /// These are reachable through the various function
 /// provided in this module.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Locator {
     register: Register,
     gate: Gate,
@@ -164,8 +165,9 @@ macro_rules! locator {
 }
 
 /// Acquire the clock gate register for a clock gate locator.
-fn clock_gate_register<'a>(ccm: &'a CCM, locator: &'_ Locator) -> &'a ral::RWRegister<u32> {
-    match locator.register {
+#[inline(always)]
+fn clock_gate_register<'a>(ccm: &'a CCM, register: Register) -> &'a ral::RWRegister<u32> {
+    match register {
         Register::CCGR0 => &ccm.CCGR0,
         Register::CCGR1 => &ccm.CCGR1,
         Register::CCGR2 => &ccm.CCGR2,
@@ -193,14 +195,14 @@ fn clock_gate_register<'a>(ccm: &'a CCM, locator: &'_ Locator) -> &'a ral::RWReg
 impl Locator {
     /// Get the clock gate setting for the peripheral.
     pub fn get(&self, ccm: &CCM) -> Setting {
-        let ccgr = clock_gate_register(ccm, self);
+        let ccgr = clock_gate_register(ccm, self.register);
         let raw = (ccgr.read() >> self.gate.shift()) & 0b11;
         Setting::from_raw(raw)
     }
 
     /// Set the clock gate for this peripheral.
     pub fn set(&self, ccm: &mut CCM, setting: Setting) {
-        let ccgr = clock_gate_register(ccm, self);
+        let ccgr = clock_gate_register(ccm, self.register);
         let mut raw = ccgr.read();
         raw &= !(0b11 << self.gate.shift());
         raw |= (setting as u32) << self.gate.shift();
@@ -248,27 +250,27 @@ pub fn while_off<R, const N: usize>(
 
 /// Returns the PIT clock gate locator.
 #[inline(always)]
-pub const fn pit() -> &'static Locator {
+pub const fn pit() -> Locator {
     // TODO(mciantyre) there's multiple PITs on the 1170 chips...
-    &locator!(CCGR1, CG6)
+    locator!(CCGR1, CG6)
 }
 
 /// Returns the GPT serial clock gate locator.
 #[inline(always)]
-pub const fn gpt_serial<const N: u8>() -> &'static Locator
+pub const fn gpt_serial<const N: u8>() -> Locator
 where
     ral::gpt::Instance<N>: ral::Valid,
 {
-    &[locator!(CCGR1, CG11), locator!(CCGR0, CG13)][N as usize - 1]
+    [locator!(CCGR1, CG11), locator!(CCGR0, CG13)][N as usize - 1]
 }
 
 /// Returns the GPT serial clock gate locator.
 #[inline(always)]
-pub const fn gpt_bus<const N: u8>() -> &'static Locator
+pub const fn gpt_bus<const N: u8>() -> Locator
 where
     ral::gpt::Instance<N>: ral::Valid,
 {
-    &[locator!(CCGR1, CG10), locator!(CCGR0, CG12)][N as usize - 1]
+    [locator!(CCGR1, CG10), locator!(CCGR0, CG12)][N as usize - 1]
 }
 
 /// Returns the GPIO clock gate locator.
@@ -280,11 +282,11 @@ where
 ///
 /// Panics if `N` describes a fast GPIO port.
 #[inline(always)]
-pub const fn gpio<const N: u8>() -> &'static Locator
+pub const fn gpio<const N: u8>() -> Locator
 where
     ral::gpio::Instance<N>: ral::Valid,
 {
-    &[
+    [
         locator!(CCGR1, CG13),
         locator!(CCGR0, CG15),
         locator!(CCGR2, CG13),
@@ -295,11 +297,11 @@ where
 
 /// Returns the LPUART clock gate locator.
 #[inline(always)]
-pub const fn lpuart<const N: u8>() -> &'static Locator
+pub const fn lpuart<const N: u8>() -> Locator
 where
     ral::lpuart::Instance<N>: ral::Valid,
 {
-    &[
+    [
         locator!(CCGR5, CG12),
         locator!(CCGR0, CG14),
         locator!(CCGR0, CG6),
@@ -313,17 +315,17 @@ where
 
 /// Returns the DMA clock gate locator.
 #[inline(always)]
-pub const fn dma() -> &'static Locator {
-    &locator!(CCGR5, CG3)
+pub const fn dma() -> Locator {
+    locator!(CCGR5, CG3)
 }
 
 /// Returns the LPI2C clock gate locator.
 #[inline(always)]
-pub const fn lpi2c<const N: u8>() -> &'static Locator
+pub const fn lpi2c<const N: u8>() -> Locator
 where
     ral::lpi2c::Instance<N>: ral::Valid,
 {
-    &[
+    [
         locator!(CCGR2, CG3),
         locator!(CCGR2, CG4),
         locator!(CCGR2, CG5),
@@ -333,11 +335,11 @@ where
 
 /// Returns the LPSPI clock gate locator.
 #[inline(always)]
-pub const fn lpspi<const N: u8>() -> &'static Locator
+pub const fn lpspi<const N: u8>() -> Locator
 where
     ral::lpspi::Instance<N>: ral::Valid,
 {
-    &[
+    [
         locator!(CCGR1, CG0),
         locator!(CCGR1, CG1),
         locator!(CCGR1, CG2),
@@ -347,12 +349,12 @@ where
 
 /// Returns the FlexPWM clock gate locator.
 #[inline(always)]
-pub const fn flexpwm<const N: u8>() -> &'static Locator
+pub const fn flexpwm<const N: u8>() -> Locator
 where
     ral::pwm::Instance<N>: ral::Valid,
 {
     const _: () = assert!(ral::SOLE_INSTANCE == 0u8);
-    &[
+    [
         locator!(CCGR4, CG8),
         locator!(CCGR4, CG9),
         locator!(CCGR4, CG10),
@@ -371,14 +373,14 @@ where
 
 /// Returns the TRNG clock gate locator.
 #[inline(always)]
-pub const fn trng() -> &'static Locator {
-    &locator!(CCGR6, CG6)
+pub const fn trng() -> Locator {
+    locator!(CCGR6, CG6)
 }
 
 /// Returns the SNVS clock gate locator.
 #[inline(always)]
-pub const fn snvs() -> &'static Locator {
-    &locator!(CCGR5, CG15)
+pub const fn snvs() -> Locator {
+    locator!(CCGR5, CG15)
 }
 
 pub use crate::ccm::root_clock_gates::*;
@@ -387,12 +389,12 @@ pub use crate::ccm::root_clock_gates::*;
 ///
 /// Clock gate locator ordering is unspecified. All locators are
 /// unique. The number of locators may vary by chip family.
-pub fn all() -> impl Iterator<Item = &'static Locator> {
+pub fn all() -> impl Iterator<Item = Locator> {
     PERCLK_CLOCK_GATES
-        .iter()
-        .chain(UART_CLOCK_GATES)
-        .chain(LPSPI_CLOCK_GATES)
-        .chain(LPI2C_CLOCK_GATES)
-        .chain(IPG_CLOCK_GATES)
-        .cloned() // &&Locator -> &Locator
+        .into_iter()
+        .chain(UART_CLOCK_GATES.into_iter())
+        .chain(LPSPI_CLOCK_GATES.into_iter())
+        .chain(LPI2C_CLOCK_GATES.into_iter())
+        .chain(IPG_CLOCK_GATES.into_iter())
+        .copied()
 }
