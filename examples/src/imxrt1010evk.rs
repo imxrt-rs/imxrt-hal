@@ -28,6 +28,7 @@ pub struct Specifics {
 
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
+    rtt_target::rtt_init_print!();
     let super::Peripherals {
         gpio1,
         iomuxc,
@@ -174,9 +175,4 @@ pub mod clock_out {
     ];
 }
 
-/// TODO featureful panic handler
-#[cfg(target_arch = "arm")]
-#[panic_handler]
-fn panic_handler(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+use panic_rtt_target as _;
