@@ -1,75 +1,120 @@
 //! This build script prepares the HAL build.
 
-type Board = &'static str;
-type ChipFamily = &'static str;
-
-/// When adding a new board, update this collection.
-///
-/// A "chip family" represents a group of related MCU parts.
-/// For example, the 1051 and 1052 belong to the "1050" chip family.
-static BOARD_TO_CHIP_FAMILY: &[(Board, ChipFamily)] =
-    &[("imxrt1010evk", "imxrt1010"), ("teensy4", "imxrt1060")];
-
-//
-// Add linker script memory regions here.
-//
-
-type MemoryMap = &'static str;
-
-const IMXRT1010_MEMORY: MemoryMap = r#"
-MEMORY
-{
-    FLASH      (RX) : ORIGIN = 0x60000000, LENGTH = 16M
-    /* Lengths determined by default fuse values. */
-    /* See note in 9.6.1.1 to understand why this isn't zero. */
-    ITCM       (RX) : ORIGIN = 0x00000004, LENGTH = 32K - 4
-    DTCM       (RW) : ORIGIN = 0x20000000, LENGTH = 32K
-    /* 32K reserved, starting at 0x20200000, for boot ROM. */
-    OCRAM     (RWX) : ORIGIN = 0x20208000, LENGTH = 32K
+/// Defines a new board.
+struct Board {
+    /// Your board name.
+    ///
+    /// Must match the Cargo feature.
+    name: &'static str,
+    /// Select your chip.
+    chip: Chip,
+    /// Specify your board's flash LENGTH.
+    flash_length: usize,
 }
 
-__fcb_offset = 0x400;
-"#;
-
-const IMXRT1060_MEMORY: MemoryMap = r#"
-MEMORY
-{
-    FLASH      (RX) : ORIGIN = 0x60000000, LENGTH = 1984K
-    /* Lengths determined by default fuse values. */
-    ITCM       (RX) : ORIGIN = 0x00000000, LENGTH = 128K
-    DTCM       (RW) : ORIGIN = 0x20000000, LENGTH = 128K
-    /* 32K reserved, starting at 0x20200000, for boot ROM. */
-    OCRAM     (RWX) : ORIGIN = 0x20208000, LENGTH = 256K - 32K
+/// An i.MX RT chip with RAM memory regions.
+struct Chip {
+    /// Bytes in ITCM.
+    itcm_length: usize,
+    /// Bytes in DTCM.
+    dtcm_length: usize,
+    /// Bytes in OCRAM.
+    ///
+    /// For chips that support it, this should include
+    /// the dedicated OCRAM2 length.
+    ocram_length: usize,
+    /// Chip family.
+    family: &'static str,
+    /// FCB offset expected by the hardware.
+    ///
+    /// Affects our boot section.
+    fcb_offset: usize,
 }
 
-__fcb_offset = 0;
-"#;
+const IMXRT1010: Chip = Chip {
+    itcm_length: kb(32),
+    dtcm_length: kb(32),
+    ocram_length: kb(64),
+    family: "imxrt1010",
+    fcb_offset: 0x400,
+};
 
-/// Once you define your memory regions, updat this map.
-static CHIP_TO_MEMORY: &[(ChipFamily, MemoryMap)] = &[
-    ("imxrt1010", IMXRT1010_MEMORY),
-    ("imxrt1060", IMXRT1060_MEMORY),
+const IMXRT1060: Chip = Chip {
+    itcm_length: kb(128),
+    dtcm_length: kb(128),
+    ocram_length: kb(256),
+    family: "imxrt1060",
+    fcb_offset: 0,
+};
+
+/// Add your boards here.
+static BOARDS: &[Board] = &[
+    Board {
+        name: "teensy4",
+        chip: IMXRT1060,
+        flash_length: kb(1984),
+    },
+    Board {
+        name: "imxrt1010evk",
+        chip: IMXRT1010,
+        flash_length: mb(16),
+    },
 ];
 
 ////////////////////////////////////////////////////////////////////
 
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    fs::File,
-    io::Write,
-    path::PathBuf,
-};
+use std::{collections::HashSet, env, fs::File, io::Write, path::PathBuf};
 
-fn required_features() -> HashSet<String> {
-    board_to_chip_family().keys().cloned().collect()
+impl std::fmt::Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "/* Board configuration for imxrt-hal-examples '{}' */",
+            self.name
+        )?;
+        writeln!(f, "MEMORY {{")?;
+        writeln!(
+            f,
+            "FLASH (RX) : ORIGIN = 0x60000000, LENGTH = {:#X}",
+            self.flash_length
+        )?;
+        writeln!(
+            f,
+            "ITCM (RX) : ORIGIN = 0x00000000, LENGTH = {:#X}",
+            self.chip.itcm_length
+        )?;
+        writeln!(
+            f,
+            "DTCM (RW) : ORIGIN = 0x20000000, LENGTH = {:#X}",
+            self.chip.dtcm_length
+        )?;
+        writeln!(
+            f,
+            "OCRAM (RWX) : ORIGIN = 0x20200000, LENGTH = {:#X}",
+            self.chip.ocram_length
+        )?;
+        writeln!(f, "}}")?;
+        writeln!(f, "__fcb_offset = {:#X};", self.chip.fcb_offset)?;
+        Ok(())
+    }
 }
 
-fn board_to_chip_family() -> HashMap<String, String> {
-    BOARD_TO_CHIP_FAMILY
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .collect()
+impl Chip {
+    fn emit_configuration(&self) {
+        println!("cargo:rustc-cfg={}", self.family);
+    }
+}
+
+const fn kb(kb: usize) -> usize {
+    kb * 1024
+}
+
+const fn mb(mb: usize) -> usize {
+    mb * 1024 * 1024
+}
+
+fn required_features() -> HashSet<String> {
+    BOARDS.iter().map(|board| board.name.into()).collect()
 }
 
 fn extract_features() -> HashSet<String> {
@@ -79,18 +124,10 @@ fn extract_features() -> HashSet<String> {
         .collect()
 }
 
-fn chip_family_to_memory(chip_family: &str) -> Result<&'static str, String> {
-    CHIP_TO_MEMORY
-        .iter()
-        .find(|(k, _)| *k == chip_family)
-        .map(|(_, memory_region)| *memory_region)
-        .ok_or_else(|| format!("Chip family {} has no memory regions! This is a maintainer error; please let us know.", chip_family))
-}
-
-fn check_required_features(
+fn select_board(
     features: &HashSet<String>,
     required: &HashSet<String>,
-) -> Result<String, String> {
+) -> Result<&'static Board, String> {
     let enabled_required_features: HashSet<_> = required.intersection(features).collect();
     if enabled_required_features.is_empty() {
         Err(format!(
@@ -103,21 +140,15 @@ fn check_required_features(
             required
         ))
     } else {
-        Ok(enabled_required_features
+        let board_name = enabled_required_features
             .into_iter()
             .next()
             .cloned()
-            .expect("Has exactly one element"))
-    }
-}
-
-fn emit_chip_config(board: &str) -> Result<String, String> {
-    let chip_families = board_to_chip_family();
-    if let Some(chip_family) = chip_families.get(board) {
-        println!("cargo:rustc-cfg={}", chip_family);
-        Ok(chip_family.clone())
-    } else {
-        Err(format!("Board {} was not configured with a chip family! This is a maintainer error; please let us know.", board))
+            .expect("Has exactly one element");
+        Ok(BOARDS
+            .iter()
+            .find(|board| board.name == board_name)
+            .expect("Board name matches"))
     }
 }
 
@@ -125,24 +156,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let features = extract_features();
     let required = required_features();
 
-    let board = check_required_features(&features, &required)?;
-    let chip_family = emit_chip_config(&board)?;
-    let chip_memory = chip_family_to_memory(&chip_family)?;
+    let board = select_board(&features, &required)?;
+    board.chip.emit_configuration();
 
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
     println!("cargo:rustc-link-search={}", out_dir.display());
 
     let mut board_file = File::create(out_dir.join("board.x"))?;
-    board_file.write_all(chip_memory.as_bytes())?;
+    writeln!(board_file, "{}", board)?;
 
     let memory_script = include_bytes!("memory.x");
-    let memory_script_xip = include_bytes!("memory_xip.x");
     let mut memory_file = File::create(out_dir.join("memory.x"))?;
-    memory_file.write_all(if env::var("CARGO_FEATURE_XIP").is_ok() {
-        memory_script_xip
-    } else {
-        memory_script
-    })?;
+    memory_file.write_all(memory_script)?;
 
     Ok(())
 }

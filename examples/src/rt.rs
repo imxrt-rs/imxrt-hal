@@ -20,12 +20,5 @@ unsafe fn disable_rtwdog() {
 unsafe fn pre_init() {
     cortex_m::interrupt::free(|_| {
         disable_rtwdog();
-
-        extern "C" {
-            static __svectors: u32;
-        }
-
-        const SCB_VTOR: *mut u32 = 0xE000_ED08 as *mut u32;
-        SCB_VTOR.write_volatile(&__svectors as *const u32 as u32);
     });
 }

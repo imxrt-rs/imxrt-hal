@@ -26,7 +26,11 @@ version = "0.7"
 
 [dependencies.cortex-m-rt]
 version = "0.7"
-features = ["device", "region-alias"]
+features = [
+    "device",
+    "set-vtor",
+    "region-alias",
+]
 
 [dependencies.cortex-m-rtic]
 version = "1.0"
@@ -67,7 +71,6 @@ teensy4 = [
     "teensy4-panic",
 ]
 rtic = ["cortex-m-rtic", "imxrt-ral/rtic"]
-xip = []
 
 [[bin]]
 name = "rtic_dma_uart"
