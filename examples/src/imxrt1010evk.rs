@@ -173,3 +173,10 @@ pub mod clock_out {
         Clko2::Spdif0Clk,
     ];
 }
+
+/// TODO featureful panic handler
+#[cfg(target_arch = "arm")]
+#[panic_handler]
+fn panic_handler(_: &core::panic::PanicInfo) -> ! {
+    loop {}
+}

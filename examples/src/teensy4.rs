@@ -70,6 +70,8 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
 
 #[cfg(target_arch = "arm")]
 use teensy4_fcb as _;
+#[cfg(target_arch = "arm")]
+use teensy4_panic as _;
 
 /// Helpers for the clock_out example.
 ///

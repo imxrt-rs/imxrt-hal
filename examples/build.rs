@@ -19,15 +19,10 @@ type MemoryMap = &'static str;
 const IMXRT1010_MEMORY: MemoryMap = r#"
 MEMORY
 {
-    /* Sections precisely placed, following 9.6.2.2 in the reference manual */
-    /* Flash configuration block. */
-    BOOT_FLASH (RX) : ORIGIN = 0x60000000, LENGTH = 8K
-
-    /* Application image storage. It must start with the vector table. */
-    APP_FLASH  (RX) : ORIGIN = 0x60002000, LENGTH = 16M - LENGTH(BOOT_FLASH)
-
+    FLASH      (RX) : ORIGIN = 0x60000000, LENGTH = 16M
     /* Lengths determined by default fuse values. */
-    ITCM       (RX) : ORIGIN = 0x00000000, LENGTH = 32K
+    /* See note in 9.6.1.1 to understand why this isn't zero. */
+    ITCM       (RX) : ORIGIN = 0x00000004, LENGTH = 32K - 4
     DTCM       (RW) : ORIGIN = 0x20000000, LENGTH = 32K
     /* 32K reserved, starting at 0x20200000, for boot ROM. */
     OCRAM     (RWX) : ORIGIN = 0x20208000, LENGTH = 32K
@@ -39,11 +34,7 @@ __fcb_offset = 0x400;
 const IMXRT1060_MEMORY: MemoryMap = r#"
 MEMORY
 {
-    BOOT_FLASH (RX) : ORIGIN = 0x60000000, LENGTH = 8K
-
-    /* Application image storage. It must start with the vector table. */
-    APP_FLASH  (RX) : ORIGIN = 0x60002000, LENGTH = 1984K - LENGTH(BOOT_FLASH)
-
+    FLASH      (RX) : ORIGIN = 0x60000000, LENGTH = 1984K
     /* Lengths determined by default fuse values. */
     ITCM       (RX) : ORIGIN = 0x00000000, LENGTH = 128K
     DTCM       (RW) : ORIGIN = 0x20000000, LENGTH = 128K
@@ -145,8 +136,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     board_file.write_all(chip_memory.as_bytes())?;
 
     let memory_script = include_bytes!("memory.x");
+    let memory_script_xip = include_bytes!("memory_xip.x");
     let mut memory_file = File::create(out_dir.join("memory.x"))?;
-    memory_file.write_all(memory_script)?;
+    memory_file.write_all(if env::var("CARGO_FEATURE_XIP").is_ok() {
+        memory_script_xip
+    } else {
+        memory_script
+    })?;
 
     Ok(())
 }

@@ -3,24 +3,25 @@
  * Supports LMA and VMA differentiation for instructions, which isn't currently available
  * in cortex-m-rt.
  *
- * This approach has only been tested with serial NOR FlexSPI boot. It will likely also work
- * with XIP by updating some REGION_ALIAS specifiers, but this hasn't been tested either.
+ * This approach use XIP to boot from flash. It's available with the "xip" package feature.
  */
 
 /* Defined in the example's build.rs */
 INCLUDE board.x
 
-/* Boot ROM moves VTABLE from FLASH to ITCM. */
+/* KEEP VTOR, text, and RODATA in flash.
+ *
+ * Technically, we shouldn't put VTOR in flash. TODO: handle
+ * this later...
+ */
 REGION_ALIAS("REGION_LOAD_VTABLE", FLASH);
-REGION_ALIAS("REGION_VTABLE", ITCM);
+REGION_ALIAS("REGION_VTABLE", FLASH);
 
-/* Boot ROM moves text from FLASH to ITCM. */
 REGION_ALIAS("REGION_LOAD_TEXT", FLASH);
-REGION_ALIAS("REGION_TEXT", ITCM);
+REGION_ALIAS("REGION_TEXT", FLASH);
 
-/* Boot ROM moves read-only data from FLASH to ITCM. */
 REGION_ALIAS("REGION_LOAD_RODATA", FLASH);
-REGION_ALIAS("REGION_RODATA", ITCM);
+REGION_ALIAS("REGION_RODATA", FLASH);
 
 /* Runtime moves data from FLASH to DTCM. */
 REGION_ALIAS("REGION_LOAD_DATA", FLASH);
@@ -58,10 +59,10 @@ SECTIONS
          * ---------
          */
         __boot_data = .;
-        LONG(ORIGIN(ITCM));        /* Start of image */
+        LONG(ORIGIN(FLASH));        /* Start of image */
         LONG(__image_size);         /* Length of image */
         LONG(0x00000000);           /* Plugin flag (unused) */
         LONG(0xDEADBEEF);           /* Dummy to align boot data to 16 bytes */
         . = ADDR(.boot) + 0x2000;   /* TODO make this not board dependent? */
-    } > ITCM AT> FLASH
+    } > FLASH
 }

@@ -40,6 +40,10 @@ version = "=1.0.0-alpha.5"
 optional = true
 version = "0.3"
 
+[target.thumbv7em-none-eabihf.dependencies.teensy4-panic]
+optional = true
+version = "0.2"
+
 # Other boards may choose to define their FCB inline.
 [dependencies.imxrt-boot-gen]
 optional = true
@@ -60,8 +64,10 @@ teensy4 = [
     "imxrt-ral/imxrt1062",
     "imxrt-hal/imxrt1060",
     "teensy4-fcb",
+    "teensy4-panic",
 ]
 rtic = ["cortex-m-rtic", "imxrt-ral/rtic"]
+xip = []
 
 [[bin]]
 name = "rtic_dma_uart"
