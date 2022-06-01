@@ -1,4 +1,4 @@
-//! imxrt-ral shim library, providing cross-platform RTIC support.
+//! imxrt-ral shim module, providing cross-board RTIC support.
 //!
 //! This shim exists to work around cortex-m-rtic #197 [1]. Before this
 //! shim, we maintained unique RTIC app modules per board, just so that
@@ -6,66 +6,16 @@
 //! for us.
 //!
 //! It re-exports all of imxrt-ral, then overrides the Interrupt items
-//! It only supports the needs of the imxrt-hal examples. It must be a
-//! separate crate, because RTIC will try to "extern crate ..." the item.
+//! It only supports the needs of the imxrt-hal examples.
 //!
 //! [1]: https://github.com/rtic-rs/cortex-m-rtic/issues/197
 
-#![no_std]
-
 use imxrt_ral::Interrupt as ISR;
-pub use imxrt_ral::*;
-
-//
-// When adding a new interrupt, make sure
-// you update the BOARD_INTERRUPTS slice in build.rs
-// to include the same symbol.
-//
-
-pub mod interrupt {
-    // In PACs and RAL, 'interrupt' is typically an enum.
-    // Bit RTIC doesn't care if 'interrupt' is an enum or a module.
-    // It only cares that it's accessible with path-like syntax.
-    // Using a module allows us to meet RTIC's requirements without
-    // introducing a new type.
-
-    use super::ISR;
-
-    //
-    // Interrupts common for all boards.
-    //
-    pub const BOARD_PIT: ISR = ISR::PIT;
-    pub const BOARD_GPT1: ISR = ISR::GPT1;
-    pub const BOARD_GPT2: ISR = ISR::GPT2;
-
-    //
-    // These interrupts are renamed to match their
-    // board resource.
-    //
-    #[cfg(board = "imxrt1010evk")]
-    pub const BOARD_CONSOLE: ISR = ISR::LPUART1;
-    #[cfg(board = "teensy4")]
-    pub const BOARD_CONSOLE: ISR = ISR::LPUART2;
-
-    #[cfg(board = "imxrt1010evk")]
-    pub const BOARD_SPI: ISR = ISR::LPSPI1;
-    #[cfg(board = "teensy4")]
-    pub const BOARD_SPI: ISR = ISR::LPSPI4;
-
-    //
-    // These interrupts simply refer to a chip
-    // family resource. They can be re-used across
-    // all boards provided that they have a consistent
-    // name.
-    //
-    #[cfg(family = "imxrt1010")]
-    pub const BOARD_DMA_A: ISR = ISR::DMA7;
-    #[cfg(family = "imxrt1060")]
-    pub const BOARD_DMA_A: ISR = ISR::DMA7_DMA23;
-}
+pub use imxrt_ral::{Peripherals, NVIC_PRIO_BITS};
 
 // Represents the 'enum' namespace.
-pub use interrupt as Interrupt;
+pub use interrupt_shims as Interrupt;
+pub use interrupt_shims as interrupt;
 
 type Vector = unsafe extern "C" fn();
 

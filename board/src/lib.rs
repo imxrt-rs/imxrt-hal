@@ -6,13 +6,16 @@ use imxrt_hal as hal;
 use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
 
+mod ral_shim;
 mod rt;
 
-#[cfg(feature = "imxrt1010evk")]
+pub use ral_shim::{interrupt, Interrupt, Peripherals, BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
+
+#[cfg(board = "imxrt1010evk")]
 #[path = "imxrt1010evk.rs"]
 mod board;
 
-#[cfg(feature = "teensy4")]
+#[cfg(board = "teensy4")]
 #[path = "teensy4.rs"]
 mod board;
 
@@ -46,14 +49,14 @@ pub struct Board {
     pub specifics: board::Specifics,
 }
 
-/// Peripheral register blocks required by the board.
+/// Peripheral instances required by the board.
 ///
 /// This is an opaque structure. If it exists, the board
 /// has ownership of all `imxrt-ral` peripheral register
-/// blocks that it requires. Use [`take()`](Peripherals::take)
+/// blocks that it requires. Use [`take()`](Instances::take)
 /// to safely acquire those peripherals.
 #[allow(dead_code)] // Might not be used by all boards.
-pub struct Peripherals {
+pub struct Instances {
     gpio1: ral::gpio::GPIO1,
     gpio2: ral::gpio::GPIO2,
     iomuxc: ral::iomuxc::IOMUXC,
@@ -68,11 +71,11 @@ pub struct Peripherals {
     ccm_analog: ral::ccm_analog::CCM_ANALOG,
     dcdc: ral::dcdc::DCDC,
     lpspi1: ral::lpspi::LPSPI1,
-    #[cfg(imxrt1060)]
+    #[cfg(family = "imxrt1060")]
     lpspi4: ral::lpspi::LPSPI4,
 }
 
-impl Peripherals {
+impl Instances {
     pub fn take() -> Option<Self> {
         Some(Self {
             gpio1: ral::gpio::GPIO1::take()?,
@@ -89,14 +92,13 @@ impl Peripherals {
             ccm_analog: ral::ccm_analog::CCM_ANALOG::take()?,
             dcdc: ral::dcdc::DCDC::take()?,
             lpspi1: ral::lpspi::LPSPI1::take()?,
-            #[cfg(imxrt1060)]
+            #[cfg(family = "imxrt1060")]
             lpspi4: ral::lpspi::LPSPI4::take()?,
         })
     }
 }
 
-#[cfg(feature = "rtic")]
-impl From<ral::Peripherals> for Peripherals {
+impl From<ral::Peripherals> for Instances {
     fn from(p: ral::Peripherals) -> Self {
         Self {
             gpio1: p.GPIO1,
@@ -113,7 +115,7 @@ impl From<ral::Peripherals> for Peripherals {
             ccm_analog: p.CCM_ANALOG,
             dcdc: p.DCDC,
             lpspi1: p.LPSPI1,
-            #[cfg(imxrt1060)]
+            #[cfg(family = "imxrt1060")]
             lpspi4: p.LPSPI4,
         }
     }
@@ -143,10 +145,10 @@ pub const LPSPI_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpspi_frequency(RUN_M
 /// Target SPI baud rate (Hz).
 pub const SPI_BAUD_RATE_FREQUENCY: u32 = 1_000_000;
 
-#[cfg(imxrt1010)]
+#[cfg(family = "imxrt1010")]
 use iomuxc::imxrt1010::Pads;
 
-#[cfg(imxrt1060)]
+#[cfg(family = "imxrt1060")]
 use iomuxc::imxrt1060::Pads;
 
 /// Convert the IOMUXC peripheral into pad objects.
@@ -200,7 +202,7 @@ where
 ///
 /// Panics if any board component is already taken from the RAL.
 pub fn prepare() -> Board {
-    Peripherals::take()
+    Instances::take()
         .map(board::new)
         .expect("Board component already taken")
 }

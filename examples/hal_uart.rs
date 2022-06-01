@@ -7,6 +7,8 @@
 #![no_main]
 #![no_std]
 
+use eh1 as embedded_hal;
+
 use embedded_hal::serial::{
     blocking::Write,
     nb::{Read, Write as NbWrite},

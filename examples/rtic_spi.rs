@@ -8,7 +8,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = imxrt_ral, peripherals = true)]
+#[rtic::app(device = board, peripherals = true)]
 mod app {
 
     use hal::lpspi::{Direction, Interrupts, MasterStatus, Transaction};

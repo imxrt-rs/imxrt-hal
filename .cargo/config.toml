@@ -11,14 +11,12 @@
 # IMXRT1010EVK aliases.
 build-imxrt1010evk = [
     "build",
-    "--package=imxrt-hal-examples",
-    "--features=imxrt-hal-examples/imxrt1010evk",
+    "--features=board/imxrt1010evk",
     "--target-dir=target/imxrt1010evk",
 ]
 run-imxrt1010evk = [
     "run",
-    "--package=imxrt-hal-examples",
-    "--features=imxrt-hal-examples/imxrt1010evk",
+    "--features=board/imxrt1010evk",
     "--target-dir=target/imxrt1010evk",
     "--target=thumbv7em-none-eabihf",
 ]
@@ -26,14 +24,12 @@ run-imxrt1010evk = [
 # Teensy4 aliases.
 build-teensy4 = [
     "build",
-    "--package=imxrt-hal-examples",
-    "--features=imxrt-hal-examples/teensy4",
+    "--features=board/teensy4",
     "--target-dir=target/teensy4",
 ]
 run-teensy4 = [
     "run",
-    "--package=imxrt-hal-examples",
-    "--features=imxrt-hal-examples/teensy4",
+    "--features=board/teensy4",
     "--target-dir=target/teensy4",
     "--target=thumbv7em-none-eabihf"
 ]

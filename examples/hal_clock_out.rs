@@ -14,6 +14,8 @@ use imxrt_hal as hal;
 use imxrt_ral as ral;
 use ral::ccm::CCM;
 
+use eh1 as embedded_hal;
+
 use embedded_hal::serial::{blocking::Write as _, nb::Read};
 
 use core::fmt::{self, Write as _};

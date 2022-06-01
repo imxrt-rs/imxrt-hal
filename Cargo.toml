@@ -72,8 +72,7 @@ eh02-unproven = []
 
 [workspace]
 members = [
-    "examples",
-    "examples/ral-shim",
+    "board",
     "tools",
 ]
 
@@ -96,3 +95,26 @@ codegen-units = 256
 [profile.release.build-override]
 opt-level = 0
 codegen-units = 256
+
+######################################
+# Configurations for hardware examples
+######################################
+
+[dev-dependencies]
+board = { path = "board" }
+cortex-m-rt = { version = "0.7", features = [
+    "device",
+    "set-vtor",
+    "region-alias",
+]}
+menu = "0.3.2"
+cortex-m-rtic = { version = "1.0" }
+imxrt-ral = { features = ["rtic"], path = "../ral" }
+
+[[example]]
+name = "hal_spi"
+required-features = ["board/spi"]
+
+[[example]]
+name = "rtic_spi"
+required-features = ["board/spi"]

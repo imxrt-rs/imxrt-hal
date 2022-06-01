@@ -40,11 +40,11 @@ pub struct Specifics {
 }
 
 /// Prepare all board resources, and return them.
-pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
+pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     #[cfg(target_arch = "arm")]
     rtt_target::rtt_init_print!();
 
-    let super::Peripherals {
+    let super::Instances {
         gpio1,
         iomuxc,
         pit,

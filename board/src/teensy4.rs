@@ -7,10 +7,10 @@
 
 use crate::{hal, iomuxc::imxrt1060 as iomuxc, RUN_MODE};
 
-#[cfg(not(feature = "board-spi"))]
+#[cfg(not(feature = "spi"))]
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;
-#[cfg(feature = "board-spi")]
+#[cfg(feature = "spi")]
 /// LED output repurposed for SPI SCLK.
 pub type Led = ();
 
@@ -25,11 +25,11 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_b0::GPIO_B0_00, // PCS0, P10
 >;
 
-#[cfg(not(feature = "board-spi"))]
+#[cfg(not(feature = "spi"))]
 /// Activate the `"board-spi"` feature to configure the SPI peripheral.
 pub type Spi = ();
 
-#[cfg(feature = "board-spi")]
+#[cfg(feature = "spi")]
 /// SPI peripheral.
 pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 4>;
 
@@ -37,8 +37,8 @@ pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 4>;
 pub struct Specifics {}
 
 /// Prepare all board resources, and return them.
-pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
-    let super::Peripherals {
+pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
+    let super::Instances {
         gpio2: _gpio2,
         iomuxc,
         pit,
@@ -61,9 +61,9 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
 
     let mut _gpio2 = super::configure_gpio(_gpio2, &mut ccm);
 
-    #[cfg(not(feature = "board-spi"))]
+    #[cfg(not(feature = "spi"))]
     let led = _gpio2.output(iomuxc.gpio_b0.p03);
-    #[cfg(feature = "board-spi")]
+    #[cfg(feature = "spi")]
     let led = ();
 
     let pit = super::configure_pit(pit, &mut ccm);
@@ -84,7 +84,7 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         console.set_parity(None);
     });
 
-    #[cfg(feature = "board-spi")]
+    #[cfg(feature = "spi")]
     let spi = {
         hal::ccm::clock_gate::lpspi::<{ Spi::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
         let pins = SpiPins {
@@ -99,7 +99,7 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         });
         spi
     };
-    #[cfg(not(feature = "board-spi"))]
+    #[cfg(not(feature = "spi"))]
     let spi = ();
 
     hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);

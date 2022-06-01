@@ -9,7 +9,7 @@
 
 use imxrt_hal as hal;
 
-#[rtic::app(device = imxrt_ral, peripherals = true)]
+#[rtic::app(device = board, peripherals = true)]
 mod app {
     use super::{dma_receive, dma_transfer, hal};
 
@@ -42,7 +42,7 @@ mod app {
             ..
         } = board::new(cx.device);
 
-        let mut channel = dma[imxrt_ral::BOARD_DMA_A_INDEX].take().unwrap();
+        let mut channel = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         channel.set_interrupt_on_completion(true);
         channel.set_disable_on_completion(true);
 

@@ -1,12 +1,9 @@
 [package]
-name = "imxrt-hal-examples"
+name = "board"
 version = "0.1.0"
 edition = "2021"
 # Only for testing, documentation.
 publish = false
-
-[lib]
-name = "board"
 
 [dependencies.imxrt-hal]
 path = ".."
@@ -16,35 +13,16 @@ version = "0.5.0-alpha"
 version = "0.2"
 path = "../../iomuxc"
 
-# Actual imxrt-ral library is called 'chip'.
-# Its items are available through the ral shim
-# library, which is conveniently named imxrt-ral.
-# See documentation in the shim library for rational.
-[dependencies.chip]
-package = "imxrt-ral"
+[dependencies.imxrt-ral]
 version = "0.5"
 path = "../../ral"
-
-[dependencies.imxrt-ral-shim]
-path = "ral-shim"
+features = ["rt", "rtic"]
 
 [dependencies.cortex-m]
 version = "0.7"
 
 [dependencies.cortex-m-rt]
 version = "0.7"
-features = [
-    "device",
-    "set-vtor",
-    "region-alias",
-]
-
-[dependencies.cortex-m-rtic]
-version = "1.0"
-optional = true
-
-[dependencies.embedded-hal]
-version = "=1.0.0-alpha.5"
 
 # Use existing FCB, instead of defining inline.
 [target.thumbv7em-none-eabihf.dependencies.teensy4-fcb]
@@ -60,9 +38,6 @@ version = "0.2"
 optional = true
 version = "0.2"
 
-[dependencies.menu]
-version = "0.3.2"
-
 [target.thumbv7em-none-eabihf.dependencies.rtt-target]
 version = "0.3"
 optional = true
@@ -76,8 +51,7 @@ features = ["cortex-m"]
 [features]
 imxrt1010evk = [
     "imxrt-iomuxc/imxrt1010",
-    "chip/imxrt1011",
-    "imxrt-ral-shim/imxrt1010evk",
+    "imxrt-ral/imxrt1011",
     "imxrt-hal/imxrt1010",
     "imxrt-boot-gen/imxrt1010",
     "rtt-target",
@@ -85,41 +59,16 @@ imxrt1010evk = [
 ]
 teensy4 = [
     "imxrt-iomuxc/imxrt1060",
-    "chip/imxrt1062",
-    "imxrt-ral-shim/teensy4",
+    "imxrt-ral/imxrt1062",
     "imxrt-hal/imxrt1060",
     "teensy4-fcb",
     "teensy4-panic",
 ]
-rtic = ["cortex-m-rtic", "chip/rtic"]
+
 # Some boards (Teensy 4) require a resource
 # configuration to enable the (easily accessible)
 # SPI peripheral. Turn on this feature to activate
 # the SPI peripheral.
 #
 # See board-specific documentation for its effects.
-board-spi = []
-
-[[bin]]
-name = "hal_spi"
-required-features = ["board-spi"]
-
-[[bin]]
-name = "rtic_dma_uart"
-required-features = ["rtic"]
-
-[[bin]]
-name = "rtic_gpt"
-required-features = ["rtic"]
-
-[[bin]]
-name = "rtic_pit"
-required-features = ["rtic"]
-
-[[bin]]
-name = "rtic_spi"
-required-features = ["board-spi", "rtic"]
-
-[[bin]]
-name = "rtic_uart"
-required-features = ["rtic"]
+spi = []

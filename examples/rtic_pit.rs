@@ -3,7 +3,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = imxrt_ral, peripherals = true)]
+#[rtic::app(device = board, peripherals = true)]
 mod app {
     use imxrt_hal as hal;
 

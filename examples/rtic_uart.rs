@@ -18,7 +18,7 @@
 /// toggle.
 const CONFIG_FIFOS: bool = true;
 
-#[rtic::app(device = imxrt_ral, peripherals = true)]
+#[rtic::app(device = board, peripherals = true)]
 mod app {
     use hal::lpuart;
     use imxrt_hal as hal;

@@ -10,6 +10,8 @@
 
 use imxrt_hal as hal;
 
+use eh1 as embedded_hal;
+
 use embedded_hal::{
     serial::blocking::Write as _,
     spi::blocking::{Transfer, Write},
