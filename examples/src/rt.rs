@@ -20,5 +20,6 @@ unsafe fn disable_rtwdog() {
 unsafe fn pre_init() {
     cortex_m::interrupt::free(|_| {
         disable_rtwdog();
+        ral::shim_vectors();
     });
 }

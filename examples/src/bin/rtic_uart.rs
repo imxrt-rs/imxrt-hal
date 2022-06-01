@@ -60,7 +60,7 @@ mod app {
         }
     }
 
-    #[task(binds = LPUART1, local = [led, console])]
+    #[task(binds = BOARD_CONSOLE, local = [led, console])]
     fn console_interrupt(cx: console_interrupt::Context) {
         use lpuart::Status;
         let console = cx.local.console;

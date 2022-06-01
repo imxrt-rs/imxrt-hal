@@ -73,6 +73,7 @@ eh02-unproven = []
 [workspace]
 members = [
     "examples",
+    "examples/ral-shim",
     "tools",
 ]
 

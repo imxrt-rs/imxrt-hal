@@ -16,10 +16,17 @@ version = "0.5.0-alpha"
 version = "0.2"
 path = "../../iomuxc"
 
-[dependencies.imxrt-ral]
+# Actual imxrt-ral library is called 'chip'.
+# Its items are available through the ral shim
+# library, which is conveniently named imxrt-ral.
+# See documentation in the shim library for rational.
+[dependencies.chip]
+package = "imxrt-ral"
 version = "0.5"
 path = "../../ral"
-features = ["rt"]
+
+[dependencies.imxrt-ral-shim]
+path = "ral-shim"
 
 [dependencies.cortex-m]
 version = "0.7"
@@ -69,7 +76,8 @@ features = ["cortex-m"]
 [features]
 imxrt1010evk = [
     "imxrt-iomuxc/imxrt1010",
-    "imxrt-ral/imxrt1011",
+    "chip/imxrt1011",
+    "imxrt-ral-shim/imxrt1010evk",
     "imxrt-hal/imxrt1010",
     "imxrt-boot-gen/imxrt1010",
     "rtt-target",
@@ -77,12 +85,13 @@ imxrt1010evk = [
 ]
 teensy4 = [
     "imxrt-iomuxc/imxrt1060",
-    "imxrt-ral/imxrt1062",
+    "chip/imxrt1062",
+    "imxrt-ral-shim/teensy4",
     "imxrt-hal/imxrt1060",
     "teensy4-fcb",
     "teensy4-panic",
 ]
-rtic = ["cortex-m-rtic", "imxrt-ral/rtic"]
+rtic = ["cortex-m-rtic", "chip/rtic"]
 # Some boards (Teensy 4) require a resource
 # configuration to enable the (easily accessible)
 # SPI peripheral. Turn on this feature to activate

@@ -6,6 +6,8 @@
 
 /* Emitted from build.rs based on the board selection. */
 INCLUDE board.x
+/* Emitted from the imxrt-ral shim library */
+INCLUDE interrupt_shims.x
 
 /* Runtime moves VTABLE from FLASH to DTCM. */
 REGION_ALIAS("REGION_LOAD_VTABLE", FLASH);

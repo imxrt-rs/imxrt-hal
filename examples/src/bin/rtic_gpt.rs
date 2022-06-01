@@ -54,7 +54,7 @@ mod app {
         }
     }
 
-    #[task(binds = GPT1, shared = [led, gpt1, gpt2])]
+    #[task(binds = BOARD_GPT1, shared = [led, gpt1, gpt2])]
     fn turn_on(cx: turn_on::Context) {
         let gpt1 = cx.shared.gpt1;
         let gpt2 = cx.shared.gpt2;
@@ -70,7 +70,7 @@ mod app {
         })
     }
 
-    #[task(binds = GPT2, shared = [led, gpt1, gpt2])]
+    #[task(binds = BOARD_GPT2, shared = [led, gpt1, gpt2])]
     fn turn_off(cx: turn_off::Context) {
         let gpt1 = cx.shared.gpt1;
         let gpt2 = cx.shared.gpt2;

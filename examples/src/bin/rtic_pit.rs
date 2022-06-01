@@ -39,7 +39,7 @@ mod app {
         }
     }
 
-    #[task(binds = PIT, local = [led, pit])]
+    #[task(binds = BOARD_PIT, local = [led, pit])]
     fn toggle_led(cx: toggle_led::Context) {
         let pit = cx.local.pit;
         let led = cx.local.led;

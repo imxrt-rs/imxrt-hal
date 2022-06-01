@@ -3,171 +3,120 @@
 //! The driver waits for a serial character, then sends the same
 //! character back 32 times. All UART sends and receives are performed
 //! with DMA.
-//!
-//! # Board compatibility
-//!
-//! Due to cortex-m-rtic #197 [1], this example is a non-traditional
-//! RTIC application. The example conditionally compiles the
-//! 'mod app' item in order to generalize platforms. The only thing
-//! that changes is the "binds" hardware task attribute.
-//!
-//! [1]: https://github.com/rtic-rs/cortex-m-rtic/issues/197
 
 #![no_std]
 #![no_main]
 
 use imxrt_hal as hal;
 
-/// Application when the platform only supports 16 DMA channels.
-#[cfg(feature = "imxrt1010evk")]
-mod chan16 {
-    #[rtic::app(device = imxrt_ral, peripherals = true)]
-    mod app {
-        #[shared]
-        struct Shared {}
+#[rtic::app(device = imxrt_ral, peripherals = true)]
+mod app {
+    use super::{dma_receive, dma_transfer, hal};
 
-        #[local]
-        struct Local {
-            app: crate::App,
+    /// What's our UART state?
+    pub enum State {
+        /// Waiting for the first character.
+        Receiving,
+        /// Sending back the results.
+        Transfering,
+    }
+
+    #[shared]
+    struct Shared {}
+
+    #[local]
+    struct Local {
+        led: board::Led,
+        console: board::Console,
+        channel: hal::dma::channel::Channel,
+        buffer: &'static mut [u8],
+        state: State,
+    }
+
+    #[init(local = [buf: [u8; 32] = [0; 32]])]
+    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
+        let board::Board {
+            led,
+            mut console,
+            mut dma,
+            ..
+        } = board::new(cx.device);
+
+        let mut channel = dma[imxrt_ral::BOARD_DMA_A_INDEX].take().unwrap();
+        channel.set_interrupt_on_completion(true);
+        channel.set_disable_on_completion(true);
+
+        unsafe {
+            // Safety: buffer is static.
+            dma_receive(&mut channel, &mut console, &mut cx.local.buf[..1]);
+        }
+        (
+            Shared {},
+            Local {
+                led,
+                console,
+                channel,
+                buffer: cx.local.buf,
+                state: State::Receiving,
+            },
+            init::Monotonics(),
+        )
+    }
+
+    #[task(binds = BOARD_DMA_A, local = [led, console, channel, buffer, state])]
+    fn dma_complete(cx: dma_complete::Context) {
+        let dma_complete::LocalResources {
+            mut channel,
+            led,
+            state,
+            buffer,
+            mut console,
+        } = cx.local;
+
+        while channel.is_interrupt() {
+            channel.clear_interrupt();
         }
 
-        #[init(local = [buf: [u8; 32] = [0; 32]])]
-        fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-            let app = crate::App::init(cx.device, cx.local.buf);
-            (Shared {}, Local { app }, init::Monotonics())
+        if !channel.is_complete() || channel.is_error() {
+            led.set();
+            return;
         }
+        channel.clear_complete();
 
-        #[task(binds = DMA7, local = [app])]
-        fn dma_complete(cx: dma_complete::Context) {
-            cx.local.app.dma_complete();
-        }
-
-        #[idle]
-        fn idle(_: idle::Context) -> ! {
-            loop {
-                rtic::export::wfi();
+        match state {
+            State::Receiving => {
+                // Completed receive operation.
+                let recv = buffer[0];
+                buffer.fill(recv);
+                unsafe {
+                    // Safety: buffer is static
+                    dma_transfer(&mut channel, &mut console, buffer);
+                }
+                *state = State::Transfering;
+            }
+            State::Transfering => {
+                unsafe {
+                    // Safety: buffer is static.
+                    dma_receive(&mut channel, &mut console, &mut buffer[..1]);
+                }
+                *state = State::Receiving;
+                led.toggle();
             }
         }
     }
-}
 
-/// Application when the platform supports 32 DMA channels.
-#[cfg(not(feature = "imxrt1010evk"))]
-mod chan32 {
-    #[rtic::app(device = imxrt_ral, peripherals = true)]
-    mod app {
-        #[shared]
-        struct Shared {}
-
-        #[local]
-        struct Local {
-            app: crate::App,
-        }
-
-        #[init(local = [buf: [u8; 32] = [0; 32]])]
-        fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-            let app = crate::App::init(cx.device, cx.local.buf);
-            (Shared {}, Local { app }, init::Monotonics())
-        }
-
-        #[task(binds = DMA7_DMA23, local = [app])]
-        fn dma_complete(cx: dma_complete::Context) {
-            cx.local.app.dma_complete();
-        }
-
-        #[idle]
-        fn idle(_: idle::Context) -> ! {
-            loop {
-                rtic::export::wfi();
-            }
+    #[idle]
+    fn idle(_: idle::Context) -> ! {
+        loop {
+            rtic::export::wfi();
         }
     }
-}
-
-/// What's our UART state?
-enum State {
-    /// Waiting for the first character.
-    Receiving,
-    /// Sending back the results.
-    Transfering,
 }
 
 use hal::dma::{
     channel,
     peripheral::{Destination, Source},
 };
-
-/// The application resources.
-pub struct App {
-    led: board::Led,
-    console: board::Console,
-    channel: hal::dma::channel::Channel,
-    buffer: &'static mut [u8],
-    state: State,
-}
-
-impl App {
-    /// Called by RTIC's init routine to prepare resources.
-    fn init(peripherals: imxrt_ral::Peripherals, buffer: &'static mut [u8]) -> Self {
-        let board::Board {
-            led,
-            mut console,
-            mut dma,
-            ..
-        } = board::new(peripherals);
-
-        let mut channel = dma[7].take().unwrap();
-        channel.set_interrupt_on_completion(true);
-        channel.set_disable_on_completion(true);
-
-        unsafe {
-            // Safety: buffer is static.
-            dma_receive(&mut channel, &mut console, &mut buffer[..1]);
-        }
-
-        Self {
-            led,
-            console,
-            channel,
-            buffer,
-            state: State::Receiving,
-        }
-    }
-
-    /// Invoked by the DMA interrupt handler when an operation completes.
-    fn dma_complete(&mut self) {
-        while self.channel.is_interrupt() {
-            self.channel.clear_interrupt();
-        }
-
-        if !self.channel.is_complete() || self.channel.is_error() {
-            self.led.set();
-            return;
-        }
-        self.channel.clear_complete();
-
-        match self.state {
-            State::Receiving => {
-                // Completed receive operation.
-                let recv = self.buffer[0];
-                self.buffer.fill(recv);
-                unsafe {
-                    // Safety: buffer is static
-                    dma_transfer(&mut self.channel, &mut self.console, self.buffer);
-                }
-                self.state = State::Transfering;
-            }
-            State::Transfering => {
-                unsafe {
-                    // Safety: buffer is static.
-                    dma_receive(&mut self.channel, &mut self.console, &mut self.buffer[..1]);
-                }
-                self.state = State::Receiving;
-                self.led.toggle();
-            }
-        }
-    }
-}
 
 /// Prepares and activates the DMA receive operation.
 ///
