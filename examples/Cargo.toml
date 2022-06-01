@@ -56,12 +56,12 @@ version = "0.2"
 [dependencies.menu]
 version = "0.3.2"
 
-[dependencies.rtt-target]
+[target.thumbv7em-none-eabihf.dependencies.rtt-target]
 version = "0.3"
 optional = true
 features = ["cortex-m"]
 
-[dependencies.panic-rtt-target]
+[target.thumbv7em-none-eabihf.dependencies.panic-rtt-target]
 version = "0.1"
 optional = true
 features = ["cortex-m"]
@@ -83,6 +83,17 @@ teensy4 = [
     "teensy4-panic",
 ]
 rtic = ["cortex-m-rtic", "imxrt-ral/rtic"]
+# Some boards (Teensy 4) require a resource
+# configuration to enable the (easily accessible)
+# SPI peripheral. Turn on this feature to activate
+# the SPI peripheral.
+#
+# See board-specific documentation for its effects.
+board-spi = []
+
+[[bin]]
+name = "hal_spi"
+required-features = ["board-spi"]
 
 [[bin]]
 name = "rtic_dma_uart"
@@ -95,6 +106,10 @@ required-features = ["rtic"]
 [[bin]]
 name = "rtic_pit"
 required-features = ["rtic"]
+
+[[bin]]
+name = "rtic_spi"
+required-features = ["board-spi", "rtic"]
 
 [[bin]]
 name = "rtic_uart"

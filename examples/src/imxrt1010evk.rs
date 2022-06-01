@@ -1,4 +1,8 @@
 //! IMXRT1010EVK board configuration.
+//!
+//! # `"board-spi"` feature
+//!
+//! This feature has no effect on this board.
 
 use crate::{hal, iomuxc::imxrt1010 as iomuxc, RUN_MODE};
 
@@ -7,6 +11,15 @@ pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
 /// The UART console.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
 pub type ConsolePins = crate::hal::lpuart::Pins<iomuxc::gpio::GPIO_10, iomuxc::gpio::GPIO_09>;
+
+pub type SpiPins = hal::lpspi::Pins<
+    iomuxc::gpio_ad::GPIO_AD_04, // SDO, J57_8
+    iomuxc::gpio_ad::GPIO_AD_03, // SDI, J57_10
+    iomuxc::gpio_ad::GPIO_AD_06, // SCK, J57_12
+    iomuxc::gpio_ad::GPIO_AD_05, // PCS0, J57_6
+>;
+
+pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 1>;
 
 /// Test point 34.
 ///
@@ -28,7 +41,9 @@ pub struct Specifics {
 
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
+    #[cfg(target_arch = "arm")]
     rtt_target::rtt_init_print!();
+
     let super::Peripherals {
         gpio1,
         iomuxc,
@@ -38,6 +53,7 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         lpuart1,
         dma,
         dma_mux,
+        lpspi1,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
@@ -69,6 +85,21 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         console.set_parity(None);
     });
 
+    hal::ccm::clock_gate::lpspi::<{ Spi::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
+    let spi = {
+        let pins = SpiPins {
+            sdo: iomuxc.gpio_ad.p04,
+            sdi: iomuxc.gpio_ad.p03,
+            sck: iomuxc.gpio_ad.p06,
+            pcs0: iomuxc.gpio_ad.p05,
+        };
+        let mut spi = Spi::new(lpspi1, pins);
+        spi.disabled(|spi| {
+            spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
+        });
+        spi
+    };
+
     hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
 
@@ -83,6 +114,7 @@ pub fn new<P: Into<super::Peripherals>>(peripherals: P) -> super::Board {
         gpt2,
         console,
         dma,
+        spi,
         ccm,
         specifics,
     }
@@ -175,4 +207,5 @@ pub mod clock_out {
     ];
 }
 
+#[cfg(target_arch = "arm")]
 use panic_rtt_target as _;

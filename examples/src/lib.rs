@@ -36,6 +36,8 @@ pub struct Board {
     pub console: Console,
     /// DMA channels.
     pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
+    /// SPI peripheral.
+    pub spi: Spi,
     /// CCM registers.
     pub ccm: ral::ccm::CCM,
     /// Any board-specific resouces.
@@ -65,6 +67,9 @@ pub struct Peripherals {
     ccm: ral::ccm::CCM,
     ccm_analog: ral::ccm_analog::CCM_ANALOG,
     dcdc: ral::dcdc::DCDC,
+    lpspi1: ral::lpspi::LPSPI1,
+    #[cfg(imxrt1060)]
+    lpspi4: ral::lpspi::LPSPI4,
 }
 
 impl Peripherals {
@@ -83,6 +88,9 @@ impl Peripherals {
             ccm: ral::ccm::CCM::take()?,
             ccm_analog: ral::ccm_analog::CCM_ANALOG::take()?,
             dcdc: ral::dcdc::DCDC::take()?,
+            lpspi1: ral::lpspi::LPSPI1::take()?,
+            #[cfg(imxrt1060)]
+            lpspi4: ral::lpspi::LPSPI4::take()?,
         })
     }
 }
@@ -104,6 +112,9 @@ impl From<ral::Peripherals> for Peripherals {
             ccm: p.CCM,
             ccm_analog: p.CCM_ANALOG,
             dcdc: p.DCDC,
+            lpspi1: p.LPSPI1,
+            #[cfg(imxrt1060)]
+            lpspi4: p.LPSPI4,
         }
     }
 }
@@ -126,6 +137,11 @@ pub const GPT2_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE)
 pub const UART_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::uart_frequency(RUN_MODE);
 /// The console baud rate: 115200bps.
 pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
+
+/// The LPSPI clock frequency (Hz).
+pub const LPSPI_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpspi_frequency(RUN_MODE);
+/// Target SPI baud rate (Hz).
+pub const SPI_BAUD_RATE_FREQUENCY: u32 = 1_000_000;
 
 #[cfg(imxrt1010)]
 use iomuxc::imxrt1010::Pads;
