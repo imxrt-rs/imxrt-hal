@@ -33,6 +33,13 @@ pub type Spi = ();
 /// SPI peripheral.
 pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 4>;
 
+pub type I2cPins = hal::lpi2c::Pins<
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_07, // SCL, P16
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_06, // SDA, P17
+>;
+
+pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, 3>;
+
 /// Teensy 4 specific peripherals.
 pub struct Specifics {}
 
@@ -48,13 +55,14 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         dma,
         dma_mux,
         lpspi4: _lpspi4,
+        lpi2c3,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
         ..
     } = peripherals.into();
 
-    let iomuxc = super::convert_iomuxc(iomuxc);
+    let mut iomuxc = super::convert_iomuxc(iomuxc);
     hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
     hal::set_target_power(&mut dcdc, RUN_MODE);
     hal::ccm::clock_tree::configure(RUN_MODE, &mut ccm, &mut ccm_analog);
@@ -102,6 +110,19 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     #[cfg(not(feature = "spi"))]
     let spi = ();
 
+    hal::ccm::clock_gate::lpi2c::<{ I2c::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
+    crate::iomuxc::configure(&mut iomuxc.gpio_ad_b1.p07, super::I2C_PIN_CONFIG);
+    crate::iomuxc::configure(&mut iomuxc.gpio_ad_b1.p06, super::I2C_PIN_CONFIG);
+
+    let i2c = I2c::new(
+        lpi2c3,
+        I2cPins {
+            scl: iomuxc.gpio_ad_b1.p07,
+            sda: iomuxc.gpio_ad_b1.p06,
+        },
+        &hal::lpi2c::timing::from_clock_speed(super::LPI2C_CLK_FREQUENCY, super::I2C_BAUD_RATE),
+    );
+
     hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
     let specifics = Specifics {};
@@ -113,6 +134,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         console,
         dma,
         spi,
+        i2c,
         ccm,
         specifics,
     }

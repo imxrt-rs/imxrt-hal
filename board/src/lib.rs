@@ -41,6 +41,8 @@ pub struct Board {
     pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
     /// SPI peripheral.
     pub spi: Spi,
+    /// I2C peripheral.
+    pub i2c: I2c,
     /// CCM registers.
     pub ccm: ral::ccm::CCM,
     /// Any board-specific resouces.
@@ -71,8 +73,11 @@ pub struct Instances {
     ccm_analog: ral::ccm_analog::CCM_ANALOG,
     dcdc: ral::dcdc::DCDC,
     lpspi1: ral::lpspi::LPSPI1,
+    lpi2c1: ral::lpi2c::LPI2C1,
     #[cfg(family = "imxrt1060")]
     lpspi4: ral::lpspi::LPSPI4,
+    #[cfg(family = "imxrt1060")]
+    lpi2c3: ral::lpi2c::LPI2C3,
 }
 
 impl Instances {
@@ -92,8 +97,11 @@ impl Instances {
             ccm_analog: ral::ccm_analog::CCM_ANALOG::take()?,
             dcdc: ral::dcdc::DCDC::take()?,
             lpspi1: ral::lpspi::LPSPI1::take()?,
+            lpi2c1: ral::lpi2c::LPI2C1::take()?,
             #[cfg(family = "imxrt1060")]
             lpspi4: ral::lpspi::LPSPI4::take()?,
+            #[cfg(family = "imxrt1060")]
+            lpi2c3: ral::lpi2c::LPI2C3::take()?,
         })
     }
 }
@@ -115,8 +123,11 @@ impl From<ral::Peripherals> for Instances {
             ccm_analog: p.CCM_ANALOG,
             dcdc: p.DCDC,
             lpspi1: p.LPSPI1,
+            lpi2c1: p.LPI2C1,
             #[cfg(family = "imxrt1060")]
             lpspi4: p.LPSPI4,
+            #[cfg(family = "imxrt1060")]
+            lpi2c3: p.LPI2C3,
         }
     }
 }
@@ -144,6 +155,18 @@ pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_
 pub const LPSPI_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpspi_frequency(RUN_MODE);
 /// Target SPI baud rate (Hz).
 pub const SPI_BAUD_RATE_FREQUENCY: u32 = 1_000_000;
+
+/// The LPI2C clock frequency (Hz).
+pub const LPI2C_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpi2c_frequency(RUN_MODE);
+/// Target I2C baud rate (Hz).
+pub const I2C_BAUD_RATE: hal::lpi2c::timing::ClockSpeed = hal::lpi2c::timing::ClockSpeed::KHz400;
+
+const I2C_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+    .set_open_drain(iomuxc::OpenDrain::Enabled)
+    .set_slew_rate(iomuxc::SlewRate::Fast)
+    .set_drive_strength(iomuxc::DriveStrength::R0_4)
+    .set_speed(iomuxc::Speed::Fast)
+    .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup22k));
 
 #[cfg(family = "imxrt1010")]
 use iomuxc::imxrt1010::Pads;

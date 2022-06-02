@@ -21,6 +21,13 @@ pub type SpiPins = hal::lpspi::Pins<
 
 pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 1>;
 
+pub type I2cPins = hal::lpi2c::Pins<
+    iomuxc::gpio::GPIO_02, // SCL, J57_20
+    iomuxc::gpio::GPIO_01, // SDA, J57_18
+>;
+
+pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, 1>;
+
 /// Test point 34.
 ///
 /// Use this for measuring your application timing (as a GPIO).
@@ -54,13 +61,14 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         dma,
         dma_mux,
         lpspi1,
+        lpi2c1,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
         ..
     } = peripherals.into();
 
-    let iomuxc = super::convert_iomuxc(iomuxc);
+    let mut iomuxc = super::convert_iomuxc(iomuxc);
     hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
     hal::set_target_power(&mut dcdc, RUN_MODE);
     hal::ccm::clock_tree::configure(RUN_MODE, &mut ccm, &mut ccm_analog);
@@ -100,6 +108,19 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         spi
     };
 
+    hal::ccm::clock_gate::lpi2c::<{ I2c::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
+    crate::iomuxc::configure(&mut iomuxc.gpio.p02, super::I2C_PIN_CONFIG);
+    crate::iomuxc::configure(&mut iomuxc.gpio.p01, super::I2C_PIN_CONFIG);
+
+    let i2c = I2c::new(
+        lpi2c1,
+        I2cPins {
+            scl: iomuxc.gpio.p02,
+            sda: iomuxc.gpio.p01,
+        },
+        &hal::lpi2c::timing::from_clock_speed(super::LPI2C_CLK_FREQUENCY, super::I2C_BAUD_RATE),
+    );
+
     hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
 
@@ -115,6 +136,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         console,
         dma,
         spi,
+        i2c,
         ccm,
         specifics,
     }

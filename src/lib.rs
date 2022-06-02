@@ -38,6 +38,7 @@ use imxrt_ral as ral;
 pub mod dcdc;
 pub mod gpio;
 pub mod gpt;
+pub mod lpi2c;
 pub mod lpspi;
 pub mod lpuart;
 pub mod pit;
