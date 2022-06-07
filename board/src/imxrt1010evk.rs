@@ -1,6 +1,6 @@
 //! IMXRT1010EVK board configuration.
 //!
-//! # `"board-spi"` feature
+//! # `"spi"` feature
 //!
 //! This feature has no effect on this board.
 
@@ -73,14 +73,19 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     hal::set_target_power(&mut dcdc, RUN_MODE);
     hal::ccm::clock_tree::configure(RUN_MODE, &mut ccm, &mut ccm_analog);
 
-    let mut gpio1 = super::configure_gpio(gpio1, &mut ccm);
+    CLOCK_GATES
+        .into_iter()
+        .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
+    configure_pins(&mut iomuxc);
+
+    let mut gpio1 = hal::gpio::Port::new(gpio1);
     let led = gpio1.output(iomuxc.gpio.p11);
-    let pit = super::configure_pit(pit, &mut ccm);
 
-    let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER, &mut ccm);
-    let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER, &mut ccm);
+    let pit = super::configure_pit(pit);
 
-    hal::ccm::clock_gate::lpuart::<{ Console::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
+    let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER);
+    let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER);
+
     let mut console = hal::lpuart::Lpuart::new(
         lpuart1,
         hal::lpuart::Pins {
@@ -93,7 +98,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         console.set_parity(None);
     });
 
-    hal::ccm::clock_gate::lpspi::<{ Spi::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
     let spi = {
         let pins = SpiPins {
             sdo: iomuxc.gpio_ad.p04,
@@ -108,10 +112,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         spi
     };
 
-    hal::ccm::clock_gate::lpi2c::<{ I2c::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
-    crate::iomuxc::configure(&mut iomuxc.gpio.p02, super::I2C_PIN_CONFIG);
-    crate::iomuxc::configure(&mut iomuxc.gpio.p01, super::I2C_PIN_CONFIG);
-
     let i2c = I2c::new(
         lpi2c1,
         I2cPins {
@@ -121,7 +121,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         &hal::lpi2c::timing::from_clock_speed(super::LPI2C_CLK_FREQUENCY, super::I2C_BAUD_RATE),
     );
 
-    hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
 
     let specifics = Specifics {
@@ -140,6 +139,39 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         ccm,
         specifics,
     }
+}
+
+use hal::ccm::clock_gate;
+
+/// The clock gates for this board's peripherals.
+const CLOCK_GATES: &[clock_gate::Locator] = &[
+    clock_gate::pit(),
+    clock_gate::gpt_bus::<1>(),
+    clock_gate::gpt_bus::<2>(),
+    clock_gate::gpt_serial::<1>(),
+    clock_gate::gpt_serial::<2>(),
+    clock_gate::gpio::<1>(),
+    clock_gate::lpuart::<{ Console::N }>(),
+    clock_gate::dma(),
+    clock_gate::lpspi::<{ Spi::N }>(),
+    clock_gate::lpi2c::<{ I2c::N }>(),
+];
+
+/// Configure board pins.
+///
+/// Peripherals are responsible for pin muxing, so there's no need to
+/// set alternates here.
+fn configure_pins(super::Pads { ref mut gpio, .. }: &mut super::Pads) {
+    use crate::iomuxc;
+    const I2C_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+        .set_open_drain(iomuxc::OpenDrain::Enabled)
+        .set_slew_rate(iomuxc::SlewRate::Fast)
+        .set_drive_strength(iomuxc::DriveStrength::R0_4)
+        .set_speed(iomuxc::Speed::Fast)
+        .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup22k));
+
+    iomuxc::configure(&mut gpio.p02, I2C_PIN_CONFIG);
+    iomuxc::configure(&mut gpio.p01, I2C_PIN_CONFIG);
 }
 
 /// Flash configuration block.

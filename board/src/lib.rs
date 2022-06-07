@@ -161,13 +161,6 @@ pub const LPI2C_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpi2c_frequency(RUN_M
 /// Target I2C baud rate (Hz).
 pub const I2C_BAUD_RATE: hal::lpi2c::timing::ClockSpeed = hal::lpi2c::timing::ClockSpeed::KHz400;
 
-const I2C_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
-    .set_open_drain(iomuxc::OpenDrain::Enabled)
-    .set_slew_rate(iomuxc::SlewRate::Fast)
-    .set_drive_strength(iomuxc::DriveStrength::R0_4)
-    .set_speed(iomuxc::Speed::Fast)
-    .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup22k));
-
 #[cfg(family = "imxrt1010")]
 use iomuxc::imxrt1010::Pads;
 
@@ -182,35 +175,16 @@ fn convert_iomuxc(_: ral::iomuxc::IOMUXC) -> Pads {
 }
 
 /// Configure PIT channels.
-fn configure_pit(pit: ral::pit::PIT, ccm: &mut ral::ccm::CCM) -> hal::pit::Channels {
-    hal::ccm::clock_gate::pit().set(ccm, hal::ccm::clock_gate::ON);
+fn configure_pit(pit: ral::pit::PIT) -> hal::pit::Channels {
     // Stop timers in debug mode.
     ral::modify_reg!(ral::pit, pit, MCR, FRZ: FRZ_1);
     hal::pit::new(pit)
 }
 
-/// Configure a GPIO port.
-fn configure_gpio<const N: u8>(
-    gpio: ral::gpio::Instance<N>,
-    ccm: &mut ral::ccm::CCM,
-) -> hal::gpio::Port<N>
-where
-    ral::gpio::Instance<N>: ral::Valid,
-{
-    hal::ccm::clock_gate::gpio::<N>().set(ccm, hal::ccm::clock_gate::ON);
-    hal::gpio::Port::new(gpio)
-}
-
-fn configure_gpt<const N: u8>(
-    gpt: ral::gpt::Instance<N>,
-    divider: u32,
-    ccm: &mut ral::ccm::CCM,
-) -> hal::gpt::Gpt<N>
+fn configure_gpt<const N: u8>(gpt: ral::gpt::Instance<N>, divider: u32) -> hal::gpt::Gpt<N>
 where
     ral::gpt::Instance<N>: ral::Valid,
 {
-    hal::ccm::clock_gate::gpt_serial::<N>().set(ccm, hal::ccm::clock_gate::ON);
-    hal::ccm::clock_gate::gpt_bus::<N>().set(ccm, hal::ccm::clock_gate::ON);
     let mut gpt = hal::gpt::Gpt::new(gpt);
     gpt.disable();
     gpt.set_wait_mode_enable(true);

@@ -1,9 +1,10 @@
 //! Teensy 4.0 and 4.1 board configuration.
 //!
-//! # `"board-spi"` feature
+//! # `"spi"` feature
 //!
 //! When activated, [`Led`] is the unit type, `()`. The
-//! SPI peripheral uses pin 13 as the clock output.
+//! SPI peripheral uses pin 13 as the clock output. When
+//! not activated, the SPI peripheral is the unit type `()`.
 
 use crate::{hal, iomuxc::imxrt1060 as iomuxc, RUN_MODE};
 
@@ -26,7 +27,7 @@ pub type SpiPins = hal::lpspi::Pins<
 >;
 
 #[cfg(not(feature = "spi"))]
-/// Activate the `"board-spi"` feature to configure the SPI peripheral.
+/// Activate the `"spi"` feature to configure the SPI peripheral.
 pub type Spi = ();
 
 #[cfg(feature = "spi")]
@@ -67,19 +68,23 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     hal::set_target_power(&mut dcdc, RUN_MODE);
     hal::ccm::clock_tree::configure(RUN_MODE, &mut ccm, &mut ccm_analog);
 
-    let mut _gpio2 = super::configure_gpio(_gpio2, &mut ccm);
+    CLOCK_GATES
+        .into_iter()
+        .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
+    configure_pins(&mut iomuxc);
+
+    let mut _gpio2 = hal::gpio::Port::new(_gpio2);
 
     #[cfg(not(feature = "spi"))]
     let led = _gpio2.output(iomuxc.gpio_b0.p03);
     #[cfg(feature = "spi")]
     let led = ();
 
-    let pit = super::configure_pit(pit, &mut ccm);
+    let pit = super::configure_pit(pit);
 
-    let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER, &mut ccm);
-    let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER, &mut ccm);
+    let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER);
+    let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER);
 
-    hal::ccm::clock_gate::lpuart::<{ Console::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
     let mut console = hal::lpuart::Lpuart::new(
         lpuart2,
         hal::lpuart::Pins {
@@ -110,10 +115,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     #[cfg(not(feature = "spi"))]
     let spi = ();
 
-    hal::ccm::clock_gate::lpi2c::<{ I2c::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
-    crate::iomuxc::configure(&mut iomuxc.gpio_ad_b1.p07, super::I2C_PIN_CONFIG);
-    crate::iomuxc::configure(&mut iomuxc.gpio_ad_b1.p06, super::I2C_PIN_CONFIG);
-
     let i2c = I2c::new(
         lpi2c3,
         I2cPins {
@@ -123,7 +124,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         &hal::lpi2c::timing::from_clock_speed(super::LPI2C_CLK_FREQUENCY, super::I2C_BAUD_RATE),
     );
 
-    hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
     let dma = hal::dma::channels(dma, dma_mux);
     let specifics = Specifics {};
     super::Board {
@@ -138,6 +138,44 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         ccm,
         specifics,
     }
+}
+
+use hal::ccm::clock_gate;
+
+/// The clock gates for this board's peripherals.
+const CLOCK_GATES: &[clock_gate::Locator] = &[
+    clock_gate::pit(),
+    clock_gate::gpt_bus::<1>(),
+    clock_gate::gpt_bus::<2>(),
+    clock_gate::gpt_serial::<1>(),
+    clock_gate::gpt_serial::<2>(),
+    clock_gate::gpio::<2>(),
+    clock_gate::lpuart::<{ Console::N }>(),
+    clock_gate::dma(),
+    #[cfg(feature = "spi")]
+    clock_gate::lpspi::<{ Spi::N }>(),
+    clock_gate::lpi2c::<{ I2c::N }>(),
+];
+
+/// Configure board pins.
+///
+/// Peripherals are responsible for pin muxing, so there's no need to
+/// set alternates here.
+fn configure_pins(
+    super::Pads {
+        ref mut gpio_ad_b1, ..
+    }: &mut super::Pads,
+) {
+    use crate::iomuxc;
+    const I2C_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+        .set_open_drain(iomuxc::OpenDrain::Enabled)
+        .set_slew_rate(iomuxc::SlewRate::Fast)
+        .set_drive_strength(iomuxc::DriveStrength::R0_4)
+        .set_speed(iomuxc::Speed::Fast)
+        .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup22k));
+
+    iomuxc::configure(&mut gpio_ad_b1.p07, I2C_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_ad_b1.p06, I2C_PIN_CONFIG);
 }
 
 #[cfg(target_arch = "arm")]
