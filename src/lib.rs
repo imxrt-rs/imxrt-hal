@@ -43,15 +43,15 @@ pub mod lpspi;
 pub mod lpuart;
 pub mod pit;
 
-#[cfg(feature = "imxrt1010")]
+#[cfg(family = "imxrt1010")]
 #[path = "chip/imxrt1010.rs"]
 mod chip;
 
-#[cfg(any(feature = "imxrt1060", feature = "imxrt1064"))]
+#[cfg(any(family = "imxrt1060", family = "imxrt1064"))]
 #[path = "chip/imxrt1060.rs"]
 mod chip;
 
-#[cfg(any(feature = "imxrt1010", feature = "imxrt1060", feature = "imxrt1064"))]
+#[cfg(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064"))]
 pub use chip::*;
 
 /// SOC run mode.

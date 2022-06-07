@@ -14,7 +14,7 @@ contexts.
 use imxrt_hal as hal;
 use hal::{ccm::clock_tree, RunMode};
 
-# #[cfg(feature = "imxrt1060")] {
+# #[cfg(family = "imxrt1060")] {
 // Functions suffixed with '_frequency' are const.
 const _: () = assert!(clock_tree::ahb_frequency(RunMode::Overdrive) == 600_000_000);
 # }
