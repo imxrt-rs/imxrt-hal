@@ -208,44 +208,6 @@ impl Locator {
         raw |= (setting as u32) << self.gate.shift();
         ccgr.write(raw);
     }
-
-    /// Executes `func` while this clock gate is off.
-    ///
-    /// When this method returns, the clock gate is configured back to its
-    /// previous setting before the call.
-    pub fn while_off<R>(&self, ccm: &mut CCM, func: impl FnOnce() -> R) -> R {
-        while_off([self], ccm, func)
-    }
-}
-
-/// Executes `func` while all clock gates are turned off.
-///
-/// When this function returns, the clock gates are configured back
-/// to their states before this call.
-pub fn while_off<R, const N: usize>(
-    locators: [&Locator; N],
-    ccm: &mut CCM,
-    func: impl FnOnce() -> R,
-) -> R {
-    let mut settings = [Setting::Off; N];
-    settings
-        .iter_mut()
-        .zip(locators)
-        .for_each(|(setting, locator)| {
-            *setting = locator.get(ccm);
-            locator.set(ccm, Setting::Off);
-        });
-
-    let result = func();
-
-    settings
-        .iter()
-        .zip(locators)
-        .for_each(|(setting, locator)| {
-            locator.set(ccm, *setting);
-        });
-
-    result
 }
 
 /// Returns the PIT clock gate locator.
