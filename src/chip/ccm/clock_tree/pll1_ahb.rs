@@ -33,12 +33,23 @@ pub const fn ahb_frequency(run_mode: RunMode) -> u32 {
 
 const _: () = assert!(600_000_000 == ahb_frequency(RunMode::Overdrive));
 
-/// Configure the AHB clock to run on PLL1.
-pub(super) fn configure_ahb(
+/// Configure the AHB and IPG clock.
+///
+/// When this call returns, the AHB and IPG clocks frequencies match the
+/// values returned by the [`ahb_frequency()`] and
+/// [`ipg_frequency()`](crate::chip::ccm::clock_tree::ipg_frequency) functions.
+///
+/// This function will disable the clock gates for various peripherals. It may
+/// leave these clock gates disabled.
+pub fn configure_ahb_ipg(
     run_mode: RunMode,
     ccm: &mut ral::ccm::CCM,
     ccm_analog: &mut ral::ccm_analog::CCM_ANALOG,
 ) {
+    ccm::clock_gate::IPG_CLOCK_GATES
+        .into_iter()
+        .for_each(|locator| locator.set(ccm, ccm::clock_gate::OFF));
+
     if ccm::ahb_clk::Selection::PeriphClk2Sel == ccm::ahb_clk::selection(ccm) {
         // Switch to the pre-peripheral clock before changing
         // peripheral clock 2...
@@ -62,4 +73,6 @@ pub(super) fn configure_ahb(
             ccm::ahb_clk::set_selection(ccm, ccm::ahb_clk::Selection::PrePeriphClkSel);
         }
     }
+
+    ccm::ipg_clk::set_divider(ccm, crate::chip::ccm::clock_tree::ipg_divider(run_mode));
 }

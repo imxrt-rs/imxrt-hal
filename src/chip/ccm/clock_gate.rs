@@ -345,7 +345,7 @@ pub const fn snvs() -> Locator {
     locator!(CCGR5, CG15)
 }
 
-pub use crate::ccm::root_clock_gates::*;
+pub use crate::chip::config::root_clock_gates::*;
 
 /// Produces an iterator for all implemented clock gate locators.
 ///

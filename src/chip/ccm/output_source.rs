@@ -52,7 +52,7 @@ where
 
 /// CLKO1 output source.
 pub mod clko1 {
-    pub use crate::chip::ccm::clko::Clko1Selection as Selection;
+    pub use crate::chip::config::clko::Clko1Selection as Selection;
     use crate::ral::{self, ccm::CCM};
 
     /// Indicates if CLKO1 is (`true`) (not, `false`) enabled.
@@ -91,7 +91,7 @@ pub mod clko1 {
     /// Set CLKO1 outputs selection.
     ///
     /// The CLKO1 output *pin* can represent either CLKO1 or CLKO2.
-    /// Use [`set_output`](super::set_output) to set this configuration.
+    /// Use [`set_output`] to set this configuration.
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Output {
@@ -108,7 +108,7 @@ pub mod clko1 {
 
 /// CLKO2 output source.
 pub mod clko2 {
-    pub use crate::chip::ccm::clko::Clko2Selection as Selection;
+    pub use crate::chip::config::clko::Clko2Selection as Selection;
     use crate::ral::{self, ccm::CCM};
 
     /// Indicates if CLKO2 is (`true`) (not, `false`) enabled.

@@ -1,6 +1,9 @@
-//! Common CCM_ANALOG APIs for all chips.
+//! Analog clock control module.
 //!
-//! This module should be re-exported behind a chip-specific ccm_analog API.
+//! Each module describes a system PLL. The symbols in this module depend on the
+//! chip selection.
+
+pub use crate::chip::config::plls::*;
 
 /// The system PLL.
 pub mod pll2 {

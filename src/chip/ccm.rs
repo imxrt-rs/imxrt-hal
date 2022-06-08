@@ -1,15 +1,17 @@
-//! Common CCM modules.
+//! Chip-specific CCM APIs.
+//!
+//! This module and its submodules should work across all i.MX RT10xx processors
+//! (with proper family configuration).
+
+pub use crate::chip::config::root_clock_gen::*;
+
+pub mod ahb_clk;
+pub mod analog;
+pub mod clock_gate;
+pub mod clock_tree;
+pub mod output_source;
 
 use crate::ral;
-
-#[path = "ahb_clk.rs"]
-pub mod ahb_clk;
-
-#[path = "clock_gate.rs"]
-pub mod clock_gate;
-
-#[path = "output_source.rs"]
-pub mod output_source;
 
 /// Frequency (Hz) of the crystal oscillator.
 pub const XTAL_OSCILLATOR_HZ: u32 = 24_000_000;

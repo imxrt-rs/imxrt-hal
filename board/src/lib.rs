@@ -203,3 +203,15 @@ pub fn prepare() -> Board {
         .map(board::new)
         .expect("Board component already taken")
 }
+
+fn prepare_clock_tree(
+    ccm: &mut crate::ral::ccm::CCM,
+    ccm_analog: &mut crate::ral::ccm_analog::CCM_ANALOG,
+) {
+    use crate::hal::ccm;
+    ccm::clock_tree::configure_ahb_ipg(RUN_MODE, ccm, ccm_analog);
+    ccm::clock_tree::configure_lpi2c(RUN_MODE, ccm);
+    ccm::clock_tree::configure_lpspi(RUN_MODE, ccm);
+    ccm::clock_tree::configure_perclk(RUN_MODE, ccm);
+    ccm::clock_tree::configure_uart(RUN_MODE, ccm);
+}

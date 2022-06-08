@@ -71,7 +71,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     let mut iomuxc = super::convert_iomuxc(iomuxc);
     hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
     hal::set_target_power(&mut dcdc, RUN_MODE);
-    hal::ccm::clock_tree::configure(RUN_MODE, &mut ccm, &mut ccm_analog);
+    super::prepare_clock_tree(&mut ccm, &mut ccm_analog);
 
     CLOCK_GATES
         .into_iter()
