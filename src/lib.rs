@@ -37,14 +37,6 @@ use imxrt_ral as ral;
 
 mod chip;
 
-pub mod dcdc;
-pub mod gpio;
-pub mod gpt;
-pub mod lpi2c;
-pub mod lpspi;
-pub mod lpuart;
-pub mod pit;
-
 /// SOC run mode.
 ///
 /// Each MCU specifies its own core clock speed
@@ -66,12 +58,23 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
     dcdc::set_target_vdd_soc(dcdc, millivolts);
 }
 
-/// Exports common DMA functions.
+/// Modules that need no HAL conditional compilation.
 ///
-/// Re-exported through the `dma` module when activated through a chip family feature.
+/// These modules only depend on a RAL feature.
 mod common {
+    pub mod dcdc;
     pub mod dma;
+    pub mod gpio;
+    pub mod gpt;
+    pub mod lpi2c;
+    pub mod lpspi;
+    pub mod lpuart;
+    pub mod pit;
 }
+
+// These common drivers have no associated chip APIs, so
+// export them directly.
+pub use common::{dcdc, gpio, gpt, lpi2c, lpspi, lpuart, pit};
 
 /// Clock control module.
 ///
