@@ -3,8 +3,7 @@
 //! Use this module to customize features for the
 //! 1060 chips.
 
-#[doc = include_str!("../ccm/README.md")]
-#[path = "../ccm"]
+#[doc = include_str!("ccm/README.md")]
 pub mod ccm {
     mod common;
     pub use common::*;
@@ -23,7 +22,7 @@ pub mod ccm {
         pub use super::periph_clk2_sel::*;
     }
 
-    #[doc = include_str!("../ccm/analog/README.md")]
+    #[doc = include_str!("ccm/analog/README.md")]
     pub mod analog {
         mod common;
         pub use common::*;
@@ -94,7 +93,7 @@ pub mod ccm {
         ];
     }
 
-    #[doc = include_str!("../ccm/clock_tree/README.md")]
+    #[doc = include_str!("ccm/clock_tree/README.md")]
     pub mod clock_tree {
         mod common;
         pub use common::*;
