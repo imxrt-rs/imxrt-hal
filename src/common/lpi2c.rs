@@ -1,56 +1,3 @@
-//! Low-power inter-integrated circuit.
-//!
-//! The `Lpi2cMaster` driver implements all embedded-hal I2C traits. Use these traits to perform
-//! common I2C I/O. The driver also exposes lower-level APIs for the LPI2C master.
-//!
-//! # Example
-//!
-//! Demonstrates how to create an LPI2C peripheral, and perform a write-read with
-//! a device. This example skips the LPI2C clock configuration. To understand LPI2C
-//! clock configuration, see the [`ccm::lpi2c_clk`](crate::ccm::lpi2c_clk) documentation.
-//!
-//! ```no_run
-//! use imxrt_hal as hal;
-//! use imxrt_ral as ral;
-//! use hal::lpi2c::{self, Lpi2cMaster};
-//! use ral::{ccm::CCM, lpi2c::LPI2C3};
-//! # use eh1 as embedded_hal;
-//! use embedded_hal::i2c::blocking::WriteRead;
-//!
-//! let mut pads = // Handle to all processor pads...
-//!     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
-//!
-//! # || -> Option<()> {
-//! let mut ccm = CCM::take()?;
-//! let mut i2c3 = LPI2C3::take()?;
-//!
-//! # const LPI2C_CLK_HZ: u32 = 0;
-//! let timings = lpi2c::timing::from_clock_speed(
-//!     LPI2C_CLK_HZ, lpi2c::timing::ClockSpeed::KHz400);
-//!
-//! let mut i2c3 = Lpi2cMaster::new(
-//!     i2c3,
-//!     lpi2c::Pins {
-//!         scl: pads.gpio_ad_b1.p07,
-//!         sda: pads.gpio_ad_b1.p06,
-//!     },
-//!     &timings,
-//! );
-//!
-//! let mut input = [0; 3];
-//! let output = [0x74];
-//! # const MY_DEVICE_ADDRESS: u8 = 0;
-//!
-//! i2c3.write_read(MY_DEVICE_ADDRESS, &output, &mut input).ok()?;
-//! # Some(()) }();
-//! ```
-//!
-//! # Limitations
-//!
-//! This driver supports standard, fast, and fast+ modes. High speed mode is not
-//! yet supported, and supporting the mode was not considered in the initial driver
-//! design.
-
 use crate::iomuxc::consts;
 
 use crate::iomuxc::lpi2c;
@@ -97,18 +44,20 @@ where
     /// See the [`timing` module](crate::lpi2c::timing) to learn how to specify
     /// LPI2C clock settings.
     pub fn new(
-        lpi2c: crate::ral::lpi2c::Instance<N>,
+        mut lpi2c: crate::ral::lpi2c::Instance<N>,
         mut pins: Pins<SCL, SDA>,
-        timings: &timing::Timing,
+        timings: &Timing,
     ) -> Self {
         lpi2c::prepare(&mut pins.scl);
         lpi2c::prepare(&mut pins.sda);
 
         ral::write_reg!(ral::lpi2c, lpi2c, MCR, RST: RST_1);
-        ral::write_reg!(ral::lpi2c, lpi2c, MCR, RST: RST_0);
+        while ral::read_reg!(ral::lpi2c, lpi2c, MCR, RST == RST_1) {
+            ral::write_reg!(ral::lpi2c, lpi2c, MCR, RST: RST_0);
+        }
 
         // I2C master disabled due to reset.
-        set_timings(&lpi2c, timings);
+        set_timings(&mut lpi2c, timings);
 
         ral::write_reg!(ral::lpi2c, lpi2c, MFCR, RXWATER: 0b01, TXWATER: 0b01);
         ral::write_reg!(ral::lpi2c, lpi2c, MCR, MEN: MEN_1);
@@ -170,7 +119,7 @@ impl<P, const N: u8> Lpi2cMaster<P, N> {
     /// The handle to a [`DisabledMaster`](crate::lpi2c::DisabledMaster) driver lets you modify
     /// LPI2C settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut DisabledMaster<N>) -> R) -> R {
-        let mut disabled = DisabledMaster::new(&self.lpi2c);
+        let mut disabled = DisabledMaster::new(&mut self.lpi2c);
         func(&mut disabled)
     }
 
@@ -284,7 +233,7 @@ pub struct MasterFifoStatus {
 }
 
 /// Must be called only when the LPI2C peripheral is disabled.
-fn set_timings<const N: u8>(lpi2c: &ral::lpi2c::Instance<N>, timings: &timing::Timing) {
+fn set_timings<const N: u8>(lpi2c: &mut ral::lpi2c::Instance<N>, timings: &Timing) {
     let clock_config = timings.clock_configuration();
     ral::write_reg!(ral::lpi2c, lpi2c, MCCR0,
         CLKHI: clock_config.clkhi as u32,
@@ -293,6 +242,12 @@ fn set_timings<const N: u8>(lpi2c: &ral::lpi2c::Instance<N>, timings: &timing::T
         DATAVD: clock_config.datavd as u32
     );
     ral::modify_reg!(ral::lpi2c, lpi2c, MCFGR1, PRESCALE: timings.prescaler() as u32);
+
+    ral::modify_reg!(ral::lpi2c, lpi2c, MCFGR2,
+        FILTSDA: clock_config.filtsda as u32,
+        FILTSCL: clock_config.filtscl as u32,
+        BUSIDLE: timings.busidle as u32
+    );
 }
 
 /// A temporarily disabled LPI2C peripheral.
@@ -300,12 +255,12 @@ fn set_timings<const N: u8>(lpi2c: &ral::lpi2c::Instance<N>, timings: &timing::T
 /// This handle lets you modify LPI2C settings that require
 /// a disabled peripheral.
 pub struct DisabledMaster<'a, const N: u8> {
-    lpi2c: &'a ral::lpi2c::Instance<N>,
+    lpi2c: &'a mut ral::lpi2c::Instance<N>,
     men: bool,
 }
 
 impl<'a, const N: u8> DisabledMaster<'a, N> {
-    fn new(lpi2c: &'a ral::lpi2c::Instance<N>) -> Self {
+    fn new(lpi2c: &'a mut ral::lpi2c::Instance<N>) -> Self {
         let men = ral::read_reg!(ral::lpi2c, lpi2c, MCR, MEN == MEN_1);
         ral::modify_reg!(ral::lpi2c, lpi2c, MCR, MEN: MEN_0);
         Self { lpi2c, men }
@@ -315,7 +270,7 @@ impl<'a, const N: u8> DisabledMaster<'a, N> {
     ///
     /// This call only affects parameters used in standard, fast, and fast+ modes.
     /// There is no support for switching into high-speed mode.
-    pub fn set_timings(&mut self, timings: &timing::Timing) {
+    pub fn set_timings(&mut self, timings: &Timing) {
         set_timings(self.lpi2c, timings);
     }
 
@@ -758,195 +713,132 @@ mod transaction {
     }
 }
 
+/// Clock configuration fields.
+///
+/// These fields are written directly to the clock configuration register.
+/// All values are written as-is to the register fields. Values that are
+/// less than eight bits are truncated by the implementation. You're
+/// responsible for making sure that these parameters meet their timing
+/// parameter restrictions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ClockConfiguration {
+    /// Clock high period.
+    ///
+    /// Minimum number of cycles that the SCL clock is driven high.
+    /// Value of zero represents "one cycle." Only six bits large.
+    pub clkhi: u8,
+    /// Clock low period.
+    ///
+    /// Minimum number of cycles that the SCL clock is driven low.
+    /// Value of zero represents "one cycle." Only six bits large.
+    pub clklo: u8,
+    /// Setup hold delay.
+    ///
+    /// Minimum number of cycles that's used for
+    /// - START condition hold
+    /// - repeated START setup & hold
+    /// - START condition setup
+    ///
+    /// Value of zero represents "one cycle." Only six bits large.
+    pub sethold: u8,
+    /// Data valid delay.
+    ///
+    /// Minimum number of cycles for SDA data hold. Must be less than
+    /// the minimum SCL low period. Value of zero represents "one cycle."
+    /// Only six bits large.
+    pub datavd: u8,
+    /// Glitch filter SDA.
+    ///
+    /// Only four bits large. Value of zero represents "no filter," and
+    /// non-zero values represent filtered cycles.
+    pub filtsda: u8,
+    /// Glitch filter for SCL.
+    ///
+    /// Only four bits large. Value of zero represents "no filter," and
+    /// non-zero values represent filtered cycles.
+    pub filtscl: u8,
+}
+
+/// Source clock prescaler.
+///
+/// Affects all timing, except for the glitch filters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum Prescaler {
+    /// Divide the source clock by 1.
+    Prescaler1,
+    /// Divide the source clock by 2.
+    Prescaler2,
+    /// Divide the source clock by 4.
+    Prescaler4,
+    /// Divide the source clock by 8.
+    Prescaler8,
+    /// Divide the source clock by 16.
+    Prescaler16,
+    /// Divide the source clock by 32.
+    Prescaler32,
+    /// Divide the source clock by 64.
+    Prescaler64,
+    /// Divide the source clock by 128.
+    Prescaler128,
+}
+
+/// Clock speed.
+#[derive(Clone, Copy, Debug)]
+pub enum ClockSpeed {
+    /// 100 KHz.
+    KHz100,
+    /// 400 KHz.
+    KHz400,
+    /// 1 MHz.
+    MHz1,
+}
+
 /// LPI2C timing parameters.
 ///
-/// The simplest way to compute LPI2C timing parameters is to use [`from_clock_speed()`])
-/// at runtime. If you'd like more control, you may specify the clock configuration and
-/// prescaler values manually.
-///
-/// # Baud rate
-///
-/// The equation to compute the I2C clock baud rate:
-///
-/// ```text
-/// BAUD_RATE = (SOURCE_CLOCK/2^PRESCALE)/(CLKLO+1 + CLKHI+1 + FLOOR((2+FILTSCL)/2^PRESCALE)
-/// ```
-///
-/// where
-/// - `BAUD_RATE` is the I2C clock baud rate, Hz.
-/// - `SOURCE_CLOCK` is the LPI2C input clock speed, Hz.
-/// - `PRESCALE` is the prescaler value.
-/// - `CLKLO` and `CLKHI` are the number of cycles that SCL is low or high, respectively.
-/// - `FILTSCL` is the glitch filter cycles for the SCL line (not affected by the prescale value).
-pub mod timing {
-    /// Clock configuration fields.
-    ///
-    /// These fields are written directly to the clock configuration register.
-    /// They describe the LPI2C SCL and SDA behaviors. These fields are only
-    /// six bits large, and the high two bits will be masked away by the implementation.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct ClockConfiguration {
-        /// Clock high period.
-        ///
-        /// Minimum number of cycles (minus one) that the SCL clock is driven high.
-        pub clkhi: u8,
-        /// Clock low period.
-        ///
-        /// Minimum number of cycles (minus one) that the SCL clock is driven low.
-        pub clklo: u8,
-        /// Setup hold delay.
-        ///
-        /// Minimum number of cycles (minus one) that's used for
-        /// - START condition hold
-        /// - repeated START setup & hold
-        /// - START condition setup
-        pub sethold: u8,
-        /// Data valid delay.
-        ///
-        /// Minimum number of cycles (minus one) for SDA data hold. Must be less than
-        /// the minimum SCL low period.
-        pub datavd: u8,
-    }
+/// The implementation computes BUSIDLE based on the clock configuration values,
+/// but you can override this after construction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Timing {
+    clock_configuration: ClockConfiguration,
+    prescaler: Prescaler,
+    busidle: u32,
+}
 
-    /// Source clock prescaler.
-    ///
-    /// Affects all timing, except for the glitch filters.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    #[repr(u32)]
-    pub enum Prescaler {
-        /// Divide the source clock by 1.
-        Prescaler1,
-        /// Divide the source clock by 2.
-        Prescaler2,
-        /// Divide the source clock by 4.
-        Prescaler4,
-        /// Divide the source clock by 8.
-        Prescaler8,
-        /// Divide the source clock by 16.
-        Prescaler16,
-        /// Divide the source clock by 32.
-        Prescaler32,
-        /// Divide the source clock by 64.
-        Prescaler64,
-        /// Divide the source clock by 128.
-        Prescaler128,
-    }
-
-    /// Clock speed.
-    #[derive(Clone, Copy, Debug)]
-    pub enum ClockSpeed {
-        /// 100 KHz.
-        KHz100,
-        /// 400 KHz.
-        KHz400,
-        /// 1 MHz.
-        MHz1,
-    }
-
-    /// LPI2C timing parameters.
-    ///
-    /// To simply compute LPI2C timing parameters, use
-    /// [`from_clock_speed()`](crate::lpi2c::timing::from_clock_speed).
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct Timing {
-        clock_configuration: ClockConfiguration,
-        prescaler: Prescaler,
-    }
-
-    impl Timing {
-        /// Define LPI2C timings by the clock configuration values, and a prescaler.
-        pub const fn new(clock_configuration: ClockConfiguration, prescaler: Prescaler) -> Self {
-            Self {
-                clock_configuration,
-                prescaler,
-            }
-        }
-        /// Returns the clock configuration.
-        pub const fn clock_configuration(&self) -> ClockConfiguration {
-            self.clock_configuration
-        }
-        /// Returns the prescaler.
-        pub const fn prescaler(&self) -> Prescaler {
-            self.prescaler
-        }
-    }
-
-    /// Compute timings for a given clock speed.
-    ///
-    /// `source_clock_hz` is the LPI2C input clock frequency (Hz). This is derived from the
-    /// CCM. See the [`ccm::lpi2c_clk` module](crate::ccm::lpi2c_clk) for more information
-    /// on defining LPI2C source clock frequencies.
-    ///
-    /// `clock_speed` is your target I2C clock speed.
-    pub fn from_clock_speed(source_clock_hz: u32, clock_speed: ClockSpeed) -> Timing {
-        // Assume CLKLO = 2*CLKHI, SETHOLD = CLKHI, DATAVD = CLKHI/2, FILTSCL = FILTSDA = 0,
-        // and that risetime is negligible (less than 1 cycle).
-        use crate::ral::lpi2c::MCFGR1::PRESCALE::RW::*;
-        use core::cmp;
-
-        const PRESCALARS: [u32; 8] = [
-            PRESCALE_0, PRESCALE_1, PRESCALE_2, PRESCALE_3, PRESCALE_4, PRESCALE_5, PRESCALE_6,
-            PRESCALE_7,
-        ];
-
-        struct ByError {
-            prescalar: u32,
-            clkhi: u32,
-            error: u32,
-        }
-
-        let baud_rate: u32 = match clock_speed {
-            ClockSpeed::KHz100 => 100_000,
-            ClockSpeed::KHz400 => 400_000,
-            ClockSpeed::MHz1 => 1_000_000,
-        };
-
-        // prescale = 1, 2, 4, 8, ... 128
-        // divider = 2 ^ prescale
-        let dividers = PRESCALARS.iter().copied().map(|prescalar| 1 << prescalar);
-        let clkhis = 1u32..32u32;
-        // possibilities = every divider with every clkhi (8 * 30 == 240 possibilities)
-        let possibilities =
-            dividers.flat_map(|divider| core::iter::repeat(divider).zip(clkhis.clone()));
-        let errors = possibilities.map(|(divider, clkhi)| {
-            let computed_rate = if 1 == clkhi {
-                // See below for justification on magic numbers.
-                // In the 1 == clkhi case, the + 3 is the minimum allowable CLKLO value
-                // + 1 is CLKHI itself
-                (source_clock_hz / divider) / ((1 + 3 + 2) + 2 / divider)
+impl Timing {
+    /// Define LPI2C timings by the clock configuration values, and a prescaler.
+    pub const fn new(clock_configuration: ClockConfiguration, prescaler: Prescaler) -> Self {
+        const fn max(left: u32, right: u32) -> u32 {
+            if left > right {
+                left
             } else {
-                // CLKLO = 2 * CLKHI, allows us to do 3 * CLKHI
-                // + 2 accounts for the CLKLOW + 1 and CLKHI + 1
-                // + 2 accounts for the FLOOR((2 + FILTSCL)) factor
-                (source_clock_hz / divider) / ((3 * clkhi + 2) + 2 / divider)
-            };
-            let error = cmp::max(computed_rate, baud_rate) - cmp::min(computed_rate, baud_rate);
-            ByError {
-                prescalar: divider.saturating_sub(1).count_ones(),
-                clkhi, /* (1..32) in u8 range */
-                error,
+                right
             }
-        });
-
-        let ByError {
-            prescalar, clkhi, ..
-        } = errors.min_by(|lhs, rhs| lhs.error.cmp(&rhs.error)).unwrap();
-
-        let (clklo, sethold, datavd) = if clkhi < 2 {
-            (3, 2, 1)
-        } else {
-            (clkhi * 2, clkhi, clkhi / 2)
-        };
-
-        Timing {
-            clock_configuration: ClockConfiguration {
-                clkhi: clkhi as u8,
-                clklo: clklo as u8,
-                sethold: sethold as u8,
-                datavd: datavd as u8,
-            },
-            // Safety: values in range of enum.
-            prescaler: unsafe { core::mem::transmute(prescalar) },
         }
+        let busidle = max(
+            (clock_configuration.clklo as u32 + clock_configuration.sethold as u32 + 2) * 2,
+            clock_configuration.clkhi as u32 + 1,
+        );
+        Self {
+            clock_configuration,
+            prescaler,
+            busidle,
+        }
+    }
+    /// Returns the clock configuration.
+    pub const fn clock_configuration(&self) -> ClockConfiguration {
+        self.clock_configuration
+    }
+    /// Returns the prescaler.
+    pub const fn prescaler(&self) -> Prescaler {
+        self.prescaler
+    }
+    /// Override the BUSIDLE parameter.
+    ///
+    /// The minimum BUSIDLE is computed by CLKLO, SETHOLD, and CLKHI. Use
+    /// this method to override the value.
+    pub const fn override_busidle(mut self, busidle: u32) -> Self {
+        self.busidle = busidle;
+        self
     }
 }

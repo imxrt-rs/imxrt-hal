@@ -24,3 +24,9 @@ pub mod dma;
 
 #[cfg(not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)))]
 pub mod dma {}
+
+#[cfg(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",))]
+pub mod lpi2c;
+
+#[cfg(not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)))]
+pub mod lpi2c {}

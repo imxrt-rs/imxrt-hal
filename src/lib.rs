@@ -74,7 +74,7 @@ mod common {
 
 // These common drivers have no associated chip APIs, so
 // export them directly.
-pub use common::{dcdc, gpio, gpt, lpi2c, lpspi, lpuart, pit};
+pub use common::{dcdc, gpio, gpt, lpspi, lpuart, pit};
 
 /// Clock control module.
 ///
@@ -178,4 +178,61 @@ pub mod ccm {
 pub mod dma {
     pub use crate::chip::dma::*;
     pub use crate::common::dma::*;
+}
+
+/// Low-power inter-integrated circuit.
+///
+/// The `Lpi2cMaster` driver implements all embedded-hal I2C traits. Use these traits to perform
+/// common I2C I/O. The driver also exposes lower-level APIs for the LPI2C master.
+///
+/// # Example
+///
+/// Demonstrates how to create an LPI2C peripheral, and perform a write-read with
+/// a device. This example skips the LPI2C clock configuration. To understand LPI2C
+/// clock configuration, see the [`ccm::lpi2c_clk`](crate::ccm::lpi2c_clk) documentation.
+///
+/// ```no_run
+/// use imxrt_hal as hal;
+/// use imxrt_ral as ral;
+/// use hal::lpi2c::{self, Lpi2cMaster};
+/// use ral::{ccm::CCM, lpi2c::LPI2C3};
+/// # use eh1 as embedded_hal;
+/// use embedded_hal::i2c::blocking::WriteRead;
+///
+/// let mut pads = // Handle to all processor pads...
+///     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
+///
+/// # || -> Option<()> {
+/// let mut ccm = CCM::take()?;
+/// let mut i2c3 = LPI2C3::take()?;
+///
+/// # const LPI2C_CLK_HZ: u32 = 0;
+/// # const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
+/// const LPI2C_400KHz: lpi2c::Timing = lpi2c::timing(lpi2c::ClockSpeed::KHz400, RUN_MODE);
+///
+/// let mut i2c3 = Lpi2cMaster::new(
+///     i2c3,
+///     lpi2c::Pins {
+///         scl: pads.gpio_ad_b1.p07,
+///         sda: pads.gpio_ad_b1.p06,
+///     },
+///     &LPI2C_400KHz,
+/// );
+///
+/// let mut input = [0; 3];
+/// let output = [0x74];
+/// # const MY_DEVICE_ADDRESS: u8 = 0;
+///
+/// i2c3.write_read(MY_DEVICE_ADDRESS, &output, &mut input).ok()?;
+/// # Some(()) }();
+/// ```
+///
+/// # Limitations
+///
+/// This driver supports standard, fast, and fast+ modes. High speed mode is not
+/// yet supported, and supporting the mode was not considered in the initial driver
+/// design.
+pub mod lpi2c {
+    pub use crate::chip::lpi2c::*;
+    pub use crate::common::lpi2c::*;
 }

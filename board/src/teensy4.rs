@@ -121,7 +121,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
             scl: iomuxc.gpio_ad_b1.p07,
             sda: iomuxc.gpio_ad_b1.p06,
         },
-        &hal::lpi2c::timing::from_clock_speed(super::LPI2C_CLK_FREQUENCY, super::I2C_BAUD_RATE),
+        &super::I2C_BAUD_RATE,
     );
 
     let dma = hal::dma::channels(dma, dma_mux);
