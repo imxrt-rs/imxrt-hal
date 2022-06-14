@@ -41,6 +41,19 @@ pub type I2cPins = hal::lpi2c::Pins<
 
 pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, 3>;
 
+/// PWM components.
+pub mod pwm {
+    use super::iomuxc;
+    use crate::hal::flexpwm;
+
+    pub type Peripheral = flexpwm::Pwm<2>;
+    pub type Submodule = flexpwm::Submodule<{ Peripheral::N }, 2>;
+    pub type Outputs = (
+        flexpwm::Output<iomuxc::gpio_b0::GPIO_B0_10>, // A, P6
+        flexpwm::Output<iomuxc::gpio_b0::GPIO_B0_11>, // B, P9
+    );
+}
+
 /// Teensy 4 specific peripherals.
 pub struct Specifics {}
 
@@ -57,6 +70,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         dma_mux,
         lpspi4: _lpspi4,
         lpi2c3,
+        flexpwm2,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
@@ -125,6 +139,20 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     );
 
     let dma = hal::dma::channels(dma, dma_mux);
+
+    let pwm = {
+        let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm2);
+
+        let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_b0.p10);
+        let out_b = hal::flexpwm::Output::new_b(iomuxc.gpio_b0.p11);
+
+        super::Pwm {
+            module: pwm,
+            submodule: sm,
+            outputs: (out_a, out_b),
+        }
+    };
+
     let specifics = Specifics {};
     super::Board {
         led,
@@ -135,6 +163,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         dma,
         spi,
         i2c,
+        pwm,
         ccm,
         specifics,
     }
@@ -155,6 +184,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
+    clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
 ];
 
 /// Configure board pins.

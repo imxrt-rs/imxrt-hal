@@ -24,6 +24,7 @@ const TEENSY4: Board = Board {
     interrupts: interrupts::Board {
         console: "LPUART2",
         spi: "LPSPI4",
+        pwm: "PWM2_2",
     },
 };
 
@@ -34,6 +35,7 @@ const IMXRT1010EVK: Board = Board {
     interrupts: interrupts::Board {
         console: "LPUART1",
         spi: "LPSPI1",
+        pwm: "PWM1_2",
     },
 };
 

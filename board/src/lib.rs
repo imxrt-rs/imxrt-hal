@@ -45,10 +45,22 @@ pub struct Board {
     pub i2c: I2c,
     /// CCM registers.
     pub ccm: ral::ccm::CCM,
+    /// PWM components.
+    pub pwm: Pwm,
     /// Any board-specific resouces.
     ///
     /// For example portability, try to minimize these.
     pub specifics: board::Specifics,
+}
+
+/// The board's PWM components.
+pub struct Pwm {
+    /// Core PWM peripheral.
+    pub module: board::pwm::Peripheral,
+    /// PWM submodule control registers.
+    pub submodule: board::pwm::Submodule,
+    /// The output pairs (tuple of A, B outputs).
+    pub outputs: board::pwm::Outputs,
 }
 
 /// Peripheral instances required by the board.
@@ -78,6 +90,10 @@ pub struct Instances {
     lpspi4: ral::lpspi::LPSPI4,
     #[cfg(family = "imxrt1060")]
     lpi2c3: ral::lpi2c::LPI2C3,
+    #[cfg(family = "imxrt1010")]
+    flexpwm: ral::pwm::PWM,
+    #[cfg(family = "imxrt1060")]
+    flexpwm2: ral::pwm::PWM2,
 }
 
 impl Instances {
@@ -102,6 +118,10 @@ impl Instances {
             lpspi4: ral::lpspi::LPSPI4::take()?,
             #[cfg(family = "imxrt1060")]
             lpi2c3: ral::lpi2c::LPI2C3::take()?,
+            #[cfg(family = "imxrt1010")]
+            flexpwm: ral::pwm::PWM::take()?,
+            #[cfg(family = "imxrt1060")]
+            flexpwm2: ral::pwm::PWM2::take()?,
         })
     }
 }
@@ -128,6 +148,10 @@ impl From<ral::Peripherals> for Instances {
             lpspi4: p.LPSPI4,
             #[cfg(family = "imxrt1060")]
             lpi2c3: p.LPI2C3,
+            #[cfg(family = "imxrt1010")]
+            flexpwm: p.PWM,
+            #[cfg(family = "imxrt1060")]
+            flexpwm2: p.PWM2,
         }
     }
 }

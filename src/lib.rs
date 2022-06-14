@@ -64,6 +64,7 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
 mod common {
     pub mod dcdc;
     pub mod dma;
+    pub mod flexpwm;
     pub mod gpio;
     pub mod gpt;
     pub mod lpi2c;
@@ -74,7 +75,7 @@ mod common {
 
 // These common drivers have no associated chip APIs, so
 // export them directly.
-pub use common::{dcdc, gpio, gpt, lpspi, lpuart, pit};
+pub use common::{dcdc, flexpwm, gpio, gpt, lpspi, lpuart, pit};
 
 /// Clock control module.
 ///

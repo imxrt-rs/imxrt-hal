@@ -21,6 +21,8 @@ pub struct Board {
     pub console: &'static str,
     /// Which interrupt handles the LPSPI master?
     pub spi: &'static str,
+    /// Which interrupt handles the PWM module & submodule events?
+    pub pwm: &'static str,
 }
 
 /// Mapping of board interrupt names to imxrt-ral interrupt names.
@@ -30,6 +32,7 @@ impl Board {
     fn fill_map(&self, map: &mut Map) {
         map.insert("BOARD_CONSOLE", self.console);
         map.insert("BOARD_SPI", self.spi);
+        map.insert("BOARD_PWM", self.pwm);
     }
 }
 

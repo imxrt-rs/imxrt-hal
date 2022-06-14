@@ -2,7 +2,14 @@
 //!
 //! # `"spi"` feature
 //!
-//! This feature has no effect on this board.
+//! When activated, the PWM peripheral is disabled,
+//! and the SPI peripheral takes its place. When not activated,
+//! the SPI peripheral is the unit type `()`.
+//!
+//! This board repurposes the SPI pins for PWM instead of using the
+//! hardware-allocated PWM pins. Hardware-allocated PWM pins require
+//! that you populate and de-populate certain resistors. Compile-time
+//! configurations are faster than working with 0402 resistors.
 
 use crate::{hal, iomuxc::imxrt1010 as iomuxc, RUN_MODE};
 
@@ -19,7 +26,11 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_ad::GPIO_AD_05, // PCS0, J57_6
 >;
 
+#[cfg(feature = "spi")]
 pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 1>;
+
+#[cfg(not(feature = "spi"))]
+pub type Spi = ();
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio::GPIO_02, // SCL, J57_20
@@ -27,6 +38,31 @@ pub type I2cPins = hal::lpi2c::Pins<
 >;
 
 pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, 1>;
+
+/// PWM components.
+#[cfg(not(feature = "spi"))]
+pub mod pwm {
+    use super::iomuxc;
+    use crate::hal::flexpwm;
+
+    /// The RAL qualifies this as "PWM 0," even if the board schematic and
+    /// reference manual qualify this as "PWM 1." This is due to how the RAL
+    /// auto-generated register definitions in the presence of multiple instances
+    /// per peripheral.
+    pub type Peripheral = flexpwm::Pwm<{ crate::ral::SOLE_INSTANCE }>;
+    pub type Submodule = flexpwm::Submodule<{ Peripheral::N }, 2>;
+    pub type Outputs = (
+        flexpwm::Output<iomuxc::gpio_ad::GPIO_AD_04>, // A, J57_8
+        flexpwm::Output<iomuxc::gpio_ad::GPIO_AD_03>, // B, J57_10
+    );
+}
+
+#[cfg(feature = "spi")]
+pub mod pwm {
+    pub type Peripheral = ();
+    pub type Submodule = ();
+    pub type Outputs = ();
+}
 
 /// Test point 34.
 ///
@@ -60,8 +96,9 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         lpuart1,
         dma,
         dma_mux,
-        lpspi1,
+        lpspi1: _lpspi1,
         lpi2c1,
+        flexpwm: _flexpwm,
         mut ccm,
         mut ccm_analog,
         mut dcdc,
@@ -98,6 +135,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         console.set_parity(None);
     });
 
+    #[cfg(feature = "spi")]
     let spi = {
         let pins = SpiPins {
             sdo: iomuxc.gpio_ad.p04,
@@ -105,12 +143,15 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
             sck: iomuxc.gpio_ad.p06,
             pcs0: iomuxc.gpio_ad.p05,
         };
-        let mut spi = Spi::new(lpspi1, pins);
+        let mut spi = Spi::new(_lpspi1, pins);
         spi.disabled(|spi| {
             spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
         });
         spi
     };
+
+    #[cfg(not(feature = "spi"))]
+    let spi = ();
 
     let i2c = I2c::new(
         lpi2c1,
@@ -122,6 +163,27 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     );
 
     let dma = hal::dma::channels(dma, dma_mux);
+
+    #[cfg(not(feature = "spi"))]
+    let pwm = {
+        let (pwm, (_, _, sm, _)) = hal::flexpwm::new(_flexpwm);
+
+        let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_ad.p04);
+        let out_b = hal::flexpwm::Output::new_b(iomuxc.gpio_ad.p03);
+
+        super::Pwm {
+            module: pwm,
+            submodule: sm,
+            outputs: (out_a, out_b),
+        }
+    };
+
+    #[cfg(feature = "spi")]
+    let pwm = super::Pwm {
+        module: (),
+        submodule: (),
+        outputs: (),
+    };
 
     let specifics = Specifics {
         tp31: iomuxc.gpio_sd.p01,
@@ -136,6 +198,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         dma,
         spi,
         i2c,
+        pwm,
         ccm,
         specifics,
     }
@@ -153,8 +216,11 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<1>(),
     clock_gate::lpuart::<{ Console::N }>(),
     clock_gate::dma(),
+    #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
+    #[cfg(not(feature = "spi"))]
+    clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
 ];
 
 /// Configure board pins.
