@@ -91,6 +91,7 @@ pub mod root_clock_gates {
         clock_gate::gpio::<5>(),
         clock_gate::trng(),
         clock_gate::snvs(),
+        clock_gate::usb(),
     ];
 }
 
@@ -108,3 +109,6 @@ pub mod clko {
 }
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 32;
+
+#[path = "usbd/one_two.rs"]
+pub mod usbd;

@@ -71,6 +71,7 @@ mod common {
     pub mod lpspi;
     pub mod lpuart;
     pub mod pit;
+    pub mod usbd;
 }
 
 // These common drivers have no associated chip APIs, so
@@ -236,4 +237,43 @@ pub mod dma {
 pub mod lpi2c {
     pub use crate::chip::lpi2c::*;
     pub use crate::common::lpi2c::*;
+}
+
+/// USB device.
+///
+/// This module re-exports types from the `imxrt-usbd` package. This module also defines
+/// USB peripheral instances to initialize the the USB device. If a chip family feature is
+/// enabled, there are helper methods to take the USB peripheral instances.
+///
+/// This driver is usable with the [`usb-device`](https://docs.rs/usb-device/latest/usb_device/)
+/// ecosystem.
+///
+/// # Example
+///
+/// Construct a [`BusAdapter`](crate::usbd::BusAdapter) with USB peripheral instances. See the
+/// [`BusAdapter`](crate::usbd::BusAdapter) documentation for more information on how to use the bus.
+///
+/// ```no_run
+/// use imxrt_hal as hal;
+/// use imxrt_ral as ral;
+///
+/// use hal::usbd;
+///
+/// # || -> Option<()> {
+/// let mut usb_analog = ral::usb_analog::USB_ANALOG::take()?;
+/// let usb_instances = usbd::UsbInstances::<1>::take(&mut usb_analog)?;
+///
+/// // Prepare the USB clocks.
+/// let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take()?;
+/// hal::ccm::analog::pll3::restart(&mut ccm_analog);
+///
+/// # static mut ENDPOINT_MEMORY: [u8; 4] = [0; 4];
+/// # let endpoint_memory = unsafe { &mut ENDPOINT_MEMORY };
+/// let usbd = usbd::BusAdapter::new(usb_instances, endpoint_memory);
+/// # Some(()) }().unwrap();
+/// ```
+#[cfg(feature = "imxrt-usbd")]
+pub mod usbd {
+    pub use crate::chip::usbd::*;
+    pub use crate::common::usbd::*;
 }

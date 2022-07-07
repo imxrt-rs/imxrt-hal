@@ -53,6 +53,10 @@ const COMMON: &[(&str, &str)] = &[
     ("BOARD_PIT", "PIT"),
     ("BOARD_GPT1", "GPT1"),
     ("BOARD_GPT2", "GPT2"),
+    ("BOARD_USB1", "USB_OTG1"),
+    // RTIC software tasks need dispatchers. The interrupts
+    // below have been reserved for this purpose.
+    ("BOARD_SWTASK0", "KPP"),
     ("__BOARD_FAKE_DO_NOT_USE", NOT_YET_IMPLEMENTED),
 ];
 

@@ -345,6 +345,12 @@ pub const fn snvs() -> Locator {
     locator!(CCGR5, CG15)
 }
 
+/// Returns the USB clock gate locator.
+#[inline(always)]
+pub const fn usb() -> Locator {
+    locator!(CCGR6, CG0)
+}
+
 pub use crate::chip::config::root_clock_gates::*;
 
 /// Produces an iterator for all implemented clock gate locators.

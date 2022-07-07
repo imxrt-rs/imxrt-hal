@@ -36,4 +36,32 @@ pub mod pll3 {
     pub const MIN_FRAC: u8 = 12;
     /// The largest PLL3_PFD divider.
     pub const MAX_FRAC: u8 = 35;
+
+    use crate::ral;
+
+    /// Restart the USB(1) PLL.
+    pub fn restart(ccm_analog: &mut ral::ccm_analog::CCM_ANALOG) {
+        loop {
+            if ral::read_reg!(ral::ccm_analog, ccm_analog, PLL_USB1, ENABLE == 0) {
+                ral::write_reg!(ral::ccm_analog, ccm_analog, PLL_USB1_SET, ENABLE: 1);
+                continue;
+            }
+            if ral::read_reg!(ral::ccm_analog, ccm_analog, PLL_USB1, POWER == 0) {
+                ral::write_reg!(ral::ccm_analog, ccm_analog, PLL_USB1_SET, POWER: 1);
+                continue;
+            }
+            if ral::read_reg!(ral::ccm_analog, ccm_analog, PLL_USB1, LOCK == 0) {
+                continue;
+            }
+            if ral::read_reg!(ral::ccm_analog, ccm_analog, PLL_USB1, BYPASS == 1) {
+                ral::write_reg!(ral::ccm_analog, ccm_analog, PLL_USB1_CLR, BYPASS: 1);
+                continue;
+            }
+            if ral::read_reg!(ral::ccm_analog, ccm_analog, PLL_USB1, EN_USB_CLKS == 0) {
+                ral::write_reg!(ral::ccm_analog, ccm_analog, PLL_USB1_SET, EN_USB_CLKS: 1);
+                continue;
+            }
+            break;
+        }
+    }
 }

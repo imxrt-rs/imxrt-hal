@@ -47,6 +47,14 @@ pub struct Board {
     pub ccm: ral::ccm::CCM,
     /// PWM components.
     pub pwm: Pwm,
+    /// USB1 core registers.
+    pub usb1: Usb1,
+    /// USB1 non-core registers.
+    pub usbnc1: UsbNc1,
+    /// USBPHY1 registers.
+    pub usbphy1: UsbPhy1,
+    /// USB_ANALOG registers.
+    pub usb_analog: UsbAnalog,
     /// Any board-specific resouces.
     ///
     /// For example portability, try to minimize these.
@@ -94,6 +102,10 @@ pub struct Instances {
     flexpwm: ral::pwm::PWM,
     #[cfg(family = "imxrt1060")]
     flexpwm2: ral::pwm::PWM2,
+    usb_analog: UsbAnalog,
+    usb1: Usb1,
+    usbnc1: UsbNc1,
+    usbphy1: UsbPhy1,
 }
 
 impl Instances {
@@ -122,6 +134,11 @@ impl Instances {
             flexpwm: ral::pwm::PWM::take()?,
             #[cfg(family = "imxrt1060")]
             flexpwm2: ral::pwm::PWM2::take()?,
+
+            usb_analog: ral::usb_analog::USB_ANALOG::take()?,
+            usb1: Usb1::take()?,
+            usbnc1: UsbNc1::take()?,
+            usbphy1: UsbPhy1::take()?,
         })
     }
 }
@@ -152,6 +169,20 @@ impl From<ral::Peripherals> for Instances {
             flexpwm: p.PWM,
             #[cfg(family = "imxrt1060")]
             flexpwm2: p.PWM2,
+
+            usb_analog: p.USB_ANALOG,
+            #[cfg(family = "imxrt1010")]
+            usb1: p.USB,
+            #[cfg(family = "imxrt1010")]
+            usbnc1: p.USBNC,
+            #[cfg(family = "imxrt1010")]
+            usbphy1: p.USBPHY,
+            #[cfg(not(family = "imxrt1010"))]
+            usb1: p.USB1,
+            #[cfg(not(family = "imxrt1010"))]
+            usbnc1: p.USBNC1,
+            #[cfg(not(family = "imxrt1010"))]
+            usbphy1: p.USBPHY1,
         }
     }
 }
@@ -239,4 +270,5 @@ fn prepare_clock_tree(
     ccm::clock_tree::configure_lpspi(RUN_MODE, ccm);
     ccm::clock_tree::configure_perclk(RUN_MODE, ccm);
     ccm::clock_tree::configure_uart(RUN_MODE, ccm);
+    ccm::analog::pll3::restart(ccm_analog);
 }

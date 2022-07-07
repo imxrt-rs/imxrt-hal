@@ -8,6 +8,8 @@
 INCLUDE board.x
 /* Emitted from the imxrt-ral shim library */
 INCLUDE interrupt_shims.x
+/* Emitted by defmt */
+INCLUDE defmt.x
 
 /* Runtime moves VTABLE from FLASH to DTCM. */
 REGION_ALIAS("REGION_LOAD_VTABLE", FLASH);

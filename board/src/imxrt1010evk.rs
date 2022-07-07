@@ -11,7 +11,7 @@
 //! that you populate and de-populate certain resistors. Compile-time
 //! configurations are faster than working with 0402 resistors.
 
-use crate::{hal, iomuxc::imxrt1010 as iomuxc, RUN_MODE};
+use crate::{hal, iomuxc::imxrt1010 as iomuxc, ral, RUN_MODE};
 
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
@@ -82,6 +82,11 @@ pub struct Specifics {
     pub tp34: Tp34,
 }
 
+pub type Usb1 = ral::usb::USB;
+pub type UsbPhy1 = ral::usbphy::USBPHY;
+pub type UsbNc1 = ral::usbnc::USBNC;
+pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
+
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     #[cfg(target_arch = "arm")]
@@ -102,6 +107,10 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         mut ccm,
         mut ccm_analog,
         mut dcdc,
+        usb1,
+        usbnc1,
+        usb_analog,
+        usbphy1,
         ..
     } = peripherals.into();
 
@@ -200,6 +209,10 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         i2c,
         pwm,
         ccm,
+        usb1,
+        usbnc1,
+        usb_analog,
+        usbphy1,
         specifics,
     }
 }
@@ -221,6 +234,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpi2c::<{ I2c::N }>(),
     #[cfg(not(feature = "spi"))]
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
+    clock_gate::usb(),
 ];
 
 /// Configure board pins.

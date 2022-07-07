@@ -250,7 +250,8 @@ impl Channel {
     ///
     /// A 'transfer iteration' is a read from a source, and a write to a destination, with
     /// read and write sizes described by a minor loop. Each iteration requires a DMA
-    /// service request, either from hardware or from software.
+    /// service request, either from hardware or from software. The maximum number of iterations
+    /// is 2^15.
     ///
     /// # Safety
     ///
@@ -259,8 +260,18 @@ impl Channel {
     /// for the transfer.
     pub unsafe fn set_transfer_iterations(&mut self, iterations: u16) {
         let tcd = self.tcd();
+        // Keeps CITER[ELINK] and BITER[ELINK] low.
+        let iterations = iterations.min(0x7FFF);
         ral::write_reg!(super::ral::tcd, tcd, CITER, iterations);
         ral::write_reg!(super::ral::tcd, tcd, BITER, iterations);
+    }
+
+    /// Returns the beginning transfer iterations setting for the channel.
+    ///
+    /// This reflects the last call to `set_transfer_iterations`.
+    pub fn beginning_transfer_iterations(&self) -> u16 {
+        let tcd = self.tcd();
+        ral::read_reg!(super::ral::tcd, tcd, BITER) & !(1 << 15)
     }
 
     /// Set the DMAMUX channel configuration

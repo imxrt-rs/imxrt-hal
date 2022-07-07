@@ -30,3 +30,15 @@ pub mod lpi2c;
 
 #[cfg(not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)))]
 pub mod lpi2c {}
+
+#[cfg(all(
+    feature = "imxrt-usbd",
+    any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)
+))]
+pub mod usbd;
+
+#[cfg(all(
+    feature = "imxrt-usbd",
+    not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",))
+))]
+pub mod usbd {}

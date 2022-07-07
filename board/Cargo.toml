@@ -18,6 +18,13 @@ version = "0.5"
 path = "../../ral"
 features = ["rt", "rtic"]
 
+[dependencies.imxrt-log]
+version = "0.1"
+path = "../logging"
+
+[dependencies.imxrt-usbd]
+path = "../../usbd"
+
 [dependencies.cortex-m]
 version = "0.7"
 

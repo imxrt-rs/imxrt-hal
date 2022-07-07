@@ -1,0 +1,50 @@
+[package]
+name = "imxrt-log"
+version = "0.1.0"
+edition = "2021"
+description = "Logging extensions for i.MX RT processors."
+
+[dependencies]
+cortex-m = "0.7"
+bbqueue = "0.5"
+
+[dependencies.defmt]
+optional = true
+version = "0.3"
+
+[dependencies.log]
+optional = true
+version = "0.4"
+
+[dependencies.usb-device]
+optional = true
+version = "0.2"
+
+[dependencies.usbd-serial]
+optional = true
+version = "0.1"
+
+[dependencies.imxrt-hal]
+optional = true
+path = "../"
+version = "0.5.0-alpha"
+
+[dependencies.imxrt-usbd]
+optional = true
+path = "../../usbd"
+
+[features]
+default = ["defmt", "log", "lpuart", "usbd"]
+lpuart = ["dep:imxrt-hal"]
+usbd = ["dep:imxrt-usbd", "dep:usb-device", "dep:usbd-serial"]
+
+# Development dependency allows you to build
+# this crate and specify a RAL feature flag
+# for the HAL.
+[dev-dependencies.imxrt-ral]
+path = "../../ral"
+version = "0.5"
+features = ["rt"]
+
+[dev-dependencies.cortex-m-rt]
+version = "0.7"

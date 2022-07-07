@@ -6,7 +6,7 @@
 //! SPI peripheral uses pin 13 as the clock output. When
 //! not activated, the SPI peripheral is the unit type `()`.
 
-use crate::{hal, iomuxc::imxrt1060 as iomuxc, RUN_MODE};
+use crate::{hal, iomuxc::imxrt1060 as iomuxc, ral, RUN_MODE};
 
 #[cfg(not(feature = "spi"))]
 /// The board LED.
@@ -57,6 +57,11 @@ pub mod pwm {
 /// Teensy 4 specific peripherals.
 pub struct Specifics {}
 
+pub type Usb1 = ral::usb::USB1;
+pub type UsbPhy1 = ral::usbphy::USBPHY1;
+pub type UsbNc1 = ral::usbnc::USBNC1;
+pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
+
 /// Prepare all board resources, and return them.
 pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
     let super::Instances {
@@ -74,6 +79,10 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         mut ccm,
         mut ccm_analog,
         mut dcdc,
+        usb1,
+        usbnc1,
+        usbphy1,
+        usb_analog,
         ..
     } = peripherals.into();
 
@@ -86,6 +95,9 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         .into_iter()
         .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
     configure_pins(&mut iomuxc);
+
+    // cortex_m::peripheral::NVIC::pend(interrupt::USB_OTG1);
+    // unsafe { cortex_m::peripheral::NVIC::unmask(interrupt::USB_OTG1) };
 
     let mut _gpio2 = hal::gpio::Port::new(_gpio2);
 
@@ -165,6 +177,10 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         i2c,
         pwm,
         ccm,
+        usb1,
+        usbnc1,
+        usbphy1,
+        usb_analog,
         specifics,
     }
 }
@@ -185,6 +201,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
+    clock_gate::usb(),
 ];
 
 /// Configure board pins.
@@ -226,3 +243,25 @@ pub mod clock_out {
 
     pub const CLKO2_SELECTIONS: [Clko2; 0] = [];
 }
+
+// use crate::ral::interrupt;
+
+// #[cortex_m_rt::interrupt]
+// fn USB_OTG1() {
+//     static mut POLLER: Option<imxrt_log::Poller> = None;
+//     if let Some(poller) = POLLER.as_mut() {
+//         poller.poll();
+//     } else {
+//         // let mut poller = imxrt_log::log::usb(
+//         //     super::UsbPeripherals(()),
+//         //     imxrt_log::Interrupts::Enabled,
+//         //     Default::default(),
+//         // )
+//         // .expect("Could not initialize USB logger");
+//         let mut poller =
+//             imxrt_log::defmt::usb(super::UsbPeripherals(()), imxrt_log::Interrupts::Enabled)
+//                 .expect("Could not initialize USB logger");
+//         poller.poll();
+//         *POLLER = Some(poller);
+//     }
+// }

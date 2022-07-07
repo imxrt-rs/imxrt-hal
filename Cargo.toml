@@ -49,6 +49,11 @@ path = "../iomuxc"
 version = "0.5"
 path = "../ral"
 
+[dependencies.imxrt-usbd]
+version = "0.1"
+path = "../usbd"
+optional = true
+
 [package.metadata.docs.rs]
 default-target = "thumbv7em-none-eabihf"
 features = ["imxrt-ral/imxrt1062"]
@@ -58,6 +63,7 @@ features = ["imxrt-ral/imxrt1062"]
 ######################
 
 [features]
+default = ["imxrt-usbd"]
 imxrt1010 = []
 imxrt1060 = []
 imxrt1064 = []
@@ -73,11 +79,15 @@ eh02-unproven = []
 [workspace]
 members = [
     "board",
+    "logging",
     "tools",
 ]
 
 [patch.crates-io.cortex-m-rt]
 path = "../../cortex-m/cortex-m-rt"
+
+[patch.crates-io.bbqueue]
+path = "../../bbqueue/core"
 
 [profile.dev]
 opt-level = 1
@@ -110,6 +120,9 @@ cortex-m-rt = { version = "0.7", features = [
 menu = "0.3.2"
 cortex-m-rtic = { version = "1.0" }
 imxrt-ral = { features = ["rtic"], path = "../ral" }
+log = "0.4"
+defmt = "0.3"
+imxrt-log = { path = "logging" }
 
 [[example]]
 name = "hal_spi"

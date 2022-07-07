@@ -74,6 +74,7 @@ pub mod root_clock_gates {
         clock_gate::gpio::<5>(),
         clock_gate::trng(),
         clock_gate::snvs(),
+        clock_gate::usb(),
     ];
 }
 
@@ -122,3 +123,6 @@ pub mod clko {
 }
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 16;
+
+#[path = "usbd/singleton.rs"]
+pub mod usbd;
