@@ -39,7 +39,7 @@ mod app {
             mut gpt1,
             mut gpt2,
             ..
-        } = board::new(cx.device);
+        } = board::new((cx.device, cx.core));
         init_gpt(&mut gpt1, GPT1_DELAY_MS);
         init_gpt(&mut gpt2, GPT2_DELAY_MS);
 

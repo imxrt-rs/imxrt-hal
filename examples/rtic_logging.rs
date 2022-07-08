@@ -20,7 +20,7 @@ mod app {
 
     /// Change me to change how log messages are serialized
     /// and transported.
-    const FRONTEND: Frontend = Frontend::Log;
+    const FRONTEND: Frontend = Frontend::Defmt;
     /// Change me to select the peripheral used for logging.
     const BACKEND: Backend = Backend::Usbd;
 
@@ -84,8 +84,13 @@ mod app {
             mut usb_analog,
             console,
             mut dma,
+            mut cortex_m,
             ..
-        } = board::new(cx.device);
+        } = board::new((cx.device, cx.core));
+        cortex_m.DCB.enable_trace();
+        cortex_m::peripheral::DWT::unlock();
+        cortex_m.DWT.enable_cycle_counter();
+
         // We only need the extra timer when the LPUART backend is used.
         // The USBD backend uses the USB peripheral's internal timer to
         // track time for us.
@@ -197,13 +202,35 @@ mod app {
             while make_log.is_elapsed() {
                 make_log.clear_elapsed();
             }
-            log::info!("Hello from the log framework over {BACKEND:?}! The count is {counter}");
-            defmt::println!(
-                "Hello from defmt over {}! The count is {=u32}",
-                BACKEND,
-                counter
+
+            let count = cycles(|| {
+                log::info!("Hello from the log framework over {BACKEND:?}! The count is {counter}")
+            });
+            log::info!(
+                "That last message took {count} cycles to be copied into the logging buffer"
             );
+
+            let count = cycles(|| {
+                defmt::println!(
+                    "Hello from defmt over {}! The count is {=u32}",
+                    BACKEND,
+                    counter
+                )
+            });
+            defmt::println!(
+                "That last message took {=u32} cycles to be copied into the logging buffer",
+                count
+            );
+
             *counter += 1;
         }
+    }
+
+    /// Count the clock cycles required to execute `f`
+    fn cycles<F: FnOnce()>(f: F) -> u32 {
+        let start = cortex_m::peripheral::DWT::cycle_count();
+        f();
+        let end = cortex_m::peripheral::DWT::cycle_count();
+        end - start
     }
 }

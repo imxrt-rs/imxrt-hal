@@ -40,7 +40,7 @@ mod app {
             mut console,
             mut dma,
             ..
-        } = board::new(cx.device);
+        } = board::new((cx.device, cx.core));
 
         let mut channel = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         channel.set_interrupt_on_completion(true);
