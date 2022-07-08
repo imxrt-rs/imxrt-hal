@@ -16,6 +16,8 @@ use imxrt_hal::{
 static mut CONSUMER: MaybeUninit<crate::Consumer> = MaybeUninit::uninit();
 static mut CHANNEL: MaybeUninit<channel::Channel> = MaybeUninit::uninit();
 
+pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll: poll };
+
 /// Drive the logging behavior.
 ///
 /// # Safety
@@ -26,7 +28,7 @@ static mut CHANNEL: MaybeUninit<channel::Channel> = MaybeUninit::uninit();
 /// By exposing this function through a [`Poller`](crate::Poller), we make both
 /// of these guarantees. The `Poller` indirectly "owns" the static mut memory,
 /// and the crate design ensures that there's only one `Poller` object in existence.
-pub(crate) unsafe fn poll() {
+unsafe fn poll() {
     let consumer = CONSUMER.assume_init_mut();
     let channel = CHANNEL.assume_init_mut();
 

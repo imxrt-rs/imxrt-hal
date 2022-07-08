@@ -225,6 +225,8 @@
 //! - `IMXRT_LOG_USB_*` are always permitted. If `usbd` is disabled, then `IMXRT_LOG_USB_*`
 //!    configurations do nothing.
 //! - If `IMXRT_LOG_USB_SPEED=FULL`, then `IMXRT_LOG_USB_BULK_MPS` cannot be 512.
+//! - Both `IMXRT_LOG_USB_BULK_MPS` and `IMXRT_LOG_BUFFER_SIZE` affect internally-managed buffer
+//!   sizes. If space is tight, reduces these numbers to reclaim memory.
 //!
 //! # Limitations
 //!
@@ -345,7 +347,7 @@ type Consumer = bbqueue::Consumer<'static, { crate::BUFFER_SIZE }>;
 /// of a `Poller` in any program.
 pub struct Poller {
     _marker: core::marker::PhantomData<*mut ()>,
-    func: unsafe fn(),
+    vtable: PollerVTable,
 }
 
 // Safety: it's OK to move this across execution contexts.
@@ -354,21 +356,27 @@ pub struct Poller {
 unsafe impl Send for Poller {}
 
 impl Poller {
-    fn new(func: unsafe fn()) -> Self {
+    fn new(vtable: PollerVTable) -> Self {
         Poller {
             _marker: core::marker::PhantomData,
-            func,
+            vtable,
         }
     }
+
     /// Drive the logging process.
     ///
     /// If log messages are available, and if there is no active transfer,
     /// `poll()` initiates a new transfer. It also manages the state of the
-    /// backend peripheral.
+    /// backend peripheral. There's no guarantee on how many bytes are sent
+    /// in each transfer.
     #[inline]
     pub fn poll(&mut self) {
-        unsafe { (self.func)() };
+        unsafe { (self.vtable.poll)() };
     }
+}
+
+struct PollerVTable {
+    poll: unsafe fn(),
 }
 
 #[cfg(test)]

@@ -190,7 +190,7 @@ pub fn usb_with_config<'a, const N: u8>(
         frontend::init(producer);
         // Safety: BUFFER.try_split() guarantees that this is only called once.
         unsafe { crate::usbd::init(peripherals, interrupts, consumer, backend_config) };
-        Ok(crate::Poller::new(crate::usbd::poll))
+        Ok(crate::Poller::new(crate::usbd::VTABLE))
     })
 }
 
@@ -228,6 +228,6 @@ pub fn lpuart<P, const LPUART: u8>(
         crate::lpuart::try_init(&mut dma_channel, &mut producer);
         frontend::init(producer);
         unsafe { crate::lpuart::finish_init(lpuart, dma_channel, consumer, interrupts) };
-        Ok(crate::Poller::new(crate::lpuart::poll))
+        Ok(crate::Poller::new(crate::lpuart::VTABLE))
     })
 }

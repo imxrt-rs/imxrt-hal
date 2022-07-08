@@ -96,7 +96,7 @@ pub fn usbd_with_config<'a, const N: u8>(
             Ok(()) => {}
         }
         crate::usbd::init(peripherals, interrupts, consumer, backend_config);
-        Ok(Poller::new(crate::usbd::poll))
+        Ok(Poller::new(crate::usbd::VTABLE))
     })
 }
 
@@ -141,7 +141,7 @@ pub fn lpuart_with_config<P, const LPUART: u8>(
             Ok(()) => {}
         }
         crate::lpuart::finish_init(lpuart, dma_channel, consumer, interrupts);
-        Ok(Poller::new(crate::lpuart::poll))
+        Ok(Poller::new(crate::lpuart::VTABLE))
     })
 }
 

@@ -31,6 +31,8 @@ const EP0_CONTROL_PACKET_SIZE: usize = 64;
 /// The USB GPT timer we use to (infrequently) check for data.
 const GPT_INSTANCE: imxrt_usbd::gpt::Instance = imxrt_usbd::gpt::Instance::Gpt0;
 
+pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll: poll };
+
 /// Drive the logging behavior.
 ///
 /// # Safety
@@ -41,7 +43,7 @@ const GPT_INSTANCE: imxrt_usbd::gpt::Instance = imxrt_usbd::gpt::Instance::Gpt0;
 /// By exposing this function through a [`Poller`](crate::Poller), we make both
 /// of these guarantees. The `Poller` indirectly "owns" the static mut memory,
 /// and the crate design ensures that there's only one `Poller` object in existence.
-pub(crate) unsafe fn poll() {
+unsafe fn poll() {
     static mut CONFIGURED: bool = false;
     let device = DEVICE.assume_init_mut();
     let class = CLASS.assume_init_mut();
