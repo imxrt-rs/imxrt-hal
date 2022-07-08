@@ -11,7 +11,7 @@
 //! and provides two peripheral backends:
 //!
 //! - LPUART with DMA
-//! - USB serial (CDC)
+//! - USB serial (CDC) device
 //!
 //! Mix and match these frontends and backends to integrate logging into your
 //! i.MX RT processor. To understand the differences of each frontend, see
@@ -87,10 +87,10 @@
 //! for log messages. The implementation frees the log messages from the circular
 //! buffer once the transfer completes.
 //!
-//! ## USB
+//! ## USBD
 //!
-//! The USB implementation transports log messages over USB by presenting a serial
-//! (USB CDC) class to a USB host. In summary,
+//! The USB device implementation transports log messages over USB by presenting
+//! a serial (USB CDC) class to a USB host. In summary,
 //!
 //! - Simply provide USB register blocks to the logger initialization routine.
 //! - If you enable interrupts, define your interrupt handles.
@@ -115,8 +115,8 @@
 //! fires. You can use this to periodically call `poll()` without using any other
 //! timer or software loop.
 //!
-//! The timer has a default interval. You can configure this interval with build-time
-//! environment variables.
+//! The timer has a default interval. You can configure this interval through each
+//! logger initialization routine.
 //!
 //! If you do not enable interrupts, you're responsible for periodically calling
 //! `poll()`. See the LPUART _timers_ discussion for recommendations.
@@ -218,14 +218,12 @@
 //! | ------------------------------ | --------------------------------------------------------- | ------------- | ------------------------- |
 //! | `IMXRT_LOG_USB_BULK_MPS`       | Bulk endpoint max packet size, in bytes.                  |      64       | One of 8, 16, 32, 64, 512 |
 //! | `IMXRT_LOG_USB_SPEED`          | Specify a high (USB2) or full (USB 1.1) speed USB device. |    HIGH       | Either `HIGH` or `FULL`   |
-//! | `IMXRT_LOG_USB_TIMER_INTERVAL` | Specify the USB timer polling interval, in microseconds.  |    4000       | A positive number         |
 //! | `IMXRT_LOG_BUFFER_SIZE`        | Specify the log message buffer size, in bytes.            |    1024       | An integer power of two   |
 //!
 //! Note:
 //!
 //! - `IMXRT_LOG_USB_*` are always permitted. If `usbd` is disabled, then `IMXRT_LOG_USB_*`
 //!    configurations do nothing.
-//! - `IMXRT_LOG_USB_TIMER_INTERVAL` is silently clamped to 2^24 microseconds by the driver.
 //! - If `IMXRT_LOG_USB_SPEED=FULL`, then `IMXRT_LOG_USB_BULK_MPS` cannot be 512.
 //!
 //! # Limitations
@@ -249,8 +247,11 @@ pub mod log;
 
 #[cfg(feature = "lpuart")]
 mod lpuart;
+
 #[cfg(feature = "usbd")]
 mod usbd;
+#[cfg(feature = "usbd")]
+pub use usbd::{UsbdConfig, UsbdConfigBuilder};
 
 /// Interrupt configuration.
 ///
@@ -434,6 +435,5 @@ mod tests {
         assert_eq!(crate::config::USB_BULK_MPS, 64);
         assert_eq!(crate::config::USB_SPEED, imxrt_usbd::Speed::High);
         assert_eq!(crate::config::BUFFER_SIZE, 1024);
-        assert_eq!(crate::config::USB_TIMER_INTERVAL, 4000);
     }
 }

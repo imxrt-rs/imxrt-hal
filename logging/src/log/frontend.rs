@@ -60,7 +60,7 @@ impl<const N: usize> core::fmt::Write for Writer<'_, '_, N> {
 /// Caller must ensure that this function is only called once.
 pub(crate) unsafe fn init(
     producer: bbq::Producer<'static, { crate::BUFFER_SIZE }>,
-    config: super::LoggingConfig,
+    config: &super::LoggingConfig,
 ) -> Result<(), crate::AlreadySetError<()>> {
     static mut LOGGER: MaybeUninit<Logger<'static, { crate::BUFFER_SIZE }>> = MaybeUninit::uninit();
     // Safety: write to static mut. Assumed that this only happens once.

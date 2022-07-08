@@ -30,8 +30,6 @@ const MAX_PACKET_SIZE: usize = crate::config::USB_BULK_MPS;
 const EP0_CONTROL_PACKET_SIZE: usize = 64;
 /// The USB GPT timer we use to (infrequently) check for data.
 const GPT_INSTANCE: imxrt_usbd::gpt::Instance = imxrt_usbd::gpt::Instance::Gpt0;
-/// How many microseconds to delay before checking for data.
-const CHECK_CONSUMER_INTERVAL_US: u32 = crate::config::USB_TIMER_INTERVAL;
 
 /// Drive the logging behavior.
 ///
@@ -132,6 +130,7 @@ pub(crate) unsafe fn init<const N: u8>(
     peripherals: Instances<'_, N>,
     interrupts: crate::Interrupts,
     consumer: super::Consumer,
+    config: &UsbdConfig,
 ) {
     CONSUMER.write(consumer);
 
@@ -158,7 +157,7 @@ pub(crate) unsafe fn init<const N: u8>(
             gpt.clear_elapsed();
             gpt.set_interrupt_enabled(interrupts == crate::Interrupts::Enabled);
             gpt.set_mode(imxrt_usbd::gpt::Mode::Repeat);
-            gpt.set_load(CHECK_CONSUMER_INTERVAL_US);
+            gpt.set_load(config.poll_interval_us);
             gpt.reset();
         });
         let bus = usb_device::bus::UsbBusAllocator::new(bus);
@@ -177,5 +176,75 @@ pub(crate) unsafe fn init<const N: u8>(
             .max_packet_size_0(EP0_CONTROL_PACKET_SIZE as u8)
             .build();
         DEVICE.write(device);
+    }
+}
+
+/// USB device configuration builder.
+///
+/// Use this to construct a [`UsbdConfig`], which provides settings
+/// to the USB device. For additional configurations that can only
+/// be safely expressed statically, see the package configuration
+/// documentation.
+///
+/// # Default values
+///
+/// The snippet below demonstrates the default values.
+///
+/// ```
+/// use imxrt_log::{UsbdConfigBuilder, UsbdConfig};
+///
+/// const DEFAULT_VALUES: UsbdConfig =
+///     UsbdConfigBuilder::new()
+///         .poll_interval_us(4_000)
+///         .build();
+///
+/// assert_eq!(DEFAULT_VALUES, UsbdConfigBuilder::new().build());
+/// ```
+#[derive(PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct UsbdConfigBuilder {
+    cfg: UsbdConfig,
+}
+
+impl UsbdConfigBuilder {
+    /// Create a new builder with the default values.
+    pub const fn new() -> Self {
+        Self {
+            cfg: UsbdConfig::default(),
+        }
+    }
+
+    /// Build the USB device configuration.
+    pub const fn build(self) -> UsbdConfig {
+        self.cfg
+    }
+
+    /// Set the USB timer polling interval, in microseconds.
+    ///
+    /// This value has no effect if interrupts are disabled. See the USB device
+    /// backend documentation for more information.
+    ///
+    /// Note that the USB device driver internally clamps this value to 2^24.
+    pub const fn poll_interval_us(mut self, poll_interval_us: u32) -> Self {
+        self.cfg.poll_interval_us = poll_interval_us;
+        self
+    }
+}
+
+/// A USB device configuration.
+///
+/// Use [`UsbdConfigBuilder`] to build a configuration.
+#[derive(PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct UsbdConfig {
+    poll_interval_us: u32,
+}
+
+impl UsbdConfig {
+    /// Returns a configuration with the default values.
+    const fn default() -> Self {
+        Self {
+            poll_interval_us: 4_000,
+        }
     }
 }

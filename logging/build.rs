@@ -5,7 +5,6 @@ type Error = Box<dyn std::error::Error>;
 const CHECKED_ENV_VARS: &[&str] = &[
     "IMXRT_LOG_USB_BULK_MPS",
     "IMXRT_LOG_USB_SPEED",
-    "IMXRT_LOG_USB_TIMER_INTERVAL",
     "IMXRT_LOG_BUFFER_SIZE",
 ];
 
@@ -45,18 +44,6 @@ fn handle_usb_bulk_speed_mps(file: &mut dyn Write, is_high_speed: bool) -> Resul
     writeln!(file, "\tpub const USB_BULK_MPS: usize = {mps};")?;
     Ok(())
 }
-fn handle_usb_interval(file: &mut dyn Write) -> Result<(), Error> {
-    let interval = env::var("IMXRT_LOG_USB_TIMER_INTERVAL").unwrap_or_else(|_| "4000".into());
-    let interval: u32 = interval.parse().map_err(|err| -> Error {
-        format!("{err:?} when trying to parse IMXRT_LOG_USB_TIMER_INTERVAL={interval}").into()
-    })?;
-    if interval == 0 {
-        return Err("Timer interval of zero is not allowed. Choose a positive number".into());
-    }
-    writeln!(file, "\t#[cfg(feature = \"usbd\")]")?;
-    writeln!(file, "\tpub const USB_TIMER_INTERVAL: u32 = {interval};")?;
-    Ok(())
-}
 fn handle_buffer_size(file: &mut dyn Write) -> Result<(), Error> {
     let buffer_size = env::var("IMXRT_LOG_BUFFER_SIZE").unwrap_or_else(|_| "1024".into());
     let buffer_size: usize = buffer_size.parse().map_err(|err| -> Error {
@@ -86,7 +73,6 @@ fn main() -> Result<(), Error> {
     handle_buffer_size(&mut cfg)?;
     let is_high_speed = handle_usb_speed(&mut cfg)?;
     handle_usb_bulk_speed_mps(&mut cfg, is_high_speed)?;
-    handle_usb_interval(&mut cfg)?;
     writeln!(&mut cfg, "}}")?;
 
     Ok(())

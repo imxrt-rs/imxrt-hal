@@ -111,27 +111,18 @@ mod app {
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         let poller = match (FRONTEND, BACKEND) {
             // Logging frontends...
-            (Frontend::Log, Backend::Lpuart) => imxrt_log::log::lpuart(
-                console,
-                dma_a,
-                imxrt_log::Interrupts::Enabled,
-                Default::default(),
-            )
-            .unwrap_or_else(|_| panic!()),
-            (Frontend::Log, Backend::Usbd) => imxrt_log::log::usb(
-                usb_instances,
-                imxrt_log::Interrupts::Enabled,
-                Default::default(),
-            )
-            .unwrap_or_else(|_| panic!()),
+            (Frontend::Log, Backend::Lpuart) => {
+                imxrt_log::log::lpuart(console, dma_a, imxrt_log::Interrupts::Enabled).unwrap()
+            }
+            (Frontend::Log, Backend::Usbd) => {
+                imxrt_log::log::usbd(usb_instances, imxrt_log::Interrupts::Enabled).unwrap()
+            }
             // Defmt frontends...
             (Frontend::Defmt, Backend::Lpuart) => {
-                imxrt_log::defmt::lpuart(console, dma_a, imxrt_log::Interrupts::Enabled)
-                    .unwrap_or_else(|_| panic!())
+                imxrt_log::defmt::lpuart(console, dma_a, imxrt_log::Interrupts::Enabled).unwrap()
             }
             (Frontend::Defmt, Backend::Usbd) => {
-                imxrt_log::defmt::usb(usb_instances, imxrt_log::Interrupts::Enabled)
-                    .unwrap_or_else(|_| panic!())
+                imxrt_log::defmt::usbd(usb_instances, imxrt_log::Interrupts::Enabled).unwrap()
             }
         };
 

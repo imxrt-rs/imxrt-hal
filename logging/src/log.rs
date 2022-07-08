@@ -72,15 +72,16 @@ impl Default for LoggingConfig {
     }
 }
 
-/// Initialize a USB logger with the `log` frontend.
+/// Initialize a USB logger with the `log` frontend and custom configurations.
 ///
 /// See the crate-level documentation to understand how the USB device backend works.
 #[cfg(feature = "usbd")]
-pub fn usb<const N: u8>(
-    peripherals: imxrt_usbd::Instances<'_, N>,
+pub fn usbd_with_config<'a, const N: u8>(
+    peripherals: imxrt_usbd::Instances<'a, N>,
     interrupts: super::Interrupts,
-    config: LoggingConfig,
-) -> Result<Poller, crate::AlreadySetError<imxrt_usbd::Instances<'_, N>>> {
+    frontend_config: &LoggingConfig,
+    backend_config: &crate::UsbdConfig,
+) -> Result<Poller, crate::AlreadySetError<imxrt_usbd::Instances<'a, N>>> {
     let (producer, consumer) = match BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new(peripherals)),
@@ -90,24 +91,41 @@ pub fn usb<const N: u8>(
     // (above) to meet that requirement. If that method is called
     // more than once, subsequent calls are an error.
     cortex_m::interrupt::free(|_| unsafe {
-        match frontend::init(producer, config) {
+        match frontend::init(producer, &frontend_config) {
             Err(_) => return Err(crate::AlreadySetError::new(peripherals)),
             Ok(()) => {}
         }
-        crate::usbd::init(peripherals, interrupts, consumer);
+        crate::usbd::init(peripherals, interrupts, consumer, backend_config);
         Ok(Poller::new(crate::usbd::poll))
     })
 }
 
-/// Initialize a LPUART & DMA logger with the `log` frontend.
+/// Initialize a USB logger with the `log` frontend.
+///
+/// This function uses default configurations for the frontend and backend.
+/// See the crate-level documentation to understand how the USB device backend works.
+#[cfg(feature = "usbd")]
+pub fn usbd<'a, const N: u8>(
+    peripherals: imxrt_usbd::Instances<'a, N>,
+    interrupts: super::Interrupts,
+) -> Result<Poller, crate::AlreadySetError<imxrt_usbd::Instances<'a, N>>> {
+    usbd_with_config(
+        peripherals,
+        interrupts,
+        &LoggingConfig::default(),
+        &crate::UsbdConfigBuilder::new().build(),
+    )
+}
+
+/// Initialize a LPUART & DMA logger with the `log` frontend and custom configurations.
 ///
 /// See the crate-level documentation to understand how the LPUART backend works.
 #[cfg(feature = "lpuart")]
-pub fn lpuart<P, const LPUART: u8>(
+pub fn lpuart_with_config<P, const LPUART: u8>(
     lpuart: Lpuart<P, LPUART>,
     mut dma_channel: Channel,
     interrupts: crate::Interrupts,
-    config: LoggingConfig,
+    frontend_config: &LoggingConfig,
 ) -> Result<Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
     let (mut producer, consumer) = match BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
@@ -118,11 +136,24 @@ pub fn lpuart<P, const LPUART: u8>(
     // to meet that requirement.
     cortex_m::interrupt::free(|_| unsafe {
         crate::lpuart::try_init(&mut dma_channel, &mut producer);
-        match frontend::init(producer, config) {
+        match frontend::init(producer, frontend_config) {
             Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),
             Ok(()) => {}
         }
         crate::lpuart::finish_init(lpuart, dma_channel, consumer, interrupts);
         Ok(Poller::new(crate::lpuart::poll))
     })
+}
+
+/// Initialize a LPUART & DMA logger with the `log` frontend.
+///
+/// This function uses default configurations for the frontend.
+/// See the crate-level documentation to understand how the LPUART backend works.
+#[cfg(feature = "lpuart")]
+pub fn lpuart<P, const LPUART: u8>(
+    lpuart: Lpuart<P, LPUART>,
+    dma_channel: Channel,
+    interrupts: crate::Interrupts,
+) -> Result<Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
+    lpuart_with_config(lpuart, dma_channel, interrupts, &LoggingConfig::default())
 }

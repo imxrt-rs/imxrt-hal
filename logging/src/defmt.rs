@@ -172,14 +172,15 @@ unsafe impl defmt::Logger for Logger {
     }
 }
 
-/// Initialize a USB logger with the `defmt` frontend.
+/// Initialize a USB logger with the `defmt` frontend and custom configurations.
 ///
 /// See the crate-level documentation to understand how the USB device backend works.
 #[cfg(feature = "usbd")]
-pub fn usb<const N: u8>(
-    peripherals: imxrt_usbd::Instances<'_, N>,
+pub fn usb_with_config<'a, const N: u8>(
+    peripherals: imxrt_usbd::Instances<'a, N>,
     interrupts: super::Interrupts,
-) -> Result<crate::Poller, crate::AlreadySetError<imxrt_usbd::Instances<'_, N>>> {
+    backend_config: &crate::UsbdConfig,
+) -> Result<crate::Poller, crate::AlreadySetError<imxrt_usbd::Instances<'a, N>>> {
     let (producer, consumer) = match crate::BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new(peripherals)),
@@ -188,9 +189,25 @@ pub fn usb<const N: u8>(
     cortex_m::interrupt::free(|_| {
         frontend::init(producer);
         // Safety: BUFFER.try_split() guarantees that this is only called once.
-        unsafe { crate::usbd::init(peripherals, interrupts, consumer) };
+        unsafe { crate::usbd::init(peripherals, interrupts, consumer, backend_config) };
         Ok(crate::Poller::new(crate::usbd::poll))
     })
+}
+
+/// Initialize a USB logger with the `defmt` frontend.
+///
+/// This function uses default configurations for the backend.
+/// See the crate-level documentation to understand how the USB device backend works.
+#[cfg(feature = "usbd")]
+pub fn usbd<'a, const N: u8>(
+    peripherals: imxrt_usbd::Instances<'a, N>,
+    interrupts: super::Interrupts,
+) -> Result<crate::Poller, crate::AlreadySetError<imxrt_usbd::Instances<'a, N>>> {
+    usb_with_config(
+        peripherals,
+        interrupts,
+        &crate::UsbdConfigBuilder::new().build(),
+    )
 }
 
 /// Initialize a LPUART & DMA logger with the `defmt` frontend.
