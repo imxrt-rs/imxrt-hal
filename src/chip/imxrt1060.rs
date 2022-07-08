@@ -109,6 +109,3 @@ pub mod clko {
 }
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 32;
-
-#[path = "usbd/one_two.rs"]
-pub mod usbd;

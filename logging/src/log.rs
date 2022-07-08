@@ -76,11 +76,11 @@ impl Default for LoggingConfig {
 ///
 /// See the crate-level documentation to understand how the USB device backend works.
 #[cfg(feature = "usbd")]
-pub fn usb<P: imxrt_usbd::Peripherals>(
-    peripherals: P,
+pub fn usb<const N: u8>(
+    peripherals: imxrt_usbd::Instances<'_, N>,
     interrupts: super::Interrupts,
     config: LoggingConfig,
-) -> Result<Poller, crate::AlreadySetError<P>> {
+) -> Result<Poller, crate::AlreadySetError<imxrt_usbd::Instances<'_, N>>> {
     let (producer, consumer) = match BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new(peripherals)),

@@ -161,7 +161,7 @@
 //! fn initialize_logger() -> Option<imxrt_log::Poller> {
 //!     // The next two lines acquire USB resources for the logger.
 //!     let mut usb_analog = ral::usb_analog::USB_ANALOG::take()?;
-//!     let usb_instances = hal::usbd::UsbInstances::<1>::take(&mut usb_analog)?;
+//!     let usb_instances = hal::usbd::Instances::<1>::take(&mut usb_analog)?;
 //!     // Initialize the logger, and ensure that it triggers interrupts.
 //!     let poller = defmt::usb(usb_instances, imxrt_log::Interrupts::Enabled).ok()?;
 //!     Some(poller)

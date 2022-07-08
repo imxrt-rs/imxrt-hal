@@ -123,6 +123,3 @@ pub mod clko {
 }
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 16;
-
-#[path = "usbd/singleton.rs"]
-pub mod usbd;

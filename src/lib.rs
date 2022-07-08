@@ -71,7 +71,6 @@ mod common {
     pub mod lpspi;
     pub mod lpuart;
     pub mod pit;
-    pub mod usbd;
 }
 
 // These common drivers have no associated chip APIs, so
@@ -241,12 +240,8 @@ pub mod lpi2c {
 
 /// USB device.
 ///
-/// This module re-exports types from the `imxrt-usbd` package. This module also defines
-/// USB peripheral instances to initialize the the USB device. If a chip family feature is
-/// enabled, there are helper methods to take the USB peripheral instances.
-///
-/// This driver is usable with the [`usb-device`](https://docs.rs/usb-device/latest/usb_device/)
-/// ecosystem.
+/// This module re-exports types from the `imxrt-usbd` package. The driver is compatible
+///  with the [`usb-device`](https://docs.rs/usb-device/latest/usb_device/) ecosystem.
 ///
 /// # Example
 ///
@@ -261,7 +256,7 @@ pub mod lpi2c {
 ///
 /// # || -> Option<()> {
 /// let mut usb_analog = ral::usb_analog::USB_ANALOG::take()?;
-/// let usb_instances = usbd::UsbInstances::<1>::take(&mut usb_analog)?;
+/// let usb_instances = usbd::Instances::<1>::take(&mut usb_analog)?;
 ///
 /// // Prepare the USB clocks.
 /// let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take()?;
@@ -273,7 +268,4 @@ pub mod lpi2c {
 /// # Some(()) }().unwrap();
 /// ```
 #[cfg(feature = "imxrt-usbd")]
-pub mod usbd {
-    pub use crate::chip::usbd::*;
-    pub use crate::common::usbd::*;
-}
+pub use imxrt_usbd as usbd;

@@ -1,7 +1,7 @@
 //! USB serial (CDC) backend using imxrt-usbd.
 
 use core::mem::MaybeUninit;
-use imxrt_usbd::Peripherals;
+use imxrt_usbd::Instances;
 use usb_device::device::UsbDeviceState;
 
 const VID_PID: usb_device::device::UsbVidPid = usb_device::device::UsbVidPid(0x5824, 0x27dd);
@@ -128,8 +128,8 @@ pub(crate) unsafe fn poll() {
 /// # Safety
 ///
 /// This can only be called once.
-pub(crate) unsafe fn init<P: Peripherals>(
-    peripherals: P,
+pub(crate) unsafe fn init<const N: u8>(
+    peripherals: Instances<'_, N>,
     interrupts: crate::Interrupts,
     consumer: super::Consumer,
 ) {

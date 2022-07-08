@@ -24,13 +24,13 @@ const FRONTEND: Frontend = Frontend::Log;
 /// Change me to select the peripheral used for logging.
 const BACKEND: Backend = Backend::Usbd;
 
-#[derive(PartialEq, Eq, Debug, defmt::Format)]
+#[derive(Debug, defmt::Format)]
 pub enum Frontend {
     Log,
     Defmt,
 }
 
-#[derive(PartialEq, Eq, Debug, defmt::Format)]
+#[derive(Debug, defmt::Format)]
 pub enum Backend {
     Usbd,
     Lpuart,
@@ -66,7 +66,7 @@ fn main() -> ! {
     make_log.set_interrupt_enable(false);
     make_log.enable();
 
-    let usb_instances = hal::usbd::UsbInstances {
+    let usb_instances = hal::usbd::Instances {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,
