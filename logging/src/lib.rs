@@ -231,10 +231,18 @@
 //! # Limitations
 //!
 //! `imxrt-log` does not (yet) support any multi-core i.MX RT processors, like
-//! the i.MX RT 1160s or 1170s. The implementation relies on critical sections
-//! for exclusivity, which is not sufficient for multi-core systems. To safely
+//! the i.MX RT 1160s or 1170s. The implementation relies on a critical section that globally
+//! disables interrupts, which is not sufficient for multi-core systems. To safely
 //! use this package on multi-core systems, each core should have its own compiled
-//! copy of this package.
+//! copy of this package. Future versions of this package may use [the `critical-section`
+//! package](https://crates.io/crates/critical-section) so that the critical section could
+//! be changed by the user.
+//!
+//! Since it globally disables interrupts in its critical section, logging may interfer
+//! with a scheduler that manages tasks and interrupt preemptions, like RTIC. Be diligent
+//! when logging in these contexts, since a low priority task that accesses the logging
+//! frontend blocks a high priority task. A context-aware critical section could also help
+//! here.
 //!
 //! [defmt-docs]: https://defmt.ferrous-systems.com
 //! [hal-docs]: https://docs.rs/imxrt-hal
