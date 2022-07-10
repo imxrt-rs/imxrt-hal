@@ -74,7 +74,8 @@ pub mod root_clock_gates {
 
     /// All clock gates downstream of the IPG root clock.
     pub const IPG_CLOCK_GATES: &[clock_gate::Locator] = &[
-        // TODO ADC.
+        clock_gate::adc::<1>(),
+        clock_gate::adc::<2>(),
         clock_gate::dma(),
         clock_gate::flexpwm::<1>(),
         clock_gate::flexpwm::<2>(),

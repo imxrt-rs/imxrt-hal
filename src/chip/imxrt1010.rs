@@ -62,7 +62,7 @@ pub mod root_clock_gates {
 
     /// All clock gates downstream of the IPG root clock.
     pub const IPG_CLOCK_GATES: &[clock_gate::Locator] = &[
-        // TODO ADC.
+        clock_gate::adc::<{ crate::ral::SOLE_INSTANCE }>(),
         clock_gate::dma(),
         clock_gate::flexpwm::<{ crate::ral::SOLE_INSTANCE }>(),
         // GPIOs assume that we're not "fast," since the fast

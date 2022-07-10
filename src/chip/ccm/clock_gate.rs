@@ -351,6 +351,19 @@ pub const fn usb() -> Locator {
     locator!(CCGR6, CG0)
 }
 
+/// Returns the ADC clock gate locators.
+#[inline(always)]
+pub const fn adc<const N: u8>() -> Locator
+where
+    ral::adc::Instance<N>: ral::Valid,
+{
+    [locator!(CCGR1, CG8), locator!(CCGR1, CG4)][if N == ral::SOLE_INSTANCE {
+        N as usize
+    } else {
+        N as usize - 1
+    }]
+}
+
 pub use crate::chip::config::root_clock_gates::*;
 
 /// Produces an iterator for all implemented clock gate locators.

@@ -21,6 +21,10 @@ version = "1.0"
 [dependencies.bitflags]
 version = "1.2"
 
+[dependencies.nb]
+optional = true
+version = "1"
+
 [dependencies.eh02]
 package = "embedded-hal"
 version = "0.2"
@@ -74,7 +78,7 @@ imxrt1064 = []
 
 # Enable implementations for EH02 "unproven" traits.
 # Requires the EH02 "unproven" feature.
-eh02-unproven = []
+eh02-unproven = ["dep:nb"]
 
 [workspace]
 members = [
