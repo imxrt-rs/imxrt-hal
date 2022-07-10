@@ -83,6 +83,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         usbnc1,
         usbphy1,
         usb_analog,
+        trng,
         cortex_m,
         ..
     } = peripherals.into();
@@ -166,6 +167,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         }
     };
 
+    let trng = hal::trng::Trng::new(trng, Default::default(), Default::default());
     let specifics = Specifics {};
     super::Board {
         led,
@@ -182,6 +184,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         usbnc1,
         usbphy1,
         usb_analog,
+        trng,
         specifics,
         cortex_m,
     }
@@ -204,6 +207,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpi2c::<{ I2c::N }>(),
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
     clock_gate::usb(),
+    clock_gate::trng(),
 ];
 
 /// Configure board pins.

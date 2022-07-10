@@ -110,6 +110,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         usb1,
         usbnc1,
         usb_analog,
+        trng,
         usbphy1,
         cortex_m,
         ..
@@ -195,6 +196,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         outputs: (),
     };
 
+    let trng = hal::trng::Trng::new(trng, Default::default(), Default::default());
     let specifics = Specifics {
         tp31: iomuxc.gpio_sd.p01,
         tp34: iomuxc.gpio_sd.p02,
@@ -214,6 +216,7 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         usbnc1,
         usb_analog,
         usbphy1,
+        trng,
         specifics,
         cortex_m,
     }
@@ -237,6 +240,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     #[cfg(not(feature = "spi"))]
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
     clock_gate::usb(),
+    clock_gate::trng(),
 ];
 
 /// Configure board pins.

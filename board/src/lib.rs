@@ -55,6 +55,8 @@ pub struct Board {
     pub usbphy1: UsbPhy1,
     /// USB_ANALOG registers.
     pub usb_analog: UsbAnalog,
+    /// True random number generator.
+    pub trng: hal::trng::Trng,
     /// Any board-specific resouces.
     ///
     /// For example portability, try to minimize these.
@@ -108,6 +110,7 @@ pub struct Instances {
     usb1: Usb1,
     usbnc1: UsbNc1,
     usbphy1: UsbPhy1,
+    trng: ral::trng::TRNG,
     cortex_m: cortex_m::Peripherals,
 }
 
@@ -143,6 +146,7 @@ impl Instances {
             usbnc1: UsbNc1::take()?,
             usbphy1: UsbPhy1::take()?,
 
+            trng: ral::trng::TRNG::take()?,
             cortex_m: cortex_m::Peripherals::take()?,
         })
     }
@@ -189,6 +193,7 @@ impl From<(ral::Peripherals, cortex_m::Peripherals)> for Instances {
             #[cfg(not(family = "imxrt1010"))]
             usbphy1: p.USBPHY1,
 
+            trng: p.TRNG,
             cortex_m,
         }
     }

@@ -72,11 +72,12 @@ mod common {
     pub mod lpspi;
     pub mod lpuart;
     pub mod pit;
+    pub mod trng;
 }
 
 // These common drivers have no associated chip APIs, so
 // export them directly.
-pub use common::{adc, dcdc, flexpwm, gpio, gpt, lpspi, lpuart, pit};
+pub use common::{adc, dcdc, flexpwm, gpio, gpt, lpspi, lpuart, pit, trng};
 
 /// Clock control module.
 ///
