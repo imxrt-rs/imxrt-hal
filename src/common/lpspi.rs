@@ -721,16 +721,14 @@ bitflags::bitflags! {
 }
 
 impl MasterStatus {
-    const W1C: Self = unsafe {
-        Self::from_bits_unchecked(
-            Self::DMF.bits()
-                | Self::REF.bits()
-                | Self::TEF.bits()
-                | Self::TCF.bits()
-                | Self::FCF.bits()
-                | Self::WCF.bits(),
-        )
-    };
+    const W1C: Self = Self::from_bits_truncate(
+        Self::DMF.bits()
+            | Self::REF.bits()
+            | Self::TEF.bits()
+            | Self::TCF.bits()
+            | Self::FCF.bits()
+            | Self::WCF.bits(),
+    );
 }
 
 /// The number of words in each FIFO.

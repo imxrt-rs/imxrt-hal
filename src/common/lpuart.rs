@@ -611,15 +611,12 @@ bitflags::bitflags! {
 impl Interrupts {
     /// Mask for only the FIFO bits.
     const fn fifo_mask() -> Self {
-        // Safety: bits are valid for this bitflags instance.
-        // Need to represent as u32 since OR for bitflags isn't
-        // const.
-        unsafe { Self::from_bits_unchecked(Interrupts::TXOFE.bits() | Interrupts::RXUFE.bits()) }
+        Self::from_bits_truncate(Interrupts::TXOFE.bits() | Interrupts::RXUFE.bits())
     }
     /// Mask for only the CTRL bits.
     const fn ctrl_mask() -> Self {
         // Safety: bits are valid for this bitflags instance.
-        unsafe { Self::from_bits_unchecked(Self::all().bits() & !Self::fifo_mask().bits()) }
+        Self::from_bits_truncate(Self::all().bits() & !Self::fifo_mask().bits())
     }
 }
 
@@ -740,28 +737,24 @@ impl Status {
     /// Use this to differentiate read-only bits from bits that are
     /// W1C.
     pub const W1C: Status =
-        unsafe { Self::from_bits_unchecked(Self::all().bits() & !Self::read_only_mask().bits()) };
+        Self::from_bits_truncate(Self::all().bits() & !Self::read_only_mask().bits());
 
     /// Status bits that are read-only.
     ///
     /// Includes those bits in the FIFO register.
     const fn read_only_mask() -> Self {
-        unsafe {
-            Self::from_bits_unchecked(
-                Self::RAF.bits() | Self::TDRE.bits() | Self::TC.bits() | Self::RDRF.bits(),
-            )
-        }
+        Self::from_bits_truncate(
+            Self::RAF.bits() | Self::TDRE.bits() | Self::TC.bits() | Self::RDRF.bits(),
+        )
     }
 
     /// Return the bitflags that represent the FIFO bits.
     const fn fifo_mask() -> Self {
-        // Safety: bits are valid.
-        unsafe { Self::from_bits_unchecked(Self::TXOF.bits() | Self::RXUF.bits()) }
+        Self::from_bits_truncate(Self::TXOF.bits() | Self::RXUF.bits())
     }
     /// Return the bitflags that represent the STAT bits.
     const fn stat_mask() -> Self {
-        // Safety: Bits are valid.
-        unsafe { Self::from_bits_unchecked(Self::all().bits() & !Self::fifo_mask().bits()) }
+        Self::from_bits_truncate(Self::all().bits() & !Self::fifo_mask().bits())
     }
     /// Returns the FIFO bits that may be written to the FIFO register.
     const fn fifo_bits(self) -> u32 {
