@@ -98,9 +98,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
     configure_pins(&mut iomuxc);
 
-    // cortex_m::peripheral::NVIC::pend(interrupt::USB_OTG1);
-    // unsafe { cortex_m::peripheral::NVIC::unmask(interrupt::USB_OTG1) };
-
     let mut _gpio2 = hal::gpio::Port::new(_gpio2);
 
     #[cfg(not(feature = "spi"))]
@@ -249,25 +246,3 @@ pub mod clock_out {
 
     pub const CLKO2_SELECTIONS: [Clko2; 0] = [];
 }
-
-// use crate::ral::interrupt;
-
-// #[cortex_m_rt::interrupt]
-// fn USB_OTG1() {
-//     static mut POLLER: Option<imxrt_log::Poller> = None;
-//     if let Some(poller) = POLLER.as_mut() {
-//         poller.poll();
-//     } else {
-//         // let mut poller = imxrt_log::log::usb(
-//         //     super::UsbPeripherals(()),
-//         //     imxrt_log::Interrupts::Enabled,
-//         //     Default::default(),
-//         // )
-//         // .expect("Could not initialize USB logger");
-//         let mut poller =
-//             imxrt_log::defmt::usb(super::UsbPeripherals(()), imxrt_log::Interrupts::Enabled)
-//                 .expect("Could not initialize USB logger");
-//         poller.poll();
-//         *POLLER = Some(poller);
-//     }
-// }
