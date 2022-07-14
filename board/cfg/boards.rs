@@ -1,4 +1,8 @@
 //! Board definitions for imxrt-hal examples.
+//!
+//! If you're here to add a new board, see the documentation
+//! of [`Board`]. Then, define a `const` for your board. Finally,
+//! add your board to the list of `BOARDS`.
 
 use crate::cfg::{family, interrupts};
 use std::io::{self, Write};
@@ -7,13 +11,26 @@ use std::io::{self, Write};
 pub struct Board {
     /// Your board name.
     ///
-    /// Must match the Cargo feature.
+    /// Must match the feature flag that you set in Cargo.toml
     pub name: &'static str,
     /// Select your chip family.
+    ///
+    /// All supported chip families are defined in the `family` module.
     pub family: family::Family,
     /// Specify your board's flash LENGTH.
+    ///
+    /// This is a property of your board's flash chip.
     flash_length: usize,
     /// Board-specific interrupts.
+    ///
+    /// When you bring up a board, your exposing various peripherals
+    /// that are consistent across all boards. This is where you
+    /// associate your peripheral selection with its interrupt. The
+    /// configuration library then gives this a generic name for RTIC.
+    ///
+    /// If you're feeling lazy, use `interrupts::NOT_YET_IMPLEMENTED`
+    /// as the value for any / all interrupts. This allows you to build
+    /// imxrt-hal examples that don't need RTIC / the interrupt symbol.
     pub interrupts: interrupts::Board,
 }
 
@@ -39,6 +56,7 @@ const IMXRT1010EVK: Board = Board {
     },
 };
 
+/// After you've defined your board, add it here.
 pub const BOARDS: &[Board] = &[TEENSY4, IMXRT1010EVK];
 
 impl Board {

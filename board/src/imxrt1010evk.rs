@@ -1,5 +1,7 @@
 //! IMXRT1010EVK board configuration.
 //!
+//! Peripheral pins and instances are documented inline.
+//!
 //! # `"spi"` feature
 //!
 //! When activated, the PWM peripheral is disabled,
@@ -15,8 +17,12 @@ use crate::{hal, iomuxc::imxrt1010 as iomuxc, ral, RUN_MODE};
 
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
-/// The UART console.
+/// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
+/// The UART routes to the DAP coprocessor, so the specific pins are not
+/// important. To interact with the console, attach to the serial interface of
+/// your board's DAP coprocssor. The coprocessor shuttles the data between your
+/// host and the MCU.
 pub type ConsolePins = crate::hal::lpuart::Pins<iomuxc::gpio::GPIO_10, iomuxc::gpio::GPIO_09>;
 
 pub type SpiPins = hal::lpspi::Pins<

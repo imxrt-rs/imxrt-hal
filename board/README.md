@@ -1,8 +1,150 @@
-## Adding new boards
+`board` provides a thin board support package for `imxrt-hal`. The package
+provides cross-board compatibility for all `imxrt-hal` hardware examples. It
+supports `imxrt-hal` development and testing, and is not intended as a general
+BSP.
 
-1. Create a new board feature in [`Cargo.toml`](./Cargo.toml). This depends on support for
-   your i.MX RT chip in both the RAL and IOMUXC crates.
-2. Define a new alias in the repo's [`.cargo/config.toml`](../.cargo/config.toml). This makes
-   it easier to build examples for your board.
-3. Ad a new module in `src/`, and define your board configuration. Integrate your module into
-   [`src/lib.rs`](./src/lib.rs).
+`board` supports
+
+- Teensy 4.0 and Teensy 4.1 boards with the `teensy4` feature.
+- the IMXRT1010EVK board with the `imxrt1010evk` feature.
+
+## Board configurations
+
+Each board configures its supported hardware based on its pinout. To understand
+your board's configuration, see the relevant module in `src/`. You'll want this
+information to understand which pins are configured as LPUART TX and RX pins,
+which pin is the LED, etc.
+
+Boards may share configurations, like baud and clock rates. To understand those
+configurations, see `src/lib.rs`.
+
+## Building hardware examples
+
+Hardware examples for `imxrt-hal` depend on `board` and a board selection. This
+section describes how to build an example for your board. It focuses on building
+examples for the Teensy 4, but the concept generalizes for all supported boards.
+
+To build the `hal_led` example for a Teensy 4, run the command from the repo's
+root:
+
+```
+cargo build --example=hal_led --features=board/teensy4 --target=thumbv7em-none-eabihf
+```
+
+Generally, you select the example with `--example`, and specify the board with
+`--features=board/[your-board]`. To build the same example for the
+IMXRT1010EVK, change `--features=board/teensy4` to
+`--features=board/imxrt1010evk`.
+
+To build _most_ of the hardware examples for the Teensy 4, run
+
+```
+cargo build --examples --features=board/teensy4 --target=thumbv7em-none-eabihf
+```
+
+As before, change the `board` feature to select a different board.
+
+Some examples require additional board features. To understand those extra board
+features, see the top-level `Cargo.toml` and the required features of each
+example. For instance, examples with SPI may require an additional feature. To
+build the SPI example for the Teensy 4, run
+
+```
+cargo build --example=rtic_spi --features=board/teensy4,board/spi --target=thumbv7em-none-eabihf
+```
+
+Note that enabling `board/spi` for other examples may not be supported. So, you
+should only include extra board features when building specific examples, as
+required.
+
+Depending on the target, some debug builds may fail to link due to large data or
+text regions. Try building these examples with `--release` to enable size
+optimizations.
+
+Artifacts are available under
+`target/thumbv7em-none-eabihf/[debug|release]/examples`. Keep this in mind when
+flashing your board.
+
+## Flashing hardware examples
+
+The tools required to flash an example depend on the board you're using. This
+section recommends tooling to flash hardware examples on your board.
+
+### NXP IMXRT EVKs
+
+If you're using an NXP IMXRT EVK, use can use any of the following to flash your
+board.
+
+- All [`probe-rs` tools](https://probe.rs), such as
+  - [`probe-run`](https://github.com/knurling-rs/probe-run)
+  - [`cargo-flash`](https://github.com/probe-rs/cargo-flash)
+  - [`cargo-embed`](https://github.com/probe-rs/cargo-embed)
+- [`pyOCD`](https://pyocd.io)
+
+See each tool's documentation to understand its usage. To make some tooling
+integration easier, see the Tips and Tricks section near the end of this
+document.
+
+### Teensy 4
+
+If you're using a Teensy 4 board, you'll need all of the following:
+
+- An `objcopy` capable of transforming ELF files into Intel HEX. Consider using
+  `rust-objcopy` provided by [`cargo-binutils`]. The rest of this documentation
+  assumes you're using `cargo-binutils`.
+- Either a build of [`teensy_loader_cli`], or the [Teensy Loader
+  Application]. The latter is available with the Teensyduino add-ons.
+
+After building your example, use `rust-objcopy` to convert the program into
+HEX. For the `hal_led` example above, that command resembles
+
+```
+rust-objcopy -O ihex target/thumbv7em-none-eabihf/debug/examples/hal_led hal_led.hex
+```
+
+Finally, load the HEX file onto your board using your preferred loader.
+
+[`cargo-binutils`]: https://github.com/rust-embedded/cargo-binutils
+[`teensy_loader_cli`]: https://github.com/PaulStoffregen/teensy_loader_cli
+[Teensy Loader Application]: https://www.pjrc.com/teensy/loader.html
+
+## Tips and tricks
+
+- Use the `--target-dir` option of `cargo build` to select output directories on
+  a board-by-board basis. This is useful to automatically track artifacts for
+  different boards.
+- If you're using `probe-run` or `pyOCD` to flash an EVK, use the tool as a
+  runner. See the [Cargo
+  Configuration](https://doc.rust-lang.org/cargo/reference/config.html)
+  documentation for more information. Please do not check your runner setting
+  into the repository; consider using environment variables or hierarchical
+  configuration files to configure your runner and any other useful command
+  aliases.
+
+## Adding a new board
+
+Adding a new board lets you easily develop and test i.MX RT hardware
+peripherals, and makes it easier for others to contribute. This section
+briefly describes how to add a new board. If you run into issues, reach out to
+the imxrt-rs team.
+
+- `board/cfg/board.rs` describes your board's chip and other board-specific
+  configurations. See the inline documentation for more guidance. Add a
+  definition for your new board here.
+- `board/Cargo.toml` will need a new feature to describe your board. Use the
+  existing features as an example.
+- `board/src/[your_board_name].rs` is a module that you'll add to specify the hardware
+  configuration. Use the existing board modules as an example. Integrate this
+  module into `board/src/lib.rs`.
+
+You shouldn't need to support all `imxrt-hal` hardware examples right away; the
+design does its best to allow incremental board support. Start with the
+`hal_led` example, adding all the code necessary to turn on the LED. Then, pick
+another example, and add more code to your board module. Keep going until your
+board supports all hardware examples.
+
+The board uses a build-time configuration library to automatically add startup
+and runtime support. (It uses a fork of `cortex-m-rt` to achieve this.) However,
+you're still required to supply the firmware configuration block (FCB) in your
+board module. If you're having trouble defining your FCB, reach out to the
+imxrt-rs team.

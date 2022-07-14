@@ -1,47 +1,6 @@
-# 'build-' aliases intentionally do not specify an ARM target.
-# We expect them to build for host targets, so that we can include
-# unit tests. To build for an ARM target, pass the target flags when
-# invoking the alias.
-#
-# On the other hand, 'run-' aliases specify the target, since these
-# programs can't run on your host. To build a release build, pass in
-# '--release' with the 'run-' alias.
-
-[alias]
-# IMXRT1010EVK aliases.
-build-imxrt1010evk = [
-    "build",
-    "--features=board/imxrt1010evk",
-    "--target-dir=target/imxrt1010evk",
-]
-run-imxrt1010evk = [
-    "run",
-    "--features=board/imxrt1010evk",
-    "--target-dir=target/imxrt1010evk",
-    "--target=thumbv7em-none-eabihf",
-]
-
-# Teensy4 aliases.
-build-teensy4 = [
-    "build",
-    "--features=board/teensy4",
-    "--target-dir=target/teensy4",
-]
-run-teensy4 = [
-    "run",
-    "--features=board/teensy4",
-    "--target-dir=target/teensy4",
-    "--target=thumbv7em-none-eabihf"
-]
-
 [target.thumbv7em-none-eabihf]
 rustflags = [
     "-C", "link-arg=-Tlink.x",
     "-C", "link-arg=-Tdefmt.x",
     "-C", "link-arg=-error-limit=0",
-]
-runner = [
-    "cargo", "run",
-    "--package=imxrt-hal-tools",
-    "--",
 ]

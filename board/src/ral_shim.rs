@@ -30,9 +30,8 @@ pub const BOARD_DMA_A_INDEX: usize = 7;
 ///
 /// # Safety
 ///
-/// Here be dragons. Only safe when called from the imxrt-hal
-/// examples board crate.
-pub unsafe fn shim_vectors() {
+/// Only safe when called from the imxrt-hal examples support crate.
+pub(crate) unsafe fn shim_vectors() {
     use core::cell::UnsafeCell;
 
     extern "C" {

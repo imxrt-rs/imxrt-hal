@@ -1,4 +1,8 @@
-//! Board configurations for `imxrt-hal` examples.
+//! A thin board support package for `imxrt-hal` hardware examples.
+//!
+//! The top-level module exposes configurations and APIs that are common across
+//! boards. For board specific information, like which LPUART is the console and
+//! which pins are I2C, see the board-specific modules.
 
 #![no_std]
 

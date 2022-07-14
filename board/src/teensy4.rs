@@ -1,5 +1,7 @@
 //! Teensy 4.0 and 4.1 board configuration.
 //!
+//! Peripheral pins and instances are documented inline.
+//!
 //! # `"spi"` feature
 //!
 //! When activated, [`Led`] is the unit type, `()`. The
@@ -15,9 +17,12 @@ pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;
 /// LED output repurposed for SPI SCLK.
 pub type Led = ();
 
+/// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 2>;
-pub type ConsolePins =
-    hal::lpuart::Pins<iomuxc::gpio_ad_b1::GPIO_AD_B1_02, iomuxc::gpio_ad_b1::GPIO_AD_B1_03>;
+pub type ConsolePins = hal::lpuart::Pins<
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_02, // TX, P14
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_03, // RX, P15
+>;
 
 pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_b0::GPIO_B0_02, // SDO, P11
