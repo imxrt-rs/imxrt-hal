@@ -24,7 +24,7 @@ mod app {
             led,
             pit: (_, _, mut pit, _),
             ..
-        } = board::new((cx.device, cx.core));
+        } = board::new(cx.device);
 
         pit.set_interrupt_enable(true);
         pit.set_load_timer_value(PIT_DELAY_MS);

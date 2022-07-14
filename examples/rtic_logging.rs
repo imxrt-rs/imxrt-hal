@@ -75,6 +75,7 @@ mod app {
 
     #[init]
     fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
+        let mut cortex_m = cx.core;
         let board::Board {
             led,
             pit: (_, mut poll_log, mut make_log, _),
@@ -84,9 +85,8 @@ mod app {
             mut usb_analog,
             console,
             mut dma,
-            mut cortex_m,
             ..
-        } = board::new((cx.device, cx.core));
+        } = board::new(cx.device);
         cortex_m.DCB.enable_trace();
         cortex_m::peripheral::DWT::unlock();
         cortex_m.DWT.enable_cycle_counter();

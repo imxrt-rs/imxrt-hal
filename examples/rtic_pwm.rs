@@ -38,7 +38,7 @@ mod app {
                     ..
                 },
             ..
-        } = board::new((cx.device, cx.core));
+        } = board::new(cx.device);
 
         submodule.set_debug_enable(true);
         submodule.set_wait_enable(true);

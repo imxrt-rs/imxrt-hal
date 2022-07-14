@@ -36,7 +36,7 @@ mod app {
     fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
         let board::Board {
             led, mut console, ..
-        } = board::new((cx.device, cx.core));
+        } = board::new(cx.device);
         console.disable(|console| {
             if crate::CONFIG_FIFOS {
                 console.enable_fifo(lpuart::Watermark::rx(

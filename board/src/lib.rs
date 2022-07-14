@@ -65,8 +65,6 @@ pub struct Board {
     ///
     /// For example portability, try to minimize these.
     pub specifics: board::Specifics,
-    /// Cortex-M peripherals.
-    pub cortex_m: cortex_m::Peripherals,
 }
 
 /// The board's PWM components.
@@ -115,7 +113,6 @@ pub struct Instances {
     usbnc1: UsbNc1,
     usbphy1: UsbPhy1,
     trng: ral::trng::TRNG,
-    cortex_m: cortex_m::Peripherals,
 }
 
 impl Instances {
@@ -151,13 +148,12 @@ impl Instances {
             usbphy1: UsbPhy1::take()?,
 
             trng: ral::trng::TRNG::take()?,
-            cortex_m: cortex_m::Peripherals::take()?,
         })
     }
 }
 
-impl From<(ral::Peripherals, cortex_m::Peripherals)> for Instances {
-    fn from((p, cortex_m): (ral::Peripherals, cortex_m::Peripherals)) -> Self {
+impl From<ral::Peripherals> for Instances {
+    fn from(p: ral::Peripherals) -> Self {
         Self {
             gpio1: p.GPIO1,
             gpio2: p.GPIO2,
@@ -198,7 +194,6 @@ impl From<(ral::Peripherals, cortex_m::Peripherals)> for Instances {
             usbphy1: p.USBPHY1,
 
             trng: p.TRNG,
-            cortex_m,
         }
     }
 }

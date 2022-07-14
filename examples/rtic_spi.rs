@@ -24,7 +24,7 @@ mod app {
 
     #[init]
     fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board { mut spi, .. } = board::new((cx.device, cx.core));
+        let board::Board { mut spi, .. } = board::new(cx.device);
         spi.disabled(|spi| {
             // Trigger when the TX FIFO is empty.
             spi.set_watermark(Direction::Tx, 0);

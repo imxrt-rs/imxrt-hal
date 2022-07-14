@@ -118,7 +118,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         usb_analog,
         trng,
         usbphy1,
-        cortex_m,
         ..
     } = peripherals.into();
 
@@ -224,7 +223,6 @@ pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
         usbphy1,
         trng,
         specifics,
-        cortex_m,
     }
 }
 
