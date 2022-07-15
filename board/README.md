@@ -15,8 +15,8 @@ your board's configuration, see the relevant module in `src/`. You'll want this
 information to understand which pins are configured as LPUART TX and RX pins,
 which pin is the LED, etc.
 
-Boards may share configurations, like baud and clock rates. To understand those
-configurations, see `src/lib.rs`.
+Boards may share configurations, like baud rates and timer
+resolutions. To understand those configurations, see `src/lib.rs`.
 
 ## Building hardware examples
 
@@ -72,7 +72,7 @@ section recommends tooling to flash hardware examples on your board.
 
 ### NXP IMXRT EVKs
 
-If you're using an NXP IMXRT EVK, use can use any of the following to flash your
+If you're using an NXP IMXRT EVK, you can use any of the following to flash your
 board.
 
 - All [`probe-rs` tools](https://probe.rs), such as
@@ -123,28 +123,5 @@ Finally, load the HEX file onto your board using your preferred loader.
 
 ## Adding a new board
 
-Adding a new board lets you easily develop and test i.MX RT hardware
-peripherals, and makes it easier for others to contribute. This section
-briefly describes how to add a new board. If you run into issues, reach out to
-the imxrt-rs team.
-
-- `board/cfg/board.rs` describes your board's chip and other board-specific
-  configurations. See the inline documentation for more guidance. Add a
-  definition for your new board here.
-- `board/Cargo.toml` will need a new feature to describe your board. Use the
-  existing features as an example.
-- `board/src/[your_board_name].rs` is a module that you'll add to specify the hardware
-  configuration. Use the existing board modules as an example. Integrate this
-  module into `board/src/lib.rs`.
-
-You shouldn't need to support all `imxrt-hal` hardware examples right away; the
-design does its best to allow incremental board support. Start with the
-`hal_led` example, adding all the code necessary to turn on the LED. Then, pick
-another example, and add more code to your board module. Keep going until your
-board supports all hardware examples.
-
-The board uses a build-time configuration library to automatically add startup
-and runtime support. (It uses a fork of `cortex-m-rt` to achieve this.) However,
-you're still required to supply the firmware configuration block (FCB) in your
-board module. If you're having trouble defining your FCB, reach out to the
-imxrt-rs team.
+See the hardware testing section of the
+[CONTRIBUTING](../CONTRIBUTING.md) guide.

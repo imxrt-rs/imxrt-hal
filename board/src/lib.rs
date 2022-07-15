@@ -17,13 +17,16 @@ pub use ral_shim::{interrupt, Interrupt, BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
 
 #[cfg(board = "imxrt1010evk")]
 #[path = "imxrt1010evk.rs"]
-mod board;
+mod board_impl;
 
 #[cfg(board = "teensy4")]
 #[path = "teensy4.rs"]
-mod board;
+mod board_impl;
 
-pub use board::*;
+// rustdoc doesn't like when this is named 'board'
+// since it happens to match the package name.
+// So went with an '_impl' suffix.
+pub use board_impl::*;
 
 /// Components that are common to all boards.
 ///
@@ -106,7 +109,7 @@ fn configure() {
 
     COMMON_CLOCK_GATES
         .into_iter()
-        .chain(board::CLOCK_GATES.into_iter())
+        .chain(board_impl::CLOCK_GATES.into_iter())
         .for_each(|locator: &clock_gate::Locator| {
             locator.set(&mut ccm, hal::ccm::clock_gate::ON);
         });

@@ -163,7 +163,7 @@
 //!     let mut usb_analog = ral::usb_analog::USB_ANALOG::take()?;
 //!     let usb_instances = hal::usbd::Instances::<1>::take(&mut usb_analog)?;
 //!     // Initialize the logger, and ensure that it triggers interrupts.
-//!     let poller = defmt::usb(usb_instances, imxrt_log::Interrupts::Enabled).ok()?;
+//!     let poller = defmt::usbd(usb_instances, imxrt_log::Interrupts::Enabled).ok()?;
 //!     Some(poller)
 //! }
 //!

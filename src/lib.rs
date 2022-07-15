@@ -1,34 +1,79 @@
-//! Hardware abstraction layer for i.MX RT processors.
+//! A hardware abstraction layer (HAL) for i.MX RT processors.
 //!
-//! This package provides i.MX RT drivers that implement `embedded-hal` traits.
-//! It supports two `embeddd-hal` versions:
-//!
-//! - [`embedded-hal` 0.2 (EH02)](https://docs.rs/embedded-hal/0.2/embedded_hal/)
-//! - [`embedded-hal` 1 (EH1)](https://docs.rs/embedded-hal/1.0/embedded_hal/)
+//! `imxrt-hal` provides implementations of the `embedded-hal` traits. It also
+//! supports embedded frameworks like RTIC.
 //!
 //! # Building
 //!
-//! This package requires that you, or another package, enable a chip-specific
-//! feature from the i.MX RT _register access layer (RAL)_ package, `imxrt-ral`.
-//! Without this, this package does not build.
+//! This package requires that you, or something in your dependency graph,
+//! enable a chip-specific feature from the i.MX RT _register access layer
+//! (RAL)_, also known as the `imxrt-ral` package.  Without this, the HAL does
+//! not build. Since the HAL uses the RAL in its public API, you're expected to
+//! depend on both packages.
 //!
-//! For example, to build the HAL from the command line for a 1062 chip, enable
-//! the _RAL's_ `"imxrt1062"` feature:
+//! Here's an example of a project that builds the `imxrt-hal` for an i.MX RT
+//! 1062 system.
 //!
-//! ```text
-//! cargo build --features=imxrt-ral/imxrt1062
+//! ```toml
+//! [dependencies.imxrt-hal] # There's no required feature here...
+//! version = # ...
+//!
+//! [dependencies.imxrt-ral]
+//! version = # ...
+//! features = ["imxrt1062"] # ...but this feature is required.
 //! ```
 //!
-//! # Features
+//! Once you've enabled a RAL feature, the HAL builds without any additional
+//! features. All APIs exposed in this build are portable across all i.MX RT
+//! chips.
 //!
-//! Use these optional features to control the HAL build:
+//! # Examples
+//!
+//! See each module's documentation for examples. Note that documentation
+//! examples may assume a specific chip and chip family, so you may need to
+//! adapt the example for your hardware.
+//!
+//! The `imxrt-hal` repository maintains examples that run on various i.MX RT
+//! development boards. See the project documentation for more information.
+//!
+//! # Configuration
+//!
+//! Use these optional package features to control the HAL build.
 //!
 //! | Feature           | Description                                                      |
 //! |-------------------|------------------------------------------------------------------|
+//! | `"imxrt1010"`     | Enable features for the 1010 chip family.                        |
+//! | `"imxrt1060"`     | Enable features for the 1060 chip family.                        |
+//! | `"imxrt1064"`     | Enable features for the 1064 chip family.                        |
 //! | `"eh02-unproven"` | Enable implementations for embedded-hal 0.2 `"unproven"` traits. |
+//! | `"rand_core"`     | Allows the TRNG to be used with the `rand` package.              |
 //!
-//! The `"eh02-unproven"` feature will not build without the corresponding `"unproven"` feature enabled
-//! in embedded-hal 0.2.
+//! The APIs exposed by the various `"imxrt10xx"` features are specific to a
+//! chip family. The HAL does not support building with more than one of these
+//! features at a time.
+//!
+//! When enabling a HAL chip family feature, make sure that it pairs properly
+//! with your RAL chip selection. You are responsible for making sure that your
+//! RAL chip feature is appropriate for the HAL family feature. For instance,
+//! mixing the RAL's `imxrt1062` feature with the HAL's `imxrt1010` feature is
+//! not supported.
+//!
+//! ```toml
+//! [dependencies.imxrt-hal]
+//! version = # ...
+//! #Bad: doesn't support RAL feature.
+//! #features = ["imxrt1010"]
+//!
+//! #Good: supports RAL feature
+//! features = ["imxrt1060"]
+//!
+//! [dependencies.imxrt-ral]
+//! version = # ...
+//! features = ["imxrt1062"] # Informs the HAL family feature
+//! ```
+//!
+//! The `"eh02-unproven"` feature will not build without the corresponding
+//! `"unproven"` feature enabled in embedded-hal 0.2.
 
 #![no_std]
 
