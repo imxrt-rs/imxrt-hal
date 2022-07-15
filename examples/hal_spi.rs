@@ -49,12 +49,14 @@ fn write_error(console: &mut board::Console, result: Result<(), LpspiMasterError
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board {
-        mut gpt1,
-        mut spi,
-        mut console,
-        ..
-    } = board::prepare();
+    let (
+        board::Common { mut gpt1, .. },
+        board::Specifics {
+            mut spi,
+            mut console,
+            ..
+        },
+    ) = board::new();
 
     gpt1.set_output_compare_count(GPT1_OCR, GPT1_DELAY_MS);
     gpt1.set_mode(hal::gpt::Mode::Restart);

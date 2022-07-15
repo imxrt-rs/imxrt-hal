@@ -8,7 +8,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = board, peripherals = true)]
+#[rtic::app(device = board, peripherals = false)]
 mod app {
 
     use hal::lpspi::{Direction, Interrupts, MasterStatus, Transaction};
@@ -23,8 +23,8 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board { mut spi, .. } = board::new(cx.device);
+    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+        let (_, board::Specifics { mut spi, .. }) = board::new();
         spi.disabled(|spi| {
             // Trigger when the TX FIFO is empty.
             spi.set_watermark(Direction::Tx, 0);

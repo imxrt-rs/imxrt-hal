@@ -18,7 +18,7 @@
 /// toggle.
 const CONFIG_FIFOS: bool = true;
 
-#[rtic::app(device = board, peripherals = true)]
+#[rtic::app(device = board, peripherals = false)]
 mod app {
     use hal::lpuart;
     use imxrt_hal as hal;
@@ -33,10 +33,13 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board {
-            led, mut console, ..
-        } = board::new(cx.device);
+    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+        let (
+            _,
+            board::Specifics {
+                led, mut console, ..
+            },
+        ) = board::new();
         console.disable(|console| {
             if crate::CONFIG_FIFOS {
                 console.enable_fifo(lpuart::Watermark::rx(

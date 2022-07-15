@@ -7,7 +7,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = board, peripherals = true)]
+#[rtic::app(device = board, peripherals = false)]
 mod app {
     use imxrt_hal as hal;
 
@@ -33,13 +33,13 @@ mod app {
     }
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board {
-            led,
-            mut gpt1,
-            mut gpt2,
-            ..
-        } = board::new(cx.device);
+    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+        let (
+            board::Common {
+                mut gpt1, mut gpt2, ..
+            },
+            board::Specifics { led, .. },
+        ) = board::new();
         init_gpt(&mut gpt1, GPT1_DELAY_MS);
         init_gpt(&mut gpt2, GPT2_DELAY_MS);
 

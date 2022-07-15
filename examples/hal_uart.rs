@@ -22,9 +22,12 @@ const ECHO_RESPONSE_SIZE: usize = 0;
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board {
-        led, mut console, ..
-    } = board::prepare();
+    let (
+        _,
+        board::Specifics {
+            led, mut console, ..
+        },
+    ) = board::new();
     loop {
         led.toggle();
         let byte = embedded_hal::nb::block!(console.read()).unwrap();

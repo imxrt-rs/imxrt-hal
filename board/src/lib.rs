@@ -13,7 +13,7 @@ use imxrt_ral as ral;
 mod ral_shim;
 mod rt;
 
-pub use ral_shim::{interrupt, Interrupt, Peripherals, BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
+pub use ral_shim::{interrupt, Interrupt, BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
 
 #[cfg(board = "imxrt1010evk")]
 #[path = "imxrt1010evk.rs"]
@@ -25,10 +25,11 @@ mod board;
 
 pub use board::*;
 
-/// Resources available for all boards.
-pub struct Board {
-    /// GPIO output for the board's LED.
-    pub led: Led,
+/// Components that are common to all boards.
+///
+/// This includes timers, DMA channels, and things
+/// that don't necessarily depend on a pinout.
+pub struct Common {
     /// PIT channels.
     pub pit: hal::pit::Channels,
     /// GPT1 timer.
@@ -39,18 +40,10 @@ pub struct Board {
     ///
     /// Use [`GPT2_FREQUENCY`] to understand its frequency.
     pub gpt2: hal::gpt::Gpt<2>,
-    /// UART console.
-    pub console: Console,
     /// DMA channels.
     pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
-    /// SPI peripheral.
-    pub spi: Spi,
-    /// I2C peripheral.
-    pub i2c: I2c,
-    /// CCM registers.
-    pub ccm: ral::ccm::CCM,
-    /// PWM components.
-    pub pwm: Pwm,
+    /// True random number generator.
+    pub trng: hal::trng::Trng,
     /// USB1 core registers.
     pub usb1: Usb1,
     /// USB1 non-core registers.
@@ -59,143 +52,93 @@ pub struct Board {
     pub usbphy1: UsbPhy1,
     /// USB_ANALOG registers.
     pub usb_analog: UsbAnalog,
-    /// True random number generator.
-    pub trng: hal::trng::Trng,
-    /// Any board-specific resouces.
+}
+
+impl Common {
+    /// Take common resources.
     ///
-    /// For example portability, try to minimize these.
-    pub specifics: board::Specifics,
-}
+    /// Returns `None` if _any_ resource is already taken.
+    fn take() -> Option<Self> {
+        let pit = ral::pit::PIT::take()?;
+        // Stop timers in debug mode.
+        ral::modify_reg!(ral::pit, pit, MCR, FRZ: FRZ_1);
+        let pit = hal::pit::new(pit);
 
-/// The board's PWM components.
-pub struct Pwm {
-    /// Core PWM peripheral.
-    pub module: board::pwm::Peripheral,
-    /// PWM submodule control registers.
-    pub submodule: board::pwm::Submodule,
-    /// The output pairs (tuple of A, B outputs).
-    pub outputs: board::pwm::Outputs,
-}
+        let gpt1 = configure_gpt(ral::gpt::GPT1::take()?, GPT1_DIVIDER);
+        let gpt2 = configure_gpt(ral::gpt::GPT2::take()?, GPT2_DIVIDER);
 
-/// Peripheral instances required by the board.
-///
-/// This is an opaque structure. If it exists, the board
-/// has ownership of all `imxrt-ral` peripheral register
-/// blocks that it requires. Use [`take()`](Instances::take)
-/// to safely acquire those peripherals.
-#[allow(dead_code)] // Might not be used by all boards.
-pub struct Instances {
-    gpio1: ral::gpio::GPIO1,
-    gpio2: ral::gpio::GPIO2,
-    iomuxc: ral::iomuxc::IOMUXC,
-    gpt1: ral::gpt::GPT1,
-    gpt2: ral::gpt::GPT2,
-    lpuart1: ral::lpuart::LPUART1,
-    lpuart2: ral::lpuart::LPUART2,
-    pit: ral::pit::PIT,
-    dma: ral::dma0::DMA0,
-    dma_mux: ral::dmamux::DMAMUX,
-    ccm: ral::ccm::CCM,
-    ccm_analog: ral::ccm_analog::CCM_ANALOG,
-    dcdc: ral::dcdc::DCDC,
-    lpspi1: ral::lpspi::LPSPI1,
-    lpi2c1: ral::lpi2c::LPI2C1,
-    #[cfg(family = "imxrt1060")]
-    lpspi4: ral::lpspi::LPSPI4,
-    #[cfg(family = "imxrt1060")]
-    lpi2c3: ral::lpi2c::LPI2C3,
-    #[cfg(family = "imxrt1010")]
-    flexpwm: ral::pwm::PWM,
-    #[cfg(family = "imxrt1060")]
-    flexpwm2: ral::pwm::PWM2,
-    usb_analog: UsbAnalog,
-    usb1: Usb1,
-    usbnc1: UsbNc1,
-    usbphy1: UsbPhy1,
-    trng: ral::trng::TRNG,
-}
-
-impl Instances {
-    pub fn take() -> Option<Self> {
+        let dma = hal::dma::channels(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?);
+        let trng = hal::trng::Trng::new(
+            ral::trng::TRNG::take()?,
+            Default::default(),
+            Default::default(),
+        );
         Some(Self {
-            gpio1: ral::gpio::GPIO1::take()?,
-            gpio2: ral::gpio::GPIO2::take()?,
-            iomuxc: ral::iomuxc::IOMUXC::take()?,
-            gpt1: ral::gpt::GPT1::take()?,
-            gpt2: ral::gpt::GPT2::take()?,
-            lpuart1: ral::lpuart::LPUART1::take()?,
-            lpuart2: ral::lpuart::LPUART2::take()?,
-            pit: ral::pit::PIT::take()?,
-            dma: ral::dma0::DMA0::take()?,
-            dma_mux: ral::dmamux::DMAMUX::take()?,
-            ccm: ral::ccm::CCM::take()?,
-            ccm_analog: ral::ccm_analog::CCM_ANALOG::take()?,
-            dcdc: ral::dcdc::DCDC::take()?,
-            lpspi1: ral::lpspi::LPSPI1::take()?,
-            lpi2c1: ral::lpi2c::LPI2C1::take()?,
-            #[cfg(family = "imxrt1060")]
-            lpspi4: ral::lpspi::LPSPI4::take()?,
-            #[cfg(family = "imxrt1060")]
-            lpi2c3: ral::lpi2c::LPI2C3::take()?,
-            #[cfg(family = "imxrt1010")]
-            flexpwm: ral::pwm::PWM::take()?,
-            #[cfg(family = "imxrt1060")]
-            flexpwm2: ral::pwm::PWM2::take()?,
-
-            usb_analog: ral::usb_analog::USB_ANALOG::take()?,
+            pit,
+            gpt1,
+            gpt2,
+            dma,
+            trng,
             usb1: Usb1::take()?,
             usbnc1: UsbNc1::take()?,
             usbphy1: UsbPhy1::take()?,
-
-            trng: ral::trng::TRNG::take()?,
+            usb_analog: UsbAnalog::take()?,
         })
     }
 }
 
-impl From<ral::Peripherals> for Instances {
-    fn from(p: ral::Peripherals) -> Self {
-        Self {
-            gpio1: p.GPIO1,
-            gpio2: p.GPIO2,
-            iomuxc: p.IOMUXC,
-            gpt1: p.GPT1,
-            gpt2: p.GPT2,
-            lpuart1: p.LPUART1,
-            lpuart2: p.LPUART2,
-            pit: p.PIT,
-            dma: p.DMA0,
-            dma_mux: p.DMAMUX,
-            ccm: p.CCM,
-            ccm_analog: p.CCM_ANALOG,
-            dcdc: p.DCDC,
-            lpspi1: p.LPSPI1,
-            lpi2c1: p.LPI2C1,
-            #[cfg(family = "imxrt1060")]
-            lpspi4: p.LPSPI4,
-            #[cfg(family = "imxrt1060")]
-            lpi2c3: p.LPI2C3,
-            #[cfg(family = "imxrt1010")]
-            flexpwm: p.PWM,
-            #[cfg(family = "imxrt1060")]
-            flexpwm2: p.PWM2,
+/// Configure board clocks and power.
+///
+/// This should be the first call to every example. This call takes
+/// RAL resources, and releases them before exit.
+///
+/// # Panics
+///
+/// Panics if any of the RAL resources are already taken.
+fn configure() {
+    let mut ccm = ral::ccm::CCM::take().unwrap();
+    let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take().unwrap();
+    let mut dcdc = ral::dcdc::DCDC::take().unwrap();
 
-            usb_analog: p.USB_ANALOG,
-            #[cfg(family = "imxrt1010")]
-            usb1: p.USB,
-            #[cfg(family = "imxrt1010")]
-            usbnc1: p.USBNC,
-            #[cfg(family = "imxrt1010")]
-            usbphy1: p.USBPHY,
-            #[cfg(not(family = "imxrt1010"))]
-            usb1: p.USB1,
-            #[cfg(not(family = "imxrt1010"))]
-            usbnc1: p.USBNC1,
-            #[cfg(not(family = "imxrt1010"))]
-            usbphy1: p.USBPHY1,
+    hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
+    hal::set_target_power(&mut dcdc, RUN_MODE);
+    prepare_clock_tree(&mut ccm, &mut ccm_analog);
 
-            trng: p.TRNG,
-        }
-    }
+    COMMON_CLOCK_GATES
+        .into_iter()
+        .chain(board::CLOCK_GATES.into_iter())
+        .for_each(|locator: &clock_gate::Locator| {
+            locator.set(&mut ccm, hal::ccm::clock_gate::ON);
+        });
+
+    ral::dcdc::DCDC::release(dcdc);
+    ral::ccm_analog::CCM_ANALOG::release(ccm_analog);
+    ral::ccm::CCM::release(ccm);
+}
+
+use hal::ccm::clock_gate;
+const COMMON_CLOCK_GATES: &[clock_gate::Locator] = &[
+    clock_gate::pit(),
+    clock_gate::gpt_bus::<1>(),
+    clock_gate::gpt_bus::<2>(),
+    clock_gate::gpt_serial::<1>(),
+    clock_gate::gpt_serial::<2>(),
+    clock_gate::dma(),
+    clock_gate::usb(),
+    clock_gate::trng(),
+];
+
+/// Board entrypoint.
+///
+/// Use this to configure the hardware and acquire peripherals.
+///
+/// # Panics
+///
+/// This should only be called once, at the top of your `main()` routine.
+/// It panics if any hardware resource is already taken.
+pub fn new() -> (Common, Specifics) {
+    configure();
+    (Common::take().unwrap(), Specifics::take().unwrap())
 }
 
 /// The board's run mode.
@@ -241,13 +184,6 @@ fn convert_iomuxc(_: ral::iomuxc::IOMUXC) -> Pads {
     unsafe { Pads::new() }
 }
 
-/// Configure PIT channels.
-fn configure_pit(pit: ral::pit::PIT) -> hal::pit::Channels {
-    // Stop timers in debug mode.
-    ral::modify_reg!(ral::pit, pit, MCR, FRZ: FRZ_1);
-    hal::pit::new(pit)
-}
-
 fn configure_gpt<const N: u8>(gpt: ral::gpt::Instance<N>, divider: u32) -> hal::gpt::Gpt<N>
 where
     ral::gpt::Instance<N>: ral::Valid,
@@ -258,17 +194,6 @@ where
     gpt.set_clock_source(GPT_SELECTION);
     gpt.set_divider(divider);
     gpt
-}
-
-/// Prepare all board components.
-///
-/// # Panics
-///
-/// Panics if any board component is already taken from the RAL.
-pub fn prepare() -> Board {
-    Instances::take()
-        .map(board::new)
-        .expect("Board component already taken")
 }
 
 fn prepare_clock_tree(
@@ -283,3 +208,25 @@ fn prepare_clock_tree(
     ccm::clock_tree::configure_uart(RUN_MODE, ccm);
     ccm::analog::pll3::restart(ccm_analog);
 }
+
+#[cfg(family = "imxrt1010")]
+mod usb1 {
+    use crate::ral;
+
+    pub type Usb1 = ral::usb::USB;
+    pub type UsbPhy1 = ral::usbphy::USBPHY;
+    pub type UsbNc1 = ral::usbnc::USBNC;
+    pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
+}
+
+#[cfg(not(family = "imxrt1010"))]
+mod usb1 {
+    use crate::ral;
+
+    pub type Usb1 = ral::usb::USB1;
+    pub type UsbPhy1 = ral::usbphy::USBPHY1;
+    pub type UsbNc1 = ral::usbnc::USBNC1;
+    pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
+}
+
+use usb1::*;

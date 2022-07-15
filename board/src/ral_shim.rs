@@ -11,7 +11,7 @@
 //! [1]: https://github.com/rtic-rs/cortex-m-rtic/issues/197
 
 use imxrt_ral::Interrupt as ISR;
-pub use imxrt_ral::{Peripherals, NVIC_PRIO_BITS};
+pub use imxrt_ral::NVIC_PRIO_BITS;
 
 // Represents the 'enum' namespace.
 pub use interrupt_shims as Interrupt;

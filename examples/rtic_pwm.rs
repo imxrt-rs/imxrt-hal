@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = board, peripherals = true)]
+#[rtic::app(device = board, peripherals = false)]
 mod app {
     use imxrt_hal as hal;
 
@@ -28,17 +28,20 @@ mod app {
     }
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board {
-            led,
-            pwm:
-                board::Pwm {
-                    mut module,
-                    mut submodule,
-                    ..
-                },
-            ..
-        } = board::new(cx.device);
+    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+        let (
+            _,
+            board::Specifics {
+                led,
+                pwm:
+                    board::Pwm {
+                        mut module,
+                        mut submodule,
+                        ..
+                    },
+                ..
+            },
+        ) = board::new();
 
         submodule.set_debug_enable(true);
         submodule.set_wait_enable(true);

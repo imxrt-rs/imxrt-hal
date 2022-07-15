@@ -11,7 +11,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = board, peripherals = true, dispatchers = [BOARD_SWTASK0])]
+#[rtic::app(device = board, peripherals = false, dispatchers = [BOARD_SWTASK0])]
 mod app {
 
     //
@@ -76,17 +76,19 @@ mod app {
     #[init]
     fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
         let mut cortex_m = cx.core;
-        let board::Board {
-            led,
-            pit: (_, mut poll_log, mut make_log, _),
-            usb1,
-            usbnc1,
-            usbphy1,
-            mut usb_analog,
-            console,
-            mut dma,
-            ..
-        } = board::new(cx.device);
+        let (
+            board::Common {
+                pit: (_, mut poll_log, mut make_log, _),
+                usb1,
+                usbnc1,
+                usbphy1,
+                mut usb_analog,
+
+                mut dma,
+                ..
+            },
+            board::Specifics { led, console, .. },
+        ) = board::new();
         cortex_m.DCB.enable_trace();
         cortex_m::peripheral::DWT::unlock();
         cortex_m.DWT.enable_cycle_counter();

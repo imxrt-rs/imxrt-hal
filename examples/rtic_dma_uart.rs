@@ -9,7 +9,7 @@
 
 use imxrt_hal as hal;
 
-#[rtic::app(device = board, peripherals = true)]
+#[rtic::app(device = board, peripherals = false)]
 mod app {
     use super::{dma_receive, dma_transfer, hal};
 
@@ -35,13 +35,12 @@ mod app {
 
     #[init(local = [buf: [u8; 32] = [0; 32]])]
     fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board {
-            led,
-            mut console,
-            mut dma,
-            ..
-        } = board::new(cx.device);
-
+        let (
+            board::Common { mut dma, .. },
+            board::Specifics {
+                led, mut console, ..
+            },
+        ) = board::new();
         let mut channel = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         channel.set_interrupt_on_completion(true);
         channel.set_disable_on_completion(true);

@@ -21,9 +21,7 @@ const OCR: hal::gpt::OutputCompareRegister = hal::gpt::OutputCompareRegister::OC
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board {
-        led, gpt1, gpt2, ..
-    } = board::prepare();
+    let (board::Common { gpt1, gpt2, .. }, board::Specifics { led, .. }) = board::new();
     if USE_GPT1 {
         use_gpt(led, gpt1, GPT1_DELAY_MS);
     } else {

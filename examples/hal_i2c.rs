@@ -95,13 +95,15 @@ fn query_mpu(
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board {
-        led,
-        mut console,
-        mut i2c,
-        mut gpt1,
-        ..
-    } = board::prepare();
+    let (
+        board::Common { mut gpt1, .. },
+        board::Specifics {
+            led,
+            mut console,
+            mut i2c,
+            ..
+        },
+    ) = board::new();
 
     gpt1.set_output_compare_count(GPT1_OCR, GPT1_DELAY_MS);
     gpt1.set_mode(hal::gpt::Mode::Restart);

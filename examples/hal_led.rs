@@ -5,7 +5,7 @@
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board { led, .. } = board::prepare();
+    let (_, board::Specifics { led, .. }) = board::new();
     loop {
         led.set();
     }

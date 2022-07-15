@@ -22,9 +22,7 @@ const PWM_B_DUTY: u32 = PWM_A_DUTY / 2;
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board {
-        led, mut pit, pwm, ..
-    } = board::prepare();
+    let (board::Common { mut pit, .. }, board::Specifics { led, pwm, .. }) = board::new();
     pit.0.set_load_timer_value(PIT_DELAY_MS);
     pit.0.enable();
 

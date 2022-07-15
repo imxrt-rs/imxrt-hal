@@ -3,7 +3,7 @@
 #![no_std]
 #![no_main]
 
-#[rtic::app(device = board, peripherals = true)]
+#[rtic::app(device = board, peripherals = false)]
 mod app {
     use imxrt_hal as hal;
 
@@ -19,13 +19,14 @@ mod app {
     }
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        let board::Board {
-            led,
-            pit: (_, _, mut pit, _),
-            ..
-        } = board::new(cx.device);
-
+    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+        let (
+            board::Common {
+                pit: (_, _, mut pit, _),
+                ..
+            },
+            board::Specifics { led, .. },
+        ) = board::new();
         pit.set_interrupt_enable(true);
         pit.set_load_timer_value(PIT_DELAY_MS);
         pit.enable();

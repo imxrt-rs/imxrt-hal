@@ -8,7 +8,7 @@
 //! SPI peripheral uses pin 13 as the clock output. When
 //! not activated, the SPI peripheral is the unit type `()`.
 
-use crate::{hal, iomuxc::imxrt1060 as iomuxc, ral, RUN_MODE};
+use crate::{hal, iomuxc::imxrt1060 as iomuxc, ral};
 
 #[cfg(not(feature = "spi"))]
 /// The board LED.
@@ -59,155 +59,114 @@ pub mod pwm {
     );
 }
 
+/// The board's PWM components.
+pub struct Pwm {
+    /// Core PWM peripheral.
+    pub module: pwm::Peripheral,
+    /// PWM submodule control registers.
+    pub submodule: pwm::Submodule,
+    /// The output pairs (tuple of A, B outputs).
+    pub outputs: pwm::Outputs,
+}
+
 /// Teensy 4 specific peripherals.
-pub struct Specifics {}
+pub struct Specifics {
+    pub led: Led,
+    pub console: Console,
+    pub spi: Spi,
+    pub i2c: I2c,
+    pub pwm: Pwm,
+}
 
-pub type Usb1 = ral::usb::USB1;
-pub type UsbPhy1 = ral::usbphy::USBPHY1;
-pub type UsbNc1 = ral::usbnc::USBNC1;
-pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
+impl Specifics {
+    pub(crate) fn take() -> Option<Self> {
+        let iomuxc = ral::iomuxc::IOMUXC::take()?;
+        let mut iomuxc = super::convert_iomuxc(iomuxc);
+        configure_pins(&mut iomuxc);
 
-/// Prepare all board resources, and return them.
-pub fn new<P: Into<super::Instances>>(peripherals: P) -> super::Board {
-    let super::Instances {
-        gpio2: _gpio2,
-        iomuxc,
-        pit,
-        gpt1,
-        gpt2,
-        lpuart2,
-        dma,
-        dma_mux,
-        lpspi4: _lpspi4,
-        lpi2c3,
-        flexpwm2,
-        mut ccm,
-        mut ccm_analog,
-        mut dcdc,
-        usb1,
-        usbnc1,
-        usbphy1,
-        usb_analog,
-        trng,
-        ..
-    } = peripherals.into();
+        let _gpio2 = ral::gpio::GPIO2::take()?;
+        let mut _gpio2 = hal::gpio::Port::new(_gpio2);
 
-    let mut iomuxc = super::convert_iomuxc(iomuxc);
-    hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
-    hal::set_target_power(&mut dcdc, RUN_MODE);
-    super::prepare_clock_tree(&mut ccm, &mut ccm_analog);
+        #[cfg(not(feature = "spi"))]
+        let led = _gpio2.output(iomuxc.gpio_b0.p03);
+        #[cfg(feature = "spi")]
+        let led = ();
 
-    CLOCK_GATES
-        .into_iter()
-        .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
-    configure_pins(&mut iomuxc);
-
-    let mut _gpio2 = hal::gpio::Port::new(_gpio2);
-
-    #[cfg(not(feature = "spi"))]
-    let led = _gpio2.output(iomuxc.gpio_b0.p03);
-    #[cfg(feature = "spi")]
-    let led = ();
-
-    let pit = super::configure_pit(pit);
-
-    let gpt1 = super::configure_gpt(gpt1, super::GPT1_DIVIDER);
-    let gpt2 = super::configure_gpt(gpt2, super::GPT2_DIVIDER);
-
-    let mut console = hal::lpuart::Lpuart::new(
-        lpuart2,
-        hal::lpuart::Pins {
-            tx: iomuxc.gpio_ad_b1.p02,
-            rx: iomuxc.gpio_ad_b1.p03,
-        },
-    );
-    console.disable(|console| {
-        console.set_baud(&super::CONSOLE_BAUD);
-        console.set_parity(None);
-    });
-
-    #[cfg(feature = "spi")]
-    let spi = {
-        hal::ccm::clock_gate::lpspi::<{ Spi::N }>().set(&mut ccm, hal::ccm::clock_gate::ON);
-        let pins = SpiPins {
-            sdo: iomuxc.gpio_b0.p02,
-            sdi: iomuxc.gpio_b0.p01,
-            sck: iomuxc.gpio_b0.p03,
-            pcs0: iomuxc.gpio_b0.p00,
-        };
-        let mut spi = Spi::new(_lpspi4, pins);
-        spi.disabled(|spi| {
-            spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
+        let lpuart2 = ral::lpuart::LPUART2::take()?;
+        let mut console = hal::lpuart::Lpuart::new(
+            lpuart2,
+            hal::lpuart::Pins {
+                tx: iomuxc.gpio_ad_b1.p02,
+                rx: iomuxc.gpio_ad_b1.p03,
+            },
+        );
+        console.disable(|console| {
+            console.set_baud(&super::CONSOLE_BAUD);
+            console.set_parity(None);
         });
-        spi
-    };
-    #[cfg(not(feature = "spi"))]
-    let spi = ();
 
-    let i2c = I2c::new(
-        lpi2c3,
-        I2cPins {
-            scl: iomuxc.gpio_ad_b1.p07,
-            sda: iomuxc.gpio_ad_b1.p06,
-        },
-        &super::I2C_BAUD_RATE,
-    );
+        #[cfg(feature = "spi")]
+        let spi = {
+            let lpspi4 = ral::lpspi::LPSPI4::take()?;
+            let pins = SpiPins {
+                sdo: iomuxc.gpio_b0.p02,
+                sdi: iomuxc.gpio_b0.p01,
+                sck: iomuxc.gpio_b0.p03,
+                pcs0: iomuxc.gpio_b0.p00,
+            };
+            let mut spi = Spi::new(lpspi4, pins);
+            spi.disabled(|spi| {
+                spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
+            });
+            spi
+        };
+        #[cfg(not(feature = "spi"))]
+        let spi = ();
 
-    let dma = hal::dma::channels(dma, dma_mux);
+        let lpi2c3 = ral::lpi2c::LPI2C3::take()?;
+        let i2c = I2c::new(
+            lpi2c3,
+            I2cPins {
+                scl: iomuxc.gpio_ad_b1.p07,
+                sda: iomuxc.gpio_ad_b1.p06,
+            },
+            &super::I2C_BAUD_RATE,
+        );
 
-    let pwm = {
-        let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm2);
+        let flexpwm2 = ral::pwm::PWM2::take()?;
+        let pwm = {
+            let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm2);
 
-        let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_b0.p10);
-        let out_b = hal::flexpwm::Output::new_b(iomuxc.gpio_b0.p11);
+            let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_b0.p10);
+            let out_b = hal::flexpwm::Output::new_b(iomuxc.gpio_b0.p11);
 
-        super::Pwm {
-            module: pwm,
-            submodule: sm,
-            outputs: (out_a, out_b),
-        }
-    };
+            Pwm {
+                module: pwm,
+                submodule: sm,
+                outputs: (out_a, out_b),
+            }
+        };
 
-    let trng = hal::trng::Trng::new(trng, Default::default(), Default::default());
-    let specifics = Specifics {};
-    super::Board {
-        led,
-        pit,
-        gpt1,
-        gpt2,
-        console,
-        dma,
-        spi,
-        i2c,
-        pwm,
-        ccm,
-        usb1,
-        usbnc1,
-        usbphy1,
-        usb_analog,
-        trng,
-        specifics,
+        Some(Self {
+            led,
+            console,
+            spi,
+            i2c,
+            pwm,
+        })
     }
 }
 
 use hal::ccm::clock_gate;
 
 /// The clock gates for this board's peripherals.
-const CLOCK_GATES: &[clock_gate::Locator] = &[
-    clock_gate::pit(),
-    clock_gate::gpt_bus::<1>(),
-    clock_gate::gpt_bus::<2>(),
-    clock_gate::gpt_serial::<1>(),
-    clock_gate::gpt_serial::<2>(),
+pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<2>(),
     clock_gate::lpuart::<{ Console::N }>(),
-    clock_gate::dma(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
-    clock_gate::usb(),
-    clock_gate::trng(),
 ];
 
 /// Configure board pins.
@@ -242,8 +201,6 @@ use teensy4_panic as _;
 /// no functionality.
 pub mod clock_out {
     use crate::hal::ccm::output_source::{clko1::Selection as Clko1, clko2::Selection as Clko2};
-
-    pub fn prepare_outputs(_: &mut super::Specifics) {}
 
     pub const CLKO1_SELECTIONS: [Clko1; 0] = [];
 

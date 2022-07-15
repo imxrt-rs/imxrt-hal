@@ -13,16 +13,18 @@ use imxrt_hal as hal;
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board::Board {
-        led,
-        pit: (_, _, mut make_log, _),
-        usb1,
-        usbnc1,
-        usbphy1,
-        mut usb_analog,
-        mut trng,
-        ..
-    } = board::prepare();
+    let (
+        board::Common {
+            pit: (_, _, mut make_log, _),
+            usb1,
+            usbnc1,
+            usbphy1,
+            mut usb_analog,
+            mut trng,
+            ..
+        },
+        board::Specifics { led, .. },
+    ) = board::new();
 
     make_log.set_load_timer_value(MAKE_LOG_INTERVAL_MS);
     make_log.set_interrupt_enable(false);
