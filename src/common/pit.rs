@@ -85,10 +85,10 @@ pub fn new(pit: crate::ral::pit::PIT) -> Channels {
     //
     // PIT channels may be used by a systems boot ROM, or another
     // user. Set them to a known, good state.
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL0, 0);
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL1, 0);
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL2, 0);
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL3, 0);
+    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL_0, 0);
+    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL_1, 0);
+    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL_2, 0);
+    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL_3, 0);
 
     unsafe { (Pit::new(), Pit::new(), Pit::new(), Pit::new()) }
     // drop(pit)
@@ -122,10 +122,10 @@ impl<const CHAN: u8> Pit<CHAN> {
     {
         let base = crate::ral::pit::PIT;
         let offset = match CHAN {
-            0 => core::ptr::addr_of!((*base).LDVAL0),
-            1 => core::ptr::addr_of!((*base).LDVAL1),
-            2 => core::ptr::addr_of!((*base).LDVAL2),
-            3 => core::ptr::addr_of!((*base).LDVAL3),
+            0 => core::ptr::addr_of!((*base).LDVAL_0),
+            1 => core::ptr::addr_of!((*base).LDVAL_1),
+            2 => core::ptr::addr_of!((*base).LDVAL_2),
+            3 => core::ptr::addr_of!((*base).LDVAL_3),
             _ => unreachable!(),
         } as *const _;
         Self {
@@ -271,16 +271,16 @@ mod ral {
     }
 
     pub mod LDVAL {
-        pub use crate::ral::pit::LDVAL0::*;
+        pub use crate::ral::pit::LDVAL_0::*;
     }
     pub mod CVAL {
-        pub use crate::ral::pit::CVAL0::*;
+        pub use crate::ral::pit::CVAL_0::*;
     }
     pub mod TCTRL {
-        pub use crate::ral::pit::TCTRL0::*;
+        pub use crate::ral::pit::TCTRL_0::*;
     }
     pub mod TFLG {
-        pub use crate::ral::pit::TFLG0::*;
+        pub use crate::ral::pit::TFLG_0::*;
     }
 }
 
