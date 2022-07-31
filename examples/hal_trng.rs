@@ -19,7 +19,6 @@ fn main() -> ! {
             usb1,
             usbnc1,
             usbphy1,
-            mut usb_analog,
             mut trng,
             ..
         },
@@ -34,7 +33,6 @@ fn main() -> ! {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,
-        usb_analog: &mut usb_analog,
     };
     let mut poller = imxrt_log::log::usbd(usb_instances, imxrt_log::Interrupts::Disabled).unwrap();
 

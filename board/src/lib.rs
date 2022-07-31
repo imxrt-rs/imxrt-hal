@@ -53,8 +53,6 @@ pub struct Common {
     pub usbnc1: UsbNc1,
     /// USBPHY1 registers.
     pub usbphy1: UsbPhy1,
-    /// USB_ANALOG registers.
-    pub usb_analog: UsbAnalog,
 }
 
 impl Common {
@@ -85,7 +83,6 @@ impl Common {
             usb1: Usb1::take()?,
             usbnc1: UsbNc1::take()?,
             usbphy1: UsbPhy1::take()?,
-            usb_analog: UsbAnalog::take()?,
         })
     }
 }
@@ -219,7 +216,6 @@ mod usb1 {
     pub type Usb1 = ral::usb::USB;
     pub type UsbPhy1 = ral::usbphy::USBPHY;
     pub type UsbNc1 = ral::usbnc::USBNC;
-    pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
 }
 
 #[cfg(not(family = "imxrt1010"))]
@@ -229,7 +225,6 @@ mod usb1 {
     pub type Usb1 = ral::usb::USB1;
     pub type UsbPhy1 = ral::usbphy::USBPHY1;
     pub type UsbNc1 = ral::usbnc::USBNC1;
-    pub type UsbAnalog = ral::usb_analog::USB_ANALOG;
 }
 
 use usb1::*;

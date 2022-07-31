@@ -82,7 +82,6 @@ mod app {
                 usb1,
                 usbnc1,
                 usbphy1,
-                mut usb_analog,
 
                 mut dma,
                 ..
@@ -112,7 +111,6 @@ mod app {
             usb: usb1,
             usbnc: usbnc1,
             usbphy: usbphy1,
-            usb_analog: &mut usb_analog,
         };
 
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();

@@ -55,7 +55,6 @@ fn main() -> ! {
             usb1,
             usbnc1,
             usbphy1,
-            mut usb_analog,
 
             mut dma,
             ..
@@ -72,7 +71,6 @@ fn main() -> ! {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,
-        usb_analog: &mut usb_analog,
     };
 
     let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();

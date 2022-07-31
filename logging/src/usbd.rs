@@ -129,7 +129,7 @@ unsafe fn poll() {
 ///
 /// This can only be called once.
 pub(crate) unsafe fn init<const N: u8>(
-    peripherals: Instances<'_, N>,
+    peripherals: Instances<N>,
     interrupts: crate::Interrupts,
     consumer: super::Consumer,
     config: &UsbdConfig,
