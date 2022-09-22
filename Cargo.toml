@@ -92,6 +92,9 @@ path = "../../cortex-m/cortex-m-rt"
 [patch.crates-io.bbqueue]
 path = "../../bbqueue/core"
 
+[patch.crates-io.ral-registers]
+path = "../ral-registers"
+
 [profile.dev]
 opt-level = 1
 panic = "abort"

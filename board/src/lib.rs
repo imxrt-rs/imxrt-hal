@@ -6,6 +6,8 @@
 
 #![no_std]
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
 use imxrt_hal as hal;
 use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
@@ -56,49 +58,46 @@ pub struct Common {
 }
 
 impl Common {
-    /// Take common resources.
-    ///
-    /// Returns `None` if _any_ resource is already taken.
-    fn take() -> Option<Self> {
-        let pit = ral::pit::PIT::take()?;
+    /// Prepares common resources.
+    fn new() -> Self {
+        let pit = unsafe { ral::pit::PIT::instance() };
         // Stop timers in debug mode.
         ral::modify_reg!(ral::pit, pit, MCR, FRZ: FRZ_1);
         let pit = hal::pit::new(pit);
 
-        let gpt1 = configure_gpt(ral::gpt::GPT1::take()?, GPT1_DIVIDER);
-        let gpt2 = configure_gpt(ral::gpt::GPT2::take()?, GPT2_DIVIDER);
+        let gpt1 = configure_gpt(unsafe { ral::gpt::GPT1::instance() }, GPT1_DIVIDER);
+        let gpt2 = configure_gpt(unsafe { ral::gpt::GPT2::instance() }, GPT2_DIVIDER);
 
-        let dma = hal::dma::channels(ral::dma0::DMA0::take()?, ral::dmamux::DMAMUX::take()?);
+        let dma = hal::dma::channels(unsafe { ral::dma0::DMA0::instance() }, unsafe {
+            ral::dmamux::DMAMUX::instance()
+        });
         let trng = hal::trng::Trng::new(
-            ral::trng::TRNG::take()?,
+            unsafe { ral::trng::TRNG::instance() },
             Default::default(),
             Default::default(),
         );
-        Some(Self {
+        Self {
             pit,
             gpt1,
             gpt2,
             dma,
             trng,
-            usb1: Usb1::take()?,
-            usbnc1: UsbNc1::take()?,
-            usbphy1: UsbPhy1::take()?,
-        })
+            usb1: unsafe { Usb1::instance() },
+            usbnc1: unsafe { UsbNc1::instance() },
+            usbphy1: unsafe { UsbPhy1::instance() },
+        }
     }
 }
 
 /// Configure board clocks and power.
 ///
-/// This should be the first call to every example. This call takes
-/// RAL resources, and releases them before exit.
+/// # Safety
 ///
-/// # Panics
-///
-/// Panics if any of the RAL resources are already taken.
-fn configure() {
-    let mut ccm = ral::ccm::CCM::take().unwrap();
-    let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take().unwrap();
-    let mut dcdc = ral::dcdc::DCDC::take().unwrap();
+/// Pokes at MMIO. Should only be done once.
+unsafe fn configure() {
+    let mut ccm = ral::ccm::CCM::instance();
+    let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::instance();
+    let mut dcdc = ral::dcdc::DCDC::instance();
 
     hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
     hal::set_target_power(&mut dcdc, RUN_MODE);
@@ -110,10 +109,6 @@ fn configure() {
         .for_each(|locator: &clock_gate::Locator| {
             locator.set(&mut ccm, hal::ccm::clock_gate::ON);
         });
-
-    ral::dcdc::DCDC::release(dcdc);
-    ral::ccm_analog::CCM_ANALOG::release(ccm_analog);
-    ral::ccm::CCM::release(ccm);
 }
 
 use hal::ccm::clock_gate;
@@ -137,8 +132,15 @@ const COMMON_CLOCK_GATES: &[clock_gate::Locator] = &[
 /// This should only be called once, at the top of your `main()` routine.
 /// It panics if any hardware resource is already taken.
 pub fn new() -> (Common, Specifics) {
-    configure();
-    (Common::take().unwrap(), Specifics::take().unwrap())
+    static ONCE: AtomicBool = AtomicBool::new(false);
+    let done = ONCE.fetch_or(true, Ordering::SeqCst);
+    assert!(!done, "You've already initialized the board.");
+
+    // Safety: once flag ensures that this only happens once.
+    unsafe {
+        configure();
+        (Common::new(), Specifics::new())
+    }
 }
 
 /// The board's run mode.

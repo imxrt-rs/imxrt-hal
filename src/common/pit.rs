@@ -70,8 +70,7 @@ pub type Channels = (Pit0, Pit1, Pit2, Pit3);
 
 /// A periodic interrupt timer (PIT) channel.
 pub struct Pit<const CHAN: u8> {
-    /// *Channel* instance; see the ral module, below...
-    instance: self::ral::Instance<CHAN>,
+    instance: &'static crate::ral::pit::RegisterBlock,
 }
 
 /// Convert the PIT peripheral instances into four timer channels.
@@ -79,31 +78,40 @@ pub struct Pit<const CHAN: u8> {
 /// `new` will reset all timer control registers before returning
 /// the channels. It is is guaranteed to not touch the `FRZ` bit
 /// in `MCR`.
-pub fn new(pit: crate::ral::pit::PIT) -> Channels {
+pub fn new<const N: u8>(pit: crate::ral::pit::Instance<N>) -> Channels {
     crate::ral::modify_reg!(crate::ral::pit, pit, MCR, MDIS: MDIS_0);
     // Reset all PIT channels
     //
     // PIT channels may be used by a systems boot ROM, or another
     // user. Set them to a known, good state.
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL0, 0);
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL1, 0);
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL2, 0);
-    crate::ral::write_reg!(crate::ral::pit, pit, TCTRL3, 0);
+    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[0], TCTRL, 0);
+    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[1], TCTRL, 0);
+    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[2], TCTRL, 0);
+    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[3], TCTRL, 0);
 
-    unsafe { (Pit::new(), Pit::new(), Pit::new(), Pit::new()) }
-    // drop(pit)
+    unsafe {
+        (
+            Pit::new(&pit),
+            Pit::new(&pit),
+            Pit::new(&pit),
+            Pit::new(&pit),
+        )
+    }
 }
 
-/// Release all PIT channels, and reconstruct the PIT register
-/// instance.
-pub fn release(_: Channels) -> crate::ral::pit::PIT {
-    // Safety: user could only safely acquire four channels
-    // using new, and if they safely owned the PIT instance.
-    // At the end of new, we owned the PIT instance.
-    // We continue to own the PIT instance until this call
-    // returns.
-    unsafe { crate::ral::pit::PIT::steal() }
+mod private {
+    pub trait Sealed {}
 }
+pub trait Valid {}
+pub enum Const<const N: u8> {}
+impl private::Sealed for Const<0> {}
+impl private::Sealed for Const<1> {}
+impl private::Sealed for Const<2> {}
+impl private::Sealed for Const<3> {}
+impl Valid for Const<0> {}
+impl Valid for Const<1> {}
+impl Valid for Const<2> {}
+impl Valid for Const<3> {}
 
 impl<const CHAN: u8> Pit<CHAN> {
     /// Fabricate a PIT channel instance.
@@ -116,31 +124,35 @@ impl<const CHAN: u8> Pit<CHAN> {
     ///
     /// Use the free function [`new()`](crate::pit::new) to safely
     /// acquire the four PIT channels.
-    pub unsafe fn new() -> Self
+    pub unsafe fn new<const N: u8>(instance: &crate::ral::pit::Instance<N>) -> Self
     where
-        self::ral::Const<CHAN>: self::ral::Valid,
+        Const<CHAN>: Valid,
     {
-        let base = crate::ral::pit::PIT;
-        let offset = match CHAN {
-            0 => core::ptr::addr_of!((*base).LDVAL0),
-            1 => core::ptr::addr_of!((*base).LDVAL1),
-            2 => core::ptr::addr_of!((*base).LDVAL2),
-            3 => core::ptr::addr_of!((*base).LDVAL3),
-            _ => unreachable!(),
-        } as *const _;
+        let register_block: &'_ crate::ral::pit::RegisterBlock = &*instance;
+        let register_block: &'static _ = core::mem::transmute(register_block);
         Self {
-            instance: self::ral::Instance::new(offset),
+            instance: register_block,
         }
     }
 
     /// Enable (true) or disable (false) interrupt generation.
     pub fn set_interrupt_enable(&mut self, enable: bool) {
-        crate::ral::modify_reg!(self::ral, self.instance, TCTRL, TIE: enable as u32)
+        crate::ral::modify_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            TCTRL,
+            TIE: enable as u32
+        )
     }
 
     /// Indicates if timeouts will (true) or will not (false) generate interrupts.
     pub fn is_interrupt_enabled(&self) -> bool {
-        crate::ral::read_reg!(self::ral, self.instance, TCTRL, TIE == 1)
+        crate::ral::read_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            TCTRL,
+            TIE == 1
+        )
     }
 
     /// Reads the current time value, in clock ticks.
@@ -150,7 +162,11 @@ impl<const CHAN: u8> Pit<CHAN> {
         if self.is_enabled() {
             // Note in CVAL register docs: don't read CVAL if the timer
             // is disable "because the value is unreliable."
-            crate::ral::read_reg!(self::ral, self.instance, CVAL)
+            crate::ral::read_reg!(
+                crate::ral::pit::timer,
+                &self.instance.TIMER[CHAN as usize],
+                CVAL
+            )
         } else {
             0
         }
@@ -160,37 +176,57 @@ impl<const CHAN: u8> Pit<CHAN> {
     ///
     /// `ticks` is in clock ticks.
     pub fn set_load_timer_value(&self, ticks: u32) {
-        crate::ral::write_reg!(self::ral, self.instance, LDVAL, ticks.saturating_sub(1));
+        crate::ral::write_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            LDVAL,
+            ticks.saturating_sub(1)
+        );
     }
 
     /// Returns the load timer value for the next timer run, in clock ticks.
     pub fn load_timer_value(&self) -> u32 {
-        crate::ral::read_reg!(self::ral, self.instance, LDVAL).saturating_add(1)
+        crate::ral::read_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            LDVAL
+        )
+        .saturating_add(1)
     }
 
     /// Enable the timer.
     pub fn enable(&mut self) {
-        crate::ral::modify_reg!(self::ral, self.instance, TCTRL, TEN: 1);
+        crate::ral::modify_reg!(crate::ral::pit::timer, &self.instance.TIMER[CHAN as usize], TCTRL, TEN: 1);
     }
 
     /// Disable the timer.
     pub fn disable(&mut self) {
-        crate::ral::modify_reg!(self::ral, self.instance, TCTRL, TEN: 0);
+        crate::ral::modify_reg!(crate::ral::pit::timer, &self.instance.TIMER[CHAN as usize], TCTRL, TEN: 0);
     }
 
     /// Returns `true` if the PIT channel is enabled.
     pub fn is_enabled(&self) -> bool {
-        crate::ral::read_reg!(self::ral, self.instance, TCTRL, TEN == 1)
+        crate::ral::read_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            TCTRL,
+            TEN == 1
+        )
     }
 
     /// Returns `true` if the timer has elapsed.
     pub fn is_elapsed(&self) -> bool {
-        crate::ral::read_reg!(self::ral, self.instance, TFLG, TIF == 1)
+        crate::ral::read_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            TFLG,
+            TIF == 1
+        )
     }
 
     /// Clear the elapsed flag.
     pub fn clear_elapsed(&self) {
-        crate::ral::write_reg!(self::ral, self.instance, TFLG, TIF: 1)
+        crate::ral::write_reg!(crate::ral::pit::timer, &self.instance.TIMER[CHAN as usize], TFLG, TIF: 1)
     }
 
     /// Specify that this channel is chained to the previous channel.
@@ -198,91 +234,26 @@ impl<const CHAN: u8> Pit<CHAN> {
     /// This affects how the timer counts. If you're looking to chain timers
     /// easily, see [`Chained`](crate::pit::Chained).
     pub fn set_chained(&mut self, chained: bool) {
-        crate::ral::modify_reg!(self::ral, self.instance, TCTRL, CHN: chained as u32);
+        crate::ral::modify_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            TCTRL,
+            CHN: chained as u32
+        );
     }
 
     /// Returns true if this channel is chained to the previous channel.
     pub fn is_chained(&self) -> bool {
-        crate::ral::read_reg!(self::ral, self.instance, TCTRL, CHN == 1)
+        crate::ral::read_reg!(
+            crate::ral::pit::timer,
+            &self.instance.TIMER[CHAN as usize],
+            TCTRL,
+            CHN == 1
+        )
     }
 }
 
 unsafe impl<const CHAN: u8> Send for Pit<CHAN> {}
-
-/// Address consistent across all i.MX RTs.
-const PIT_BASE_ADDRESS: u32 = 0x4008_4000;
-
-/// Custom RAL API for PIT channels
-///
-/// The auto-generated RAL API is cumbersome. This is a macro-compatible API that makes it
-/// easier to work with.
-mod ral {
-    #![allow(unused, non_snake_case, non_upper_case_globals)] // Compatibility with RAL
-
-    use crate::ral::{RORegister, RWRegister};
-
-    pub enum Const<const C: u8> {}
-    #[doc(hidden)]
-    pub trait Valid {}
-
-    impl Valid for Const<0> {}
-    impl Valid for Const<1> {}
-    impl Valid for Const<2> {}
-    impl Valid for Const<3> {}
-
-    #[repr(C)]
-    pub struct RegisterBlock {
-        /// Timer Load Value Register
-        pub LDVAL: RWRegister<u32>,
-
-        /// Current Timer Value Register
-        pub CVAL: RORegister<u32>,
-
-        /// Timer Control Register
-        pub TCTRL: RWRegister<u32>,
-
-        /// Timer Flag Register
-        pub TFLG: RWRegister<u32>,
-    }
-
-    pub struct Instance<const C: u8> {
-        addr: u32,
-        _marker: ::core::marker::PhantomData<*const RegisterBlock>,
-    }
-
-    impl<const C: u8> Instance<C>
-    where
-        Const<C>: Valid,
-    {
-        pub unsafe fn new(addr: *const u32) -> Self {
-            Instance {
-                addr: addr as u32,
-                _marker: ::core::marker::PhantomData,
-            }
-        }
-    }
-
-    impl<const C: u8> ::core::ops::Deref for Instance<C> {
-        type Target = RegisterBlock;
-        #[inline(always)]
-        fn deref(&self) -> &RegisterBlock {
-            unsafe { &*(self.addr as *const _) }
-        }
-    }
-
-    pub mod LDVAL {
-        pub use crate::ral::pit::LDVAL0::*;
-    }
-    pub mod CVAL {
-        pub use crate::ral::pit::CVAL0::*;
-    }
-    pub mod TCTRL {
-        pub use crate::ral::pit::TCTRL0::*;
-    }
-    pub mod TFLG {
-        pub use crate::ral::pit::TFLG0::*;
-    }
-}
 
 /// Two chained PIT timer channels.
 ///
@@ -330,21 +301,16 @@ impl Chained<0, 1> {
             return 0;
         }
 
-        // Offsets consistent across all i.MX RT chip variants.
-        // TODO(mciantyre) not it's not, the 1170 has two PITs.
-        const LTMR64H: *const u32 = ((PIT_BASE_ADDRESS as u32) + 0xE0) as *const _;
-        const LTMR64L: *const u32 = ((PIT_BASE_ADDRESS as u32) + 0xE4) as *const _;
-
         // Safety: there can only be one (safe) instance of this chained timer.
         // We effectively own these registers. These addresses are valid MMIO
         // registers.
-        let mut high = unsafe { LTMR64H.read_volatile() };
-        let mut low = unsafe { LTMR64L.read_volatile() };
+        let mut high = self.low.instance.LTMR64H.read();
+        let mut low = self.low.instance.LTMR64L.read();
 
         let ldval0 = self.low.load_timer_value();
         if low == ldval0 {
-            high = unsafe { LTMR64H.read_volatile() };
-            low = unsafe { LTMR64L.read_volatile() };
+            high = self.low.instance.LTMR64H.read();
+            low = self.low.instance.LTMR64L.read();
         }
 
         (u64::from(high) << 32) + u64::from(low)

@@ -104,11 +104,11 @@ pub struct Specifics {
 }
 
 impl Specifics {
-    pub(crate) fn take() -> Option<Self> {
+    pub(crate) fn new() -> Self {
         #[cfg(target_arch = "arm")]
         rtt_target::rtt_init_print!();
 
-        let iomuxc = ral::iomuxc::IOMUXC::take()?;
+        let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);
 
@@ -116,11 +116,11 @@ impl Specifics {
         crate::iomuxc::ccm::prepare(&mut iomuxc.gpio_sd.p01);
         crate::iomuxc::ccm::prepare(&mut iomuxc.gpio_sd.p02);
 
-        let gpio1 = ral::gpio::GPIO1::take()?;
+        let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
         let led = gpio1.output(iomuxc.gpio.p11);
 
-        let lpuart1 = ral::lpuart::LPUART1::take()?;
+        let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
         let mut console = hal::lpuart::Lpuart::new(
             lpuart1,
             hal::lpuart::Pins {
@@ -135,7 +135,7 @@ impl Specifics {
 
         #[cfg(feature = "spi")]
         let spi = {
-            let lpspi1 = ral::lpspi::LPSPI1::take()?;
+            let lpspi1 = unsafe { ral::lpspi::LPSPI1::instance() };
             let pins = SpiPins {
                 sdo: iomuxc.gpio_ad.p04,
                 sdi: iomuxc.gpio_ad.p03,
@@ -152,7 +152,7 @@ impl Specifics {
         #[cfg(not(feature = "spi"))]
         let spi = ();
 
-        let lpi2c1 = ral::lpi2c::LPI2C1::take()?;
+        let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };
         let i2c = I2c::new(
             lpi2c1,
             I2cPins {
@@ -164,7 +164,7 @@ impl Specifics {
 
         #[cfg(not(feature = "spi"))]
         let pwm = {
-            let flexpwm = ral::pwm::PWM::take()?;
+            let flexpwm = unsafe { ral::pwm::PWM::instance() };
             let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm);
 
             let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_ad.p04);
@@ -184,7 +184,7 @@ impl Specifics {
             outputs: (),
         };
 
-        Some(Self {
+        Self {
             led,
             console,
             spi,
@@ -192,7 +192,7 @@ impl Specifics {
             pwm,
             tp34: iomuxc.gpio_sd.p02,
             tp31: iomuxc.gpio_sd.p01,
-        })
+        }
     }
 }
 

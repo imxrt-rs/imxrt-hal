@@ -79,12 +79,12 @@ pub struct Specifics {
 }
 
 impl Specifics {
-    pub(crate) fn take() -> Option<Self> {
-        let iomuxc = ral::iomuxc::IOMUXC::take()?;
+    pub(crate) fn new() -> Self {
+        let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);
 
-        let _gpio2 = ral::gpio::GPIO2::take()?;
+        let _gpio2 = unsafe { ral::gpio::GPIO2::instance() };
         let mut _gpio2 = hal::gpio::Port::new(_gpio2);
 
         #[cfg(not(feature = "spi"))]
@@ -92,7 +92,7 @@ impl Specifics {
         #[cfg(feature = "spi")]
         let led = ();
 
-        let lpuart2 = ral::lpuart::LPUART2::take()?;
+        let lpuart2 = unsafe { ral::lpuart::LPUART2::instance() };
         let mut console = hal::lpuart::Lpuart::new(
             lpuart2,
             hal::lpuart::Pins {
@@ -107,7 +107,7 @@ impl Specifics {
 
         #[cfg(feature = "spi")]
         let spi = {
-            let lpspi4 = ral::lpspi::LPSPI4::take()?;
+            let lpspi4 = unsafe { ral::lpspi::LPSPI4::instance() };
             let pins = SpiPins {
                 sdo: iomuxc.gpio_b0.p02,
                 sdi: iomuxc.gpio_b0.p01,
@@ -123,7 +123,7 @@ impl Specifics {
         #[cfg(not(feature = "spi"))]
         let spi = ();
 
-        let lpi2c3 = ral::lpi2c::LPI2C3::take()?;
+        let lpi2c3 = unsafe { ral::lpi2c::LPI2C3::instance() };
         let i2c = I2c::new(
             lpi2c3,
             I2cPins {
@@ -133,7 +133,7 @@ impl Specifics {
             &super::I2C_BAUD_RATE,
         );
 
-        let flexpwm2 = ral::pwm::PWM2::take()?;
+        let flexpwm2 = unsafe { ral::pwm::PWM2::instance() };
         let pwm = {
             let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm2);
 
@@ -147,13 +147,13 @@ impl Specifics {
             }
         };
 
-        Some(Self {
+        Self {
             led,
             console,
             spi,
             i2c,
             pwm,
-        })
+        }
     }
 }
 

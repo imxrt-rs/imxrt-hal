@@ -201,7 +201,7 @@ fn set_clock(output: &str, sel: &str, console: &mut Writer, ccm: &mut CCM) -> fm
 #[cortex_m_rt::entry]
 fn main() -> ! {
     let (_, board::Specifics { led, console, .. }) = board::new();
-    let mut ccm = imxrt_ral::ccm::CCM::take().unwrap();
+    let mut ccm = unsafe { imxrt_ral::ccm::CCM::instance() };
     clko1::enable(&mut ccm, true);
     clko2::enable(&mut ccm, true);
     let writer = Writer(console);

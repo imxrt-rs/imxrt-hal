@@ -141,10 +141,11 @@ pub enum ClockSource {
 
 /// An output compare register (OCR).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(usize)]
 pub enum OutputCompareRegister {
-    OCR1,
-    OCR2,
-    OCR3,
+    OCR1 = 0,
+    OCR2 = 1,
+    OCR3 = 2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -324,20 +325,12 @@ impl<const N: u8> Gpt<N> {
     /// Set an output compare register to trigger on the next `count` value of the
     /// counter.
     pub fn set_output_compare_count(&self, ocr: OutputCompareRegister, count: u32) {
-        match ocr {
-            OutputCompareRegister::OCR1 => ral::write_reg!(ral::gpt, self.gpt, OCR1, count),
-            OutputCompareRegister::OCR2 => ral::write_reg!(ral::gpt, self.gpt, OCR2, count),
-            OutputCompareRegister::OCR3 => ral::write_reg!(ral::gpt, self.gpt, OCR3, count),
-        }
+        ral::write_reg!(ral::gpt, self.gpt, OCR[ocr as usize], count);
     }
 
     /// Returns the current output compare count for the specified register.
     pub fn output_compare_count(&self, ocr: OutputCompareRegister) -> u32 {
-        match ocr {
-            OutputCompareRegister::OCR1 => ral::read_reg!(ral::gpt, self.gpt, OCR1),
-            OutputCompareRegister::OCR2 => ral::read_reg!(ral::gpt, self.gpt, OCR2),
-            OutputCompareRegister::OCR3 => ral::read_reg!(ral::gpt, self.gpt, OCR3),
-        }
+        ral::read_reg!(ral::gpt, self.gpt, OCR[ocr as usize])
     }
 
     /// Returns `true` if the time tracked by the OCR has elapsed.

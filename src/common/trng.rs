@@ -148,18 +148,18 @@ impl Trng {
         // Note: The SDK uses _MAX and _MIN for values, but the registers use the max value and a
         // range. The SDK _MIN values are expressed as (max - range), making it easy to ensure
         // that these values are correct.
-        write_reg!(trng, reg, SCM, MONO_MAX: 1384, MONO_RNG: 268); // _MONOBIT_
-        write_reg!(trng, reg, SCR1, RUN1_MAX: 405, RUN1_RNG: 178); // _RUNBIT1_
-        write_reg!(trng, reg, SCR2, RUN2_MAX: 220, RUN2_RNG: 122); // _RUNBIT2_
-        write_reg!(trng, reg, SCR3, RUN3_MAX: 125, RUN3_RNG: 88); // _RUNBIT3_
-        write_reg!(trng, reg, SCR4, RUN4_MAX: 75, RUN4_RNG: 64); // _RUNBIT4_
-        write_reg!(trng, reg, SCR5, RUN5_MAX: 47, RUN5_RNG: 46); // _RUNBIT5_
-        write_reg!(trng, reg, SCR6P, RUN6P_MAX: 47, RUN6P_RNG: 46); // _RUNBIT6PLUS_
+        write_reg!(trng, reg, SCML, MONO_MAX: 1384, MONO_RNG: 268); // _MONOBIT_
+        write_reg!(trng, reg, SCR1L, RUN1_MAX: 405, RUN1_RNG: 178); // _RUNBIT1_
+        write_reg!(trng, reg, SCR2L, RUN2_MAX: 220, RUN2_RNG: 122); // _RUNBIT2_
+        write_reg!(trng, reg, SCR3L, RUN3_MAX: 125, RUN3_RNG: 88); // _RUNBIT3_
+        write_reg!(trng, reg, SCR4L, RUN4_MAX: 75, RUN4_RNG: 64); // _RUNBIT4_
+        write_reg!(trng, reg, SCR5L, RUN5_MAX: 47, RUN5_RNG: 46); // _RUNBIT5_
+        write_reg!(trng, reg, SCR6PL, RUN6P_MAX: 47, RUN6P_RNG: 46); // _RUNBIT6PLUS_
 
-        write_reg!(trng, reg, PKR, PKR_MAX: 26912); // _POKER_MAXIMUM
+        write_reg!(trng, reg, PKRMAX, PKR_MAX: 26912); // _POKER_MAXIMUM
         write_reg!(trng, reg, PKRRNG, PKR_RNG: 2467);
 
-        write_reg!(trng, reg, FRQ, FRQ_MAX: 25600); // _FREQUENCY_MAXIMUM
+        write_reg!(trng, reg, FRQMAX, FRQ_MAX: 25600); // _FREQUENCY_MAXIMUM
         write_reg!(trng, reg, FRQMIN, FRQ_MIN: 1600); // _FREQUENCY_MINIMUM
 
         write_reg!(trng, reg, SDCTL, SAMP_SIZE: 2500, ENT_DLY: 3200); // _SAMPLE_SIZE, _ENTROPY_DELAY
@@ -169,7 +169,7 @@ impl Trng {
         modify_reg!(trng, reg, MCTL, SAMP_MODE: sample_mode as u32);
         modify_reg!(trng, reg, MCTL, PRGM: 0);
         // for 1015, 1021, maybe other non i.MX chips: set TRNG_ACC to 1 here
-        read_reg!(trng, reg, ENT15);
+        read_reg!(trng, reg, ENT[15]);
         // reading ENT15 triggers new entropy generation
 
         Self {
@@ -210,24 +210,12 @@ impl Trng {
         if (mctl & trng::MCTL::ENT_VAL::mask) == 0 {
             return Err(nb::Error::WouldBlock); // not ready to read entropy
         }
-        self.block[0] = read_reg!(trng, self.reg, ENT0);
-        self.block[1] = read_reg!(trng, self.reg, ENT1);
-        self.block[2] = read_reg!(trng, self.reg, ENT2);
-        self.block[3] = read_reg!(trng, self.reg, ENT3);
-        self.block[4] = read_reg!(trng, self.reg, ENT4);
-        self.block[5] = read_reg!(trng, self.reg, ENT5);
-        self.block[6] = read_reg!(trng, self.reg, ENT6);
-        self.block[7] = read_reg!(trng, self.reg, ENT7);
-        self.block[8] = read_reg!(trng, self.reg, ENT8);
-        self.block[9] = read_reg!(trng, self.reg, ENT9);
-        self.block[10] = read_reg!(trng, self.reg, ENT10);
-        self.block[11] = read_reg!(trng, self.reg, ENT11);
-        self.block[12] = read_reg!(trng, self.reg, ENT12);
-        self.block[13] = read_reg!(trng, self.reg, ENT13);
-        self.block[14] = read_reg!(trng, self.reg, ENT14);
-        self.block[15] = read_reg!(trng, self.reg, ENT15);
+        for idx in 0..self.reg.ENT.len() {
+            self.block[idx] = read_reg!(trng, self.reg, ENT[idx]);
+        }
+
         // this can probably be written as a loop with unsafe code
-        read_reg!(trng, self.reg, ENT0);
+        read_reg!(trng, self.reg, ENT[0]);
         // SDK (fsl_trng.c):
         //     Dummy read. Defect workaround.
         //     TRNG could not clear ENT_VAL flag automatically, application
