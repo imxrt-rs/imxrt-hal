@@ -96,6 +96,7 @@ pub enum RunMode {
 }
 
 /// Set the target power for the provided `run_mode`.
+#[cfg(family = "imxrt10xx")]
 pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
     let millivolts = match run_mode {
         RunMode::Overdrive => 1250,
@@ -107,8 +108,6 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
 ///
 /// These modules only depend on a RAL feature.
 mod common {
-    pub mod adc;
-    pub mod dcdc;
     pub mod dma;
     pub mod flexpwm;
     pub mod gpio;
@@ -117,12 +116,11 @@ mod common {
     pub mod lpspi;
     pub mod lpuart;
     pub mod pit;
-    pub mod trng;
 }
 
 // These common drivers have no associated chip APIs, so
 // export them directly.
-pub use common::{adc, dcdc, flexpwm, gpio, gpt, lpspi, lpuart, pit, trng};
+pub use common::{flexpwm, gpio, gpt, lpspi, lpuart, pit};
 
 /// Clock control module.
 ///
@@ -316,3 +314,10 @@ pub mod lpi2c {
 /// ```
 #[cfg(feature = "imxrt-usbd")]
 pub use imxrt_usbd as usbd;
+
+#[cfg(family = "imxrt10xx")]
+pub use chip::adc;
+#[cfg(family = "imxrt10xx")]
+pub use chip::dcdc;
+#[cfg(family = "imxrt10xx")]
+pub use chip::trng;

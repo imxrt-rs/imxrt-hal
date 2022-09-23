@@ -176,10 +176,10 @@ fn clock_gate_register<'a>(ccm: &'a CCM, register: Register) -> &'a ral::RWRegis
         Register::CCGR5 => &ccm.CCGR5,
         Register::CCGR6 => &ccm.CCGR6,
         Register::CCGR7 => {
-            // If we're compiling this code, it's because a chip family feature
+            // If we're compiling this code, it's because a chip feature
             // is activated.
             cfg_if::cfg_if! {
-                if #[cfg(any(family = "imxrt1060", family = "imxrt1064"))] {
+                if #[cfg(any(chip = "imxrt1060", chip = "imxrt1064"))] {
                     // Only certain i.MX RT 10xx chips have CCGR7.
                     &ccm.CCGR7
                 } else {

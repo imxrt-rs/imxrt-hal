@@ -1,32 +1,31 @@
 //! Chip family APIs.
 //!
-//! This module is always compiled, but its contents vary based on
-//! the chip family selection. The submodules are "configured" by
-//! a [`config`] module. These modules may use conditional compilation, and
-//! reference the [`config`] module, and re-export [`config`] module symbols.
+//! These submodules may vary by chip family.
 
-#[cfg(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",))]
-pub mod ccm;
+#[cfg(family = "imxrt10xx")]
+#[path = "imxrt10xx"]
+mod family {
+    pub mod adc;
+    pub mod ccm;
+    pub mod dcdc;
+    pub mod dma;
+    pub mod lpi2c;
+    pub mod trng;
 
-#[cfg(not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)))]
-pub mod ccm {}
+    #[cfg(chip = "imxrt1010")]
+    #[path = "imxrt1010.rs"]
+    pub(crate) mod config;
 
-#[cfg(family = "imxrt1010")]
-#[path = "chip/imxrt1010.rs"]
-mod config;
+    #[cfg(any(chip = "imxrt1060", chip = "imxrt1064"))]
+    #[path = "imxrt1060.rs"]
+    pub(crate) mod config;
+}
 
-#[cfg(any(family = "imxrt1060", family = "imxrt1064"))]
-#[path = "chip/imxrt1060.rs"]
-mod config;
+#[cfg(not(any(family = "imxrt10xx")))]
+mod family {
+    pub mod ccm {}
+    pub mod dma {}
+    pub mod lpi2c {}
+}
 
-#[cfg(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",))]
-pub mod dma;
-
-#[cfg(not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)))]
-pub mod dma {}
-
-#[cfg(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",))]
-pub mod lpi2c;
-
-#[cfg(not(any(family = "imxrt1010", family = "imxrt1060", family = "imxrt1064",)))]
-pub mod lpi2c {}
+pub use family::*;
