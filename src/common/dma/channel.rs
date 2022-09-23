@@ -9,7 +9,7 @@
 
 use super::{
     element::Element,
-    ral::{self, dma, dmamux, tcd::BandwidthControl, Static, DMA, MULTIPLEXER},
+    ral::{self, dma, dmamux, tcd::BandwidthControl, Static},
     Error,
 };
 
@@ -49,8 +49,8 @@ impl Channel {
         if index < 32 {
             Channel {
                 index,
-                registers: DMA,
-                multiplexer: MULTIPLEXER,
+                registers: Static(crate::ral::dma::DMA.cast()),
+                multiplexer: Static(crate::ral::dmamux::DMAMUX.cast()),
             }
         } else {
             panic!("DMA channel index {} exceeds 32", index);

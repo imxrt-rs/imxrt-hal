@@ -15,6 +15,12 @@
 
 use crate::{hal, iomuxc::imxrt1010 as iomuxc, ral};
 
+mod imxrt10xx {
+    pub mod clock;
+}
+
+pub use imxrt10xx::clock::*;
+
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
 /// The UART console. Baud specified in lib.rs.
@@ -101,6 +107,7 @@ pub struct Specifics {
     pub pwm: Pwm,
     pub tp34: Tp34,
     pub tp31: Tp31,
+    pub trng: hal::trng::Trng,
 }
 
 impl Specifics {
@@ -184,6 +191,12 @@ impl Specifics {
             outputs: (),
         };
 
+        let trng = hal::trng::Trng::new(
+            unsafe { ral::trng::TRNG::instance() },
+            Default::default(),
+            Default::default(),
+        );
+
         Self {
             led,
             console,
@@ -192,6 +205,7 @@ impl Specifics {
             pwm,
             tp34: iomuxc.gpio_sd.p02,
             tp31: iomuxc.gpio_sd.p01,
+            trng,
         }
     }
 }

@@ -8,6 +8,7 @@ mod family {
     pub mod adc;
     pub mod ccm;
     pub mod dcdc;
+    #[path = "../dma.rs"]
     pub mod dma;
     pub mod lpi2c;
     pub mod trng;
@@ -21,7 +22,20 @@ mod family {
     pub(crate) mod config;
 }
 
-#[cfg(not(any(family = "imxrt10xx")))]
+#[cfg(family = "imxrt11xx")]
+#[path = "imxrt11xx"]
+mod family {
+    pub mod ccm {}
+    #[path = "../dma.rs"]
+    pub mod dma;
+    pub mod lpi2c {}
+
+    #[cfg(chip = "imxrt1170")]
+    #[path = "imxrt1170.rs"]
+    pub(crate) mod config;
+}
+
+#[cfg(not(any(family = "imxrt10xx", family = "imxrt11xx")))]
 mod family {
     pub mod ccm {}
     pub mod dma {}

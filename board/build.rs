@@ -23,14 +23,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .rodata(Memory::Dtcm)
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"teensy4\"");
-                println!("cargo:rustc-cfg=family=\"imxrt1060\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1060\"");
+                println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
             }
             "imxrt1010evk" => {
                 RuntimeBuilder::from_flexspi(Family::Imxrt1010, 16 * 1024 * 1024)
                     .rodata(Memory::Dtcm)
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1010evk\"");
-                println!("cargo:rustc-cfg=family=\"imxrt1010\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1010\"");
+                println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
+            }
+            // Dashes replaced by underscores when signaled through
+            // environment variables.
+            "imxrt1170evk_cm7" => {
+                imxrt_rt::RuntimeBuilder::from_flexspi(
+                    imxrt_rt::Family::Imxrt1170,
+                    16 * 1024 * 1024,
+                )
+                .rodata(imxrt_rt::Memory::Dtcm)
+                .build()?;
+                println!("cargo:rustc-cfg=board=\"imxrt1170evk-cm7\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
+                println!("cargo:rustc-cfg=family=\"imxrt11xx\"");
             }
             _ => continue,
         }

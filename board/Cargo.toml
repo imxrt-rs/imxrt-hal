@@ -60,6 +60,11 @@ version = "0.1"
 optional = true
 features = ["cortex-m"]
 
+[target.thumbv7em-none-eabihf.dependencies.imxrt1170evk-fcb]
+version = "0.1"
+optional = true
+git = "https://github.com/mciantyre/imxrt-boot-gen"
+
 [features]
 imxrt1010evk = [
     "imxrt-iomuxc/imxrt1010",
@@ -75,6 +80,14 @@ teensy4 = [
     "imxrt-hal/imxrt1060",
     "teensy4-fcb",
     "teensy4-panic",
+]
+imxrt1170evk-cm7 = [
+    "imxrt-iomuxc/imxrt1170",
+    "imxrt-ral/imxrt1176_cm7",
+    "imxrt-hal/imxrt1170",
+    "imxrt1170evk-fcb",
+    "rtt-target",
+    "panic-rtt-target",
 ]
 
 # Some boards (Teensy 4) require a resource

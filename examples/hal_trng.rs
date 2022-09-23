@@ -19,10 +19,9 @@ fn main() -> ! {
             usb1,
             usbnc1,
             usbphy1,
-            mut trng,
             ..
         },
-        board::Specifics { led, .. },
+        board::Specifics { led, mut trng, .. },
     ) = board::new();
 
     make_log.set_load_timer_value(MAKE_LOG_INTERVAL_MS);

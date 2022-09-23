@@ -96,6 +96,7 @@ pub fn flash(elf_path: &Path) -> crate::Result {
         if let Some(path) = path.file_name().and_then(|path| path.to_str()) {
             match path {
                 "imxrt1010evk" => return pyocd::flash(elf_path, "mimxrt1010"),
+                "imxrt1170evk-cm7" => return pyocd::flash(elf_path, "mimxrt1170_cm7"),
                 "teensy4" => return teensy4::flash(elf_path),
                 _ => {}
             }

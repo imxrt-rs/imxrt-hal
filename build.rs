@@ -9,5 +9,8 @@ fn main() {
             if feature == "imxrt1010" || feature == "imxrt1060" || feature == "imxrt1064" {
                 println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
             }
+            if feature == "imxrt1170" {
+                println!("cargo:rustc-cfg=family=\"imxrt11xx\"");
+            }
         })
 }

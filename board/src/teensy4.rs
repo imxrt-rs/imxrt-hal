@@ -10,6 +10,12 @@
 
 use crate::{hal, iomuxc::imxrt1060 as iomuxc, ral};
 
+mod imxrt10xx {
+    pub mod clock;
+}
+
+pub use imxrt10xx::clock::*;
+
 #[cfg(not(feature = "spi"))]
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;
@@ -76,6 +82,7 @@ pub struct Specifics {
     pub spi: Spi,
     pub i2c: I2c,
     pub pwm: Pwm,
+    pub trng: hal::trng::Trng,
 }
 
 impl Specifics {
@@ -146,13 +153,18 @@ impl Specifics {
                 outputs: (out_a, out_b),
             }
         };
-
+        let trng = hal::trng::Trng::new(
+            unsafe { ral::trng::TRNG::instance() },
+            Default::default(),
+            Default::default(),
+        );
         Self {
             led,
             console,
             spi,
             i2c,
             pwm,
+            trng,
         }
     }
 }

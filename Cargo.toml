@@ -70,6 +70,7 @@ default = ["imxrt-usbd"]
 imxrt1010 = ["imxrt-iomuxc/imxrt1010"]
 imxrt1060 = ["imxrt-iomuxc/imxrt1060"]
 imxrt1064 = ["imxrt-iomuxc/imxrt1060"]
+imxrt1170 = ["imxrt-iomuxc/imxrt1170"]
 
 ################
 # Extra features
