@@ -208,18 +208,29 @@ pub mod clock_out {
 }
 
 pub mod interrupt {
+    use crate::board_interrupts as syms;
     use crate::ral::Interrupt;
 
     pub const BOARD_CONSOLE: Interrupt = Interrupt::LPUART2;
     pub const BOARD_SPI: Interrupt = Interrupt::LPSPI4;
     pub const BOARD_PWM: Interrupt = Interrupt::PWM2_2;
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7_DMA23;
-
     pub const BOARD_PIT: Interrupt = Interrupt::PIT;
     pub const BOARD_GPT1: Interrupt = Interrupt::GPT1;
     pub const BOARD_GPT2: Interrupt = Interrupt::GPT2;
     pub const BOARD_USB1: Interrupt = Interrupt::USB_OTG1;
-
     pub const BOARD_SWTASK0: Interrupt = Interrupt::KPP;
+
+    pub const INTERRUPTS: &[(Interrupt, syms::Vector)] = &[
+        (BOARD_CONSOLE, syms::BOARD_CONSOLE),
+        (BOARD_SPI, syms::BOARD_SPI),
+        (BOARD_PWM, syms::BOARD_PWM),
+        (BOARD_DMA_A, syms::BOARD_DMA_A),
+        (BOARD_PIT, syms::BOARD_PIT),
+        (BOARD_GPT1, syms::BOARD_GPT1),
+        (BOARD_GPT2, syms::BOARD_GPT2),
+        (BOARD_USB1, syms::BOARD_USB1),
+        (BOARD_SWTASK0, syms::BOARD_SWTASK0),
+    ];
 }
 pub use interrupt as Interrupt;
