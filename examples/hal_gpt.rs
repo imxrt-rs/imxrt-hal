@@ -19,7 +19,7 @@ const GPT2_DELAY_MS: u32 = board::GPT2_FREQUENCY / 1_000 * 250;
 /// to reset after a compare event.
 const OCR: hal::gpt::OutputCompareRegister = hal::gpt::OutputCompareRegister::OCR1;
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (board::Common { gpt1, gpt2, .. }, board::Specifics { led, .. }) = board::new();
     if USE_GPT1 {

@@ -11,11 +11,11 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use imxrt_hal as hal;
 use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
+use imxrt_rt as _;
 
 mod ral_shim;
-mod rt;
 
-pub use ral_shim::{interrupt, Interrupt, BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
+pub use ral_shim::{BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
 
 #[cfg(board = "imxrt1010evk")]
 #[path = "imxrt1010evk.rs"]
@@ -138,6 +138,7 @@ pub fn new() -> (Common, Specifics) {
 
     // Safety: once flag ensures that this only happens once.
     unsafe {
+        ral_shim::shim_vectors();
         configure();
         (Common::new(), Specifics::new())
     }

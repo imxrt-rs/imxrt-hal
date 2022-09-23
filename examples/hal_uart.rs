@@ -20,7 +20,7 @@ use embedded_hal::serial::{
 /// blocking write of a buffer this size.
 const ECHO_RESPONSE_SIZE: usize = 0;
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (
         _,

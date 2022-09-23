@@ -47,7 +47,7 @@ const MAKE_LOG_INTERVAL_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
 use imxrt_hal as hal;
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (
         board::Common {

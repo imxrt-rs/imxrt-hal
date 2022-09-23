@@ -16,7 +16,15 @@ path = "../../iomuxc"
 [dependencies.imxrt-ral]
 version = "0.5"
 path = "../../ral"
-features = ["rt", "rtic"]
+features = ["rtic"]
+
+[dependencies.imxrt-rt]
+version = "0.1"
+path = "../../rt"
+
+[build-dependencies.imxrt-rt]
+version = "0.1"
+path = "../../rt"
 
 [dependencies.imxrt-log]
 version = "0.1"
@@ -26,9 +34,6 @@ path = "../logging"
 path = "../../usbd"
 
 [dependencies.cortex-m]
-version = "0.7"
-
-[dependencies.cortex-m-rt]
 version = "0.7"
 
 # Use existing FCB, instead of defining inline.

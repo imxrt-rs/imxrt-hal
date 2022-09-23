@@ -86,9 +86,6 @@ members = [
     "tools",
 ]
 
-[patch.crates-io.cortex-m-rt]
-path = "../../cortex-m/cortex-m-rt"
-
 [patch.crates-io.bbqueue]
 path = "../../bbqueue/core"
 
@@ -118,11 +115,7 @@ codegen-units = 256
 
 [dev-dependencies]
 board = { path = "board" }
-cortex-m-rt = { version = "0.7", features = [
-    "device",
-    "set-vtor",
-    "region-alias",
-]}
+imxrt-rt = { version = "0.1", path = "../rt" }
 menu = "0.3.2"
 cortex-m-rtic = { version = "1.0" }
 imxrt-ral = { features = ["rtic"], path = "../ral" }

@@ -20,7 +20,7 @@ const _: () = assert!(PWM_SWITCHING_FREQUENCY < i16::MAX as u32);
 const PWM_A_DUTY: u32 = PWM_SWITCHING_FREQUENCY / 2;
 const PWM_B_DUTY: u32 = PWM_A_DUTY / 2;
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, pwm, .. }) = board::new();
     pit.0.set_load_timer_value(PIT_DELAY_MS);

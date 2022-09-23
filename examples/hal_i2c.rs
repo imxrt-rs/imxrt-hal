@@ -93,7 +93,7 @@ fn query_mpu(
     }
 }
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (
         board::Common { mut gpt1, .. },

@@ -47,7 +47,7 @@ fn write_error(console: &mut board::Console, result: Result<(), LpspiMasterError
     }
 }
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (
         board::Common { mut gpt1, .. },

@@ -7,7 +7,7 @@
 
 const DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
-#[cortex_m_rt::entry]
+#[imxrt_rt::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, .. }) = board::new();
 

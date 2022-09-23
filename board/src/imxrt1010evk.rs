@@ -310,3 +310,20 @@ pub mod clock_out {
 
 #[cfg(target_arch = "arm")]
 use panic_rtt_target as _;
+
+pub mod interrupt {
+    use crate::ral::Interrupt;
+
+    pub const BOARD_CONSOLE: Interrupt = Interrupt::LPUART1;
+    pub const BOARD_SPI: Interrupt = Interrupt::LPSPI1;
+    pub const BOARD_PWM: Interrupt = Interrupt::PWM1_2;
+    pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7;
+
+    pub const BOARD_PIT: Interrupt = Interrupt::PIT;
+    pub const BOARD_GPT1: Interrupt = Interrupt::GPT1;
+    pub const BOARD_GPT2: Interrupt = Interrupt::GPT2;
+    pub const BOARD_USB1: Interrupt = Interrupt::USB_OTG1;
+
+    pub const BOARD_SWTASK0: Interrupt = Interrupt::KPP;
+}
+pub use interrupt as Interrupt;
