@@ -35,11 +35,11 @@
 //! use imxrt_ral as ral;
 //!
 //! # || -> Option<()> {
-//! let mut ccm = ral::ccm::CCM::take()?;
+//! let mut ccm = unsafe { ral::ccm::CCM::instance() };
 //! hal::ccm::clock_gate::trng().set(&mut ccm, hal::ccm::clock_gate::ON);
 //!
 //! let mut trng = hal::trng::Trng::new(
-//!     ral::trng::TRNG::take()?,
+//!     unsafe { ral::trng::TRNG::instance() },
 //!     hal::trng::SampleMode::default(),
 //!     hal::trng::RetryCount::default(),
 //! );

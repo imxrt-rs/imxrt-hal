@@ -159,9 +159,11 @@
 //! /// Returns `None` if any USB peripheral instance is taken,
 //! /// or if initialization fails.
 //! fn initialize_logger() -> Option<imxrt_log::Poller> {
-//!     // The next two lines acquire USB resources for the logger.
-//!     let mut usb_analog = ral::usb_analog::USB_ANALOG::take()?;
-//!     let usb_instances = hal::usbd::Instances::<1>::take(&mut usb_analog)?;
+//!     let usb_instances = hal::usbd::Instances {
+//!         usb: unsafe { ral::usb::USB1::instance() },
+//!         usbnc: unsafe { ral::usbnc::USBNC1::instance() },
+//!         usbphy: unsafe { ral::usbphy::USBPHY1::instance() },
+//!     };
 //!     // Initialize the logger, and ensure that it triggers interrupts.
 //!     let poller = defmt::usbd(usb_instances, imxrt_log::Interrupts::Enabled).ok()?;
 //!     Some(poller)
@@ -170,8 +172,8 @@
 //! // Elsewhere in your code, configure USB clocks. Then, pend the USB_OTG1()
 //! // interrupt so that it fires and initializes the logger.
 //! # || -> Option<()> {
-//! let mut ccm = ral::ccm::CCM::take()?;
-//! let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take()?;
+//! let mut ccm = unsafe { ral::ccm::CCM::instance() };
+//! let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
 //! hal::ccm::analog::pll3::restart(&mut ccm_analog);
 //! hal::ccm::clock_gate::usb().set(&mut ccm, hal::ccm::clock_gate::ON);
 //!

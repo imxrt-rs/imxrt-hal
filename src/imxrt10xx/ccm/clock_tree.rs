@@ -40,8 +40,8 @@
 //! const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
 //!
 //! # fn x() -> Option<()> {
-//! let mut ccm = ral::ccm::CCM::take()?;
-//! let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take()?;
+//! let mut ccm = unsafe { ral::ccm::CCM::instance() };
+//! let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
 //!
 //! clock_tree::configure_ahb_ipg(RUN_MODE, &mut ccm, &mut ccm_analog);
 //! clock_tree::configure_lpi2c(RUN_MODE, &mut ccm);

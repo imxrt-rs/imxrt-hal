@@ -15,7 +15,7 @@
 //! use hal::ccm::clock_gate;
 //!
 //! # || -> Option<()> {
-//! let mut ccm = ral::ccm::CCM::take()?;
+//! let mut ccm = unsafe { ral::ccm::CCM::instance() };
 //! // OK: GPT1 is valid.
 //! let setting = clock_gate::gpt_serial::<1>().get(&ccm);
 //! # Some(()) }();
@@ -25,7 +25,7 @@
 //! # use imxrt_ral as ral;
 //! # use hal::ccm::clock_gate;
 //! # || -> Option<()> {
-//! # let mut ccm = ral::ccm::CCM::take()?;
+//! # let mut ccm = unsafe { ral::ccm::CCM::instance() };
 //! // ERROR: GPT33 is NOT a real peripheral.
 //! let setting = clock_gate::gpt_serial::<33>().get(&ccm);
 //! # Some(()) }();
@@ -49,7 +49,7 @@
 //! use hal::ccm::clock_gate;
 //!
 //! # || -> Option<()> {
-//! let mut ccm = ral::ccm::CCM::take()?;
+//! let mut ccm = unsafe { ral::ccm::CCM::instance() };
 //!
 //! // Turn on all clock gates downstream of the IPG clock.
 //! clock_gate::IPG_CLOCK_GATES.iter().for_each(|clock_gate| {

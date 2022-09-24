@@ -184,12 +184,12 @@ pub mod ccm {
 /// use imxrt_ral as ral;
 ///
 /// # fn doc() -> Option<()> {
-/// let mut ccm = ral::ccm::CCM::take()?;
+/// let mut ccm = unsafe { ral::ccm::CCM::instance() };
 /// hal::ccm::clock_gate::dma().set(&mut ccm, hal::ccm::clock_gate::ON);
 ///
 /// let mut channels = hal::dma::channels(
-///     ral::dma0::DMA0::take()?,
-///     ral::dmamux::DMAMUX::take()?,
+///     unsafe { ral::dma::DMA::instance() },
+///     unsafe { ral::dmamux::DMAMUX::instance() },
 /// );
 ///
 /// // Selecting the 13th DMA channel for our examples...
@@ -249,8 +249,8 @@ pub mod dma {
 ///     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
 ///
 /// # || -> Option<()> {
-/// let mut ccm = CCM::take()?;
-/// let mut i2c3 = LPI2C3::take()?;
+/// let mut ccm = unsafe { CCM::instance() };
+/// let mut i2c3 = unsafe { LPI2C3::instance() };
 ///
 /// # const LPI2C_CLK_HZ: u32 = 0;
 /// # const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
@@ -300,11 +300,15 @@ pub mod lpi2c {
 /// use hal::usbd;
 ///
 /// # || -> Option<()> {
-/// let mut usb_analog = ral::usb_analog::USB_ANALOG::take()?;
-/// let usb_instances = usbd::Instances::<1>::take(&mut usb_analog)?;
+/// let mut usb_analog = unsafe { ral::usb_analog::USB_ANALOG::instance() };
+/// let usb_instances = usbd::Instances {
+///     usb: unsafe { ral::usb::USB1::instance() },
+///     usbnc: unsafe { ral::usbnc::USBNC1::instance() },
+///     usbphy: unsafe { ral::usbphy::USBPHY1::instance() },
+/// };
 ///
 /// // Prepare the USB clocks.
-/// let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::take()?;
+/// let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
 /// hal::ccm::analog::pll3::restart(&mut ccm_analog);
 ///
 /// # static mut ENDPOINT_MEMORY: [u8; 4] = [0; 4];

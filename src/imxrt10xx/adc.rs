@@ -15,8 +15,8 @@
 //!     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
 //!
 //! # || -> Option<()> {
-//! let mut adc1 = ral::adc::ADC1::take()
-//!     .map(|inst| adc::Adc::new(inst, adc::ClockSelect::ADACK, adc::ClockDivision::Div2))?;
+//! let adc1 = unsafe { ral::adc::ADC1::instance() };
+//! let mut adc1 = adc::Adc::new(adc1, adc::ClockSelect::ADACK, adc::ClockDivision::Div2);
 //! let mut a1 = adc::AnalogInput::new(pads.gpio_ad_b1.p02);
 //!
 //! let reading: u16 = adc1.read_blocking(&mut a1);
@@ -281,9 +281,8 @@ where
 ///
 /// let mut pads = unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
 ///
-/// let mut adc1 = ral::adc::ADC1::take()
-///     .map(|inst| adc::Adc::new(inst, Default::default(), Default::default()))
-///     .unwrap();
+/// let inst = unsafe { ral::adc::ADC1::instance() };
+/// let mut adc1 = adc::Adc::new(inst, Default::default(), Default::default());
 /// let mut adc2_pin = adc::AnalogInput::new(pads.gpio_ad_b1.p12);
 ///
 /// let reading: u16 = adc1.read_blocking(&mut adc2_pin);
@@ -298,9 +297,8 @@ struct Adc1Pin2Mismatch;
 ///
 /// let mut pads = unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
 ///
-/// let mut adc2 = ral::adc::ADC2::take()
-///     .map(|inst| adc::Adc::new(inst, adc::ClockSelect::default(), adc::ClockDivision::default()))
-///     .unwrap();
+/// let inst = unsafe { ral::adc::ADC2::instance() };
+/// let mut adc2 = adc::Adc::new(inst, adc::ClockSelect::default(), adc::ClockDivision::default());
 /// let mut adc2_pin = adc::AnalogInput::new(pads.gpio_ad_b1.p12);
 ///
 /// let reading: u16 = adc2.read_blocking(&mut adc2_pin);
@@ -315,9 +313,8 @@ struct Adc2Pin2;
 ///
 /// let mut pads = unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
 ///
-/// let mut adc2 = ral::adc::ADC2::take()
-///     .map(|inst| adc::Adc::new(inst, Default::default(), Default::default()))
-///     .unwrap();
+/// let inst = unsafe { ral::adc::ADC2::instance() };
+/// let mut adc2 = adc::Adc::new(inst, Default::default(), Default::default());
 /// let mut adc2_pin = adc::AnalogInput::new(pads.gpio_ad_b0.p13);
 ///
 /// let reading: u16 = adc2.read_blocking(&mut adc2_pin);

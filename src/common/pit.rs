@@ -20,7 +20,7 @@
 //! use imxrt_hal::pit;
 //! use imxrt_ral::pit::PIT;
 //!
-//! let (mut pit0, mut pit1, _, _) = PIT::take().map(pit::new).unwrap();
+//! let (mut pit0, mut pit1, _, _) = pit::new(unsafe { PIT::instance() });
 //! ```
 //!
 //! Use `pit0` to implement a blocking delay:
@@ -28,7 +28,7 @@
 //! ```no_run
 //! # use imxrt_hal::pit;
 //! # use imxrt_ral::pit::PIT;
-//! # let (mut pit0, pit1, _, _) = PIT::take().map(pit::new).unwrap();
+//! # let (mut pit0, pit1, _, _) = pit::new(unsafe { PIT::instance() });
 //! # const DELAY_MS: u32 = 1;
 //! pit0.set_load_timer_value(DELAY_MS);
 //! pit0.enable();
@@ -45,7 +45,7 @@
 //! ```no_run
 //! # use imxrt_hal::pit;
 //! # use imxrt_ral::pit::PIT;
-//! # let (pit0, pit1, _, _) = PIT::take().map(pit::new).unwrap();
+//! # let (pit0, pit1, _, _) = pit::new(unsafe { PIT::instance() });
 //!
 //! let chained = pit::Chained01::new(pit0, pit1);
 //! ```
@@ -436,10 +436,11 @@ impl<const L: u8, const H: u8> Chained<L, H> {
 }
 
 /// ```compile_fail
+/// use imxrt_ral as ral;
 /// use imxrt_hal as hal;
 /// use hal::pit::Pit;
 ///
-/// let p: Pit<4> = unsafe { Pit::new() };
+/// let p: Pit<4> = unsafe { Pit::new(&ral::pit::PIT::instance()) };
 /// ```
 #[cfg(doctest)]
 struct InvalidChannel;

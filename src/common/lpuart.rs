@@ -28,7 +28,7 @@
 //!     # unsafe { (iomuxc::gpio_ad_b1::GPIO_AD_B1_02::new(), iomuxc::gpio_ad_b1::GPIO_AD_B1_03::new()) };
 //! # const UART_CLKC_HZ: u32 = 1;
 //!
-//! let registers = ral::lpuart::LPUART2::take()?;
+//! let registers = unsafe { ral::lpuart::LPUART2::instance() };
 //! let pins = Pins { tx: gpio_ad_b1_02, rx: gpio_ad_b1_03 };
 //! let mut lpuart2 = Lpuart::new(registers, pins);
 //!

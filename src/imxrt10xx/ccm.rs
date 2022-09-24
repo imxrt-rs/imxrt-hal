@@ -33,7 +33,7 @@ pub const XTAL_OSCILLATOR_HZ: u32 = 24_000_000;
 ///
 /// use hal::ccm::{self, clock_gate};
 ///
-/// let mut ccm = ral::ccm::CCM::take().unwrap();
+/// let mut ccm = unsafe { ral::ccm::CCM::instance() };
 ///
 /// clock_gate::PERCLK_CLOCK_GATES
 ///     .iter()
@@ -183,7 +183,7 @@ pub fn low_power_mode(ccm: &ral::ccm::CCM) -> LowPowerMode {
 /// const UART_CLK_HZ: u32 = hal::ccm::XTAL_OSCILLATOR_HZ / UART_CLK_DIVIDER;
 ///
 /// # fn opt() -> Option<()> {
-/// let mut ccm = ral::ccm::CCM::take()?;
+/// let mut ccm = unsafe { ral::ccm::CCM::instance() };
 /// clock_gate::lpuart::<2>().set(&mut ccm, clock_gate::OFF);
 /// uart_clk::set_selection(&mut ccm, uart_clk::Selection::Oscillator);
 /// uart_clk::set_divider(&mut ccm, UART_CLK_DIVIDER);
@@ -261,7 +261,7 @@ pub mod uart_clk {
 /// const LPI2C_CLK_HZ: u32 = hal::ccm::XTAL_OSCILLATOR_HZ / LPI2C_CLK_DIVIDER;
 ///
 /// # fn opt() -> Option<()> {
-/// let mut ccm = ral::ccm::CCM::take()?;
+/// let mut ccm = unsafe { ral::ccm::CCM::instance() };
 /// clock_gate::lpi2c::<2>().set(&mut ccm, clock_gate::OFF);
 /// lpi2c_clk::set_selection(&mut ccm, lpi2c_clk::Selection::Oscillator);
 /// lpi2c_clk::set_divider(&mut ccm, LPI2C_CLK_DIVIDER);
@@ -337,7 +337,7 @@ pub mod lpi2c_clk {
 /// const LPSPI_CLK_HZ: u32 = pll2::FREQUENCY / LPSPI_CLK_DIVIDER;
 ///
 /// # fn opt() -> Option<()> {
-/// let mut ccm = ral::ccm::CCM::take()?;
+/// let mut ccm = unsafe { ral::ccm::CCM::instance() };
 /// clock_gate::lpspi::<2>().set(&mut ccm, clock_gate::OFF);
 /// lpspi_clk::set_selection(&mut ccm, lpspi_clk::Selection::Pll2);
 /// lpspi_clk::set_divider(&mut ccm, LPSPI_CLK_DIVIDER);

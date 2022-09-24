@@ -19,7 +19,7 @@
 //! use imxrt_hal::gpio::Port;
 //! use imxrt_ral::gpio::GPIO2;
 //!
-//! let mut gpio2 = GPIO2::take().map(Port::new).unwrap();
+//! let mut gpio2 = Port::new(unsafe { GPIO2::instance() });
 //! let gpio_b0_04 = // Handle to GPIO_B0_04 IOMUXC pin, provided by BSP or higher-level HAL...
 //!     # unsafe { imxrt_iomuxc::imxrt1060::gpio_b0::GPIO_B0_04::new() };
 //!

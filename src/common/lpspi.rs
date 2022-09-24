@@ -40,7 +40,7 @@
 //!     pcs0: pads.gpio_b0.p00,
 //! };
 //!
-//! let mut spi4 = LPSPI4::take()?;
+//! let mut spi4 = unsafe { LPSPI4::instance() };
 //! let mut spi = LpspiMaster::new(
 //!     spi4,
 //!     spi_pins,

@@ -24,7 +24,7 @@
 //! use hal::flexpwm;
 //!
 //! # || -> Option<()> {
-//! let pwm2 = ral::pwm::PWM2::take()?;
+//! let pwm2 = unsafe { ral::pwm::PWM2::instance() };
 //! let (mut pwm, (_, _, mut sm2, _)) = flexpwm::new(pwm2);
 //!
 //! // Keep running in wait, debug modes.

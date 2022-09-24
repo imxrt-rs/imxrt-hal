@@ -76,7 +76,7 @@
 //! use imxrt_ral::gpt::GPT1;
 //! use imxrt_hal::gpt;
 //!
-//! let mut gpt = GPT1::take().map(gpt::Gpt::new).unwrap();
+//! let mut gpt = gpt::Gpt::new(unsafe { GPT1::instance() });
 //! gpt.set_clock_source(gpt::ClockSource::HighFrequencyReferenceClock);
 //! gpt.set_divider(16);
 //! gpt.set_mode(gpt::Mode::FreeRunning);
