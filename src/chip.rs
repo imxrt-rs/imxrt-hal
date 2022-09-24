@@ -25,7 +25,7 @@ mod family {
 #[cfg(family = "imxrt11xx")]
 #[path = "imxrt11xx"]
 mod family {
-    pub mod ccm {}
+    pub mod ccm;
     #[path = "../dma.rs"]
     pub mod dma;
     pub mod lpi2c {}

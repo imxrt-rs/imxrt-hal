@@ -213,7 +213,6 @@ impl Locator {
 /// Returns the PIT clock gate locator.
 #[inline(always)]
 pub const fn pit() -> Locator {
-    // TODO(mciantyre) there's multiple PITs on the 1170 chips...
     locator!(CCGR1, CG6)
 }
 

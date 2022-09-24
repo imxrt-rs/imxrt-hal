@@ -1,36 +1,41 @@
 //! i.MX RT 1170 EVK board configuration, supporting CM7 applications.
 
-use crate::{hal, iomuxc::imxrt1170 as iomuxc, ral};
+use crate::{hal, iomuxc::imxrt1170 as iomuxc, ral, GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE};
 
 #[cfg(target_arch = "arm")]
 pub use imxrt1170evk_fcb as _;
 #[cfg(target_arch = "arm")]
 use panic_rtt_target as _;
 
-mod imxrt11xx {}
+use hal::ccm::clock_gate;
+const CLOCK_GATES: &[clock_gate::Locator] = &[
+    clock_gate::gpio(),
+    clock_gate::dma(),
+    clock_gate::pit::<1>(),
+    clock_gate::gpt::<1>(),
+    clock_gate::gpt::<2>(),
+    clock_gate::usb(),
+];
 
 pub(crate) unsafe fn configure() {
-    // TODO these should all be clock gates...
-    let ccm = ral::ccm::CCM::instance();
+    let mut ccm = ral::ccm::CCM::instance();
 
-    // Enable LPCG for GPIOs.
-    ral::write_reg!(ral::ccm, ccm, LPCG51_DIRECT, 1);
-
-    // Enable LPCG for DMA.
-    ral::write_reg!(ral::ccm, ccm, LPCG22_DIRECT, 1);
-    ral::write_reg!(ral::ccm, ccm, LPCG23_DIRECT, 1);
-
-    // Enable LPCG for PIT1 (PIT2 at 63).
-    ral::write_reg!(ral::ccm, ccm, LPCG62_DIRECT, 1);
-
-    // Enable LPCG for GPTs (only the first two).
-    ral::write_reg!(ral::ccm, ccm, LPCG64_DIRECT, 1);
-    ral::write_reg!(ral::ccm, ccm, LPCG65_DIRECT, 1);
-
-    // Enable LPCG for USB1.
-    // Enable LPCG for PITs.
-    ral::write_reg!(ral::ccm, ccm, LPCG115_DIRECT, 1);
+    prepare_clock_tree(&mut ccm);
+    CLOCK_GATES
+        .into_iter()
+        .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
 }
+
+fn prepare_clock_tree(ccm: &mut ral::ccm::CCM) {
+    use crate::hal::ccm;
+    ccm::clock_tree::configure_bus(RUN_MODE, ccm);
+    ccm::clock_tree::configure_gpt::<1>(RUN_MODE, ccm);
+    ccm::clock_tree::configure_gpt::<2>(RUN_MODE, ccm);
+}
+
+pub const PIT_FREQUENCY: u32 = hal::ccm::clock_tree::bus_frequency(RUN_MODE);
+pub const GPT1_FREQUENCY: u32 = hal::ccm::clock_tree::gpt_frequency::<1>(RUN_MODE) / GPT1_DIVIDER;
+pub const GPT2_FREQUENCY: u32 = hal::ccm::clock_tree::gpt_frequency::<2>(RUN_MODE) / GPT2_DIVIDER;
 
 pub type Led = hal::gpio::Output<iomuxc::gpio_ad::GPIO_AD_04>;
 
@@ -77,3 +82,5 @@ pub mod interrupt {
         (BOARD_SWTASK0, syms::BOARD_SWTASK0),
     ];
 }
+
+pub use interrupt as Interrupt;
