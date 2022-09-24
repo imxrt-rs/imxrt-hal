@@ -136,3 +136,14 @@ where
 pub const fn usb() -> Locator {
     Locator::new(115)
 }
+
+/// Returns the LPUART clock gate locator.
+#[inline(always)]
+pub const fn lpuart<const N: u8>() -> Locator
+where
+    ral::lpuart::Instance<N>: ral::Valid,
+{
+    // LPUART1 -> LPCG86
+    // LPUART12 -> LPCG97
+    Locator::new(N as usize + 85)
+}

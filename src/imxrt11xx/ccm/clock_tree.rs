@@ -137,3 +137,40 @@ where
     // GPT 6 at CLOCK_ROOT19: 19 - 6 = 13
     configure_clock_root(N as usize + 13, &gpt_selection::<N>(run_mode), ccm);
 }
+
+const fn lpuart_selection<const N: u8>(run_mode: RunMode) -> Selection {
+    match run_mode {
+        // Same for all N.
+        RunMode::Overdrive => Selection {
+            mux: 0b010,
+            source: ClockSource::RcOsc400MHz,
+            divider: 5,
+        },
+    }
+}
+
+/// Returns the target LPUARTn clock frequency for the run mode.
+pub const fn lpuart_frequency<const N: u8>(run_mode: RunMode) -> u32
+where
+    ral::lpuart::Instance<N>: ral::Valid,
+{
+    lpuart_selection::<N>(run_mode).frequency(run_mode)
+}
+
+const _: () = assert!(lpuart_frequency::<1>(RunMode::Overdrive) == 80_000_000); // Max allowed.
+
+/// Set the LPUARTn clock configuration.
+///
+/// When this call returns, the GPTn clock frequency matches the value
+/// returned by [`lpuart_frequency`].
+///
+/// This function may disable clock gates for various peripherals. It may leave
+/// these clock gates disabled.
+pub fn configure_lpuart<const N: u8>(run_mode: RunMode, ccm: &mut CCM)
+where
+    ral::lpuart::Instance<N>: ral::Valid,
+{
+    // LPUART1 -> CLOCK_ROOT25
+    // LPUART12 -> CLOCK_ROOT36
+    configure_clock_root(N as usize + 24, &lpuart_selection::<N>(run_mode), ccm);
+}
