@@ -20,12 +20,12 @@ available under `common` and exposed directly to the end user.
 When contributing new peripherals, try your best to fit them exclusively in
 `common`. The criteria is that they build and behave consistently across _all_
 chips supported by `imxrt-ral` (RAL). There's restrictions: things under
-`common` will not require a HAL family feature; they only require a RAL chip
+`common` will not require a HAL chip feature; they only require a RAL chip
 feature. If this isn't possible, split your modules across `common` and `chip`,
 and tie them together in the crate root.
 
 Modules under `chip` require both a RAL and a HAL feature. These modules
-implement chip family features, which could be a single function or an entire
+implement chip and family features, which could be a single function or an entire
 driver. Modules under `chip` are allowed to use conditional compilation. Modules
 under `chip` are also allowed to reference the special chip configuration
 modules.
@@ -41,7 +41,7 @@ this madness (which we're looking to assess with this design):
   modules -- possibly shared across different families -- are linked into this
   configuration module.
 - The approach consolidates the minimum set of behaviors needed for any chip
-  family. To bring up a new chip family, implement its configuration
+  (family). To bring up a new chip (family), implement its configuration
   module. There's no hard spec of what goes here, so what's expected of that
   configuration module is demonstrated by the existing configuration modules.
 
@@ -56,13 +56,13 @@ single package with conditionally-compiled modules only for prototyping
 convenience.
 
 This HAL makes the interesting decision to depend on a dependency's
-feature. Since the RAL is part of the HAL's public API, there didn't seem to be
-any value in adding a HAL chip specific feature that simply enabled a RAL chip
-specific feature. The end user can simply pick their chip through the RAL,
-making the choice explicitly in their build.
+feature without explicitly controlling that feature. Since the RAL is part of the
+HAL's public API, there didn't seem to be any value in adding a HAL chip specific
+feature that simply enabled a RAL chip specific feature. The end user can simply
+pick their chip through the RAL, making the choice explicitly in their build.
 
 This approach has some repercussions; namely, when you build the HAL for the
-1060 family, you don't know if you're building for a 1061 and 1062 chip. There's
+1060 chips, you don't know if you're building for a 1061 and 1062 chip. There's
 no need to handle this with today's drivers, so we're punting this
 problem. Split HALs with their own optional features could solve this. In lieu
 of split HALs, we could build these drivers as their own crates, and the user
@@ -94,7 +94,7 @@ Notice how `--target=thumbv7em-none-eabihf` is not required. The HAL should
 build for your target system so that unit and integration tests can execute. Of
 course, adding `--target=thumbv7em-none-eabihf` will work as well.
 
-To build a HAL with chip family features, enable that feature along with the RAL
+To build a HAL with chip features, enable that feature along with the RAL
 feature:
 
 ```
@@ -139,16 +139,20 @@ cargo test --features=board/teensy4 --workspace --tests
 cargo test --features=board/teensy4 --workspace --doc
 ```
 
-### Chip-family HAL features
+### Chip features
 
-We support one HAL family per i.MX RT processor family. A "processor family" is
+We support one feature per i.MX RT processor chip. A "chip" is
 described by an NXP datasheet and reference manual. For example, the `imxrt1060`
-feature the [i.MX RT1060 Crossover
+feature is associated with the [i.MX RT1060 Crossover
 Processors](https://www.nxp.com/docs/en/nxp/data-sheets/IMXRT1060CEC.pdf), which
 includes the following processors:
 
 - i.MX RT 1061
 - i.MX RT 1062
+
+We try to use the term "family" to describe related chips across RMs. The 10xx
+family is for all i.MX RT 10xx MCUs, and the 11xx family is for the bigger,
+faster MCUs.
 
 ## Running hardware tests
 
@@ -163,17 +167,16 @@ Adding a new board lets you easily develop and test i.MX RT hardware
 peripherals, and makes it easier for others to contribute. If you run into
 issues, reach out to the imxrt-rs team.
 
-If the HAL doesn't yet support your chip family, you'll first need to add
-support for the family. See the design section of this document for
+If the HAL doesn't yet support your chip (family), you'll first need to add
+support for it. See the design section of this document for
 guidance. Essentially, you'll define a new chip configuration module under
 `chip`. Use the existing configuration modules as your guide.
 
-Once the HAL has a feature for a chip family, you're ready to add a
+Once the HAL has a feature for a chip (family), you're ready to add a
 board. Here's the `board` files of interest:
 
-- `board/cfg/board.rs` describes your board's chip and other board-specific
-  configurations. See the inline documentation for more guidance. Add a
-  definition for your new board here.
+- `board/build.rs` will need a new mapping to a runtime configuration. See the
+  existing examples for help, and also consult the `imxrt-rt` documentation.
 - `board/Cargo.toml` will need a new feature to describe your board. Use the
   existing features as an example.
 - `board/src/[your_board_name].rs` is a module that you'll add to specify the hardware

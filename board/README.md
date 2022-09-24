@@ -7,6 +7,10 @@ BSP.
 
 - Teensy 4.0 and Teensy 4.1 boards with the `teensy4` feature.
 - the IMXRT1010EVK board with the `imxrt1010evk` feature.
+- the Cortex M7 on the IMXRT1170EVK board with the `imxrt1170evk-cm7` feature.
+
+A board may only support a subset of all examples. To understand which examples
+are supported by your board, consult the CI testing matrix.
 
 ## Board configurations
 
@@ -15,8 +19,13 @@ your board's configuration, see the relevant module in `src/`. You'll want this
 information to understand which pins are configured as LPUART TX and RX pins,
 which pin is the LED, etc.
 
-Boards may share configurations, like baud rates and timer
-resolutions. To understand those configurations, see `src/lib.rs`.
+Boards may share configurations, like baud rates and timer resolutions.
+Consult a board module to understand if it's sharing these configurations.
+
+`board` plays tricks so that a single RTIC application can compile and run
+across all supported boards. This means that the RTIC examples are coupled to
+the `board` package, and interrupts like `BOARD_CONSOLE` may look peculiar.
+Make sure you're familiar with RTIC before deeply studying these examples.
 
 ## Building hardware examples
 
@@ -75,11 +84,11 @@ section recommends tooling to flash hardware examples on your board.
 If you're using an NXP IMXRT EVK, you can use any of the following to flash your
 board.
 
-- All [`probe-rs` tools](https://probe.rs), such as
+- All [`probe-rs` tools](https://probe.rs) support 10xx MCUs. These tools include
   - [`probe-run`](https://github.com/knurling-rs/probe-run)
   - [`cargo-flash`](https://github.com/probe-rs/cargo-flash)
   - [`cargo-embed`](https://github.com/probe-rs/cargo-embed)
-- [`pyOCD`](https://pyocd.io)
+- [`pyOCD`](https://pyocd.io) supports both 10xx and 11xx MCUs.
 
 See each tool's documentation to understand its usage. To make some tooling
 integration easier, see the Tips and Tricks section near the end of this
