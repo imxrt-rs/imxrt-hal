@@ -379,8 +379,6 @@ where
 
 impl<P, const N: u8> LpspiMaster<P, N> {
     pub const N: u8 = N;
-    const DMA_DESTINATION_REQUEST_SIGNAL: u32 = DMA_TX_REQUEST_LOOKUP[N as usize - 1];
-    const DMA_SOURCE_REQUEST_SIGNAL: u32 = DMA_RX_REQUEST_LOOKUP[N as usize - 1];
 
     /// Release the SPI peripheral components
     pub fn release(self) -> (ral::lpspi::Instance<N>, P) {
@@ -636,26 +634,34 @@ impl<P, const N: u8> LpspiMaster<P, N> {
         Ok(())
     }
 
-    fn enable_dma_source(&mut self) {
+    pub(crate) fn enable_dma_receive(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: 0); // No watermarks; affects DMA signaling
         ral::modify_reg!(ral::lpspi, self.lpspi, DER, RDDE: 1);
     }
 
-    fn disable_dma_source(&mut self) {
+    pub(crate) fn disable_dma_receive(&mut self) {
         while ral::read_reg!(ral::lpspi, self.lpspi, DER, RDDE == 1) {
             ral::modify_reg!(ral::lpspi, self.lpspi, DER, RDDE: 0);
         }
     }
 
-    fn enable_dma_destination(&mut self) {
+    pub(crate) fn enable_dma_transmit(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: 0); // No watermarks; affects DMA signaling
         ral::modify_reg!(ral::lpspi, self.lpspi, DER, TDDE: 1);
     }
 
-    fn disable_dma_destination(&mut self) {
+    pub(crate) fn disable_dma_transmit(&mut self) {
         while ral::read_reg!(ral::lpspi, self.lpspi, DER, TDDE == 1) {
             ral::modify_reg!(ral::lpspi, self.lpspi, DER, TDDE: 0);
         }
+    }
+
+    pub(crate) fn rdr(&self) -> *const ral::RORegister<u32> {
+        core::ptr::addr_of!(self.lpspi.RDR)
+    }
+
+    pub(crate) fn tdr(&self) -> *const ral::WORegister<u32> {
+        core::ptr::addr_of!(self.lpspi.TDR)
     }
 }
 
@@ -856,116 +862,6 @@ impl<const N: u8> Drop for DisabledMaster<'_, N> {
     }
 }
 
-//
-// DMA peripheral support
-//
-
-use crate::common::dma;
-
-/// SPI RX DMA Request signal
-///
-/// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
-const DMA_RX_REQUEST_LOOKUP: [u32; 4] = [13, 77, 15, 79];
-
-/// SPI TX DMA Request signal
-///
-/// See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
-const DMA_TX_REQUEST_LOOKUP: [u32; 4] = [14, 78, 16, 80];
-
-unsafe impl<P, const N: u8> dma::peripheral::Source<u8> for LpspiMaster<P, N> {
-    fn source_signal(&self) -> u32 {
-        Self::DMA_SOURCE_REQUEST_SIGNAL
-    }
-    fn source_address(&self) -> *const u8 {
-        &self.lpspi.RDR as *const _ as *const u8
-    }
-    fn enable_source(&mut self) {
-        self.enable_dma_source();
-    }
-    fn disable_source(&mut self) {
-        self.disable_dma_source();
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Destination<u8> for LpspiMaster<P, N> {
-    fn destination_signal(&self) -> u32 {
-        Self::DMA_DESTINATION_REQUEST_SIGNAL
-    }
-    fn destination_address(&self) -> *const u8 {
-        &self.lpspi.TDR as *const _ as *const u8
-    }
-    fn enable_destination(&mut self) {
-        self.enable_dma_destination();
-    }
-    fn disable_destination(&mut self) {
-        self.disable_dma_destination();
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Source<u16> for LpspiMaster<P, N> {
-    fn source_signal(&self) -> u32 {
-        Self::DMA_SOURCE_REQUEST_SIGNAL
-    }
-    fn source_address(&self) -> *const u16 {
-        &self.lpspi.RDR as *const _ as *const u16
-    }
-    fn enable_source(&mut self) {
-        self.enable_dma_source();
-    }
-    fn disable_source(&mut self) {
-        self.disable_dma_source();
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Destination<u16> for LpspiMaster<P, N> {
-    fn destination_signal(&self) -> u32 {
-        Self::DMA_DESTINATION_REQUEST_SIGNAL
-    }
-    fn destination_address(&self) -> *const u16 {
-        &self.lpspi.TDR as *const _ as *const u16
-    }
-    fn enable_destination(&mut self) {
-        self.enable_dma_destination();
-    }
-    fn disable_destination(&mut self) {
-        self.disable_dma_destination();
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Source<u32> for LpspiMaster<P, N> {
-    fn source_signal(&self) -> u32 {
-        Self::DMA_SOURCE_REQUEST_SIGNAL
-    }
-    fn source_address(&self) -> *const u32 {
-        &self.lpspi.RDR as *const _ as *const u32
-    }
-    fn enable_source(&mut self) {
-        self.enable_dma_source();
-    }
-    fn disable_source(&mut self) {
-        self.disable_dma_source();
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Destination<u32> for LpspiMaster<P, N> {
-    fn destination_signal(&self) -> u32 {
-        Self::DMA_DESTINATION_REQUEST_SIGNAL
-    }
-    fn destination_address(&self) -> *const u32 {
-        &self.lpspi.TDR as *const _ as *const u32
-    }
-    fn enable_destination(&mut self) {
-        self.enable_dma_destination();
-    }
-    fn disable_destination(&mut self) {
-        self.disable_dma_destination();
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Bidirectional<u8> for LpspiMaster<P, N> {}
-unsafe impl<P, const N: u8> dma::peripheral::Bidirectional<u16> for LpspiMaster<P, N> {}
-unsafe impl<P, const N: u8> dma::peripheral::Bidirectional<u32> for LpspiMaster<P, N> {}
-
 impl<P, const N: u8> eh1::spi::blocking::Transfer<u8> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
@@ -1150,6 +1046,16 @@ impl Word for [u32] {
         }
     }
 }
+
+/// Describes the primitive types that can be transmitted and
+/// received by DMA.
+///
+/// This is a subset of all possible DMA elements, since it matches
+/// the [`Transaction`] support.
+pub trait DmaElement: crate::common::dma::Element {}
+impl DmaElement for u8 {}
+impl DmaElement for u16 {}
+impl DmaElement for u32 {}
 
 #[cfg(test)]
 mod tests {

@@ -32,3 +32,107 @@ pub fn channels(_: ral::dma::DMA, _: ral::dmamux::DMAMUX) -> [Option<Channel>; C
     }
     channels
 }
+
+//
+// Peripheral implementations.
+//
+// These depend on DMA MUX peripheral mappings, which are chip (family) specific.
+//
+use crate::dma::peripheral;
+
+#[cfg(family = "imxrt10xx")]
+mod mappings {
+    pub(super) const LPUART_DMA_RX_MAPPING: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
+    pub(super) const LPUART_DMA_TX_MAPPING: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
+
+    pub(super) const LPSPI_DMA_RX_MAPPING: [u32; 4] = [13, 77, 15, 79];
+    pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 4] = [14, 78, 16, 80];
+}
+#[cfg(family = "imxrt11xx")]
+mod mappings {
+    pub(super) const LPUART_DMA_RX_MAPPING: [u32; 12] =
+        [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31];
+    pub(super) const LPUART_DMA_TX_MAPPING: [u32; 12] =
+        [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+
+    pub(super) const LPSPI_DMA_RX_MAPPING: [u32; 6] = [36, 38, 40, 42, 44, 46];
+    pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 6] = [37, 39, 41, 43, 45, 47];
+}
+use mappings::*;
+
+// LPUART
+use crate::lpuart;
+
+unsafe impl<P, const N: u8> peripheral::Destination<u8> for lpuart::Lpuart<P, N> {
+    fn destination_signal(&self) -> u32 {
+        LPUART_DMA_TX_MAPPING[N as usize - 1]
+    }
+    fn destination_address(&self) -> *const u8 {
+        self.data().cast()
+    }
+    fn enable_destination(&mut self) {
+        self.enable_dma_transmit();
+    }
+    fn disable_destination(&mut self) {
+        self.disable_dma_transmit();
+    }
+}
+
+unsafe impl<P, const N: u8> peripheral::Source<u8> for lpuart::Lpuart<P, N> {
+    fn source_signal(&self) -> u32 {
+        LPUART_DMA_RX_MAPPING[N as usize - 1]
+    }
+    fn source_address(&self) -> *const u8 {
+        self.data().cast()
+    }
+    fn enable_source(&mut self) {
+        self.enable_dma_receive();
+    }
+    fn disable_source(&mut self) {
+        self.disable_dma_receive();
+    }
+}
+
+// LPSPI
+use crate::lpspi;
+
+unsafe impl<E, P, const N: u8> peripheral::Source<E> for lpspi::LpspiMaster<P, N>
+where
+    E: lpspi::DmaElement,
+{
+    fn source_signal(&self) -> u32 {
+        LPSPI_DMA_RX_MAPPING[N as usize - 1]
+    }
+    fn source_address(&self) -> *const E {
+        self.rdr().cast()
+    }
+    fn enable_source(&mut self) {
+        self.enable_dma_receive()
+    }
+    fn disable_source(&mut self) {
+        self.disable_dma_receive();
+    }
+}
+
+unsafe impl<E, P, const N: u8> peripheral::Destination<E> for lpspi::LpspiMaster<P, N>
+where
+    E: lpspi::DmaElement,
+{
+    fn destination_signal(&self) -> u32 {
+        LPSPI_DMA_TX_MAPPING[N as usize - 1]
+    }
+    fn destination_address(&self) -> *const E {
+        self.tdr().cast()
+    }
+    fn enable_destination(&mut self) {
+        self.enable_dma_transmit();
+    }
+    fn disable_destination(&mut self) {
+        self.disable_dma_transmit();
+    }
+}
+
+unsafe impl<E, P, const N: u8> peripheral::Bidirectional<E> for lpspi::LpspiMaster<P, N> where
+    E: lpspi::DmaElement
+{
+}

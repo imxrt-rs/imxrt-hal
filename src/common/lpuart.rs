@@ -283,6 +283,31 @@ impl<P, const N: u8> Lpuart<P, N> {
         let fifo = ral::read_reg!(ral::lpuart, self.lpuart, FIFO);
         Interrupts::from_bits_truncate(ctrl | fifo)
     }
+
+    pub(crate) fn enable_dma_transmit(&mut self) {
+        ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE: 1);
+    }
+
+    pub(crate) fn disable_dma_transmit(&mut self) {
+        while ral::read_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE == 1) {
+            ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE: 0);
+        }
+    }
+
+    pub(crate) fn data(&self) -> *const ral::RWRegister<u32> {
+        core::ptr::addr_of!(self.lpuart.DATA)
+    }
+
+    pub(crate) fn enable_dma_receive(&mut self) {
+        self.clear_status(Status::W1C);
+        ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 1);
+    }
+
+    pub(crate) fn disable_dma_receive(&mut self) {
+        while ral::read_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE == 1) {
+            ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 0);
+        }
+    }
 }
 
 fn flush_fifo<const N: u8>(lpuart: &Instance<N>, direction: Direction) {
@@ -888,53 +913,6 @@ impl<P, const N: u8> eh02::blocking::serial::Write<u8> for Lpuart<P, N> {
 
     fn bflush(&mut self) -> Result<(), Self::Error> {
         eh1::serial::blocking::Write::<u8>::flush(self)
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Destination<u8> for Lpuart<P, N> {
-    fn destination_signal(&self) -> u32 {
-        use dma::peripheral::Source;
-        self.source_signal() - 1
-    }
-    fn destination_address(&self) -> *const u8 {
-        core::ptr::addr_of!(self.lpuart.DATA) as *const u8
-    }
-    fn enable_destination(&mut self) {
-        ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE: 1);
-    }
-    fn disable_destination(&mut self) {
-        while ral::read_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE == 1) {
-            ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE: 0);
-        }
-    }
-}
-
-unsafe impl<P, const N: u8> dma::peripheral::Source<u8> for Lpuart<P, N> {
-    fn source_signal(&self) -> u32 {
-        // See table 4-3 of the iMXRT1060 Reference Manual (Rev 2)
-        match N {
-            1 => 3,
-            2 => 67,
-            3 => 5,
-            4 => 69,
-            5 => 7,
-            6 => 71,
-            7 => 9,
-            8 => 73,
-            _ => unreachable!(),
-        }
-    }
-    fn source_address(&self) -> *const u8 {
-        core::ptr::addr_of!(self.lpuart.DATA) as *const u8
-    }
-    fn enable_source(&mut self) {
-        self.clear_status(Status::W1C);
-        ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 1);
-    }
-    fn disable_source(&mut self) {
-        while ral::read_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE == 1) {
-            ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 0);
-        }
     }
 }
 
