@@ -103,13 +103,6 @@ mod app {
             }
         }
     }
-
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            rtic::export::wfi();
-        }
-    }
 }
 
 use hal::dma::{

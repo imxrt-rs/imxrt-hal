@@ -37,13 +37,6 @@ mod app {
         (Shared {}, Local { spi }, init::Monotonics())
     }
 
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            rtic::export::wfi();
-        }
-    }
-
     #[task(binds = BOARD_SPI, local = [spi])]
     fn spi_interrupt(cx: spi_interrupt::Context) {
         let spi_interrupt::LocalResources { spi } = cx.local;

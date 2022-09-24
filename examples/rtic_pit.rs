@@ -33,13 +33,6 @@ mod app {
         (Shared {}, Local { led, pit }, init::Monotonics())
     }
 
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            rtic::export::wfi();
-        }
-    }
-
     #[task(binds = BOARD_PIT, local = [led, pit])]
     fn toggle_led(cx: toggle_led::Context) {
         let pit = cx.local.pit;

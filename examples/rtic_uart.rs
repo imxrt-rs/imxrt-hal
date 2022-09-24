@@ -56,13 +56,6 @@ mod app {
         (Shared {}, Local { led, console }, init::Monotonics())
     }
 
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            rtic::export::wfi();
-        }
-    }
-
     #[task(binds = BOARD_CONSOLE, local = [led, console])]
     fn console_interrupt(cx: console_interrupt::Context) {
         use lpuart::Status;

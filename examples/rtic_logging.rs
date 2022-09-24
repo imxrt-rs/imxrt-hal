@@ -142,13 +142,6 @@ mod app {
         )
     }
 
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            rtic::export::wfi();
-        }
-    }
-
     /// This interrupt fires
     ///
     /// - when log messages have been written (to the USB host).

@@ -47,13 +47,6 @@ mod app {
         (Shared { led, gpt1, gpt2 }, Local {}, init::Monotonics())
     }
 
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
-        loop {
-            rtic::export::wfi();
-        }
-    }
-
     #[task(binds = BOARD_GPT1, shared = [led, gpt1, gpt2])]
     fn turn_on(cx: turn_on::Context) {
         let gpt1 = cx.shared.gpt1;
