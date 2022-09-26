@@ -84,7 +84,6 @@ eh02-unproven = []
 members = [
     "board",
     "logging",
-    "tools",
 ]
 
 [patch.crates-io.bbqueue]
