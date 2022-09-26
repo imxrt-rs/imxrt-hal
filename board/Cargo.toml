@@ -11,27 +11,23 @@ version = "0.5.0-alpha"
 
 [dependencies.imxrt-iomuxc]
 version = "0.2"
-path = "../../iomuxc"
 
 [dependencies.imxrt-ral]
 version = "0.5"
-path = "../../ral"
 features = ["rtic"]
 
 [dependencies.imxrt-rt]
 version = "0.1"
-path = "../../rt"
 
 [build-dependencies.imxrt-rt]
 version = "0.1"
-path = "../../rt"
 
 [dependencies.imxrt-log]
 version = "0.1"
 path = "../logging"
 
 [dependencies.imxrt-usbd]
-path = "../../usbd"
+version = "0.1"
 
 [dependencies.cortex-m]
 version = "0.7"

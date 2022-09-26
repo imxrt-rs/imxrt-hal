@@ -26,12 +26,12 @@ version = "0.1"
 
 [dependencies.imxrt-hal]
 optional = true
-path = "../"
+path = ".."
 version = "0.5.0-alpha"
 
 [dependencies.imxrt-usbd]
 optional = true
-path = "../../usbd"
+version = "0.1"
 
 [features]
 default = ["defmt", "log", "lpuart", "usbd"]
@@ -42,7 +42,6 @@ usbd = ["dep:imxrt-usbd", "dep:usb-device", "dep:usbd-serial"]
 # this crate and specify a RAL feature flag
 # for the HAL.
 [dev-dependencies.imxrt-ral]
-path = "../../ral"
 version = "0.5"
 features = ["rt"]
 

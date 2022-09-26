@@ -46,15 +46,12 @@ version = "0.1"
 
 [dependencies.imxrt-iomuxc]
 version = "0.2"
-path = "../iomuxc"
 
 [dependencies.imxrt-ral]
 version = "0.5"
-path = "../ral"
 
 [dependencies.imxrt-usbd]
 version = "0.1"
-path = "../usbd"
 optional = true
 
 [package.metadata.docs.rs]
@@ -86,12 +83,6 @@ members = [
     "logging",
 ]
 
-[patch.crates-io.bbqueue]
-path = "../../bbqueue/core"
-
-[patch.crates-io.ral-registers]
-path = "../ral-registers"
-
 [profile.dev]
 opt-level = 1
 panic = "abort"
@@ -115,10 +106,10 @@ codegen-units = 256
 
 [dev-dependencies]
 board = { path = "board" }
-imxrt-rt = { version = "0.1", path = "../rt" }
+imxrt-rt = { version = "0.1" }
 menu = "0.3.2"
 cortex-m-rtic = { version = "1.0" }
-imxrt-ral = { features = ["rtic"], path = "../ral" }
+imxrt-ral = { version = "0.5", features = ["rtic"] }
 log = "0.4"
 defmt = "0.3"
 imxrt-log = { path = "logging" }
@@ -130,3 +121,11 @@ required-features = ["board/spi"]
 [[example]]
 name = "rtic_spi"
 required-features = ["board/spi"]
+
+[patch.crates-io]
+bbqueue =       { git = "https://github.com/mciantyre/bbqueue" }
+imxrt-iomuxc =  { git = "https://github.com/mciantyre/imxrt-iomuxc" }
+imxrt-ral =     { git = "https://github.com/mciantyre/imxrt-ral" }
+imxrt-rt =      { git = "https://github.com/mciantyre/imxrt-rt" }
+imxrt-usbd =    { git = "https://github.com/mciantyre/imxrt-usbd" }
+ral-registers = { git = "https://github.com/mciantyre/ral-registers" }
