@@ -1,44 +1,154 @@
-name: All Checks
+name: Check Rust code
 
 on: [push, pull_request]
 
 jobs:
-  build-hals:
+  format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Build HAL(s)
-      run: cargo build --verbose
-    - name: Run HAL(s) tests
-      run: cargo test --verbose
-    - name: Check format for HAL(s)
-      run: cargo fmt --all -- --check
-    - name: Run clippy for HAL(s)
-      run: cargo clippy -- -D warnings
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: rustfmt
+    - uses: actions-rs/cargo@v1
+      name: Check formatting
+      with:
+        command: fmt
+        args: --all -- --check
 
-  # imxrt1060-hal feature checks
-  imxrt1060-features:
+  # Checks the common HAL for all chips supported by imxrt-ral.
+  lint-hal:
+    needs: format
     strategy:
       matrix:
-        features: ["rand_core", "rtic", "rt", "rand_core,rtic,rt"]
-    env:
-      RUSTFLAGS: -D warnings
+        chips:
+        - imxrt-ral/imxrt1011
+        - imxrt-ral/imxrt1021
+        - imxrt-ral/imxrt1051
+        - imxrt-ral/imxrt1052
+        - imxrt-ral/imxrt1061
+        - imxrt-ral/imxrt1062
+        - imxrt-ral/imxrt1064
+        - imxrt-ral/imxrt1176_cm4
+        - imxrt-ral/imxrt1176_cm7
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
+    - uses: actions-rs/clippy-check@v1
+      name: Lint imxrt-hal
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --features=${{ matrix.chips }} --package=imxrt-hal # -- -D warnings
+
+  # Indirectly checks & lints the HAL with the HAL's chip feature, and also
+  # checks & lints the imxrt-log package.
+  lint-log:
+    needs: lint-hal
+    strategy:
+      matrix:
+        chips:
+        - imxrt-ral/imxrt1011,imxrt1010
+        - imxrt-ral/imxrt1061,imxrt1060
+        - imxrt-ral/imxrt1062,imxrt1060
+        - imxrt-ral/imxrt1064,imxrt1060
+        - imxrt-ral/imxrt1176_cm4,imxrt1170
+        - imxrt-ral/imxrt1176_cm7,imxrt1170
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
+    - uses: actions-rs/clippy-check@v1
+      name: Lint imxrt-log
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --features=${{ matrix.chips }} --package=imxrt-log # -- -D warnings
+  
+  # Lint and build examples for boards.
+  examples:
+    needs: lint-hal
+    strategy:
+      matrix:
+        config:
+        # Boards that support all examples.
+        - --examples --features=board/teensy4
+        - --examples --features=board/imxrt1010evk
+        # SPI examples (might break other examples)
+        - --example=hal_spi --example=rtic_spi --features=board/teensy4,board/spi
+        - --example=hal_spi --example=rtic_spi --features=board/imxrt1010evk,board/spi
+        # The i.MX RT 1170 EVK (CM7) target is WIP.
+        - --features=board/imxrt1170evk-cm7 --example=hal_led
+          --example=hal_uart --example=rtic_uart --example=rtic_dma_uart
+          --example=hal_gpt --example=rtic_gpt
+          --example=hal_pit --example=rtic_pit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
+        target: thumbv7em-none-eabihf
+    - name: Lint board and examples
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf
+    - name: Build examples
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
+
+  tests:
+    needs: format
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+    - name: Run unit, integration tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --features=board/teensy4 --workspace --tests
+    - name: Run documentation tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --features=board/teensy4 --workspace --doc
+
+  # Ensures that documentation links are valid
+  doclinks:
+    needs: format
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-        target: thumbv7em-none-eabihf
-        override: true
-        profile: minimal
-    - name: Check imxrt1060-hal with features '${{ matrix.features }}'
+    - name: Check imxrt-hal doclinks
       uses: actions-rs/cargo@v1
       with:
-        command: check
-        args: >
-          --features=${{ matrix.features }}
-          --manifest-path=imxrt1060-hal/Cargo.toml
-          --target=thumbv7em-none-eabihf
-          --verbose
-
+        command: rustdoc
+        args: --features=board/teensy4 --package=imxrt-hal
+    - name: Check imxrt-log doclinks
+      uses: actions-rs/cargo@v1
+      with:
+        command: rustdoc
+        args: --features=board/teensy4 --package=imxrt-log
