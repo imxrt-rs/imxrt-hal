@@ -16,7 +16,7 @@ use imxrt_hal::{
 static mut CONSUMER: MaybeUninit<crate::Consumer> = MaybeUninit::uninit();
 static mut CHANNEL: MaybeUninit<channel::Channel> = MaybeUninit::uninit();
 
-pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll: poll };
+pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll };
 
 /// Drive the logging behavior.
 ///

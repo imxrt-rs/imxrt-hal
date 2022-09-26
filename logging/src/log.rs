@@ -91,9 +91,8 @@ pub fn usbd_with_config<const N: u8>(
     // (above) to meet that requirement. If that method is called
     // more than once, subsequent calls are an error.
     cortex_m::interrupt::free(|_| unsafe {
-        match frontend::init(producer, &frontend_config) {
-            Err(_) => return Err(crate::AlreadySetError::new(peripherals)),
-            Ok(()) => {}
+        if frontend::init(producer, frontend_config).is_err() {
+            return Err(crate::AlreadySetError::new(peripherals));
         }
         crate::usbd::init(peripherals, interrupts, consumer, backend_config);
         Ok(Poller::new(crate::usbd::VTABLE))
@@ -136,9 +135,8 @@ pub fn lpuart_with_config<P, const LPUART: u8>(
     // to meet that requirement.
     cortex_m::interrupt::free(|_| unsafe {
         crate::lpuart::try_init(&mut dma_channel, &mut producer);
-        match frontend::init(producer, frontend_config) {
-            Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),
-            Ok(()) => {}
+        if frontend::init(producer, frontend_config).is_err() {
+            return Err(crate::AlreadySetError::new((lpuart, dma_channel)));
         }
         crate::lpuart::finish_init(lpuart, dma_channel, consumer, interrupts);
         Ok(Poller::new(crate::lpuart::VTABLE))

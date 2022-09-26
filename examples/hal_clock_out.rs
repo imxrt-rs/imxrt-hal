@@ -146,7 +146,7 @@ fn set_divider(output: &str, divider: &str, console: &mut Writer, ccm: &mut CCM)
         }
     };
     let divider: u32 = match divider.parse() {
-        Ok(d) if 1 <= d && d <= 8 => d,
+        Ok(d) if (1..=8).contains(&d) => d,
         Ok(_) => {
             return writeln!(console, "divider must be between 1 and 8");
         }

@@ -157,6 +157,7 @@ impl Specifics {
         };
 
         #[cfg(not(feature = "spi"))]
+        #[allow(clippy::let_unit_value)]
         let spi = ();
 
         let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };

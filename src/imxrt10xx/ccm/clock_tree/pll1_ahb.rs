@@ -47,7 +47,7 @@ pub fn configure_ahb_ipg(
     ccm_analog: &mut ral::ccm_analog::CCM_ANALOG,
 ) {
     ccm::clock_gate::IPG_CLOCK_GATES
-        .into_iter()
+        .iter()
         .for_each(|locator| locator.set(ccm, ccm::clock_gate::OFF));
 
     if ccm::ahb_clk::Selection::PeriphClk2Sel == ccm::ahb_clk::selection(ccm) {

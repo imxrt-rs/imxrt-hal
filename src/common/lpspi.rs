@@ -515,7 +515,7 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     fn recv_ok(&self) -> Result<(), LpspiMasterError> {
         let status = self.status();
         if status.intersects(MasterStatus::REF) {
-            return Err(LpspiMasterError::Fifo(Direction::Rx));
+            Err(LpspiMasterError::Fifo(Direction::Rx))
         } else {
             Ok(())
         }
@@ -999,6 +999,7 @@ trait Word {
 impl Word for [u8] {
     fn read_word(&self) -> u32 {
         u32::from_le_bytes([
+            #[allow(clippy::get_first)] // Syntactically consistent.
             self.get(0).copied().unwrap_or(0),
             self.get(1).copied().unwrap_or(0),
             self.get(2).copied().unwrap_or(0),
@@ -1014,6 +1015,7 @@ impl Word for [u8] {
 
 impl Word for [u16] {
     fn read_word(&self) -> u32 {
+        #[allow(clippy::get_first)] // Syntactically consistent.
         let [a, b] = self
             .get(0)
             .copied()
@@ -1038,7 +1040,7 @@ impl Word for [u16] {
 
 impl Word for [u32] {
     fn read_word(&self) -> u32 {
-        self.get(0).copied().unwrap_or(0)
+        self.first().copied().unwrap_or(0)
     }
     fn write_word(&mut self, word: u32) {
         if let Some(w) = self.get_mut(0) {

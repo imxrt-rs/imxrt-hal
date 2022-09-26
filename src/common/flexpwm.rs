@@ -242,9 +242,12 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     pub fn prescaler(&self) -> Prescaler {
         let prescaler = crate::ral::read_reg!(self::ral, self, SMCTRL, PRSC);
 
-        use self::ral::SMCTRL;
-        const _: () = assert!(SMCTRL::PRSC::mask >> SMCTRL::PRSC::offset == 7u16);
-        const _: () = assert!(Prescaler::Prescaler128 as u16 == 7u16);
+        #[allow(clippy::assertions_on_constants)]
+        {
+            use self::ral::SMCTRL;
+            const _: () = assert!(SMCTRL::PRSC::mask >> SMCTRL::PRSC::offset == 7u16);
+            const _: () = assert!(Prescaler::Prescaler128 as u16 == 7u16);
+        }
 
         // Safety: field is three bits wide. Prescaler represents all values in
         // the enum. See the asserts above for tests.
@@ -260,8 +263,11 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     pub fn pair_operation(&self) -> PairOperation {
         let indep = crate::ral::read_reg!(self::ral, self, SMCTRL2, INDEP);
 
-        use self::ral::SMCTRL2;
-        const _: () = assert!(SMCTRL2::INDEP::mask >> SMCTRL2::INDEP::offset == 1u16);
+        #[allow(clippy::assertions_on_constants)]
+        {
+            use self::ral::SMCTRL2;
+            const _: () = assert!(SMCTRL2::INDEP::mask >> SMCTRL2::INDEP::offset == 1u16);
+        }
 
         // Safety: field is one bit. Enum is two variants, representing all values
         // in this one bit state.

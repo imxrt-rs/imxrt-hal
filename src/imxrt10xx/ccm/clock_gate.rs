@@ -166,7 +166,7 @@ macro_rules! locator {
 
 /// Acquire the clock gate register for a clock gate locator.
 #[inline(always)]
-fn clock_gate_register<'a>(ccm: &'a CCM, register: Register) -> &'a ral::RWRegister<u32> {
+fn clock_gate_register(ccm: &CCM, register: Register) -> &ral::RWRegister<u32> {
     match register {
         Register::CCGR0 => &ccm.CCGR0,
         Register::CCGR1 => &ccm.CCGR1,
@@ -308,13 +308,15 @@ where
     ][N as usize - 1]
 }
 
+#[allow(clippy::assertions_on_constants)]
+const _: () = assert!(ral::SOLE_INSTANCE == 0u8);
+
 /// Returns the FlexPWM clock gate locator.
 #[inline(always)]
 pub const fn flexpwm<const N: u8>() -> Locator
 where
     ral::pwm::Instance<N>: ral::Valid,
 {
-    const _: () = assert!(ral::SOLE_INSTANCE == 0u8);
     [
         locator!(CCGR4, CG8),
         locator!(CCGR4, CG9),
@@ -371,10 +373,10 @@ pub use crate::chip::config::root_clock_gates::*;
 /// unique. The number of locators may vary by chip family.
 pub fn all() -> impl Iterator<Item = Locator> {
     PERCLK_CLOCK_GATES
-        .into_iter()
-        .chain(UART_CLOCK_GATES.into_iter())
-        .chain(LPSPI_CLOCK_GATES.into_iter())
-        .chain(LPI2C_CLOCK_GATES.into_iter())
-        .chain(IPG_CLOCK_GATES.into_iter())
+        .iter()
+        .chain(UART_CLOCK_GATES.iter())
+        .chain(LPSPI_CLOCK_GATES.iter())
+        .chain(LPI2C_CLOCK_GATES.iter())
+        .chain(IPG_CLOCK_GATES.iter())
         .copied()
 }

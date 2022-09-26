@@ -65,11 +65,11 @@ mod app {
     #[task(binds = BOARD_DMA_A, local = [led, console, channel, buffer, state])]
     fn dma_complete(cx: dma_complete::Context) {
         let dma_complete::LocalResources {
-            mut channel,
+            channel,
             led,
             state,
             buffer,
-            mut console,
+            console,
         } = cx.local;
 
         while channel.is_interrupt() {
@@ -89,14 +89,14 @@ mod app {
                 buffer.fill(recv);
                 unsafe {
                     // Safety: buffer is static
-                    dma_transfer(&mut channel, &mut console, buffer);
+                    dma_transfer(channel, console, buffer);
                 }
                 *state = State::Transfering;
             }
             State::Transfering => {
                 unsafe {
                     // Safety: buffer is static.
-                    dma_receive(&mut channel, &mut console, &mut buffer[..1]);
+                    dma_receive(channel, console, &mut buffer[..1]);
                 }
                 *state = State::Receiving;
                 led.toggle();

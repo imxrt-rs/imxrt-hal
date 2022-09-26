@@ -22,8 +22,8 @@ pub(crate) unsafe fn configure() {
     prepare_clock_tree(&mut ccm, &mut ccm_analog);
 
     COMMON_CLOCK_GATES
-        .into_iter()
-        .chain(board_impl::CLOCK_GATES.into_iter())
+        .iter()
+        .chain(board_impl::CLOCK_GATES.iter())
         .for_each(|locator: &clock_gate::Locator| {
             locator.set(&mut ccm, hal::ccm::clock_gate::ON);
         });

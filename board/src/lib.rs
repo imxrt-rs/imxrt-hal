@@ -62,7 +62,7 @@ pub struct Common {
 impl Common {
     /// Prepares common resources.
     fn new() -> Self {
-        let pit: PIT = unsafe { PIT::instance() };
+        let pit: Pit = unsafe { Pit::instance() };
         // Stop timers in debug mode.
         ral::modify_reg!(ral::pit, pit, MCR, FRZ: FRZ_1);
         let pit = hal::pit::new(pit);
@@ -162,9 +162,9 @@ mod usb1 {
 use usb1::*;
 
 #[cfg(family = "imxrt10xx")]
-type PIT = crate::ral::pit::PIT;
+type Pit = crate::ral::pit::PIT;
 #[cfg(family = "imxrt11xx")]
-type PIT = crate::ral::pit::PIT1;
+type Pit = crate::ral::pit::PIT1;
 
 /// Board interrupts.
 ///

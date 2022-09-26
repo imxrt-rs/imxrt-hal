@@ -23,7 +23,7 @@ pub(crate) unsafe fn configure() {
 
     prepare_clock_tree(&mut ccm);
     CLOCK_GATES
-        .into_iter()
+        .iter()
         .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
 }
 

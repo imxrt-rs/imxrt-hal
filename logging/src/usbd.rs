@@ -31,7 +31,7 @@ const EP0_CONTROL_PACKET_SIZE: usize = 64;
 /// The USB GPT timer we use to (infrequently) check for data.
 const GPT_INSTANCE: imxrt_usbd::gpt::Instance = imxrt_usbd::gpt::Instance::Gpt0;
 
-pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll: poll };
+pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll };
 
 /// Drive the logging behavior.
 ///

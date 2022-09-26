@@ -128,7 +128,7 @@ impl<const CHAN: u8> Pit<CHAN> {
     where
         Const<CHAN>: Valid,
     {
-        let register_block: &'_ crate::ral::pit::RegisterBlock = &*instance;
+        let register_block: &'_ crate::ral::pit::RegisterBlock = instance;
         let register_block: &'static _ = core::mem::transmute(register_block);
         Self {
             instance: register_block,

@@ -165,7 +165,7 @@ const _: () = assert!(lpi2c_frequency(RunMode::Overdrive) == 60_000_000); // Max
 /// may leave these clock gates disabled.
 pub fn configure_perclk(run_mode: RunMode, ccm: &mut CCM) {
     clock_gate::PERCLK_CLOCK_GATES
-        .into_iter()
+        .iter()
         .for_each(|locator| locator.set(ccm, clock_gate::OFF));
     perclk_clk::set_selection(ccm, perclk_selection(run_mode));
     perclk_clk::set_divider(ccm, perclk_divider(run_mode));
@@ -180,7 +180,7 @@ pub fn configure_perclk(run_mode: RunMode, ccm: &mut CCM) {
 /// may leave these clock gates disabled.
 pub fn configure_lpspi(run_mode: RunMode, ccm: &mut CCM) {
     clock_gate::LPSPI_CLOCK_GATES
-        .into_iter()
+        .iter()
         .for_each(|locator| locator.set(ccm, clock_gate::OFF));
     lpspi_clk::set_selection(ccm, lpspi_selection(run_mode));
     lpspi_clk::set_divider(ccm, lpspi_divider(run_mode));
@@ -195,7 +195,7 @@ pub fn configure_lpspi(run_mode: RunMode, ccm: &mut CCM) {
 /// may leave these clock gates disabled.
 pub fn configure_uart(run_mode: RunMode, ccm: &mut CCM) {
     clock_gate::UART_CLOCK_GATES
-        .into_iter()
+        .iter()
         .for_each(|locator| locator.set(ccm, clock_gate::OFF));
     uart_clk::set_selection(ccm, uart_selection(run_mode));
     uart_clk::set_divider(ccm, uart_divider(run_mode));
@@ -210,7 +210,7 @@ pub fn configure_uart(run_mode: RunMode, ccm: &mut CCM) {
 /// may leave these clock gates disabled.
 pub fn configure_lpi2c(run_mode: RunMode, ccm: &mut CCM) {
     clock_gate::LPI2C_CLOCK_GATES
-        .into_iter()
+        .iter()
         .for_each(|locator| locator.set(ccm, clock_gate::OFF));
     lpi2c_clk::set_selection(ccm, lpi2c_selection(run_mode));
     lpi2c_clk::set_divider(ccm, lpi2c_divider(run_mode));

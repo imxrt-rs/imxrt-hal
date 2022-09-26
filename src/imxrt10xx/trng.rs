@@ -116,7 +116,7 @@ impl RetryCount {
     pub fn new(retry_count: u32) -> Option<Self> {
         (1..=15)
             .contains(&retry_count)
-            .then(|| RetryCount(retry_count))
+            .then_some(RetryCount(retry_count))
     }
 }
 
@@ -332,7 +332,7 @@ impl rand_core::RngCore for RngCoreWrapper {
 }
 
 /// A TRNG error occurred, such as a statistical test failing.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Error(pub ErrorFlags);
 
 bitflags::bitflags! {
