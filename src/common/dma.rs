@@ -26,7 +26,6 @@ pub mod memcpy;
 pub mod peripheral;
 mod ral;
 
-pub(crate) use channel::Channel;
 pub use element::Element;
 pub use error::Error;
 pub use interrupt::{on_error, on_interrupt, Transfer};

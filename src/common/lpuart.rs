@@ -61,8 +61,8 @@
 //! # Some(()) }
 //! ```
 
+use crate::iomuxc;
 use crate::ral::{self, lpuart::Instance};
-use crate::{common::dma, iomuxc};
 
 /// LPUART pins.
 pub struct Pins<TX, RX>
@@ -85,7 +85,7 @@ where
 /// DMA transfers as futures.
 pub struct Lpuart<P, const N: u8> {
     pins: P,
-    lpuart: Instance<N>,
+    pub(crate) lpuart: Instance<N>,
 }
 
 /// Serial direction.
@@ -241,29 +241,6 @@ impl<P, const N: u8> Lpuart<P, N> {
             let fifo = fifo & !Status::fifo_mask().fifo_bits();
             fifo | fifo_flags.fifo_bits()
         });
-    }
-
-    /// Use a DMA channel to write data to the UART peripheral
-    ///
-    /// Completes when all data in `buffer` has been written to the UART
-    /// peripheral.
-    pub fn dma_write<'dst, 'chan, 'buf>(
-        &'dst mut self,
-        channel: &'chan mut dma::Channel,
-        buffer: &'buf [u8],
-    ) -> dma::peripheral::Tx<'dst, 'chan, 'buf, Self, u8> {
-        dma::peripheral::transfer(channel, buffer, self)
-    }
-
-    /// Use a DMA channel to read data from the UART peripheral
-    ///
-    /// Completes when `buffer` is filled.
-    pub fn dma_read<'src, 'chan, 'buf>(
-        &'src mut self,
-        channel: &'chan mut dma::Channel,
-        buffer: &'buf mut [u8],
-    ) -> dma::peripheral::Rx<'src, 'chan, 'buf, Self, u8> {
-        dma::peripheral::receive(channel, self, buffer)
     }
 
     /// Flush data from the FIFO.

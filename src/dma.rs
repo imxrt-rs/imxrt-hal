@@ -93,6 +93,31 @@ unsafe impl<P, const N: u8> peripheral::Source<u8> for lpuart::Lpuart<P, N> {
     }
 }
 
+impl<P, const N: u8> lpuart::Lpuart<P, N> {
+    /// Use a DMA channel to write data to the UART peripheral
+    ///
+    /// Completes when all data in `buffer` has been written to the UART
+    /// peripheral.
+    pub fn dma_write<'dst, 'chan, 'buf>(
+        &'dst mut self,
+        channel: &'chan mut Channel,
+        buffer: &'buf [u8],
+    ) -> peripheral::Tx<'dst, 'chan, 'buf, Self, u8> {
+        peripheral::transfer(channel, buffer, self)
+    }
+
+    /// Use a DMA channel to read data from the UART peripheral
+    ///
+    /// Completes when `buffer` is filled.
+    pub fn dma_read<'src, 'chan, 'buf>(
+        &'src mut self,
+        channel: &'chan mut Channel,
+        buffer: &'buf mut [u8],
+    ) -> peripheral::Rx<'src, 'chan, 'buf, Self, u8> {
+        peripheral::receive(channel, self, buffer)
+    }
+}
+
 // LPSPI
 use crate::lpspi;
 
