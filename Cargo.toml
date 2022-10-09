@@ -106,10 +106,10 @@ codegen-units = 256
 
 [dev-dependencies]
 board = { path = "board" }
-imxrt-rt = { version = "0.1" }
+imxrt-rt = "0.1"
 menu = "0.3.2"
-cortex-m-rtic = { version = "1.0" }
-imxrt-ral = { version = "0.5", features = ["rtic"] }
+cortex-m-rtic = "1.0"
+imxrt-ral = "0.5"
 log = "0.4"
 defmt = "0.3"
 imxrt-log = { path = "logging" }
