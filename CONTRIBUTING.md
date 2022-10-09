@@ -128,6 +128,14 @@ all expected to run on hardware.
 cargo build --features=board/teensy4 --examples --target=thumbv7em-none-eabihf
 ```
 
+To build specific packages in the workspace, name them with `--package`. You can
+still use `board` features even if the target package isn't using `board`. The
+example below builds the `imxrt-log` package in this workspace.
+
+```
+cargo build --features=board/teensy4 --package=imxrt-log
+```
+
 ### Running automated tests
 
 To run tests, you need to exclude examples from the build. One way to do that is
@@ -137,6 +145,31 @@ runs the necessary artifacts.
 ```
 cargo test --features=board/teensy4 --workspace --tests
 cargo test --features=board/teensy4 --workspace --doc
+```
+
+### Generating documentation
+
+It's just like building, but change `build` to `doc`. These two equivalent
+commands build imxrt-hal documentation with all 1060 chip support.
+
+```
+cargo doc --features=imxrt1060,imxrt-ral/imxrt1062
+cargo doc --features=board/teensy4
+```
+
+The next command builds the common HAL for a 1011 chip. Note that this may have
+documentation warnings, since intra-doc links may assume that a imxrt-hal
+chip feature is also enabled.
+
+```
+cargo doc --features=imxrt-ral/imxrt1011
+```
+
+Again, use `--package` to specify a different workspace package, and use a board
+feature to simplify feature aggregation.
+
+```
+cargo doc --features=board/teensy4 --package=imxrt-log
 ```
 
 ### Chip features
