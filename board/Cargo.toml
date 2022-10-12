@@ -7,26 +7,24 @@ publish = false
 
 [dependencies.imxrt-hal]
 path = ".."
-version = "0.5.0-alpha"
 
 [dependencies.imxrt-iomuxc]
-version = "0.2"
+workspace = true
 
 [dependencies.imxrt-ral]
-version = "0.5"
+workspace = true
 
 [dependencies.imxrt-rt]
-version = "0.1"
+workspace = true
 
 [build-dependencies.imxrt-rt]
-version = "0.1"
+workspace = true
 
 [dependencies.imxrt-log]
-version = "0.1"
 path = "../logging"
 
 [dependencies.imxrt-usbd]
-version = "0.1"
+workspace = true
 
 [dependencies.cortex-m]
 version = "0.7"
