@@ -33,6 +33,8 @@ mod family {
     #[cfg(chip = "imxrt1170")]
     #[path = "imxrt1170.rs"]
     pub(crate) mod config;
+
+    pub mod usbphy;
 }
 
 #[cfg(not(any(family = "imxrt10xx", family = "imxrt11xx")))]

@@ -86,7 +86,7 @@ pub struct Specifics {
 }
 
 impl Specifics {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(_: &mut crate::Common) -> Self {
         let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);

@@ -88,6 +88,12 @@ fn configure_clock_root(offset: usize, selection: &Selection, ccm: &mut CCM) {
     ral::modify_reg!(ral::ccm::clockroot, clock_root, CLOCK_ROOT_CONTROL,
         DIV: selection.divider - 1,
         MUX: selection.mux);
+    while ral::read_reg!(
+        ral::ccm::clockroot,
+        clock_root,
+        CLOCK_ROOT_STATUS0,
+        CHANGING == 1
+    ) {}
 }
 
 /// Set the bus clock (IPG) configuration for the Cortex M7.

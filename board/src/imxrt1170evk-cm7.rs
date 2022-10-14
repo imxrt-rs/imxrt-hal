@@ -55,7 +55,7 @@ pub struct Specifics {
 }
 
 impl Specifics {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(common: &mut crate::Common) -> Self {
         #[cfg(target_arch = "arm")]
         rtt_target::rtt_init_print!();
 
@@ -79,6 +79,7 @@ impl Specifics {
             console.set_baud(&CONSOLE_BAUD);
             console.set_parity(None);
         });
+        hal::usbphy::restart_pll(&mut common.usbphy1);
 
         Self { led, console }
     }

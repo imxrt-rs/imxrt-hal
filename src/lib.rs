@@ -325,3 +325,6 @@ pub use chip::adc;
 pub use chip::dcdc;
 #[cfg(family = "imxrt10xx")]
 pub use chip::trng;
+
+#[cfg(family = "imxrt11xx")]
+pub use chip::usbphy;

@@ -111,7 +111,7 @@ pub struct Specifics {
 }
 
 impl Specifics {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(_: &mut crate::Common) -> Self {
         #[cfg(target_arch = "arm")]
         rtt_target::rtt_init_print!();
 

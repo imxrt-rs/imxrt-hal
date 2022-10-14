@@ -73,6 +73,7 @@ impl Common {
         let dma = hal::dma::channels(unsafe { ral::dma::DMA::instance() }, unsafe {
             ral::dmamux::DMAMUX::instance()
         });
+
         Self {
             pit,
             gpt1,
@@ -102,7 +103,9 @@ pub fn new() -> (Common, Specifics) {
     unsafe {
         ral_shim::shim_vectors();
         configure();
-        (Common::new(), Specifics::new())
+        let mut common = Common::new();
+        let specifics = Specifics::new(&mut common);
+        (common, specifics)
     }
 }
 
