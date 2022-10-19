@@ -11,6 +11,7 @@ mod family {
     #[path = "../dma.rs"]
     pub mod dma;
     pub mod lpi2c;
+    pub mod tempmon;
     pub mod trng;
 
     #[cfg(chip = "imxrt1010")]

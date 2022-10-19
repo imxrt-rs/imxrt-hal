@@ -324,6 +324,8 @@ pub use chip::adc;
 #[cfg(family = "imxrt10xx")]
 pub use chip::dcdc;
 #[cfg(family = "imxrt10xx")]
+pub use chip::tempmon;
+#[cfg(family = "imxrt10xx")]
 pub use chip::trng;
 
 #[cfg(family = "imxrt11xx")]

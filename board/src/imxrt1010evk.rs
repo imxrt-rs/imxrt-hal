@@ -108,6 +108,7 @@ pub struct Specifics {
     pub tp34: Tp34,
     pub tp31: Tp31,
     pub trng: hal::trng::Trng,
+    pub tempmon: hal::tempmon::TempMon,
 }
 
 impl Specifics {
@@ -197,7 +198,10 @@ impl Specifics {
             Default::default(),
             Default::default(),
         );
-
+        let tempmon = hal::tempmon::TempMon::with_measure_freq(
+            unsafe { ral::tempmon::TEMPMON::instance() },
+            0x1000,
+        );
         Self {
             led,
             console,
@@ -207,6 +211,7 @@ impl Specifics {
             tp34: iomuxc.gpio_sd.p02,
             tp31: iomuxc.gpio_sd.p01,
             trng,
+            tempmon,
         }
     }
 }
