@@ -534,7 +534,7 @@ impl<P, const N: u8> LpspiMaster<P, N> {
         ral::write_reg!(ral::lpspi, self.lpspi, TDR, word);
     }
 
-    fn wait_for_transmit_fifo_space(&mut self) -> Result<(), LpspiMasterError> {
+    pub(crate) fn wait_for_transmit_fifo_space(&mut self) -> Result<(), LpspiMasterError> {
         loop {
             let status = self.status();
             if status.intersects(MasterStatus::TEF) {
@@ -565,7 +565,10 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     }
 
     /// Prepare common properties of the transaction for this driver.
-    fn prepare_transaction<W>(&self, buffer: &[W]) -> Result<Transaction, LpspiMasterError> {
+    pub(crate) fn prepare_transaction<W>(
+        &self,
+        buffer: &[W],
+    ) -> Result<Transaction, LpspiMasterError> {
         Transaction::new_words(buffer).map(|mut transaction| {
             transaction
                 .set_bit_order(self.bit_order)

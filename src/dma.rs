@@ -164,6 +164,64 @@ unsafe impl<E, P, const N: u8> peripheral::Bidirectional<E> for lpspi::LpspiMast
 {
 }
 
+impl<P, const N: u8> lpspi::LpspiMaster<P, N> {
+    /// Use a DMA channel to write data to the LPSPI peripheral.
+    ///
+    /// The future completes when all data in `buffer` has been written to the
+    /// peripheral. This call may block until space is available in the
+    /// command queue. An error indicates that there was an issue preparing the
+    /// transaction, or there was an issue while waiting for space in the command
+    /// queue.
+    pub fn dma_write<'a, E: lpspi::DmaElement>(
+        &'a mut self,
+        channel: &'a mut Channel,
+        buffer: &'a [E],
+    ) -> Result<peripheral::Tx<'a, Self, E>, lpspi::LpspiMasterError> {
+        let mut transaction = self.prepare_transaction(buffer)?;
+        transaction.disable_receive();
+        self.wait_for_transmit_fifo_space()?;
+        self.enqueue_transaction(&transaction);
+        Ok(peripheral::transfer(channel, buffer, self))
+    }
+
+    /// Use a DMA channel to read data from the LPSPI peripheral.
+    ///
+    /// The future completes when `buffer` is filled. This call may block until
+    /// space is available in the command queue. An error indicates that there was
+    /// an issue preparing the transaction, or there was an issue waiting for space
+    /// in the command queue.
+    pub fn dma_read<'a, E: lpspi::DmaElement>(
+        &'a mut self,
+        channel: &'a mut Channel,
+        buffer: &'a mut [E],
+    ) -> Result<peripheral::Rx<'a, Self, E>, lpspi::LpspiMasterError> {
+        let mut transaction = self.prepare_transaction(buffer)?;
+        transaction.disable_transmit();
+        self.wait_for_transmit_fifo_space()?;
+        self.enqueue_transaction(&transaction);
+        Ok(peripheral::receive(channel, self, buffer))
+    }
+
+    /// Use a DMA channel to simultaneously read and write from a buffer
+    /// and the LPSPI peripheral.
+    ///
+    /// The future completes when `buffer` is filled and after sending `buffer` elements.
+    /// This call may block until space is available in the command queue. An error
+    /// indicates that there was an issue preparing the transaction, or there was an
+    /// issue waiting for space in the command queue.
+    pub fn dma_full_duplex<'a, E: lpspi::DmaElement>(
+        &'a mut self,
+        rx: &'a mut Channel,
+        tx: &'a mut Channel,
+        buffer: &'a mut [E],
+    ) -> Result<peripheral::FullDuplex<'a, Self, E>, lpspi::LpspiMasterError> {
+        let transaction = self.prepare_transaction(buffer)?;
+        self.wait_for_transmit_fifo_space()?;
+        self.enqueue_transaction(&transaction);
+        Ok(peripheral::full_duplex(rx, tx, self, buffer))
+    }
+}
+
 // ADC
 #[cfg(family = "imxrt10xx")]
 use crate::adc;
