@@ -296,6 +296,10 @@ fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::Regi
 }
 
 /// An LPSPI master
+///
+/// The peripheral exposes low-level methods for coordinating
+/// DMA transfers. However, you may find it easier to use the
+/// [`dma`](crate::dma) interface to coordinate DMA transfers.
 pub struct LpspiMaster<P, const N: u8> {
     lpspi: ral::lpspi::Instance<N>,
     pins: P,
@@ -634,33 +638,57 @@ impl<P, const N: u8> LpspiMaster<P, N> {
         Ok(())
     }
 
-    pub(crate) fn enable_dma_receive(&mut self) {
+    /// Let the peripheral act as a DMA source.
+    ///
+    /// After this call, the peripheral will signal to the DMA engine whenever
+    /// it has data available to read.
+    pub fn enable_dma_receive(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: 0); // No watermarks; affects DMA signaling
         ral::modify_reg!(ral::lpspi, self.lpspi, DER, RDDE: 1);
     }
 
-    pub(crate) fn disable_dma_receive(&mut self) {
+    /// Stop the peripheral from acting as a DMA source.
+    ///
+    /// See the DMA chapter in the reference manual to understand when this
+    /// should be called in the DMA transfer lifecycle.
+    pub fn disable_dma_receive(&mut self) {
         while ral::read_reg!(ral::lpspi, self.lpspi, DER, RDDE == 1) {
             ral::modify_reg!(ral::lpspi, self.lpspi, DER, RDDE: 0);
         }
     }
 
-    pub(crate) fn enable_dma_transmit(&mut self) {
+    /// Let the peripheral act as a DMA destination.
+    ///
+    /// After this call, the peripheral will signal to the DMA engine whenever
+    /// it has free space in its transfer buffer.
+    pub fn enable_dma_transmit(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: 0); // No watermarks; affects DMA signaling
         ral::modify_reg!(ral::lpspi, self.lpspi, DER, TDDE: 1);
     }
 
-    pub(crate) fn disable_dma_transmit(&mut self) {
+    /// Stop the peripheral from acting as a DMA destination.
+    ///
+    /// See the DMA chapter in the reference manual to understand when this
+    /// should be called in the DMA transfer lifecycle.
+    pub fn disable_dma_transmit(&mut self) {
         while ral::read_reg!(ral::lpspi, self.lpspi, DER, TDDE == 1) {
             ral::modify_reg!(ral::lpspi, self.lpspi, DER, TDDE: 0);
         }
     }
 
-    pub(crate) fn rdr(&self) -> *const ral::RORegister<u32> {
+    /// Produces a pointer to the receiver data register.
+    ///
+    /// You should use this pointer when coordinating a DMA transfer.
+    /// You're not expected to read from this pointer in software.
+    pub fn rdr(&self) -> *const ral::RORegister<u32> {
         core::ptr::addr_of!(self.lpspi.RDR)
     }
 
-    pub(crate) fn tdr(&self) -> *const ral::WORegister<u32> {
+    /// Produces a pointer to the transfer data register.
+    ///
+    /// You should use this pointer when coordinating a DMA transfer.
+    /// You're not expected to read from this pointer in software.
+    pub fn tdr(&self) -> *const ral::WORegister<u32> {
         core::ptr::addr_of!(self.lpspi.TDR)
     }
 }

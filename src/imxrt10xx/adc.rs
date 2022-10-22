@@ -263,6 +263,9 @@ where
 }
 
 /// Adapter for using an ADC input as a DMA source.
+///
+/// This adapter exposes the lower-level DMA interface. However, you may
+/// find it easier to use the interface available in [`dma`](crate::dma).
 pub struct DmaSource<P, const N: u8> {
     adc: Adc<N>,
     _pin: AnalogInput<P, N>,
@@ -277,11 +280,19 @@ impl<P, const N: u8> DmaSource<P, N> {
         Self { adc, _pin: pin }
     }
 
-    pub(crate) fn r0(&self) -> *const ral::RORegister<u32> {
+    /// Returns a pointer to the ADC's `R0` register.
+    ///
+    /// You should use this pointer when coordinating a DMA transfer.
+    /// You're not expected to explicitly read from this pointer in software.
+    pub fn r0(&self) -> *const ral::RORegister<u32> {
         core::ptr::addr_of!(self.adc.reg.R0)
     }
 
-    pub(crate) fn enable_dma(&mut self)
+    /// Enable the ADC's DMA support.
+    ///
+    /// This is necessary to start a transfer. However, this in itself
+    /// does not start a DMA transfer.
+    pub fn enable_dma(&mut self)
     where
         P: Pin<N>,
     {
@@ -290,7 +301,11 @@ impl<P, const N: u8> DmaSource<P, N> {
         ral::modify_reg!(ral::adc, self.adc.reg, HC0, |_| channel);
     }
 
-    pub(crate) fn disable_dma(&mut self) {
+    /// Disable the ADC's DMA support.
+    ///
+    /// See the DMA chapter in the reference manual to understand when this
+    /// should be called in the DMA transfer lifecycle.
+    pub fn disable_dma(&mut self) {
         ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 0, DMAEN: 0);
     }
 }

@@ -82,7 +82,9 @@ where
 /// See the [module-level documentation](crate::lpuart) for an example.
 ///
 /// `Lpuart` implements serial traits from `eh1`. It models
-/// DMA transfers as futures.
+/// DMA transfers as futures. The type exposes a lower-level API for
+/// coordinating DMA transfers. However, you may find it easier to use
+/// the [`dma`](crate::dma) interface.
 pub struct Lpuart<P, const N: u8> {
     pins: P,
     pub(crate) lpuart: Instance<N>,
@@ -261,26 +263,46 @@ impl<P, const N: u8> Lpuart<P, N> {
         Interrupts::from_bits_truncate(ctrl | fifo)
     }
 
-    pub(crate) fn enable_dma_transmit(&mut self) {
+    /// Let the peripheral act as a DMA destination.
+    ///
+    /// After this call, the peripheral will signal to the DMA engine whenever
+    /// it has free space in its transfer buffer.
+    pub fn enable_dma_transmit(&mut self) {
         ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE: 1);
     }
 
-    pub(crate) fn disable_dma_transmit(&mut self) {
+    /// Stop the peripheral from acting as a DMA destination.
+    ///
+    /// See the DMA chapter in the reference manual to understand when this
+    /// should be called in the DMA transfer lifecycle.
+    pub fn disable_dma_transmit(&mut self) {
         while ral::read_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE == 1) {
             ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, TDMAE: 0);
         }
     }
 
-    pub(crate) fn data(&self) -> *const ral::RWRegister<u32> {
+    /// Produces a pointer to the data register.
+    ///
+    /// You should use this pointer when coordinating a DMA transfer.
+    /// You're not expected to read from this pointer in software.
+    pub fn data(&self) -> *const ral::RWRegister<u32> {
         core::ptr::addr_of!(self.lpuart.DATA)
     }
 
-    pub(crate) fn enable_dma_receive(&mut self) {
+    /// Let the peripheral act as a DMA source.
+    ///
+    /// After this call, the peripheral will signal to the DMA engine whenever
+    /// it has data available to read.
+    pub fn enable_dma_receive(&mut self) {
         self.clear_status(Status::W1C);
         ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 1);
     }
 
-    pub(crate) fn disable_dma_receive(&mut self) {
+    /// Stop the peripheral from acting as a DMA source.
+    ///
+    /// See the DMA chapter in the reference manual to understand when this
+    /// should be called in the DMA transfer lifecycle.
+    pub fn disable_dma_receive(&mut self) {
         while ral::read_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE == 1) {
             ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 0);
         }
