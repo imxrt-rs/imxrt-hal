@@ -47,6 +47,8 @@ mod mappings {
 
     pub(super) const LPSPI_DMA_RX_MAPPING: [u32; 4] = [13, 77, 15, 79];
     pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 4] = [14, 78, 16, 80];
+
+    pub(super) const ADC_DMA_RX_MAPPING: [u32; 2] = [32, 88];
 }
 #[cfg(family = "imxrt11xx")]
 mod mappings {
@@ -160,4 +162,31 @@ where
 unsafe impl<E, P, const N: u8> peripheral::Bidirectional<E> for lpspi::LpspiMaster<P, N> where
     E: lpspi::DmaElement
 {
+}
+
+// ADC
+#[cfg(family = "imxrt10xx")]
+use crate::adc;
+
+#[cfg(family = "imxrt10xx")]
+unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N>
+where
+    P: crate::iomuxc::adc::Pin<N>,
+{
+    fn source_signal(&self) -> u32 {
+        ADC_DMA_RX_MAPPING[if N == ral::SOLE_INSTANCE {
+            N as usize
+        } else {
+            N as usize - 1
+        }]
+    }
+    fn source_address(&self) -> *const u16 {
+        self.r0().cast()
+    }
+    fn enable_source(&mut self) {
+        self.enable_dma();
+    }
+    fn disable_source(&mut self) {
+        self.disable_dma();
+    }
 }

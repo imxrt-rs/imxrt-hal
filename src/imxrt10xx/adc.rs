@@ -23,10 +23,8 @@
 //! # Some(()) }();
 //! ```
 
-use crate::iomuxc;
 use crate::iomuxc::adc::{prepare, Pin};
 use crate::ral;
-use core::marker::PhantomData;
 
 #[cfg(feature = "eh02-unproven")]
 use eh02::adc::{Channel, OneShot};
@@ -100,36 +98,30 @@ pub enum ResolutionBits {
 }
 
 /// A pin representing an analog input for a particular ADC
-pub struct AnalogInput<ADCx, P> {
-    _module: PhantomData<ADCx>,
+pub struct AnalogInput<P, const N: u8> {
     pin: P,
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P, ADCx> Channel<ADCx> for AnalogInput<ADCx, P>
+impl<P, const N: u8> Channel<Adc<N>> for AnalogInput<P, N>
 where
-    P: Pin<ADCx>,
-    ADCx: iomuxc::consts::Unsigned,
+    P: Pin<N>,
 {
     type ID = u16;
 
     fn channel() -> Self::ID {
-        <P as Pin<ADCx>>::INPUT as u16
+        <P as Pin<N>>::INPUT as u16
     }
 }
 
-impl<P, ADCx> AnalogInput<ADCx, P>
+impl<P, const N: u8> AnalogInput<P, N>
 where
-    P: Pin<ADCx>,
-    ADCx: iomuxc::consts::Unsigned,
+    P: Pin<N>,
 {
     /// Creates a new analog input pin
     pub fn new(mut pin: P) -> Self {
         prepare(&mut pin);
-        Self {
-            _module: PhantomData,
-            pin,
-        }
+        Self { pin }
     }
 
     /// Release the ADC input, returning the underlying hardware pin. This pin is in an
@@ -244,11 +236,11 @@ impl<const N: u8> Adc<N> {
     }
 
     /// Perform a blocking read for an ADC sample.
-    pub fn read_blocking<P>(&mut self, _: &mut AnalogInput<iomuxc::consts::Const<N>, P>) -> u16
+    pub fn read_blocking<P>(&mut self, _: &mut AnalogInput<P, N>) -> u16
     where
-        P: Pin<iomuxc::consts::Const<N>>,
+        P: Pin<N>,
     {
-        let channel = <P as Pin<iomuxc::consts::Const<N>>>::INPUT;
+        let channel = <P as Pin<N>>::INPUT;
         ral::modify_reg!(ral::adc, self.reg, HC0, |_| channel);
         while (ral::read_reg!(ral::adc, self.reg, HS, COCO0) == 0) {}
 
@@ -257,20 +249,49 @@ impl<const N: u8> Adc<N> {
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<W, P, const N: u8>
-    OneShot<iomuxc::consts::Const<N>, W, AnalogInput<iomuxc::consts::Const<N>, P>> for Adc<N>
+impl<W, P, const N: u8> OneShot<Adc<N>, W, AnalogInput<P, N>> for Adc<N>
 where
     W: From<u16>,
-    P: Pin<iomuxc::consts::Const<N>>,
+    P: Pin<N>,
 {
     type Error = core::convert::Infallible;
 
     /// Read an ADC value from an AnalogInput.
-    fn read(
-        &mut self,
-        _pin: &mut AnalogInput<iomuxc::consts::Const<N>, P>,
-    ) -> nb::Result<W, Self::Error> {
+    fn read(&mut self, _pin: &mut AnalogInput<P, N>) -> nb::Result<W, Self::Error> {
         Ok(Adc::<N>::read_blocking(self, _pin).into())
+    }
+}
+
+/// Adapter for using an ADC input as a DMA source.
+pub struct DmaSource<P, const N: u8> {
+    adc: Adc<N>,
+    _pin: AnalogInput<P, N>,
+}
+
+impl<P, const N: u8> DmaSource<P, N> {
+    /// Create a new DMA source object for a DMA transfer.
+    pub fn new(adc: Adc<N>, pin: AnalogInput<P, N>) -> Self
+    where
+        P: Pin<N>,
+    {
+        Self { adc, _pin: pin }
+    }
+
+    pub(crate) fn r0(&self) -> *const ral::RORegister<u32> {
+        core::ptr::addr_of!(self.adc.reg.R0)
+    }
+
+    pub(crate) fn enable_dma(&mut self)
+    where
+        P: Pin<N>,
+    {
+        let channel = <P as Pin<N>>::INPUT;
+        ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 1, DMAEN: 1);
+        ral::modify_reg!(ral::adc, self.adc.reg, HC0, |_| channel);
+    }
+
+    pub(crate) fn disable_dma(&mut self) {
+        ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 0, DMAEN: 0);
     }
 }
 
