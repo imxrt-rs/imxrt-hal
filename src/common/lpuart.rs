@@ -76,53 +76,6 @@ where
     pub rx: RX,
 }
 
-/// A type-erased LPUART peripheral.
-///
-/// Downcast a strongly-typed [`Lpuart`] to acquire this type.
-///
-/// ```no_run
-/// use imxrt_hal as hal;
-/// use imxrt_ral as ral;
-///
-/// use hal::lpuart::{AnyLpuart, Lpuart};
-/// use ral::lpuart::LPUART2;
-///
-/// let lpuart: Lpuart<(), 2> = Lpuart::without_pins(
-///     unsafe { LPUART2::instance() }
-/// );
-///
-/// let lpuart: AnyLpuart = lpuart.into_any();
-/// ```
-///
-/// Note that [`Lpuart`] dereferences to this type, so you can
-/// temporarily reduce type information without losing the
-/// strongly-typed peripheral.
-///
-/// ```no_run
-/// # use imxrt_hal as hal;
-/// # use imxrt_ral as ral;
-/// # use hal::lpuart::{AnyLpuart, Lpuart};
-/// # use ral::lpuart::LPUART2;
-/// let mut lpuart: Lpuart<(), 2> = Lpuart::without_pins(
-///     unsafe { LPUART2::instance() }
-/// );
-///
-/// fn use_lpuart(lpuart: &mut AnyLpuart) { /* ... */ }
-/// use_lpuart(&mut lpuart);
-///
-/// fn similar_longer<P, const N: u8>(lpuart: &mut Lpuart<P, N>) { /* ... */ }
-/// similar_longer(&mut lpuart);
-/// ```
-#[repr(transparent)]
-pub struct AnyLpuart {
-    lpuart: &'static ral::lpuart::RegisterBlock,
-}
-
-// Safety: OK to send AnyLpuart across execution contexts.
-// It "owns" the static reference, and nothing in that static
-// reference will become invalid after the send.
-unsafe impl Send for AnyLpuart {}
-
 /// LPUART peripheral.
 ///
 /// `Lpuart` lets you configure the LPUART peripheral, and perform I/O.
@@ -132,7 +85,7 @@ unsafe impl Send for AnyLpuart {}
 /// DMA transfers as futures.
 pub struct Lpuart<P, const N: u8> {
     pins: P,
-    lpuart: AnyLpuart,
+    pub(crate) lpuart: Instance<N>,
 }
 
 /// Serial direction.
@@ -158,39 +111,25 @@ where
     pub fn new(lpuart: Instance<N>, mut pins: Pins<TX, RX>) -> Self {
         iomuxc::lpuart::prepare(&mut pins.tx);
         iomuxc::lpuart::prepare(&mut pins.rx);
-        Self::init(lpuart, pins)
-    }
-}
-
-impl<const N: u8> Lpuart<(), N> {
-    /// Create a new LPUART peripheral from its peripheral registers
-    /// without initializing pins.
-    ///
-    /// When this call returns, the peripheral is reset, and the TX
-    /// and RX halves are enabled. The implementation cannot prepare
-    /// any hardware pins, so you'll need to do that yourself.
-    pub fn without_pins(lpuart: Instance<N>) -> Self {
-        Self::init(lpuart, ())
+        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 1);
+        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 0);
+        ral::modify_reg!(ral::lpuart, lpuart, CTRL, TE: TE_1, RE: RE_1);
+        Self { pins, lpuart }
     }
 }
 
 impl<P, const N: u8> Lpuart<P, N> {
     pub const N: u8 = N;
 
-    fn init(lpuart: Instance<N>, pins: P) -> Self {
-        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 1);
-        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 0);
-        ral::modify_reg!(ral::lpuart, lpuart, CTRL, TE: TE_1, RE: RE_1);
-        let lpuart = AnyLpuart::new(lpuart);
-        Self { pins, lpuart }
+    /// Resets all internal logic and registers.
+    pub fn reset(&mut self) {
+        ral::write_reg!(ral::lpuart, self.lpuart, GLOBAL, RST: 1);
+        ral::write_reg!(ral::lpuart, self.lpuart, GLOBAL, RST: 0);
     }
 
     /// Release all components of the LPUART peripheral.
     pub fn release(self) -> (Instance<N>, P) {
-        // Safety: pointer points to static data. The pointer
-        // came from the instance N that's attached to our type,
-        // so we're not accidentally changing N to M.
-        (unsafe { Instance::new(self.lpuart.lpuart) }, self.pins)
+        (self.lpuart, self.pins)
     }
 
     /// Borrow the LPUART pins.
@@ -203,51 +142,13 @@ impl<P, const N: u8> Lpuart<P, N> {
         &mut self.pins
     }
 
-    /// Discard type instance and pins, and acquire the handle to
-    /// the underlying [`AnyLpuart`] instance.
-    ///
-    /// Note that you cannot release the `AnyLpuart` instance to
-    /// acquire its parts (pins, register block) after you have an
-    /// `AnyLpuart`.
-    pub fn into_any(self) -> AnyLpuart {
-        self.lpuart
-    }
-}
-
-impl<P, const N: u8> core::ops::Deref for Lpuart<P, N> {
-    type Target = AnyLpuart;
-    fn deref(&self) -> &Self::Target {
-        &self.lpuart
-    }
-}
-
-impl<P, const N: u8> core::ops::DerefMut for Lpuart<P, N> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.lpuart
-    }
-}
-
-impl AnyLpuart {
-    fn new<const N: u8>(lpuart: ral::lpuart::Instance<N>) -> Self {
-        let any: &'_ ral::lpuart::RegisterBlock = &*lpuart;
-        // Safety: reference is truly static.
-        let any: &'static _ = unsafe { core::mem::transmute(any) };
-        Self { lpuart: any }
-    }
-
-    /// Resets all internal logic and registers.
-    pub fn reset(&mut self) {
-        ral::write_reg!(ral::lpuart, self.lpuart, GLOBAL, RST: 1);
-        ral::write_reg!(ral::lpuart, self.lpuart, GLOBAL, RST: 0);
-    }
-
     /// Temporarily disable the LPUART peripheral.
     ///
     /// The handle to a [`Disabled`](crate::lpuart::Disabled) driver lets you modify
     /// LPUART settings that require a fully disabled peripheral. This will flush
     /// TX and RX buffers.
-    pub fn disable<R>(&mut self, func: impl FnOnce(&mut Disabled) -> R) -> R {
-        let mut disabled = Disabled::new(self.lpuart);
+    pub fn disable<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
+        let mut disabled = Disabled::new(&self.lpuart);
         func(&mut disabled)
     }
 
@@ -347,7 +248,7 @@ impl AnyLpuart {
     /// This does not flush anything that's already in the transmit or receive register.
     #[inline]
     pub fn flush_fifo(&mut self, direction: Direction) {
-        flush_fifo(self.lpuart, direction);
+        flush_fifo(&self.lpuart, direction);
     }
 
     /// Return the interrupt flags.
@@ -384,16 +285,9 @@ impl AnyLpuart {
             ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 0);
         }
     }
-
-    /// Return the instance number for this LPUART.
-    ///
-    /// This returns '2' if the `AnyLpuart` adapts LPUART2.
-    pub fn instance_number(&self) -> u8 {
-        ral::lpuart::number(self.lpuart).unwrap()
-    }
 }
 
-fn flush_fifo(lpuart: &ral::lpuart::RegisterBlock, direction: Direction) {
+fn flush_fifo<const N: u8>(lpuart: &Instance<N>, direction: Direction) {
     match direction {
         Direction::Rx => ral::modify_reg!(ral::lpuart, lpuart, FIFO, RXFLUSH: RXFLUSH_1),
         Direction::Tx => ral::modify_reg!(ral::lpuart, lpuart, FIFO, TXFLUSH: TXFLUSH_1),
@@ -404,20 +298,20 @@ fn flush_fifo(lpuart: &ral::lpuart::RegisterBlock, direction: Direction) {
 ///
 /// The disabled peripheral lets you changed
 /// settings that require a disabled peripheral.
-pub struct Disabled<'a> {
-    lpuart: &'a ral::lpuart::RegisterBlock,
+pub struct Disabled<'a, const N: u8> {
+    lpuart: &'a Instance<N>,
     te: bool,
     re: bool,
 }
 
-impl Drop for Disabled<'_> {
+impl<const N: u8> Drop for Disabled<'_, N> {
     fn drop(&mut self) {
         ral::modify_reg!(ral::lpuart, self.lpuart, CTRL, TE: self.te as u32, RE: self.re as u32);
     }
 }
 
-impl<'a> Disabled<'a> {
-    fn new(lpuart: &'a ral::lpuart::RegisterBlock) -> Self {
+impl<'a, const N: u8> Disabled<'a, N> {
+    fn new(lpuart: &'a Instance<N>) -> Self {
         let (te, re) = ral::read_reg!(ral::lpuart, lpuart, CTRL, TE, RE);
         ral::modify_reg!(ral::lpuart, lpuart, CTRL, TE: TE_0, RE: RE_0);
         for direction in [Direction::Rx, Direction::Tx] {
@@ -631,7 +525,7 @@ impl Baud {
 /// Parity bit selection.
 ///
 /// See [`Disabled::set_parity`](crate::lpuart::Disabled::set_parity) and
-/// [`parity`](crate::lpuart::AnyLpuart::parity) for more information.
+/// [`Lpuart::parity`](crate::lpuart::Lpuart::parity) for more information.
 /// Consider using the associated constants to quickly specify
 /// parity bits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -913,13 +807,7 @@ impl Watermark {
     }
 }
 
-impl<P, const N: u8> From<Lpuart<P, N>> for AnyLpuart {
-    fn from(lpuart: Lpuart<P, N>) -> Self {
-        lpuart.into_any()
-    }
-}
-
-impl eh1::serial::nb::Write<u8> for AnyLpuart {
+impl<P, const N: u8> eh1::serial::nb::Write<u8> for Lpuart<P, N> {
     type Error = core::convert::Infallible;
 
     fn write(&mut self, word: u8) -> eh1::nb::Result<(), Self::Error> {
@@ -937,19 +825,7 @@ impl eh1::serial::nb::Write<u8> for AnyLpuart {
     }
 }
 
-impl<P, const N: u8> eh1::serial::nb::Write<u8> for Lpuart<P, N> {
-    type Error = <AnyLpuart as eh1::serial::nb::Write<u8>>::Error;
-
-    fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
-        <AnyLpuart as eh1::serial::nb::Write<u8>>::write(self, word)
-    }
-
-    fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        <AnyLpuart as eh1::serial::nb::Write<u8>>::flush(self)
-    }
-}
-
-impl eh02::serial::Write<u8> for AnyLpuart {
+impl<P, const N: u8> eh02::serial::Write<u8> for Lpuart<P, N> {
     type Error = core::convert::Infallible;
 
     fn write(&mut self, word: u8) -> eh1::nb::Result<(), Self::Error> {
@@ -961,19 +837,7 @@ impl eh02::serial::Write<u8> for AnyLpuart {
     }
 }
 
-impl<P, const N: u8> eh02::serial::Write<u8> for Lpuart<P, N> {
-    type Error = <AnyLpuart as eh02::serial::Write<u8>>::Error;
-
-    fn write(&mut self, word: u8) -> eh1::nb::Result<(), Self::Error> {
-        <AnyLpuart as eh02::serial::Write<u8>>::write(self, word)
-    }
-
-    fn flush(&mut self) -> eh1::nb::Result<(), Self::Error> {
-        <AnyLpuart as eh02::serial::Write<u8>>::flush(self)
-    }
-}
-
-impl eh1::serial::nb::Read<u8> for AnyLpuart {
+impl<P, const N: u8> eh1::serial::nb::Read<u8> for Lpuart<P, N> {
     type Error = ReadFlags;
 
     fn read(&mut self) -> eh1::nb::Result<u8, Self::Error> {
@@ -992,15 +856,7 @@ impl eh1::serial::nb::Read<u8> for AnyLpuart {
     }
 }
 
-impl<P, const N: u8> eh1::serial::nb::Read<u8> for Lpuart<P, N> {
-    type Error = <AnyLpuart as eh1::serial::nb::Read<u8>>::Error;
-
-    fn read(&mut self) -> nb::Result<u8, Self::Error> {
-        <AnyLpuart as eh1::serial::nb::Read<u8>>::read(self)
-    }
-}
-
-impl eh02::serial::Read<u8> for AnyLpuart {
+impl<P, const N: u8> eh02::serial::Read<u8> for Lpuart<P, N> {
     type Error = ReadFlags;
 
     fn read(&mut self) -> eh1::nb::Result<u8, Self::Error> {
@@ -1008,15 +864,7 @@ impl eh02::serial::Read<u8> for AnyLpuart {
     }
 }
 
-impl<P, const N: u8> eh02::serial::Read<u8> for Lpuart<P, N> {
-    type Error = <AnyLpuart as eh02::serial::Read<u8>>::Error;
-
-    fn read(&mut self) -> nb::Result<u8, Self::Error> {
-        <AnyLpuart as eh02::serial::Read<u8>>::read(self)
-    }
-}
-
-impl eh1::serial::blocking::Write<u8> for AnyLpuart {
+impl<P, const N: u8> eh1::serial::blocking::Write<u8> for Lpuart<P, N> {
     type Error = core::convert::Infallible;
 
     fn write(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
@@ -1033,19 +881,7 @@ impl eh1::serial::blocking::Write<u8> for AnyLpuart {
     }
 }
 
-impl<P, const N: u8> eh1::serial::blocking::Write<u8> for Lpuart<P, N> {
-    type Error = <AnyLpuart as eh1::serial::blocking::Write<u8>>::Error;
-
-    fn write(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
-        <AnyLpuart as eh1::serial::blocking::Write<u8>>::write(self, buffer)
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        <AnyLpuart as eh1::serial::blocking::Write<u8>>::flush(self)
-    }
-}
-
-impl eh02::blocking::serial::Write<u8> for AnyLpuart {
+impl<P, const N: u8> eh02::blocking::serial::Write<u8> for Lpuart<P, N> {
     type Error = core::convert::Infallible;
 
     fn bwrite_all(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
@@ -1054,18 +890,6 @@ impl eh02::blocking::serial::Write<u8> for AnyLpuart {
 
     fn bflush(&mut self) -> Result<(), Self::Error> {
         eh1::serial::blocking::Write::<u8>::flush(self)
-    }
-}
-
-impl<P, const N: u8> eh02::blocking::serial::Write<u8> for Lpuart<P, N> {
-    type Error = <AnyLpuart as eh02::blocking::serial::Write<u8>>::Error;
-
-    fn bwrite_all(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
-        <AnyLpuart as eh02::blocking::serial::Write<u8>>::bwrite_all(self, buffer)
-    }
-
-    fn bflush(&mut self) -> Result<(), Self::Error> {
-        <AnyLpuart as eh02::blocking::serial::Write<u8>>::bflush(self)
     }
 }
 

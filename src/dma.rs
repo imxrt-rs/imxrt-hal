@@ -63,9 +63,9 @@ use mappings::*;
 // LPUART
 use crate::lpuart;
 
-unsafe impl peripheral::Destination<u8> for lpuart::AnyLpuart {
+unsafe impl<P, const N: u8> peripheral::Destination<u8> for lpuart::Lpuart<P, N> {
     fn destination_signal(&self) -> u32 {
-        LPUART_DMA_TX_MAPPING[self.instance_number() as usize - 1]
+        LPUART_DMA_TX_MAPPING[N as usize - 1]
     }
     fn destination_address(&self) -> *const u8 {
         self.data().cast()
@@ -78,9 +78,9 @@ unsafe impl peripheral::Destination<u8> for lpuart::AnyLpuart {
     }
 }
 
-unsafe impl peripheral::Source<u8> for lpuart::AnyLpuart {
+unsafe impl<P, const N: u8> peripheral::Source<u8> for lpuart::Lpuart<P, N> {
     fn source_signal(&self) -> u32 {
-        LPUART_DMA_RX_MAPPING[self.instance_number() as usize - 1]
+        LPUART_DMA_RX_MAPPING[N as usize - 1]
     }
     fn source_address(&self) -> *const u8 {
         self.data().cast()
@@ -93,7 +93,7 @@ unsafe impl peripheral::Source<u8> for lpuart::AnyLpuart {
     }
 }
 
-impl lpuart::AnyLpuart {
+impl<P, const N: u8> lpuart::Lpuart<P, N> {
     /// Use a DMA channel to write data to the UART peripheral
     ///
     /// Completes when all data in `buffer` has been written to the UART
