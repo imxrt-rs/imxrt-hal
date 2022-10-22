@@ -15,7 +15,7 @@ use imxrt_rt as _;
 
 mod ral_shim;
 
-pub use ral_shim::{BOARD_DMA_A_INDEX, NVIC_PRIO_BITS};
+pub use ral_shim::{BOARD_DMA_A_INDEX, BOARD_DMA_B_INDEX, NVIC_PRIO_BITS};
 
 #[cfg(board = "imxrt1010evk")]
 #[path = "imxrt1010evk.rs"]
@@ -180,10 +180,55 @@ mod board_interrupts {
         pub fn BOARD_SPI();
         pub fn BOARD_PWM();
         pub fn BOARD_DMA_A();
+        pub fn BOARD_DMA_B();
         pub fn BOARD_PIT();
         pub fn BOARD_GPT1();
         pub fn BOARD_GPT2();
         pub fn BOARD_USB1();
         pub fn BOARD_SWTASK0();
+    }
+}
+
+/// A simple blocking executor for async hardware examples.
+pub mod blocking {
+    use core::{future::Future, pin::Pin, task::Poll};
+
+    /// Poll a future with a dummy waker.
+    ///
+    /// Use `poll_no_wake` when you want to drive a future to completion, but you
+    /// don't care about the future waking an executor. It may be used to initiate
+    /// a DMA transfer that will later be awaited with [`block`].
+    ///
+    /// Do not use `poll_no_wake` if you want an executor to be woken when the DMA
+    /// transfer completes.
+    fn poll_no_wake<F>(future: Pin<&mut F>) -> Poll<F::Output>
+    where
+        F: Future,
+    {
+        use core::task::{Context, RawWaker, RawWakerVTable, Waker};
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(|_| RAW_WAKER, |_| {}, |_| {}, |_| {});
+
+        const RAW_WAKER: RawWaker = RawWaker::new(core::ptr::null(), &VTABLE);
+        // Safety: raw waker meets documented requirements.
+        let waker = unsafe { Waker::from_raw(RAW_WAKER) };
+        let mut context = Context::from_waker(&waker);
+        future.poll(&mut context)
+    }
+
+    /// Block until the future returns a result.
+    ///
+    /// `block` invokes [`poll_no_wake`] in a loop until the future
+    /// returns a result. Consider using `block` after starting a transfer
+    /// with `poll_no_wake`, and after doing other work.
+    pub fn run<F>(mut future: Pin<&mut F>) -> F::Output
+    where
+        F: Future,
+    {
+        loop {
+            match poll_no_wake(future.as_mut()) {
+                Poll::Ready(result) => return result,
+                Poll::Pending => {}
+            }
+        }
     }
 }

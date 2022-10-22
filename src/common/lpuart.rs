@@ -23,7 +23,7 @@
 //! use imxrt_ral as ral;
 //! # use imxrt_iomuxc::imxrt1060 as iomuxc;
 //!
-//! # fn opt() -> Option<()> {
+//! # async fn opt() -> Option<()> {
 //! let (gpio_ad_b1_02, gpio_ad_b1_03) = // Handle to LPUART2 TX and RX pins...
 //!     # unsafe { (iomuxc::gpio_ad_b1::GPIO_AD_B1_02::new(), iomuxc::gpio_ad_b1::GPIO_AD_B1_03::new()) };
 //! # const UART_CLKC_HZ: u32 = 1;
@@ -49,15 +49,8 @@
 //! // Schedule a DMA receive...
 //! # let mut dma_channel = unsafe { hal::dma::channel::Channel::new(13) };
 //! let mut buffer = [0u8; 64];
-//! let rx = lpuart2.dma_read(&mut dma_channel, &mut buffer);
-//! pin_utils::pin_mut!(rx);
-//! let poll = hal::dma::poll_no_wake(rx.as_mut());
-//! assert!(poll.is_pending());
-//!
-//! // Some time later...
-//!
-//! let result = hal::dma::block(rx);
-//! assert!(result.is_ok());
+//! lpuart2.dma_read(&mut dma_channel, &mut buffer)
+//!     .await.ok()?;
 //! # Some(()) }
 //! ```
 

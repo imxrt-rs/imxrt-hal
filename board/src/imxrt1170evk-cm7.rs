@@ -93,6 +93,7 @@ pub mod interrupt {
 
     pub const BOARD_CONSOLE: Interrupt = Interrupt::LPUART1;
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7_DMA23;
+    pub const BOARD_DMA_B: Interrupt = Interrupt::DMA11_DMA27;
     pub const BOARD_PIT: Interrupt = Interrupt::PIT1;
     pub const BOARD_GPT1: Interrupt = Interrupt::GPT1;
     pub const BOARD_GPT2: Interrupt = Interrupt::GPT2;
@@ -102,6 +103,7 @@ pub mod interrupt {
     pub const INTERRUPTS: &[(Interrupt, syms::Vector)] = &[
         (BOARD_CONSOLE, syms::BOARD_CONSOLE),
         (BOARD_DMA_A, syms::BOARD_DMA_A),
+        (BOARD_DMA_B, syms::BOARD_DMA_B),
         (BOARD_PIT, syms::BOARD_PIT),
         (BOARD_GPT1, syms::BOARD_GPT1),
         (BOARD_GPT2, syms::BOARD_GPT2),

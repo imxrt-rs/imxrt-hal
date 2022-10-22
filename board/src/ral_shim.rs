@@ -20,6 +20,9 @@ pub use imxrt_ral::NVIC_PRIO_BITS;
 /// Use this symbol to access the 'DMA_A' channel in the
 /// collection of all DMA channels.
 pub const BOARD_DMA_A_INDEX: usize = 7;
+/// Use this symbol to access the 'DMA_B' channel in the
+/// collection of all DMA channels.
+pub const BOARD_DMA_B_INDEX: usize = 11;
 
 /// Insert shim vectors into the vector table.
 ///

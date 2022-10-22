@@ -127,6 +127,10 @@ defmt = "0.3"
 imxrt-log = { path = "logging" }
 
 [[example]]
+name = "async_dma_spi"
+required-features = ["board/spi"]
+
+[[example]]
 name = "hal_spi"
 required-features = ["board/spi"]
 

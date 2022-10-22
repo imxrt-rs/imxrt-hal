@@ -162,8 +162,7 @@ pub mod ccm {
 /// Methods that use DMA are typically prefixed with `dma`.
 ///
 /// DMA transfers are modeled as futures. The examples below demonstrate a simple way
-/// to start a transfer, then block until completion. But, since these are futures, you
-/// may use these futures in `async` code.
+/// to start a transfer. Since these are futures, you may use these futures in `async` code.
 ///
 /// # DMA channels
 ///
@@ -201,6 +200,7 @@ pub mod ccm {
 /// perform a memory-to-memory transfer.
 ///
 /// ```no_run
+/// # async fn a() -> Option<()> {
 /// # use imxrt_hal as hal;
 /// # use imxrt_ral as ral;
 /// # let mut channel = unsafe { hal::dma::channel::Channel::new(13) };
@@ -208,16 +208,8 @@ pub mod ccm {
 /// let mut destination = [0u32; 4];
 ///
 /// let memcpy = hal::dma::memcpy::memcpy(&source, &mut destination, &mut channel);
-/// pin_utils::pin_mut!(memcpy);
-/// // This poll call begins the transfer.
-/// let poll = hal::dma::poll_no_wake(memcpy.as_mut());
-/// assert!(poll.is_pending());
-///
-/// // Do other work here while the transfer happens...
-///
-/// // Wait for the copy to complete.
-/// let result = hal::dma::block(memcpy);
-/// assert!(result.is_ok());
+/// memcpy.await.ok()?;
+/// # Some(()) }
 /// ```
 ///
 /// For examples of using DMA with a peripheral, see the peripheral's documentation.
