@@ -100,22 +100,22 @@ impl<P, const N: u8> lpuart::Lpuart<P, N> {
     ///
     /// Completes when all data in `buffer` has been written to the UART
     /// peripheral.
-    pub fn dma_write<'dst, 'chan, 'buf>(
-        &'dst mut self,
-        channel: &'chan mut Channel,
-        buffer: &'buf [u8],
-    ) -> peripheral::Tx<'dst, 'chan, 'buf, Self, u8> {
+    pub fn dma_write<'a>(
+        &'a mut self,
+        channel: &'a mut Channel,
+        buffer: &'a [u8],
+    ) -> peripheral::Tx<'a, Self, u8> {
         peripheral::transfer(channel, buffer, self)
     }
 
     /// Use a DMA channel to read data from the UART peripheral
     ///
     /// Completes when `buffer` is filled.
-    pub fn dma_read<'src, 'chan, 'buf>(
-        &'src mut self,
-        channel: &'chan mut Channel,
-        buffer: &'buf mut [u8],
-    ) -> peripheral::Rx<'src, 'chan, 'buf, Self, u8> {
+    pub fn dma_read<'a>(
+        &'a mut self,
+        channel: &'a mut Channel,
+        buffer: &'a mut [u8],
+    ) -> peripheral::Rx<'a, Self, u8> {
         peripheral::receive(channel, self, buffer)
     }
 }

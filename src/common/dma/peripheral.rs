@@ -88,18 +88,18 @@ pub unsafe trait Destination<E: Element> {
 /// A DMA transfer that receives data from hardware
 ///
 /// See [`receive`](super::peripheral::receive) to construct an `Rx`.
-pub struct Rx<'src, 'chan, 'buf, S, E>
+pub struct Rx<'r, S, E>
 where
     S: Source<E>,
     E: Element,
 {
-    channel: &'chan Channel,
-    source: &'src mut S,
-    transfer: Transfer<'chan>,
-    _elem: PhantomData<&'buf mut E>,
+    channel: &'r Channel,
+    source: &'r mut S,
+    transfer: Transfer<'r>,
+    _elem: PhantomData<&'r mut E>,
 }
 
-impl<S, E> Future for Rx<'_, '_, '_, S, E>
+impl<S, E> Future for Rx<'_, S, E>
 where
     S: Source<E>,
     E: Element,
@@ -111,7 +111,7 @@ where
     }
 }
 
-impl<S, E> Drop for Rx<'_, '_, '_, S, E>
+impl<S, E> Drop for Rx<'_, S, E>
 where
     S: Source<E>,
     E: Element,
@@ -147,11 +147,11 @@ where
 }
 
 /// Use a DMA channel to receive a `buffer` of elements from the source peripheral
-pub fn receive<'src, 'chan, 'buf, S, E>(
-    channel: &'chan mut Channel,
-    source: &'src mut S,
-    buffer: &'buf mut [E],
-) -> Rx<'src, 'chan, 'buf, S, E>
+pub fn receive<'r, S, E>(
+    channel: &'r mut Channel,
+    source: &'r mut S,
+    buffer: &'r mut [E],
+) -> Rx<'r, S, E>
 where
     S: Source<E>,
     E: Element,
@@ -169,18 +169,18 @@ where
 /// A DMA transfer that sends data to hardware
 ///
 /// See [`transfer`](super::peripheral::transfer) to create a `Tx`.
-pub struct Tx<'dst, 'chan, 'buf, D, E>
+pub struct Tx<'t, D, E>
 where
     D: Destination<E>,
     E: Element,
 {
-    channel: &'chan Channel,
-    destination: &'dst mut D,
-    transfer: Transfer<'chan>,
-    _elem: PhantomData<&'buf E>,
+    channel: &'t Channel,
+    destination: &'t mut D,
+    transfer: Transfer<'t>,
+    _elem: PhantomData<&'t E>,
 }
 
-impl<D, E> Future for Tx<'_, '_, '_, D, E>
+impl<D, E> Future for Tx<'_, D, E>
 where
     D: Destination<E>,
     E: Element,
@@ -192,7 +192,7 @@ where
     }
 }
 
-impl<D, E> Drop for Tx<'_, '_, '_, D, E>
+impl<D, E> Drop for Tx<'_, D, E>
 where
     D: Destination<E>,
     E: Element,
@@ -227,11 +227,11 @@ where
 }
 
 /// Use a DMA channel to send a `buffer` of data to the destination peripheral
-pub fn transfer<'dst, 'chan, 'buf, D, E>(
-    channel: &'chan mut Channel,
-    buffer: &'buf [E],
-    destination: &'dst mut D,
-) -> Tx<'dst, 'chan, 'buf, D, E>
+pub fn transfer<'t, D, E>(
+    channel: &'t mut Channel,
+    buffer: &'t [E],
+    destination: &'t mut D,
+) -> Tx<'t, D, E>
 where
     D: Destination<E>,
     E: Element,
@@ -279,7 +279,7 @@ where
     _elem: PhantomData<E>,
 }
 
-/// Perform a full-suplex DMA transfer using two DMA channels
+/// Perform a full-duplex DMA transfer using two DMA channels
 /// that read and write from a single buffer.
 pub fn full_duplex<'a, P, E>(
     rx_channel: &'a mut Channel,
