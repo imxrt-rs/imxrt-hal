@@ -6,7 +6,7 @@ edition = "2021"
 publish = false
 
 [dependencies.imxrt-hal]
-path = ".."
+workspace = true
 
 [dependencies.imxrt-iomuxc]
 workspace = true

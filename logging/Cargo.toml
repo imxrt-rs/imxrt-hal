@@ -30,7 +30,7 @@ version = "0.1"
 
 [dependencies.imxrt-hal]
 optional = true
-path = ".."
+workspace = true
 
 [dependencies.imxrt-usbd]
 optional = true

@@ -85,6 +85,7 @@ members = [
 
 [workspace.dependencies]
 imxrt-iomuxc = "0.2"
+imxrt-hal = { path = "." }
 imxrt-ral = "0.5"
 imxrt-rt = "0.1"
 imxrt-usbd = "0.1"
