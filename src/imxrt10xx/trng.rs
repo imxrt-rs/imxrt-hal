@@ -383,6 +383,27 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "eh02-unproven")]
+impl eh02::blocking::rng::Read for Trng {
+    type Error = Error;
+    // e-h RNG Read is a *blocking* trait, so no WouldBlock here
+    // Read is part of the unproven API and will be removed in version 1.0
+
+    fn read(&mut self, buffer: &mut [u8]) -> Result<(), Self::Error> {
+        let mut data = [0; 4];
+        let mut index = 4;
+        for b in buffer.iter_mut() {
+            if index == 4 {
+                data = nb::block!(self.next_u32())?.to_be_bytes();
+                index = 0;
+            }
+            *b = data[index];
+            index += 1;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::RetryCount;
