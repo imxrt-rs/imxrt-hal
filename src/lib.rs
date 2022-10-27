@@ -322,3 +322,5 @@ pub use chip::trng;
 
 #[cfg(family = "imxrt11xx")]
 pub use chip::usbphy;
+
+pub mod timer;

@@ -21,6 +21,14 @@ version = "1.0"
 [dependencies.bitflags]
 version = "1.2"
 
+[dependencies.fugit]
+version = "0.3"
+
+# For EH02 CountDown.
+[dependencies.void]
+version = "1"
+default-features = false
+
 [dependencies.nb]
 version = "1"
 
