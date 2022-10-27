@@ -822,51 +822,20 @@ impl Watermark {
     }
 }
 
-impl<P, const N: u8> eh1::serial::nb::Write<u8> for Lpuart<P, N> {
+impl<P, const N: u8> eh02::serial::Write<u8> for Lpuart<P, N> {
     type Error = core::convert::Infallible;
 
-    fn write(&mut self, word: u8) -> eh1::nb::Result<(), Self::Error> {
+    fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         self.flush()?;
         self.write_byte(word);
         Ok(())
     }
 
-    fn flush(&mut self) -> eh1::nb::Result<(), Self::Error> {
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
         if !self.status().contains(Status::TDRE) {
-            Err(eh1::nb::Error::WouldBlock)
+            Err(nb::Error::WouldBlock)
         } else {
             Ok(())
-        }
-    }
-}
-
-impl<P, const N: u8> eh02::serial::Write<u8> for Lpuart<P, N> {
-    type Error = core::convert::Infallible;
-
-    fn write(&mut self, word: u8) -> eh1::nb::Result<(), Self::Error> {
-        eh1::serial::nb::Write::<u8>::write(self, word)
-    }
-
-    fn flush(&mut self) -> eh1::nb::Result<(), Self::Error> {
-        eh1::serial::nb::Write::<u8>::flush(self)
-    }
-}
-
-impl<P, const N: u8> eh1::serial::nb::Read<u8> for Lpuart<P, N> {
-    type Error = ReadFlags;
-
-    fn read(&mut self) -> eh1::nb::Result<u8, Self::Error> {
-        let data = self.read_data();
-        self.clear_status(Status::W1C);
-        if data.flags().contains(ReadFlags::RXEMPT) {
-            Err(eh1::nb::Error::WouldBlock)
-        } else if data
-            .flags()
-            .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
-        {
-            Err(eh1::nb::Error::Other(data.flags()))
-        } else {
-            Ok(data.into())
         }
     }
 }
@@ -874,25 +843,19 @@ impl<P, const N: u8> eh1::serial::nb::Read<u8> for Lpuart<P, N> {
 impl<P, const N: u8> eh02::serial::Read<u8> for Lpuart<P, N> {
     type Error = ReadFlags;
 
-    fn read(&mut self) -> eh1::nb::Result<u8, Self::Error> {
-        eh1::serial::nb::Read::<u8>::read(self)
-    }
-}
-
-impl<P, const N: u8> eh1::serial::blocking::Write<u8> for Lpuart<P, N> {
-    type Error = core::convert::Infallible;
-
-    fn write(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
-        for word in buffer {
-            eh1::nb::block!(eh1::serial::nb::Write::write(self, *word))?;
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
+        let data = self.read_data();
+        self.clear_status(Status::W1C);
+        if data.flags().contains(ReadFlags::RXEMPT) {
+            Err(nb::Error::WouldBlock)
+        } else if data
+            .flags()
+            .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
+        {
+            Err(nb::Error::Other(data.flags()))
+        } else {
+            Ok(data.into())
         }
-
-        Ok(())
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        eh1::nb::block!(eh1::serial::nb::Write::flush(self))?;
-        Ok(())
     }
 }
 
@@ -900,11 +863,16 @@ impl<P, const N: u8> eh02::blocking::serial::Write<u8> for Lpuart<P, N> {
     type Error = core::convert::Infallible;
 
     fn bwrite_all(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
-        eh1::serial::blocking::Write::<u8>::write(self, buffer)
+        for word in buffer {
+            nb::block!(eh02::serial::Write::write(self, *word))?;
+        }
+
+        Ok(())
     }
 
     fn bflush(&mut self) -> Result<(), Self::Error> {
-        eh1::serial::blocking::Write::<u8>::flush(self)
+        nb::block!(eh02::serial::Write::flush(self))?;
+        Ok(())
     }
 }
 

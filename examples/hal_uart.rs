@@ -7,11 +7,9 @@
 #![no_main]
 #![no_std]
 
-use eh1 as embedded_hal;
-
-use embedded_hal::serial::{
-    blocking::Write,
-    nb::{Read, Write as NbWrite},
+use eh02::{
+    blocking::serial::Write,
+    serial::{Read, Write as NbWrite},
 };
 
 /// Change me to affect the kind of serial writes
@@ -30,12 +28,12 @@ fn main() -> ! {
     ) = board::new();
     loop {
         led.toggle();
-        let byte = embedded_hal::nb::block!(console.read()).unwrap();
+        let byte = nb::block!(console.read()).unwrap();
         if ECHO_RESPONSE_SIZE == 0 {
-            embedded_hal::nb::block!(NbWrite::write(&mut console, byte)).unwrap();
+            nb::block!(NbWrite::write(&mut console, byte)).unwrap();
         } else {
             let response: [u8; ECHO_RESPONSE_SIZE] = [byte; ECHO_RESPONSE_SIZE];
-            Write::write(&mut console, &response).unwrap();
+            console.bwrite_all(&response).unwrap();
         }
     }
 }

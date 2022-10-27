@@ -14,9 +14,7 @@ use imxrt_hal as hal;
 use imxrt_ral as ral;
 use ral::ccm::CCM;
 
-use eh1 as embedded_hal;
-
-use embedded_hal::serial::{blocking::Write as _, nb::Read};
+use eh02::{blocking::serial::Write as _, serial::Read};
 
 use core::fmt::{self, Write as _};
 
@@ -97,11 +95,11 @@ impl fmt::Write for Writer {
         let mut at_linefeed = false;
         for line in msg.split('\n') {
             if at_linefeed {
-                self.0.write(b"\r\n").unwrap();
+                self.0.bwrite_all(b"\r\n").unwrap();
             }
             let bytes = line.as_bytes();
             if !bytes.is_empty() {
-                self.0.write(bytes).unwrap();
+                self.0.bwrite_all(bytes).unwrap();
             }
             at_linefeed = true;
         }
@@ -210,7 +208,7 @@ fn main() -> ! {
     led.clear();
 
     loop {
-        match embedded_hal::nb::block!(runner.context.writer.0.read()) {
+        match nb::block!(runner.context.writer.0.read()) {
             Err(_) => break,
             Ok(byte) => runner.input_byte(byte),
         }
