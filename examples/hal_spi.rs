@@ -10,11 +10,9 @@
 
 use imxrt_hal as hal;
 
-use eh1 as embedded_hal;
-
-use embedded_hal::{
-    serial::blocking::Write as _,
-    spi::blocking::{Transfer, Write},
+use eh02::{
+    blocking::serial::Write as _,
+    blocking::spi::{Transfer, Write},
 };
 use hal::lpspi::LpspiMasterError;
 
@@ -25,23 +23,23 @@ const GPT1_OCR: hal::gpt::OutputCompareRegister = hal::gpt::OutputCompareRegiste
 /// Valid types: u8, u16, u32.
 type Elem = u8;
 
-fn write_error(console: &mut board::Console, result: Result<(), LpspiMasterError>) {
+fn write_error<T>(console: &mut board::Console, result: Result<T, LpspiMasterError>) {
     use hal::lpspi::Direction;
     match result {
         Err(LpspiMasterError::Busy) => {
-            console.write(b"Error: BUSY\r\n").ok();
+            console.bwrite_all(b"Error: BUSY\r\n").ok();
         }
         Err(LpspiMasterError::Fifo(Direction::Rx)) => {
-            console.write(b"Error: RX FIFO\r\n").ok();
+            console.bwrite_all(b"Error: RX FIFO\r\n").ok();
         }
         Err(LpspiMasterError::Fifo(Direction::Tx)) => {
-            console.write(b"Error: TX FIFO\r\n").ok();
+            console.bwrite_all(b"Error: TX FIFO\r\n").ok();
         }
         Err(LpspiMasterError::NoData) => {
-            console.write(b"Error: NO DATA\r\n").ok();
+            console.bwrite_all(b"Error: NO DATA\r\n").ok();
         }
         Err(LpspiMasterError::FrameSize) => {
-            console.write(b"Error: FRAME SIZE\r\n").ok();
+            console.bwrite_all(b"Error: FRAME SIZE\r\n").ok();
         }
         Ok(_) => {}
     }
@@ -62,7 +60,7 @@ fn main() -> ! {
     gpt1.set_mode(hal::gpt::Mode::Restart);
     gpt1.enable();
 
-    console.write(b"Starting example...\r\n").ok();
+    console.bwrite_all(b"Starting example...\r\n").ok();
     loop {
         let data: [Elem; 5] = [0xDE, 0xAD, 0xBE, 0xEF, 0xA5];
         let mut buffer: [Elem; 5] = data;
@@ -70,25 +68,25 @@ fn main() -> ! {
         while !gpt1.is_elapsed(GPT1_OCR) {}
         gpt1.clear_elapsed(GPT1_OCR);
 
-        console.write(b"Transfer... ").ok();
+        console.bwrite_all(b"Transfer... ").ok();
         let result = spi.transfer(&mut buffer);
         if result.is_err() {
             write_error(&mut console, result);
         } else if buffer != data {
-            console.write(b"Data mismatch\r\n").ok();
+            console.bwrite_all(b"Data mismatch\r\n").ok();
         } else {
-            console.write(b"OK\r\n").ok();
+            console.bwrite_all(b"OK\r\n").ok();
         }
 
         while !gpt1.is_elapsed(GPT1_OCR) {}
         gpt1.clear_elapsed(GPT1_OCR);
 
-        console.write(b"Write... ").ok();
+        console.bwrite_all(b"Write... ").ok();
         let result = spi.write(&buffer[..3]);
         if result.is_err() {
             write_error(&mut console, result);
         } else {
-            console.write(b"OK\r\n").ok();
+            console.bwrite_all(b"OK\r\n").ok();
         }
     }
 }

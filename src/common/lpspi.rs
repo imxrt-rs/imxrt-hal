@@ -24,8 +24,8 @@
 //! ```no_run
 //! use imxrt_hal as hal;
 //! use imxrt_ral as ral;
-//! # use eh1 as embedded_hal;
-//! use embedded_hal::spi::blocking::Transfer;
+//! # use eh02 as embedded_hal;
+//! use embedded_hal::blocking::spi::Transfer;
 //! use hal::lpspi::{LpspiMaster, Pins};
 //! use ral::lpspi::LPSPI4;
 //!
@@ -74,7 +74,7 @@
 use crate::iomuxc::{consts, lpspi};
 use crate::ral;
 
-pub use eh1::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+pub use eh02::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 
 /// Data direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -893,31 +893,34 @@ impl<const N: u8> Drop for DisabledMaster<'_, N> {
     }
 }
 
-impl<P, const N: u8> eh1::spi::blocking::Transfer<u8> for LpspiMaster<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
-    fn transfer(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-        self.exchange(words)
+    fn transfer<'a>(&mut self, words: &'a mut [u8]) -> Result<&'a [u8], Self::Error> {
+        self.exchange(words)?;
+        Ok(words)
     }
 }
 
-impl<P, const N: u8> eh1::spi::blocking::Transfer<u16> for LpspiMaster<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
-    fn transfer(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        self.exchange(words)
+    fn transfer<'a>(&mut self, words: &'a mut [u16]) -> Result<&'a [u16], Self::Error> {
+        self.exchange(words)?;
+        Ok(words)
     }
 }
 
-impl<P, const N: u8> eh1::spi::blocking::Transfer<u32> for LpspiMaster<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
-    fn transfer(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        self.exchange(words)
+    fn transfer<'a>(&mut self, words: &'a mut [u32]) -> Result<&'a [u32], Self::Error> {
+        self.exchange(words)?;
+        Ok(words)
     }
 }
 
-impl<P, const N: u8> eh1::spi::blocking::Write<u8> for LpspiMaster<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Write<u8> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
@@ -925,7 +928,7 @@ impl<P, const N: u8> eh1::spi::blocking::Write<u8> for LpspiMaster<P, N> {
     }
 }
 
-impl<P, const N: u8> eh1::spi::blocking::Write<u16> for LpspiMaster<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Write<u16> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
     fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
@@ -933,7 +936,7 @@ impl<P, const N: u8> eh1::spi::blocking::Write<u16> for LpspiMaster<P, N> {
     }
 }
 
-impl<P, const N: u8> eh1::spi::blocking::Write<u32> for LpspiMaster<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Write<u32> for LpspiMaster<P, N> {
     type Error = LpspiMasterError;
 
     fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
