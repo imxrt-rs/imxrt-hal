@@ -2,7 +2,7 @@ use crate::iomuxc::consts;
 
 use crate::iomuxc::lpi2c;
 use crate::ral;
-use eh1::i2c::blocking;
+use eh02::blocking::i2c as blocking;
 
 /// Data direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -518,7 +518,7 @@ impl<P, const N: u8> blocking::TransactionalIter for Lpi2cMaster<P, N> {
 
 impl<P, const N: u8> blocking::WriteIter for Lpi2cMaster<P, N> {
     type Error = MasterStatus;
-    fn write_iter<B>(&mut self, address: u8, bytes: B) -> Result<(), Self::Error>
+    fn write<B>(&mut self, address: u8, bytes: B) -> Result<(), Self::Error>
     where
         B: IntoIterator<Item = u8>,
     {
@@ -628,7 +628,7 @@ impl<P, const N: u8> blocking::WriteRead for Lpi2cMaster<P, N> {
 mod transaction {
 
     use super::{Direction, Lpi2cMaster, MasterCommand, MasterStatus};
-    use eh1::i2c::blocking::Operation;
+    use eh02::blocking::i2c::Operation;
 
     /// A stateful type that can run I2C operations.
     pub struct Runner<'a, I> {

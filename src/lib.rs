@@ -234,8 +234,7 @@ pub mod dma {
 /// use imxrt_ral as ral;
 /// use hal::lpi2c::{self, Lpi2cMaster};
 /// use ral::{ccm::CCM, lpi2c::LPI2C3};
-/// # use eh1 as embedded_hal;
-/// use embedded_hal::i2c::blocking::WriteRead;
+/// use eh02::blocking::i2c::WriteRead;
 ///
 /// let mut pads = // Handle to all processor pads...
 ///     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };

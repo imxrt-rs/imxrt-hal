@@ -7,10 +7,9 @@
 #![no_main]
 #![no_std]
 
-use eh1 as embedded_hal;
 use imxrt_hal as hal;
 
-use embedded_hal::{i2c::blocking as i2c, serial::blocking::Write as _};
+use eh02::{blocking::i2c, blocking::serial::Write as _};
 
 /// MPU9250 I2C slave address
 const SLAVE_ADDRESS: u8 = 0x68;
@@ -71,7 +70,7 @@ where
 
 fn write_error(console: &mut board::Console, _: hal::lpi2c::MasterStatus) {
     // TODO more helpful error reporting...
-    console.write(b"I2C error\r\n").ok();
+    console.bwrite_all(b"I2C error\r\n").ok();
 }
 
 fn query_mpu(
@@ -79,13 +78,13 @@ fn query_mpu(
     console: &mut board::Console,
     func: impl FnOnce() -> Result<bool, hal::lpi2c::MasterStatus>,
 ) {
-    console.write(ctx).ok();
+    console.bwrite_all(ctx).ok();
     match func() {
         Ok(true) => {
-            console.write(b"OK\r\n").ok();
+            console.bwrite_all(b"OK\r\n").ok();
         }
         Ok(false) => {
-            console.write(b"Wrong response\r\n").ok();
+            console.bwrite_all(b"Wrong response\r\n").ok();
         }
         Err(err) => {
             write_error(console, err);
@@ -139,6 +138,6 @@ fn main() -> ! {
         );
 
         led.toggle();
-        console.write(b"\r\n\r\n").ok();
+        console.bwrite_all(b"\r\n\r\n").ok();
     }
 }
