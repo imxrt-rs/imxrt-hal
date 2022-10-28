@@ -15,6 +15,11 @@
 
 use crate::{hal, iomuxc::imxrt1010 as iomuxc, ral};
 
+#[cfg(target_arch = "arm")]
+use imxrt1010evk_fcb as _;
+#[cfg(target_arch = "arm")]
+use panic_rtt_target as _;
+
 mod imxrt10xx {
     pub mod clock;
 }
@@ -246,61 +251,6 @@ fn configure_pins(super::Pads { ref mut gpio, .. }: &mut super::Pads) {
     iomuxc::configure(&mut gpio.p01, I2C_PIN_CONFIG);
 }
 
-/// Flash configuration block.
-///
-/// Only supports QuadI/O read sequences, since that's
-/// all that's necessary to get the board booted.
-mod fcb {
-
-    use imxrt_boot_gen::flexspi::{self, opcodes::sdr::*, *};
-    use imxrt_boot_gen::serial_flash::*;
-
-    /// Adesto Technologies AT25SF128A.
-    ///
-    /// 128 Mbit Serial NOR Flash Memory
-    /// w/ Dual & Quad I/O Support.
-    mod at25sf128a {
-        /// See 8.2.6 of the data sheet.
-        pub const FAST_READ_QUAD_IO: u8 = 0xEB;
-
-        const DENSITY_BITS: u32 = 128 * 1024 * 1024;
-        pub const DENSITY_BYTES: u32 = DENSITY_BITS / 8;
-    }
-
-    use at25sf128a::*;
-
-    const SEQ_READ: Sequence = SequenceBuilder::new()
-        .instr(Instr::new(CMD, Pads::One, FAST_READ_QUAD_IO))
-        .instr(Instr::new(RADDR, Pads::Four, 0x18))
-        .instr(Instr::new(DUMMY, Pads::Four, 0x06))
-        .instr(Instr::new(READ, Pads::Four, 0x04))
-        .build();
-
-    const LUT: LookupTable = LookupTable::new().command(Command::Read, SEQ_READ);
-
-    const COMMON_CONFIGURATION_BLOCK: flexspi::ConfigurationBlock =
-        flexspi::ConfigurationBlock::new(LUT)
-            .read_sample_clk_src(ReadSampleClockSource::LoopbackFromDQSPad)
-            .cs_hold_time(0x03)
-            .cs_setup_time(0x03)
-            .column_address_width(ColumnAddressWidth::OtherDevices)
-            .device_mode_configuration(DeviceModeConfiguration::Disabled)
-            .wait_time_cfg_commands(WaitTimeConfigurationCommands::disable())
-            .flash_size(SerialFlashRegion::A1, at25sf128a::DENSITY_BYTES)
-            .serial_clk_freq(SerialClockFrequency::MHz100)
-            .serial_flash_pad_type(FlashPadType::Quad);
-
-    /// Name is important; it's EXTERNed by the linker script.
-    #[used]
-    #[no_mangle]
-    #[cfg_attr(target_arch = "arm", link_section = ".fcb")]
-    pub static FLEXSPI_CONFIGURATION_BLOCK: nor::ConfigurationBlock =
-        nor::ConfigurationBlock::new(COMMON_CONFIGURATION_BLOCK)
-            .page_size(256)
-            .sector_size(4096)
-            .ip_cmd_serial_clk_freq(nor::SerialClockFrequency::NoChange);
-}
-
 /// Helpers for the clock_out example.
 pub mod clock_out {
     use crate::hal::ccm::output_source::{clko1::Selection as Clko1, clko2::Selection as Clko2};
@@ -327,9 +277,6 @@ pub mod clock_out {
         Clko2::Spdif0Clk,
     ];
 }
-
-#[cfg(target_arch = "arm")]
-use panic_rtt_target as _;
 
 pub mod interrupt {
     use crate::board_interrupts as syms;

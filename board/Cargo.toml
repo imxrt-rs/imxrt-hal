@@ -53,6 +53,11 @@ version = "0.1"
 optional = true
 features = ["cortex-m"]
 
+[target.thumbv7em-none-eabihf.dependencies.imxrt1010evk-fcb]
+version = "0.1"
+optional = true
+git = "https://github.com/mciantyre/imxrt-boot-gen"
+
 [target.thumbv7em-none-eabihf.dependencies.imxrt1170evk-fcb]
 version = "0.1"
 optional = true
@@ -63,7 +68,7 @@ imxrt1010evk = [
     "imxrt-iomuxc/imxrt1010",
     "imxrt-ral/imxrt1011",
     "imxrt-hal/imxrt1010",
-    "imxrt-boot-gen/imxrt1010",
+    "imxrt1010evk-fcb",
     "rtt-target",
     "panic-rtt-target",
 ]
