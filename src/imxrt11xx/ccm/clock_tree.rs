@@ -1,6 +1,16 @@
 //! CCM clock tree for 11xx MCUs.
 //!
-//! TODO consolidate docs.
+//! Use `configure` to simply configure the clock tree for a given
+//! run mode. After `configure`, the system clocks run at the frequencies
+//! described by each `*_frequency` function. The frequencies for a given
+//! run mode are less than or equal to the maximum allowed for the given
+//! run mode. Consult your MCU's reference manual for more information.
+//!
+//! Use `*_frequency` functions to understand the target system clock frequencies.
+//! Note that these functions are `const`, and should be usable in constant
+//! contexts.
+//!
+//! See the 10xx documentation for an example.
 
 use crate::{
     ral::{self, ccm::CCM},
@@ -167,7 +177,7 @@ const _: () = assert!(lpuart_frequency::<1>(RunMode::Overdrive) == 80_000_000); 
 
 /// Set the LPUARTn clock configuration.
 ///
-/// When this call returns, the GPTn clock frequency matches the value
+/// When this call returns, the LPUARTn clock frequency matches the value
 /// returned by [`lpuart_frequency`].
 ///
 /// This function may disable clock gates for various peripherals. It may leave
@@ -179,4 +189,76 @@ where
     // LPUART1 -> CLOCK_ROOT25
     // LPUART12 -> CLOCK_ROOT36
     configure_clock_root(N as usize + 24, &lpuart_selection::<N>(run_mode), ccm);
+}
+
+const fn lpi2c_selection<const N: u8>(run_mode: RunMode) -> Selection {
+    match run_mode {
+        RunMode::Overdrive => Selection {
+            mux: 0b001,
+            source: ClockSource::XtalOsc24MHz,
+            divider: 3,
+        },
+    }
+}
+
+/// Returns the target LPI2Cn clock frequency for the run mode.
+pub const fn lpi2c_frequency<const N: u8>(run_mode: RunMode) -> u32
+where
+    ral::lpi2c::Instance<N>: ral::Valid,
+{
+    lpi2c_selection::<N>(run_mode).frequency(run_mode)
+}
+
+const _: () = assert!(lpi2c_frequency::<1>(RunMode::Overdrive) == 8_000_000); // Max is 66MHz.
+
+/// Set the LPI2Cn clock configuration.
+///
+/// When this call returns, the LPI2Cn clock frequency matches the value
+/// returned by [`lpi2c_frequency`].
+///
+/// This function may disable clock gates for various peripherals. It may leave
+/// these clock gates disabled.
+pub fn configure_lpi2c<const N: u8>(run_mode: RunMode, ccm: &mut CCM)
+where
+    ral::lpi2c::Instance<N>: ral::Valid,
+{
+    // LPI2C1 -> CLOCK_ROOT37
+    // LPI2C6 -> CLOCK_ROOT42
+    configure_clock_root(N as usize + 36, &lpi2c_selection::<N>(run_mode), ccm);
+}
+
+const fn lpspi_selection<const N: u8>(run_mode: RunMode) -> Selection {
+    match run_mode {
+        RunMode::Overdrive => Selection {
+            mux: 0b010,
+            source: ClockSource::RcOsc400MHz,
+            divider: 4,
+        },
+    }
+}
+
+/// Returns the target LPSPIn clock frequency for the run mode.
+pub const fn lpspi_frequency<const N: u8>(run_mode: RunMode) -> u32
+where
+    ral::lpspi::Instance<N>: ral::Valid,
+{
+    lpspi_selection::<N>(run_mode).frequency(run_mode)
+}
+
+const _: () = assert!(lpspi_frequency::<1>(RunMode::Overdrive) == 100_000_000); // Max is 135MHz.
+
+/// Set the LPSPICn clock configuration.
+///
+/// When this call returns, the LPSPICn clock frequency matches the value
+/// returned by [`lpspi_frequency`].
+///
+/// This function may disable clock gates for various peripherals. It may leave
+/// these clock gates disabled.
+pub fn configure_lpspi<const N: u8>(run_mode: RunMode, ccm: &mut CCM)
+where
+    ral::lpspi::Instance<N>: ral::Valid,
+{
+    // LPSPI1 -> CLOCK_ROOT43
+    // LPSPI6 -> CLOCK_ROOT48
+    configure_clock_root(N as usize + 42, &lpspi_selection::<N>(run_mode), ccm);
 }

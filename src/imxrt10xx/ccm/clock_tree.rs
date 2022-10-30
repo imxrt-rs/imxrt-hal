@@ -136,25 +136,25 @@ const _: () = assert!(uart_frequency(RunMode::Overdrive) == 80_000_000); // Max 
 
 const fn lpi2c_divider(run_mode: RunMode) -> u32 {
     match run_mode {
-        RunMode::Overdrive => 1,
+        RunMode::Overdrive => 3,
     }
 }
 
 const fn lpi2c_selection(run_mode: RunMode) -> lpi2c_clk::Selection {
     match run_mode {
-        RunMode::Overdrive => lpi2c_clk::Selection::Pll3Div8,
+        RunMode::Overdrive => lpi2c_clk::Selection::Oscillator,
     }
 }
 
 /// Returns the LPI2C clock frequency for the run mode.
 pub const fn lpi2c_frequency(run_mode: RunMode) -> u32 {
     let hz = match run_mode {
-        RunMode::Overdrive => crate::ccm::analog::pll3::FREQUENCY / 8,
+        RunMode::Overdrive => crate::ccm::XTAL_OSCILLATOR_HZ,
     };
     hz / lpi2c_divider(run_mode)
 }
 
-const _: () = assert!(lpi2c_frequency(RunMode::Overdrive) == 60_000_000); // Max is 66MHz.
+const _: () = assert!(lpi2c_frequency(RunMode::Overdrive) == 8_000_000); // Max is 66MHz.
 
 /// Configure the PERCLK root clock.
 ///

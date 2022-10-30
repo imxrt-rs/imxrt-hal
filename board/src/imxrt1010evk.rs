@@ -125,10 +125,6 @@ impl Specifics {
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);
 
-        // Set the pin muxing for the two test points.
-        crate::iomuxc::ccm::prepare(&mut iomuxc.gpio_sd.p01);
-        crate::iomuxc::ccm::prepare(&mut iomuxc.gpio_sd.p02);
-
         let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
         let led = gpio1.output(iomuxc.gpio.p11);
@@ -238,7 +234,13 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
 ///
 /// Peripherals are responsible for pin muxing, so there's no need to
 /// set alternates here.
-fn configure_pins(super::Pads { ref mut gpio, .. }: &mut super::Pads) {
+fn configure_pins(
+    super::Pads {
+        ref mut gpio,
+        ref mut gpio_sd,
+        ..
+    }: &mut super::Pads,
+) {
     use crate::iomuxc;
     const I2C_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
         .set_open_drain(iomuxc::OpenDrain::Enabled)
@@ -249,6 +251,10 @@ fn configure_pins(super::Pads { ref mut gpio, .. }: &mut super::Pads) {
 
     iomuxc::configure(&mut gpio.p02, I2C_PIN_CONFIG);
     iomuxc::configure(&mut gpio.p01, I2C_PIN_CONFIG);
+
+    // Set the pin muxing for the two test points.
+    crate::iomuxc::ccm::prepare(&mut gpio_sd.p01);
+    crate::iomuxc::ccm::prepare(&mut gpio_sd.p02);
 }
 
 /// Helpers for the clock_out example.
@@ -276,6 +282,8 @@ pub mod clock_out {
         Clko2::UartClk,
         Clko2::Spdif0Clk,
     ];
+
+    pub const MAX_DIVIDER_VALUE: u32 = 8;
 }
 
 pub mod interrupt {

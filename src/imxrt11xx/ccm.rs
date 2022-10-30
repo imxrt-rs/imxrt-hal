@@ -8,6 +8,7 @@
 
 pub mod clock_gate;
 pub mod clock_tree;
+pub mod output_source;
 
 /// Frequency (Hz) of the crystal oscillator.
 pub const XTAL_OSCILLATOR_HZ: u32 = 24_000_000;

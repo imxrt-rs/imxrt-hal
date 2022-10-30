@@ -64,16 +64,13 @@ pub const GPT2_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE)
 
 /// The UART clock frequency (Hz).
 pub const UART_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::uart_frequency(RUN_MODE);
-/// The console baud rate: 115200bps.
-pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
 
 /// The LPSPI clock frequency (Hz).
 pub const LPSPI_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpspi_frequency(RUN_MODE);
-/// Target SPI baud rate (Hz).
-pub const SPI_BAUD_RATE_FREQUENCY: u32 = 1_000_000;
 
 /// The LPI2C clock frequency (Hz).
 pub const LPI2C_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpi2c_frequency(RUN_MODE);
-/// Target I2C baud rate (Hz).
-pub const I2C_BAUD_RATE: hal::lpi2c::Timing =
-    hal::lpi2c::timing(hal::lpi2c::ClockSpeed::KHz400, RUN_MODE);
+
+pub const PWM_PRESCALER: hal::flexpwm::Prescaler = hal::flexpwm::Prescaler::Prescaler8;
+pub const PWM_FREQUENCY: u32 =
+    hal::ccm::clock_tree::ipg_frequency(RUN_MODE) / PWM_PRESCALER.divider();

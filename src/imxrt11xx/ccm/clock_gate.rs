@@ -147,3 +147,36 @@ where
     // LPUART12 -> LPCG97
     Locator::new(N as usize + 85)
 }
+
+/// Returns the LPSPI clock gate locator.
+#[inline(always)]
+pub const fn lpspi<const N: u8>() -> Locator
+where
+    ral::lpspi::Instance<N>: ral::Valid,
+{
+    // LPSPI1 -> LPCG104
+    // LPSPI6 -> LPCG109
+    Locator::new(N as usize + 103)
+}
+
+/// Returns the LPI2C clock gate locator.
+#[inline(always)]
+pub const fn lpi2c<const N: u8>() -> Locator
+where
+    ral::lpi2c::Instance<N>: ral::Valid,
+{
+    // LPI2C1 -> LPCG98
+    // LPI2C6 -> LPCG103
+    Locator::new(N as usize + 97)
+}
+
+/// Returns the FlexPWM clock gate locator.
+#[inline(always)]
+pub const fn flexpwm<const N: u8>() -> Locator
+where
+    ral::pwm::Instance<N>: ral::Valid,
+{
+    // FlexPWM1 -> LPCG79
+    // FlexPWM4 -> LPCG82
+    Locator::new(N as usize + 78)
+}

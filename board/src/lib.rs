@@ -116,6 +116,14 @@ const GPT1_DIVIDER: u32 = 10;
 const GPT2_DIVIDER: u32 = 100;
 const GPT_SELECTION: hal::gpt::ClockSource = hal::gpt::ClockSource::HighFrequencyReferenceClock;
 
+/// Target SPI baud rate (Hz).
+pub const SPI_BAUD_RATE_FREQUENCY: u32 = 1_000_000;
+/// The console baud rate: 115200bps.
+pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
+/// Target I2C baud rate (Hz).
+pub const I2C_BAUD_RATE: hal::lpi2c::Timing =
+    hal::lpi2c::timing(hal::lpi2c::ClockSpeed::KHz400, RUN_MODE);
+
 #[cfg(chip = "imxrt1010")]
 use iomuxc::imxrt1010::Pads;
 

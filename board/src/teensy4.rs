@@ -224,6 +224,8 @@ pub mod clock_out {
     pub const CLKO1_SELECTIONS: [Clko1; 0] = [];
 
     pub const CLKO2_SELECTIONS: [Clko2; 0] = [];
+
+    pub const MAX_DIVIDER_VALUE: u32 = 8;
 }
 
 pub mod interrupt {

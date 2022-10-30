@@ -18,7 +18,7 @@ use eh02::{blocking::serial::Write as _, serial::Read};
 
 use core::fmt::{self, Write as _};
 
-use board::clock_out::{CLKO1_SELECTIONS, CLKO2_SELECTIONS};
+use board::clock_out::{CLKO1_SELECTIONS, CLKO2_SELECTIONS, MAX_DIVIDER_VALUE};
 
 use menu::*;
 
@@ -55,7 +55,7 @@ const ROOT_MENU: Menu<Ctx> = Menu {
                     },
                     Parameter::Mandatory {
                         parameter_name: "divider",
-                        help: Some("Divider value between [1-8]"),
+                        help: Some("Divider value between [1-MAX_DIVIDER_VALUE]"),
                     },
                 ],
             },
@@ -144,9 +144,9 @@ fn set_divider(output: &str, divider: &str, console: &mut Writer, ccm: &mut CCM)
         }
     };
     let divider: u32 = match divider.parse() {
-        Ok(d) if (1..=8).contains(&d) => d,
+        Ok(d) if (1..=MAX_DIVIDER_VALUE).contains(&d) => d,
         Ok(_) => {
-            return writeln!(console, "divider must be between 1 and 8");
+            return writeln!(console, "divider must be between 1 and MAX_DIVIDER_VALUE");
         }
         Err(err) => {
             return writeln!(console, "{}", err);

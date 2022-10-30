@@ -12,12 +12,10 @@ use imxrt_hal as hal;
 
 const PIT_DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
-const PWM_PRESCALER: hal::flexpwm::Prescaler = hal::flexpwm::Prescaler::Prescaler8;
-const PWM_SWITCHING_FREQUENCY: u32 =
-    (hal::ccm::clock_tree::ipg_frequency(board::RUN_MODE) / PWM_PRESCALER.divider()) / 1_000;
-const _: () = assert!(PWM_SWITCHING_FREQUENCY < i16::MAX as u32);
+const _: () = assert!(board::PWM_FREQUENCY / 1000 < i16::MAX as u32);
+const SWITCHING_FREQ: i16 = (board::PWM_FREQUENCY / 1000) as i16;
 
-const PWM_A_DUTY: u32 = PWM_SWITCHING_FREQUENCY / 2;
+const PWM_A_DUTY: u32 = SWITCHING_FREQ as u32 / 2;
 const PWM_B_DUTY: u32 = PWM_A_DUTY / 2;
 
 #[imxrt_rt::entry]
@@ -35,14 +33,14 @@ fn main() -> ! {
     submodule.set_debug_enable(true);
     submodule.set_wait_enable(true);
     submodule.set_clock_select(hal::flexpwm::ClockSelect::Ipg);
-    submodule.set_prescaler(PWM_PRESCALER);
+    submodule.set_prescaler(board::PWM_PRESCALER);
     submodule.set_pair_operation(hal::flexpwm::PairOperation::Independent);
     submodule.set_load_mode(hal::flexpwm::LoadMode::reload_full());
     submodule.set_load_frequency(1);
-    submodule.set_initial_count(&module, PWM_SWITCHING_FREQUENCY as i16 / -2i16);
+    submodule.set_initial_count(&module, SWITCHING_FREQ / -2i16);
     submodule.set_value(
         hal::flexpwm::FULL_RELOAD_VALUE_REGISTER,
-        PWM_SWITCHING_FREQUENCY as i16 / 2i16,
+        SWITCHING_FREQ / 2i16,
     );
 
     out_a.set_turn_on(&submodule, PWM_A_DUTY as i16 / -2i16);

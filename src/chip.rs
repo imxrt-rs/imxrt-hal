@@ -10,6 +10,7 @@ mod family {
     pub mod dcdc;
     #[path = "../dma.rs"]
     pub mod dma;
+    #[path = "../lpi2c.rs"]
     pub mod lpi2c;
     pub mod tempmon;
     pub mod trng;
@@ -29,7 +30,8 @@ mod family {
     pub mod ccm;
     #[path = "../dma.rs"]
     pub mod dma;
-    pub mod lpi2c {}
+    #[path = "../lpi2c.rs"]
+    pub mod lpi2c;
 
     #[cfg(chip = "imxrt1170")]
     #[path = "imxrt1170.rs"]
