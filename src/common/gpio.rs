@@ -62,27 +62,23 @@ impl<const N: u8> Port<N> {
     /// Allocate an output GPIO.
     pub fn output<P>(&mut self, mut pin: P) -> Output<P>
     where
-        P: iomuxc::gpio::Pin<Module = iomuxc::consts::Const<N>>,
+        P: iomuxc::gpio::Pin<N>,
     {
         iomuxc::gpio::prepare(&mut pin);
-        ral::modify_reg!(ral::gpio, self.gpio, GDIR, |gdir| gdir | Output::<P>::MASK);
-        Output {
-            pin,
-            gpio: self.register_block(),
-        }
+        let output = Output::new::<N>(pin, self.register_block());
+        ral::modify_reg!(ral::gpio, self.gpio, GDIR, |gdir| gdir | output.mask());
+        output
     }
 
     /// Allocate an input GPIO.
     pub fn input<P>(&mut self, mut pin: P) -> Input<P>
     where
-        P: iomuxc::gpio::Pin<Module = iomuxc::consts::Const<N>>,
+        P: iomuxc::gpio::Pin<N>,
     {
         iomuxc::gpio::prepare(&mut pin);
-        ral::modify_reg!(ral::gpio, self.gpio, GDIR, |gdir| gdir & !Input::<P>::MASK);
-        Input {
-            pin,
-            gpio: self.register_block(),
-        }
+        let input = Input::new::<N>(pin, self.register_block());
+        ral::modify_reg!(ral::gpio, self.gpio, GDIR, |gdir| gdir & !input.mask());
+        input
     }
 
     /// Enable or disable GPIO input interrupts.
@@ -91,7 +87,7 @@ impl<const N: u8> Port<N> {
     /// to configure the interrupt.
     pub fn set_interrupt<P>(&mut self, pin: &Input<P>, trigger: Option<Trigger>)
     where
-        P: iomuxc::gpio::Pin<Module = iomuxc::consts::Const<N>>,
+        P: iomuxc::gpio::Pin<N>,
     {
         self.set_interrupt_enable(pin, false);
         if let Some(trigger) = trigger {
@@ -101,22 +97,18 @@ impl<const N: u8> Port<N> {
     }
 
     /// Set the GPIO input interrupt trigger for the provided input pin.
-    fn set_interrupt_trigger<P>(&mut self, _: &Input<P>, trigger: Trigger)
-    where
-        P: iomuxc::gpio::Pin<Module = iomuxc::consts::Const<N>>,
-    {
+    fn set_interrupt_trigger<P>(&mut self, pin: &Input<P>, trigger: Trigger) {
         if Trigger::EitherEdge == trigger {
             ral::modify_reg!(ral::gpio, self.gpio, EDGE_SEL, |edge_sel| {
-                edge_sel | Input::<P>::MASK
+                edge_sel | pin.mask()
             });
         } else {
             ral::modify_reg!(ral::gpio, self.gpio, EDGE_SEL, |edge_sel| {
-                edge_sel & !Input::<P>::MASK
+                edge_sel & !pin.mask()
             });
             let icr = trigger as u32;
-            let icr_modify =
-                |reg| reg & !(0b11 << Input::<P>::ICR_OFFSET) | (icr << Input::<P>::ICR_OFFSET);
-            if Input::<P>::OFFSET < 16 {
+            let icr_modify = |reg| reg & !(0b11 << pin.icr_offset()) | (icr << pin.icr_offset());
+            if pin.offset < 16 {
                 ral::modify_reg!(ral::gpio, self.gpio, ICR1, icr_modify);
             } else {
                 ral::modify_reg!(ral::gpio, self.gpio, ICR2, icr_modify);
@@ -125,14 +117,11 @@ impl<const N: u8> Port<N> {
     }
 
     /// Enable (`true`) or disable (`false`) interrupt generation.
-    fn set_interrupt_enable<P>(&mut self, _: &Input<P>, enable: bool)
-    where
-        P: iomuxc::gpio::Pin<Module = iomuxc::consts::Const<N>>,
-    {
+    fn set_interrupt_enable<P>(&mut self, pin: &Input<P>, enable: bool) {
         if enable {
-            ral::modify_reg!(ral::gpio, self.gpio, IMR, |imr| imr | Input::<P>::MASK);
+            ral::modify_reg!(ral::gpio, self.gpio, IMR, |imr| imr | pin.mask());
         } else {
-            ral::modify_reg!(ral::gpio, self.gpio, IMR, |imr| imr & !Input::<P>::MASK);
+            ral::modify_reg!(ral::gpio, self.gpio, IMR, |imr| imr & !pin.mask());
         }
     }
 }
@@ -144,30 +133,39 @@ pub struct Output<P> {
     // - DR: read only
     // - DR_SET, DR_CLEAR, DR_TOGGLE: write 1 to set value in DR
     gpio: &'static ral::gpio::RegisterBlock,
+    offset: u32,
 }
 
 // Safety: an output pin is safe to send across execution contexts,
 // because it points to static memory.
 unsafe impl<P: Send> Send for Output<P> {}
 
-impl<P> Output<P>
-where
-    P: iomuxc::gpio::Pin,
-{
-    // TODO(iomuxc) make this a constant?
-    const OFFSET: u32 = <P::Offset as iomuxc::consts::Unsigned>::USIZE as u32;
-    const MASK: u32 = 1 << Self::OFFSET;
+impl<P> Output<P> {
+    fn new<const N: u8>(pin: P, gpio: &'static ral::gpio::RegisterBlock) -> Self
+    where
+        P: iomuxc::gpio::Pin<N>,
+    {
+        Self {
+            pin,
+            gpio,
+            offset: P::OFFSET,
+        }
+    }
+
+    const fn mask(&self) -> u32 {
+        1 << self.offset
+    }
 
     /// Set the GPIO high.
     pub fn set(&self) {
         // Atomic write, OK to take immutable reference.
-        ral::write_reg!(ral::gpio, self.gpio, DR_SET, Self::MASK);
+        ral::write_reg!(ral::gpio, self.gpio, DR_SET, self.mask());
     }
 
     /// Set the GPIO low.
     pub fn clear(&self) {
         // Atomic write, OK to take immutable reference.
-        ral::write_reg!(ral::gpio, self.gpio, DR_CLEAR, Self::MASK);
+        ral::write_reg!(ral::gpio, self.gpio, DR_CLEAR, self.mask());
     }
 
     /// Alternate the GPIO pin output.
@@ -176,12 +174,12 @@ where
     /// than implementing in software.
     pub fn toggle(&self) {
         // Atomic write, OK to take immutable reference.
-        ral::write_reg!(ral::gpio, self.gpio, DR_TOGGLE, Self::MASK);
+        ral::write_reg!(ral::gpio, self.gpio, DR_TOGGLE, self.mask());
     }
 
     /// Returns `true` if the GPIO is set.
     pub fn is_set(&self) -> bool {
-        ral::read_reg!(ral::gpio, self.gpio, DR) & Self::MASK != 0
+        ral::read_reg!(ral::gpio, self.gpio, DR) & self.mask() != 0
     }
 
     /// Release the underlying pin object.
@@ -207,6 +205,7 @@ pub struct Input<P> {
     // - PSR: read only
     // - ISR: read, W1C
     gpio: &'static ral::gpio::RegisterBlock,
+    offset: u32,
 }
 
 // Safety: see impl Send for Output.
@@ -228,33 +227,45 @@ pub enum Trigger {
     EitherEdge = 4,
 }
 
-impl<P> Input<P>
-where
-    P: iomuxc::gpio::Pin,
-{
-    const OFFSET: u32 = Output::<P>::OFFSET;
-    const MASK: u32 = Output::<P>::MASK;
-    const ICR_OFFSET: u32 = (Self::OFFSET % 16) * 2;
+impl<P> Input<P> {
+    fn new<const N: u8>(pin: P, gpio: &'static ral::gpio::RegisterBlock) -> Self
+    where
+        P: iomuxc::gpio::Pin<N>,
+    {
+        Self {
+            pin,
+            gpio,
+            offset: P::OFFSET,
+        }
+    }
+
+    const fn mask(&self) -> u32 {
+        1 << self.offset
+    }
+
+    const fn icr_offset(&self) -> u32 {
+        (self.offset % 16) * 2
+    }
 
     /// Returns `true` if the GPIO is set high.
     pub fn is_set(&self) -> bool {
-        ral::read_reg!(ral::gpio, self.gpio, PSR) & Self::MASK != 0
+        ral::read_reg!(ral::gpio, self.gpio, PSR) & self.mask() != 0
     }
 
     /// Returns `true` if the GPIO interrupt has triggered.
     pub fn is_triggered(&self) -> bool {
-        ral::read_reg!(ral::gpio, self.gpio, ISR) & Self::MASK != 0
+        ral::read_reg!(ral::gpio, self.gpio, ISR) & self.mask() != 0
     }
 
     /// Clear the interrupt triggered flag.
     pub fn clear_triggered(&self) {
         // Atomic write; OK to take immutable reference.
-        ral::write_reg!(ral::gpio, self.gpio, ISR, Self::MASK);
+        ral::write_reg!(ral::gpio, self.gpio, ISR, self.mask());
     }
 
     /// Indicates if interrupts are enabled for this input.
     pub fn is_interrupt_enabled(&self) -> bool {
-        ral::read_reg!(ral::gpio, self.gpio, IMR) & Input::<P>::MASK != 0
+        ral::read_reg!(ral::gpio, self.gpio, IMR) & self.mask() != 0
     }
 
     /// Release the underlying pin object.
@@ -273,10 +284,7 @@ where
     }
 }
 
-impl<P> eh02::digital::v2::OutputPin for Output<P>
-where
-    P: iomuxc::gpio::Pin,
-{
+impl<P> eh02::digital::v2::OutputPin for Output<P> {
     type Error = core::convert::Infallible;
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
@@ -290,10 +298,7 @@ where
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P> eh02::digital::v2::StatefulOutputPin for Output<P>
-where
-    P: iomuxc::gpio::Pin,
-{
+impl<P> eh02::digital::v2::StatefulOutputPin for Output<P> {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         Ok(self.is_set())
     }
@@ -303,10 +308,7 @@ where
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P> eh02::digital::v2::ToggleableOutputPin for Output<P>
-where
-    P: iomuxc::gpio::Pin,
-{
+impl<P> eh02::digital::v2::ToggleableOutputPin for Output<P> {
     type Error = core::convert::Infallible;
 
     fn toggle(&mut self) -> Result<(), Self::Error> {
@@ -316,10 +318,7 @@ where
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P> eh02::digital::v2::InputPin for Input<P>
-where
-    P: iomuxc::gpio::Pin,
-{
+impl<P> eh02::digital::v2::InputPin for Input<P> {
     type Error = core::convert::Infallible;
 
     fn is_high(&self) -> Result<bool, Self::Error> {
