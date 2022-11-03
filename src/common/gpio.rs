@@ -49,7 +49,7 @@ impl<const N: u8> Port<N> {
     }
 
     fn register_block(&self) -> &'static ral::gpio::RegisterBlock {
-        let register_block: &ral::gpio::RegisterBlock = &*self.gpio;
+        let register_block: &ral::gpio::RegisterBlock = &self.gpio;
         // Safety: points to peripheral memory, which is static.
         // Gpio implementation guarantees that memory which needs
         // mutable access to shared GPIO registers passes through
