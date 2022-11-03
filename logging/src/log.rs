@@ -122,11 +122,11 @@ pub fn usbd<const N: u8>(
 #[cfg(feature = "lpuart")]
 pub fn lpuart_with_config<P, const LPUART: u8>(
     lpuart: Lpuart<P, LPUART>,
-    mut dma_channel: Channel,
+    dma_channel: Channel,
     interrupts: crate::Interrupts,
     frontend_config: &LoggingConfig,
 ) -> Result<Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
-    let (mut producer, consumer) = match BUFFER.try_split() {
+    let (producer, consumer) = match BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),
     };
@@ -134,11 +134,10 @@ pub fn lpuart_with_config<P, const LPUART: u8>(
     // Safety: all of this can only happen once. We use try_split
     // to meet that requirement.
     cortex_m::interrupt::free(|_| unsafe {
-        crate::lpuart::try_init(&mut dma_channel, &mut producer);
         if frontend::init(producer, frontend_config).is_err() {
             return Err(crate::AlreadySetError::new((lpuart, dma_channel)));
         }
-        crate::lpuart::finish_init(lpuart, dma_channel, consumer, interrupts);
+        crate::lpuart::init(lpuart, dma_channel, consumer, interrupts);
         Ok(Poller::new(crate::lpuart::VTABLE))
     })
 }

@@ -144,7 +144,6 @@ name = "rtic_spi"
 required-features = ["board/spi"]
 
 [patch.crates-io]
-bbqueue =       { git = "https://github.com/mciantyre/bbqueue" }
 imxrt-iomuxc =  { git = "https://github.com/mciantyre/imxrt-iomuxc" }
 imxrt-ral =     { git = "https://github.com/mciantyre/imxrt-ral" }
 imxrt-rt =      { git = "https://github.com/mciantyre/imxrt-rt" }

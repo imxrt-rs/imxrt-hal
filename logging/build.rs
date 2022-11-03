@@ -53,11 +53,6 @@ fn handle_buffer_size(file: &mut dyn Write) -> Result<(), Error> {
         return Err(format!("Buffer size '{buffer_size}' must be a power of two.").into());
     }
     writeln!(file, "\tpub const BUFFER_SIZE: usize = {buffer_size};")?;
-    writeln!(file, "\t#[repr(align({buffer_size}))]")?;
-    writeln!(
-        file,
-        "\tpub struct Align(pub ::bbqueue::BBBuffer<BUFFER_SIZE>);"
-    )?;
     Ok(())
 }
 

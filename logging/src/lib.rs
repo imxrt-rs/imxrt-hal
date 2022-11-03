@@ -333,16 +333,9 @@ impl<R> core::fmt::Debug for AlreadySetError<R> {
 }
 
 include!(concat!(env!("OUT_DIR"), "/config.rs"));
-use config::{Align, BUFFER_SIZE};
+use config::BUFFER_SIZE;
 
-impl core::ops::Deref for Align {
-    type Target = bbqueue::BBBuffer<BUFFER_SIZE>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-static BUFFER: Align = Align(bbqueue::BBBuffer::new());
+static BUFFER: bbqueue::BBBuffer<BUFFER_SIZE> = bbqueue::BBBuffer::new();
 type Consumer = bbqueue::Consumer<'static, { crate::BUFFER_SIZE }>;
 
 /// The poller drives the logging process.
@@ -425,27 +418,6 @@ mod tests {
         // Looks like BBBuffer uses an extra element to differentiate start / end points,
         // so we lost data without any error. That's OK.
         assert_eq!(fnt, &[3]);
-    }
-
-    /// Ensures that BBBuffer can give us the capacity when everything
-    /// is just right. We need this for setting up the LPUART DMA circular
-    /// buffer.
-    #[test]
-    fn bbbuffer_max_grant() {
-        let bb = super::Align(BBBuffer::<{ crate::BUFFER_SIZE }>::new());
-        let (mut prod, _) = bb.try_split().unwrap();
-        let mut grant = prod.grant_exact(crate::BUFFER_SIZE).unwrap();
-        assert!(grant.len() == crate::BUFFER_SIZE);
-        // Test requires #[repr(C)] attribute on BBBuffer.
-        assert!(grant.buf().as_ptr() == &bb as *const _ as *const u8);
-    }
-
-    /// Not guaranteed to catch misalignment. But if it fails, there's definitely
-    /// an issue.
-    #[test]
-    fn aligned_default() {
-        let bb = super::Align(BBBuffer::<{ crate::BUFFER_SIZE }>::new());
-        assert!(&bb as *const _ as u32 % 1024 == 0);
     }
 
     #[test]

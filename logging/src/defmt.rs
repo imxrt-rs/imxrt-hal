@@ -216,18 +216,17 @@ pub fn usbd<const N: u8>(
 #[cfg(feature = "lpuart")]
 pub fn lpuart<P, const LPUART: u8>(
     lpuart: Lpuart<P, LPUART>,
-    mut dma_channel: Channel,
+    dma_channel: Channel,
     interrupts: crate::Interrupts,
 ) -> Result<crate::Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
-    let (mut producer, consumer) = match crate::BUFFER.try_split() {
+    let (producer, consumer) = match crate::BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),
     };
 
     cortex_m::interrupt::free(|_| {
-        crate::lpuart::try_init(&mut dma_channel, &mut producer);
         frontend::init(producer);
-        unsafe { crate::lpuart::finish_init(lpuart, dma_channel, consumer, interrupts) };
+        unsafe { crate::lpuart::init(lpuart, dma_channel, consumer, interrupts) };
         Ok(crate::Poller::new(crate::lpuart::VTABLE))
     })
 }
