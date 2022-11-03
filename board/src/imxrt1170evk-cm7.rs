@@ -7,6 +7,9 @@ pub use imxrt1170evk_fcb as _;
 #[cfg(target_arch = "arm")]
 use panic_rtt_target as _;
 
+/// You'll find log messages using the serial console, through the DAP.
+pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Lpuart;
+
 use hal::ccm::clock_gate;
 const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio(),

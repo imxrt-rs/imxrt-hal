@@ -240,3 +240,60 @@ pub mod blocking {
         }
     }
 }
+
+/// Configurations for the logger.
+///
+/// If your board is ready to support the logging infrastructure,
+/// add the 'imxrt-log' feature to your board's list of enabled
+/// features. Then, simply define the default backend in your module.
+#[cfg(feature = "imxrt-log")]
+pub mod logging {
+    use crate::hal::{dma::channel::Channel, lpuart::Lpuart, usbd::Instances};
+    pub use imxrt_log::Poller;
+    pub const BACKEND: Backend = crate::board_impl::DEFAULT_LOGGING_BACKEND;
+
+    /// Select the logging front-end.
+    #[derive(Debug, defmt::Format, PartialEq, Eq)]
+    pub enum Frontend {
+        /// Use the `log` crate.
+        Log,
+        /// Use `defmt`.
+        Defmt,
+    }
+
+    /// Select the logging back-end.
+    #[derive(Debug, defmt::Format, PartialEq, Eq)]
+    pub enum Backend {
+        /// Use a USB peripheral.
+        Usbd,
+        /// Use LPUART and DMA.
+        Lpuart,
+    }
+
+    /// Initialize the logger.
+    pub fn init<P, const LPUART: u8, const USBD: u8>(
+        frontend: Frontend,
+        backend: Backend,
+        lpuart: Lpuart<P, LPUART>,
+        dma: Channel,
+        usbd: Instances<USBD>,
+    ) -> imxrt_log::Poller {
+        // Always enable interrupts. If you don't want them to activate, don't unmask them.
+        match (frontend, backend) {
+            // Logging frontends...
+            (Frontend::Log, Backend::Lpuart) => {
+                imxrt_log::log::lpuart(lpuart, dma, imxrt_log::Interrupts::Enabled).unwrap()
+            }
+            (Frontend::Log, Backend::Usbd) => {
+                imxrt_log::log::usbd(usbd, imxrt_log::Interrupts::Enabled).unwrap()
+            }
+            // Defmt frontends...
+            (Frontend::Defmt, Backend::Lpuart) => {
+                imxrt_log::defmt::lpuart(lpuart, dma, imxrt_log::Interrupts::Enabled).unwrap()
+            }
+            (Frontend::Defmt, Backend::Usbd) => {
+                imxrt_log::defmt::usbd(usbd, imxrt_log::Interrupts::Enabled).unwrap()
+            }
+        }
+    }
+}

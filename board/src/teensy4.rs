@@ -16,6 +16,9 @@ mod imxrt10xx {
 
 pub use imxrt10xx::clock::*;
 
+/// You'll find log messages using USB1, the same USB that you use for programming.
+pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Usbd;
+
 #[cfg(not(feature = "spi"))]
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;

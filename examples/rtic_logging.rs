@@ -20,21 +20,10 @@ mod app {
 
     /// Change me to change how log messages are serialized
     /// and transported.
-    const FRONTEND: Frontend = Frontend::Defmt;
-    /// Change me to select the peripheral used for logging.
-    const BACKEND: Backend = Backend::Usbd;
-
-    #[derive(PartialEq, Eq, Debug, defmt::Format)]
-    pub enum Frontend {
-        Log,
-        Defmt,
-    }
-
-    #[derive(PartialEq, Eq, Debug, defmt::Format)]
-    pub enum Backend {
-        Usbd,
-        Lpuart,
-    }
+    const FRONTEND: board::logging::Frontend = board::logging::Frontend::Log;
+    /// This is a function of your board. Want to change it? Change it right
+    /// here to explore different example code paths.
+    const BACKEND: board::logging::Backend = board::logging::BACKEND;
 
     /// When using the LPUART backend, you want to occasionally poll
     /// for new log message. This interval (milliseconds) describes how
@@ -70,7 +59,7 @@ mod app {
     #[shared]
     struct Shared {
         /// The poller drives the logging backend.
-        poller: imxrt_log::Poller,
+        poller: board::logging::Poller,
     }
 
     #[init]
@@ -95,7 +84,7 @@ mod app {
         // We only need the extra timer when the LPUART backend is used.
         // The USBD backend uses the USB peripheral's internal timer to
         // track time for us.
-        if BACKEND == Backend::Lpuart {
+        if BACKEND == board::logging::Backend::Lpuart {
             poll_log.set_load_timer_value(LPUART_POLL_INTERVAL_MS);
             poll_log.set_interrupt_enable(true);
             poll_log.enable();
@@ -107,29 +96,14 @@ mod app {
         make_log.set_interrupt_enable(true);
         make_log.enable();
 
-        let usb_instances = hal::usbd::Instances {
+        let usbd = hal::usbd::Instances {
             usb: usb1,
             usbnc: usbnc1,
             usbphy: usbphy1,
         };
 
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
-        let poller = match (FRONTEND, BACKEND) {
-            // Logging frontends...
-            (Frontend::Log, Backend::Lpuart) => {
-                imxrt_log::log::lpuart(console, dma_a, imxrt_log::Interrupts::Enabled).unwrap()
-            }
-            (Frontend::Log, Backend::Usbd) => {
-                imxrt_log::log::usbd(usb_instances, imxrt_log::Interrupts::Enabled).unwrap()
-            }
-            // Defmt frontends...
-            (Frontend::Defmt, Backend::Lpuart) => {
-                imxrt_log::defmt::lpuart(console, dma_a, imxrt_log::Interrupts::Enabled).unwrap()
-            }
-            (Frontend::Defmt, Backend::Usbd) => {
-                imxrt_log::defmt::usbd(usb_instances, imxrt_log::Interrupts::Enabled).unwrap()
-            }
-        };
+        let poller = board::logging::init(FRONTEND, BACKEND, console, dma_a, usbd);
 
         (
             Shared { poller },

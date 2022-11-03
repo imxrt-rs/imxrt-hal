@@ -11,6 +11,9 @@ const MAKE_LOG_INTERVAL_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
 use imxrt_hal as hal;
 
+const FRONTEND: board::logging::Frontend = board::logging::Frontend::Log;
+const BACKEND: board::logging::Backend = board::logging::BACKEND;
+
 #[imxrt_rt::entry]
 fn main() -> ! {
     let (
@@ -19,21 +22,28 @@ fn main() -> ! {
             usb1,
             usbnc1,
             usbphy1,
+            mut dma,
             ..
         },
-        board::Specifics { led, mut trng, .. },
+        board::Specifics {
+            led,
+            console,
+            mut trng,
+            ..
+        },
     ) = board::new();
 
     make_log.set_load_timer_value(MAKE_LOG_INTERVAL_MS);
     make_log.set_interrupt_enable(false);
     make_log.enable();
 
-    let usb_instances = hal::usbd::Instances {
+    let usbd = hal::usbd::Instances {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,
     };
-    let mut poller = imxrt_log::log::usbd(usb_instances, imxrt_log::Interrupts::Disabled).unwrap();
+    let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
+    let mut poller = board::logging::init(FRONTEND, BACKEND, console, dma_a, usbd);
 
     loop {
         poller.poll();

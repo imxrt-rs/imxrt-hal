@@ -5,6 +5,9 @@ edition = "2021"
 # Only for testing, documentation.
 publish = false
 
+[dependencies.defmt]
+version = "0.3"
+
 [dependencies.imxrt-hal]
 workspace = true
 
@@ -21,7 +24,8 @@ workspace = true
 workspace = true
 
 [dependencies.imxrt-log]
-path = "../logging"
+workspace = true
+optional = true
 
 [dependencies.imxrt-usbd]
 workspace = true
@@ -71,6 +75,7 @@ imxrt1010evk = [
     "imxrt1010evk-fcb",
     "rtt-target",
     "panic-rtt-target",
+    "imxrt-log",
 ]
 teensy4 = [
     "imxrt-iomuxc/imxrt1060",
@@ -78,6 +83,7 @@ teensy4 = [
     "imxrt-hal/imxrt1060",
     "teensy4-fcb",
     "teensy4-panic",
+    "imxrt-log",
 ]
 imxrt1170evk-cm7 = [
     "imxrt-iomuxc/imxrt1170",
@@ -86,6 +92,7 @@ imxrt1170evk-cm7 = [
     "imxrt1170evk-fcb",
     "rtt-target",
     "panic-rtt-target",
+    "imxrt-log",
 ]
 
 # Some boards (Teensy 4) require a resource

@@ -26,6 +26,9 @@ mod imxrt10xx {
 
 pub use imxrt10xx::clock::*;
 
+/// You'll find log messages using the serial console, through the DAP.
+pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Lpuart;
+
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
 /// The UART console. Baud specified in lib.rs.
