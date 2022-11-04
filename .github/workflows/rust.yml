@@ -80,22 +80,22 @@ jobs:
     strategy:
       matrix:
         config:
-        # Boards that support all examples.
-        - --examples --features=board/teensy4
-        - --examples --features=board/imxrt1010evk
+        # Boards that support all examples, and should build with additional drivers.
+        - --examples --features=board/teensy4,board/lcd1602
+        - --examples --features=board/imxrt1010evk,board/lcd1602
         # SPI examples (might break other examples)
         - --example=hal_spi --example=rtic_spi --example=async_dma_spi --features=board/teensy4,board/spi
         - --example=hal_spi --example=rtic_spi --example=async_dma_spi --features=board/imxrt1010evk,board/spi
         - --example=hal_spi --example=rtic_spi --example=async_dma_spi --features=board/imxrt1170evk-cm7,board/spi
         # The i.MX RT 1170 EVK (CM7) target is WIP. The list below describes the working examples.
-        - --features=board/imxrt1170evk-cm7 --example=hal_led
+        - --features=board/imxrt1170evk-cm7,board/lcd1602 --example=hal_led
           --example=hal_uart --example=rtic_uart --example=rtic_dma_uart --example=async_dma_uart
           --example=hal_gpt --example=rtic_gpt
           --example=hal_pit --example=rtic_pit
           --example=hal_logging --example=rtic_logging
           --example=hal_clock_out
           --example=hal_pwm --example=rtic_pwm
-          --example=hal_i2c
+          --example=hal_i2c_mpu9250 --example=hal_i2c_lcd1602
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

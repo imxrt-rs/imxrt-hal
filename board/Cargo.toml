@@ -47,6 +47,10 @@ version = "0.2"
 optional = true
 version = "0.2"
 
+[dependencies.lcd_1602_i2c]
+version = "0.3"
+optional = true
+
 [target.thumbv7em-none-eabihf.dependencies.rtt-target]
 version = "0.3"
 optional = true
@@ -102,3 +106,5 @@ imxrt1170evk-cm7 = [
 #
 # See board-specific documentation for its effects.
 spi = []
+
+lcd1602 = ["dep:lcd_1602_i2c"]

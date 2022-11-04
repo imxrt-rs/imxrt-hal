@@ -159,6 +159,10 @@ required-features = ["board/imxrt-log"]
 name = "rtic_logging"
 required-features = ["board/imxrt-log"]
 
+[[example]]
+name = "hal_i2c_lcd1602"
+required-features = ["board/lcd1602"]
+
 [patch.crates-io]
 imxrt-iomuxc =  { git = "https://github.com/mciantyre/imxrt-iomuxc" }
 imxrt-ral =     { git = "https://github.com/mciantyre/imxrt-ral" }

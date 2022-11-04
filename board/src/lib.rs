@@ -29,6 +29,9 @@ mod board_impl;
 #[path = "imxrt1170evk-cm7.rs"]
 mod board_impl;
 
+#[cfg(feature = "lcd1602")]
+pub use lcd_1602_i2c as lcd1602;
+
 // rustdoc doesn't like when this is named 'board'
 // since it happens to match the package name.
 // So went with an '_impl' suffix.
