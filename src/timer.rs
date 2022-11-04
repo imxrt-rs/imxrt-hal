@@ -218,8 +218,8 @@ impl<const HZ: u32> TimerDurationExt for fugit::TimerDurationU64<HZ> {
 ///
 /// // All blocking adapters play well with embedded-hal 0.2 interfaces.
 /// use eh02::blocking::delay::{DelayMs, DelayUs};
-/// blocking.delay_ms(1000);
-/// blocking.delay_us(1000);
+/// blocking.delay_ms(1000u32);
+/// blocking.delay_us(1000u32);
 /// ```
 pub struct Blocking<T, const HZ: u32> {
     timer: T,
@@ -409,25 +409,27 @@ impl<const N: u8, const HZ: u32> BlockingGpt<N, HZ> {
     }
 }
 
-impl<T, const HZ: u32> eh02::blocking::delay::DelayMs<T::Ticks> for Blocking<T, HZ>
+impl<R, T, const HZ: u32> eh02::blocking::delay::DelayMs<R> for Blocking<T, HZ>
 where
+    R: Into<T::Ticks>,
     T: HardwareTimer,
     fugit::TimerDuration<T::Ticks, HZ>: TimerDurationExt<Repr = T::Ticks>,
     fugit::TimerDuration<T::Ticks, 1_000>: TimerDurationExt<Repr = T::Ticks>,
 {
-    fn delay_ms(&mut self, ms: T::Ticks) {
-        self.block_ms(ms);
+    fn delay_ms(&mut self, ms: R) {
+        self.block_ms(ms.into());
     }
 }
 
-impl<T, const HZ: u32> eh02::blocking::delay::DelayUs<T::Ticks> for Blocking<T, HZ>
+impl<R, T, const HZ: u32> eh02::blocking::delay::DelayUs<R> for Blocking<T, HZ>
 where
+    R: Into<T::Ticks>,
     T: HardwareTimer,
     fugit::TimerDuration<T::Ticks, HZ>: TimerDurationExt<Repr = T::Ticks>,
     fugit::TimerDuration<T::Ticks, 1_000_000>: TimerDurationExt<Repr = T::Ticks>,
 {
-    fn delay_us(&mut self, us: T::Ticks) {
-        self.block_us(us);
+    fn delay_us(&mut self, us: R) {
+        self.block_us(us.into());
     }
 }
 
