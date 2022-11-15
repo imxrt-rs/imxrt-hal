@@ -11,7 +11,7 @@
 #[rtic::app(device = board, peripherals = false)]
 mod app {
 
-    use hal::lpspi::{Direction, Interrupts, MasterStatus, Transaction};
+    use hal::lpspi::{Direction, Interrupts, Status, Transaction};
     use imxrt_hal as hal;
 
     #[local]
@@ -33,7 +33,7 @@ mod app {
         });
         // Starts the I/O as soon as we're done initializing, since
         // the TX FIFO is empty.
-        spi.set_interrupts(Interrupts::TDIE);
+        spi.set_interrupts(Interrupts::TRANSMIT_DATA);
         (Shared {}, Local { spi }, init::Monotonics())
     }
 
@@ -42,11 +42,11 @@ mod app {
         let spi_interrupt::LocalResources { spi } = cx.local;
 
         let status = spi.status();
-        spi.clear_status(MasterStatus::TDF | MasterStatus::RDF);
+        spi.clear_status(Status::TRANSMIT_DATA | Status::RECEIVE_DATA);
 
-        if status.intersects(MasterStatus::TDF) {
-            // This write clears TDIE.
-            spi.set_interrupts(Interrupts::RDIE);
+        if status.intersects(Status::TRANSMIT_DATA) {
+            // This write clears TRANSMIT_DATA.
+            spi.set_interrupts(Interrupts::RECEIVE_DATA);
 
             // Sending two u32s. Frame size is represented by bits.
             let transaction = Transaction::new(2 * 8 * core::mem::size_of::<u32>() as u16)
@@ -55,9 +55,9 @@ mod app {
 
             spi.enqueue_data(0xDEADBEEF);
             spi.enqueue_data(!0xDEADBEEF);
-        } else if status.intersects(MasterStatus::RDF) {
-            // This write clears RDIE.
-            spi.set_interrupts(Interrupts::TDIE);
+        } else if status.intersects(Status::RECEIVE_DATA) {
+            // This write clears RECEIVE_DATA.
+            spi.set_interrupts(Interrupts::TRANSMIT_DATA);
 
             assert!(spi.fifo_status().rxcount == 2);
 

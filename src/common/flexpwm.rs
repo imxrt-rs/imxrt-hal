@@ -560,59 +560,59 @@ bitflags::bitflags! {
         /// buffered value that the hardware will load on
         /// the next LDOK assertion. Use this flag to know
         /// if there is data in a buffered register.
-        const RUF = 1 << 14;
+        const REGISTER_UPDATED = 1 << 14;
         /// Reload error flag.
         ///
         /// Set when a reload cycle passed, there's something
         /// in the buffered registers, and LDOK was 0. Cleared
         /// by writing 1.
-        const REF = 1 << 13;
+        const RELOAD_ERROR = 1 << 13;
         /// Reload flag.
         ///
         /// Set at the beginning of every reload cycle, regardless
         /// of LDOK. Cleared by writing 1.
-        const RF = 1 << 12;
+        const RELOAD = 1 << 12;
 
         /// VAL5 compared to the counter value.
-        const CMPF_VAL5 = 1 << 5;
+        const COMPARE_VAL5 = 1 << 5;
         /// VAL4 compared to the counter value.
-        const CMPF_VAL4 = 1 << 4;
+        const COMPARE_VAL4 = 1 << 4;
         /// VAL3 compared to the counter value.
-        const CMPF_VAL3 = 1 << 3;
+        const COMPARE_VAL3 = 1 << 3;
         /// VAL2 compared to the counter value.
-        const CMPF_VAL2 = 1 << 2;
+        const COMPARE_VAL2 = 1 << 2;
         /// VAL1 compared to the counter value.
-        const CMPF_VAL1 = 1 << 1;
+        const COMPARE_VAL1 = 1 << 1;
         /// VAL0 compared to the counter value.
-        const CMPF_VAL0 = 1 << 0;
+        const COMPARE_VAL0 = 1 << 0;
     }
 }
 
 impl Status {
     /// The set of write-1-clear status bits.
-    pub const W1C: Status = Self::RUF.complement();
+    pub const W1C: Status = Self::REGISTER_UPDATED.complement();
 }
 
 bitflags::bitflags! {
     /// Interrupt flags.
     pub struct Interrupts : u16 {
         /// Reload error interrupt enable.
-        const REIE = 1 << 13;
+        const RELOAD_ERROR = 1 << 13;
         /// Reload interrupt enable.
-        const RIE = 1 << 12;
+        const RELOAD = 1 << 12;
 
         /// VAL5 compare interrupt enable.
-        const CMPIE_VAL5 = 1 << 5;
+        const COMPARE_VAL5 = 1 << 5;
         /// VAL4 compare interrupt enable.
-        const CMPIE_VAL4 = 1 << 4;
+        const COMPARE_VAL4 = 1 << 4;
         /// VAL3 compare interrupt enable.
-        const CMPIE_VAL3 = 1 << 3;
+        const COMPARE_VAL3 = 1 << 3;
         /// VAL2 compare interrupt enable.
-        const CMPIE_VAL2 = 1 << 2;
+        const COMPARE_VAL2 = 1 << 2;
         /// VAL1 compare interrupt enable.
-        const CMPIE_VAL1 = 1 << 1;
+        const COMPARE_VAL1 = 1 << 1;
         /// VAL0 compare interrupt enable.
-        const CMPIE_VAL0 = 1 << 0;
+        const COMPARE_VAL0 = 1 << 0;
     }
 }
 

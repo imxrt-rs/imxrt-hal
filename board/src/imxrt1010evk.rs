@@ -47,7 +47,7 @@ pub type SpiPins = hal::lpspi::Pins<
 >;
 
 #[cfg(feature = "spi")]
-pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 1>;
+pub type Spi = hal::lpspi::Lpspi<SpiPins, 1>;
 
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
@@ -57,7 +57,7 @@ pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio::GPIO_01, // SDA, J57_18
 >;
 
-pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, 1>;
+pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 1>;
 
 /// PWM components.
 #[cfg(not(feature = "spi"))]

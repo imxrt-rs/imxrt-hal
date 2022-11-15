@@ -81,7 +81,7 @@ pub type SpiPins = hal::lpspi::Pins<
 const SPI_INSTANCE: u8 = 1;
 
 #[cfg(feature = "spi")]
-pub type Spi = hal::lpspi::LpspiMaster<SpiPins, { SPI_INSTANCE }>;
+pub type Spi = hal::lpspi::Lpspi<SpiPins, { SPI_INSTANCE }>;
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
 
@@ -91,7 +91,7 @@ pub type I2cPins = hal::lpi2c::Pins<
 >;
 
 const I2C_INSTANCE: u8 = 5;
-pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, { I2C_INSTANCE }>;
+pub type I2c = hal::lpi2c::Lpi2c<I2cPins, { I2C_INSTANCE }>;
 
 const PWM_INSTANCE: u8 = 2;
 

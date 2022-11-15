@@ -51,7 +51,7 @@ mod app {
                 console.disable_fifo(lpuart::Direction::Rx);
             }
             // Interrupt when we receive a byte.
-            console.set_interrupts(lpuart::Interrupts::RIE);
+            console.set_interrupts(lpuart::Interrupts::RECEIVE_FULL);
         });
         (Shared {}, Local { led, console }, init::Monotonics())
     }
@@ -65,13 +65,13 @@ mod app {
         let status = console.status();
         console.clear_status(Status::W1C);
 
-        if status.contains(Status::RDRF) {
+        if status.contains(Status::RECEIVE_FULL) {
             loop {
                 let data = console.read_data();
                 if data.flags().contains(lpuart::ReadFlags::RXEMPT) {
                     break;
                 }
-                if console.status().contains(Status::TDRE) {
+                if console.status().contains(Status::TRANSMIT_EMPTY) {
                     console.write_byte(data.into());
                 }
             }

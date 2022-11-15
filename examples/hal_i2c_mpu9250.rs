@@ -1,4 +1,4 @@
-//! Demonstrates an I2C master.
+//! Demonstrates I2C communication with an MPU9250.
 //!
 //! Requires an MPU9250. The board queries the sensor's WHO_AM_I
 //! register using various types of I2C write-read sequences. The
@@ -11,8 +11,8 @@ use imxrt_hal as hal;
 
 use eh02::{blocking::i2c, blocking::serial::Write as _};
 
-/// MPU9250 I2C slave address
-const SLAVE_ADDRESS: u8 = 0x68;
+/// MPU9250 I2C address
+const MPU9250_ADDRESS: u8 = 0x68;
 const WHO_AM_I_REG: u8 = 0x75;
 const WHO_AM_I_RESP: u8 = 0x71;
 
@@ -25,7 +25,7 @@ where
     I: i2c::WriteRead,
 {
     let mut out = [0; 1];
-    i2c.write_read(SLAVE_ADDRESS, &[WHO_AM_I_REG], &mut out)?;
+    i2c.write_read(MPU9250_ADDRESS, &[WHO_AM_I_REG], &mut out)?;
     Ok(out[0] == WHO_AM_I_RESP)
 }
 
@@ -35,9 +35,9 @@ fn who_am_i_write_then_read<I, E>(i2c: &mut I) -> Result<bool, E>
 where
     I: i2c::Write<Error = E> + i2c::Read<Error = E>,
 {
-    i2c.write(SLAVE_ADDRESS, &[WHO_AM_I_REG])?;
+    i2c.write(MPU9250_ADDRESS, &[WHO_AM_I_REG])?;
     let mut out = [0; 1];
-    i2c.read(SLAVE_ADDRESS, &mut out)?;
+    i2c.read(MPU9250_ADDRESS, &mut out)?;
     Ok(out[0] == WHO_AM_I_RESP)
 }
 
@@ -49,7 +49,7 @@ where
     use i2c::Operation;
     let mut out = [0u8; 1];
     let mut ops = [Operation::Write(&[WHO_AM_I_REG]), Operation::Read(&mut out)];
-    i2c.exec(SLAVE_ADDRESS, &mut ops)?;
+    i2c.exec(MPU9250_ADDRESS, &mut ops)?;
     Ok(out[0] == WHO_AM_I_RESP)
 }
 
@@ -61,14 +61,14 @@ where
 {
     use i2c::Operation;
     let mut ops = [Operation::Write(&[WHO_AM_I_REG])];
-    i2c.exec(SLAVE_ADDRESS, &mut ops)?;
+    i2c.exec(MPU9250_ADDRESS, &mut ops)?;
     let mut out = [0u8; 1];
     ops[0] = Operation::Read(&mut out);
-    i2c.exec(SLAVE_ADDRESS, &mut ops)?;
+    i2c.exec(MPU9250_ADDRESS, &mut ops)?;
     Ok(out[0] == WHO_AM_I_RESP)
 }
 
-fn write_error(console: &mut board::Console, _: hal::lpi2c::MasterStatus) {
+fn write_error(console: &mut board::Console, _: hal::lpi2c::ControllerStatus) {
     // TODO more helpful error reporting...
     console.bwrite_all(b"I2C error\r\n").ok();
 }
@@ -76,7 +76,7 @@ fn write_error(console: &mut board::Console, _: hal::lpi2c::MasterStatus) {
 fn query_mpu(
     ctx: &[u8],
     console: &mut board::Console,
-    func: impl FnOnce() -> Result<bool, hal::lpi2c::MasterStatus>,
+    func: impl FnOnce() -> Result<bool, hal::lpi2c::ControllerStatus>,
 ) {
     console.bwrite_all(ctx).ok();
     match func() {

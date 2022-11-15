@@ -42,7 +42,7 @@
 //! });
 //!
 //! // Fill the transmit FIFO with 0xAA...
-//! while lpuart2.status().contains(Status::TDRE) {
+//! while lpuart2.status().contains(Status::TRANSMIT_EMPTY) {
 //!     lpuart2.write_byte(0xAA);
 //! }
 //!
@@ -588,25 +588,25 @@ bitflags::bitflags! {
     /// A set bit indicates that the interrupt is enabled.
     pub struct Interrupts : u32 {
         /// Overrun interrupt enable.
-        const ORIE = 1 << 27;
+        const OVERRUN = 1 << 27;
         /// Noise error interrupt enable.
-        const NEIE = 1 << 26;
+        const NOISE_ERROR = 1 << 26;
         /// Framing error interrupt enable.
-        const FRIE = 1 << 25;
+        const FRAMING_ERROR = 1 << 25;
         /// Parity error interrupt enable.
-        const PEIE = 1 << 24;
-        /// Transmit interrupt enable.
+        const PARITY_ERROR = 1 << 24;
+        /// Transmit empty interrupt enable.
         ///
-        /// Triggers when the TDRE status bit is high.
-        const TIE = 1 << 23;
+        /// Triggers when the `TRANSMIT_EMPTY` _status_ bit is high.
+        const TRANSMIT_EMPTY = 1 << 23;
         /// Transmit complete interrupt enable.
         ///
-        /// Triggers an interrupt when the TC status bit is high.
-        const TCIE = 1 << 22;
+        /// Triggers an interrupt when the `TRANSMIT_COMPLETE` _status_ bit is high.
+        const TRANSMIT_COMPLETE = 1 << 22;
         /// Receiver interrupt enable.
         ///
-        /// Triggers when the RDRE status bit is high.
-        const RIE = 1 << 21;
+        /// Triggers when the `RECEIVE_FULL` _status_ bit is high.
+        const RECEIVE_FULL = 1 << 21;
 
         // All of the above flags pertain to the CTRL
         // register. These flags pertain to the FIFO
@@ -616,19 +616,21 @@ bitflags::bitflags! {
         ///
         /// If set, a transmit FIFO overrun event generates an
         /// interrupt.
-        const TXOFE = 1 << 9;
+        const TRANSMIT_OVERFLOW = 1 << 9;
         /// Receive FIFO Underflow Interrupt Enable.
         ///
         /// If set, a receive FIFO underflow event generates an
         /// interrupt.
-        const RXUFE = 1 << 8;
+        const RECEIVE_UNDERFLOW = 1 << 8;
     }
 }
 
 impl Interrupts {
     /// Mask for only the FIFO bits.
     const fn fifo_mask() -> Self {
-        Self::from_bits_truncate(Interrupts::TXOFE.bits() | Interrupts::RXUFE.bits())
+        Self::from_bits_truncate(
+            Interrupts::TRANSMIT_OVERFLOW.bits() | Interrupts::RECEIVE_UNDERFLOW.bits(),
+        )
     }
     /// Mask for only the CTRL bits.
     const fn ctrl_mask() -> Self {
@@ -675,28 +677,28 @@ bitflags::bitflags! {
         ///
         /// Set when the receiver detects a start bit. Cleared when
         /// the line is idle.
-        const RAF = 1 << 24;
+        const RECEIVE_ACTIVE = 1 << 24;
         /// Transmit data register empty.
         ///
         /// This bit is set when the transmit FIFO can accept data.
         /// - if the FIFO is enabled, this is set when the FIFO hits the watermark.
         /// - if the FIFO is disabled, this is set when there's nothing in
         ///   the transmit data register.
-        const TDRE = 1 << 23;
+        const TRANSMIT_EMPTY = 1 << 23;
         /// Transmit complete.
         ///
         /// TC is cleared when there's a transmission in progress, or when a preamble /
         /// break character is loaded. It's set when the transmit buffer is empty.
         ///
         /// To clear TC, perform a write.
-        const TC = 1 << 22;
+        const TRANSMIT_COMPLETE = 1 << 22;
         /// Receiver data register full.
         ///
         /// This bit is set when the receive FIFO is full.
         /// - if the FIFO is enabled, this is set when the FIFO hits the watermark.
         /// - if the FIFO is disabled, this is set when there's something in the
         ///   receiver register.
-        const RDRF = 1 << 21;
+        const RECEIVE_FULL = 1 << 21;
         /// Idle line flag.
         ///
         /// IDLE is set when the LPUART receive line becomes idle for a full character
@@ -704,12 +706,12 @@ bitflags::bitflags! {
         const IDLE = 1 << 20;
         /// Receiver overrun.
         ///
-        /// OR is set when software fails to prevent the receive data register
+        /// Set when software fails to prevent the receive data register
         /// from overflowing with data. The OR bit is set immediately after the
         /// stop bit has been completely received for the dataword that overflows
         /// the buffer and all the other error flags (FE, NF, and PF) are prevented
         /// from setting.
-        const OR = 1 << 19;
+        const OVERRUN = 1 << 19;
         /// Noise flag.
         ///
         /// This is also available in the read flags. However, setting it here
@@ -736,11 +738,11 @@ bitflags::bitflags! {
         /// Transmitter Buffer Overflow Flag
         ///
         /// Indicates that more data has been written to the transmit buffer than it can hold.
-        const TXOF = 1 << 13;
+        const TRANSMIT_OVERFLOW = 1 << 13;
         /// Receiver Buffer Underflow Flag
         ///
         /// Indicates that more data has been read from the receive buffer than was present.
-        const RXUF = 1 << 12;
+        const RECEIVE_UNDERFLOW = 1 << 12;
     }
 }
 
@@ -761,13 +763,16 @@ impl Status {
     /// Includes those bits in the FIFO register.
     const fn read_only_mask() -> Self {
         Self::from_bits_truncate(
-            Self::RAF.bits() | Self::TDRE.bits() | Self::TC.bits() | Self::RDRF.bits(),
+            Self::RECEIVE_ACTIVE.bits()
+                | Self::TRANSMIT_EMPTY.bits()
+                | Self::TRANSMIT_COMPLETE.bits()
+                | Self::RECEIVE_FULL.bits(),
         )
     }
 
     /// Return the bitflags that represent the FIFO bits.
     const fn fifo_mask() -> Self {
-        Self::from_bits_truncate(Self::TXOF.bits() | Self::RXUF.bits())
+        Self::from_bits_truncate(Self::TRANSMIT_OVERFLOW.bits() | Self::RECEIVE_UNDERFLOW.bits())
     }
     /// Return the bitflags that represent the STAT bits.
     const fn stat_mask() -> Self {
@@ -832,7 +837,7 @@ impl<P, const N: u8> eh02::serial::Write<u8> for Lpuart<P, N> {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        if !self.status().contains(Status::TDRE) {
+        if !self.status().contains(Status::TRANSMIT_EMPTY) {
             Err(nb::Error::WouldBlock)
         } else {
             Ok(())
@@ -926,11 +931,10 @@ mod tests {
         assert_eq!(Status::stat_mask().stat_bits(), 0x01FF_0000);
         assert_eq!(Status::W1C.bits(), 0x001F_3000);
 
-        assert!(
-            Status::from_registers(0, (1 << 17) | (1 << 16)).contains(Status::TXOF | Status::RXUF)
-        );
+        assert!(Status::from_registers(0, (1 << 17) | (1 << 16))
+            .contains(Status::TRANSMIT_OVERFLOW | Status::RECEIVE_UNDERFLOW));
         assert!(Status::from_registers(u32::MAX, 0).contains(Status::stat_mask()));
 
-        assert!(Status::all().contains(Status::TDRE));
+        assert!(Status::all().contains(Status::TRANSMIT_EMPTY));
     }
 }

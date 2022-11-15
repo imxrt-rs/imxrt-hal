@@ -220,8 +220,8 @@ pub mod dma {
 
 /// Low-power inter-integrated circuit.
 ///
-/// The `Lpi2cMaster` driver implements all embedded-hal I2C traits. Use these traits to perform
-/// common I2C I/O. The driver also exposes lower-level APIs for the LPI2C master.
+/// The `Lpi2c` driver implements all embedded-hal I2C traits. Use these traits to perform
+/// common I2C I/O. The driver also exposes lower-level APIs for the LPI2C controller.
 ///
 /// # Example
 ///
@@ -232,7 +232,7 @@ pub mod dma {
 /// ```no_run
 /// use imxrt_hal as hal;
 /// use imxrt_ral as ral;
-/// use hal::lpi2c::{self, Lpi2cMaster};
+/// use hal::lpi2c::{self, Lpi2c};
 /// use ral::{ccm::CCM, lpi2c::LPI2C3};
 /// use eh02::blocking::i2c::WriteRead;
 ///
@@ -247,7 +247,7 @@ pub mod dma {
 /// # const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
 /// const LPI2C_400KHz: lpi2c::Timing = lpi2c::timing(lpi2c::ClockSpeed::KHz400, RUN_MODE);
 ///
-/// let mut i2c3 = Lpi2cMaster::new(
+/// let mut i2c3 = Lpi2c::new(
 ///     i2c3,
 ///     lpi2c::Pins {
 ///         scl: pads.gpio_ad_b1.p07,

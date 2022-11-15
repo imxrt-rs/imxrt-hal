@@ -1,13 +1,13 @@
 //! Low-power serial peripheral interface.
 //!
-//! [`LpspiMaster`] implements select embedded HAL SPI traits for SPI masters.
-//! When using the trait implementations, make sure to call [`set_endian`](LpspiMaster::set_endian)
-//! and [`set_bit_order`](LpspiMaster::set_bit_order) based on your device. These settings
+//! [`Lpspi`] implements select embedded HAL SPI traits for coordinating SPI I/O.
+//! When using the trait implementations, make sure to call [`set_endian`](Lpspi::set_endian)
+//! and [`set_bit_order`](Lpspi::set_bit_order) based on your device. These settings
 //! apply when the driver internally defines the transaction.
 //!
 //! This driver also exposes the peripheral's lower-level, hardware-dependent transaction interface.
-//! Create a [`Transaction`], then [`enqueue_transaction`](LpspiMaster::enqueue_transaction) before
-//! sending data with [`enqueue_data`](LpspiMaster::enqueue_data). When using the transaction interface,
+//! Create a [`Transaction`], then [`enqueue_transaction`](Lpspi::enqueue_transaction) before
+//! sending data with [`enqueue_data`](Lpspi::enqueue_data). When using the transaction interface,
 //! you're responsible for serializing your data into `u32` SPI words.
 //!
 //! # Chip selects (CS) for SPI peripherals
@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! Initialize an LPSPI master with a 1MHz SCK. To understand how to configure the LPSPI
+//! Initialize an LPSPI with a 1MHz SCK. To understand how to configure the LPSPI
 //! peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
 //!
 //! ```no_run
@@ -26,7 +26,7 @@
 //! use imxrt_ral as ral;
 //! # use eh02 as embedded_hal;
 //! use embedded_hal::blocking::spi::Transfer;
-//! use hal::lpspi::{LpspiMaster, Pins};
+//! use hal::lpspi::{Lpspi, Pins};
 //! use ral::lpspi::LPSPI4;
 //!
 //! let mut pads = // Handle to all processor pads...
@@ -41,7 +41,7 @@
 //! };
 //!
 //! let mut spi4 = unsafe { LPSPI4::instance() };
-//! let mut spi = LpspiMaster::new(
+//! let mut spi = Lpspi::new(
 //!     spi4,
 //!     spi_pins,
 //! );
@@ -147,9 +147,9 @@ pub struct Transaction {
     frame_size: u16,
 }
 
-/// Possible errors when interfacing the LPSPI master.
+/// Possible errors when interfacing the LPSPI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LpspiMasterError {
+pub enum LpspiError {
     /// The transaction frame size is incorrect.
     ///
     /// The frame size, in bits, must be between 8 bits and
@@ -174,7 +174,7 @@ impl Transaction {
     ///
     /// - the buffer is empty.
     /// - there's more than 512 elements in the buffer.
-    pub fn new_u8s(data: &[u8]) -> Result<Self, LpspiMasterError> {
+    pub fn new_u8s(data: &[u8]) -> Result<Self, LpspiError> {
         Transaction::new_words(data)
     }
 
@@ -188,7 +188,7 @@ impl Transaction {
     ///
     /// - the buffer is empty.
     /// - there's more than 256 elements in the buffer.
-    pub fn new_u16s(data: &[u16]) -> Result<Self, LpspiMasterError> {
+    pub fn new_u16s(data: &[u16]) -> Result<Self, LpspiError> {
         Transaction::new_words(data)
     }
 
@@ -202,11 +202,11 @@ impl Transaction {
     ///
     /// - the buffer is empty.
     /// - there's more than 128 elements in the buffer.
-    pub fn new_u32s(data: &[u32]) -> Result<Self, LpspiMasterError> {
+    pub fn new_u32s(data: &[u32]) -> Result<Self, LpspiError> {
         Transaction::new_words(data)
     }
 
-    fn new_words<W>(data: &[W]) -> Result<Self, LpspiMasterError> {
+    fn new_words<W>(data: &[W]) -> Result<Self, LpspiError> {
         Transaction::new(8 * core::mem::size_of_val(data) as u16)
     }
 
@@ -221,7 +221,7 @@ impl Transaction {
     /// - `frame_size` fits within 12 bits; the implementation enforces this maximum value.
     /// - The minimum value for `frame_size` is 8; the implementation enforces this minimum
     ///   value.
-    pub fn new(frame_size: u16) -> Result<Self, LpspiMasterError> {
+    pub fn new(frame_size: u16) -> Result<Self, LpspiError> {
         const MIN_FRAME_SIZE: u16 = 8;
         const MAX_FRAME_SIZE: u16 = 1 << 12;
         if (MIN_FRAME_SIZE..MAX_FRAME_SIZE).contains(&frame_size) {
@@ -233,7 +233,7 @@ impl Transaction {
                 frame_size: frame_size - 1,
             })
         } else {
-            Err(LpspiMasterError::FrameSize)
+            Err(LpspiError::FrameSize)
         }
     }
 
@@ -295,12 +295,12 @@ fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::Regi
     );
 }
 
-/// An LPSPI master
+/// An LPSPI peripheral.
 ///
 /// The peripheral exposes low-level methods for coordinating
 /// DMA transfers. However, you may find it easier to use the
 /// [`dma`](crate::dma) interface to coordinate DMA transfers.
-pub struct LpspiMaster<P, const N: u8> {
+pub struct Lpspi<P, const N: u8> {
     lpspi: ral::lpspi::Instance<N>,
     pins: P,
     bit_order: BitOrder,
@@ -324,7 +324,7 @@ pub struct LpspiMaster<P, const N: u8> {
 /// >;
 ///
 /// // Helper type for your SPI peripheral
-/// type LpspiMaster<const N: u8> = hal::lpspi::LpspiMaster<LpspiPins, N>;
+/// type Lpspi<const N: u8> = hal::lpspi::Lpspi<LpspiPins, N>;
 /// ```
 pub struct Pins<SDO, SDI, SCK, PCS0> {
     /// Serial data out
@@ -343,7 +343,7 @@ pub struct Pins<SDO, SDI, SCK, PCS0> {
     pub pcs0: PCS0,
 }
 
-impl<SDO, SDI, SCK, PCS0, const N: u8> LpspiMaster<Pins<SDO, SDI, SCK, PCS0>, N>
+impl<SDO, SDI, SCK, PCS0, const N: u8> Lpspi<Pins<SDO, SDI, SCK, PCS0>, N>
 where
     SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
     SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
@@ -359,7 +359,7 @@ where
         lpspi::prepare(&mut pins.sck);
         lpspi::prepare(&mut pins.pcs0);
 
-        let mut spi = LpspiMaster {
+        let mut spi = Lpspi {
             lpspi,
             pins,
             endian: Endian::default(),
@@ -374,14 +374,14 @@ where
             MASTER: MASTER_1,
             SAMPLE: SAMPLE_1
         );
-        DisabledMaster::new(&mut spi.lpspi).set_mode(MODE_0);
+        Disabled::new(&mut spi.lpspi).set_mode(MODE_0);
         ral::write_reg!(ral::lpspi, spi.lpspi, FCR, RXWATER: 0xF, TXWATER: 0xF);
         ral::write_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_1);
         spi
     }
 }
 
-impl<P, const N: u8> LpspiMaster<P, N> {
+impl<P, const N: u8> Lpspi<P, N> {
     pub const N: u8 = N;
 
     /// Release the SPI peripheral components
@@ -391,7 +391,7 @@ impl<P, const N: u8> LpspiMaster<P, N> {
 
     /// Returns the endian configuration.
     ///
-    /// See notes in [`set_endian`](LpspiMaster::set_endian) to understand
+    /// See notes in [`set_endian`](Lpspi::set_endian) to understand
     /// when this configuration takes effect.
     pub fn endian(&self) -> Endian {
         self.endian
@@ -408,7 +408,7 @@ impl<P, const N: u8> LpspiMaster<P, N> {
 
     /// Returns the bit order configuration.
     ///
-    /// See notes in [`set_bit_order`](LpspiMaster::set_bit_order) to
+    /// See notes in [`set_bit_order`](Lpspi::set_bit_order) to
     /// understand when this configuration takes effect.
     pub fn bit_order(&self) -> BitOrder {
         self.bit_order
@@ -425,18 +425,18 @@ impl<P, const N: u8> LpspiMaster<P, N> {
 
     /// Temporarily disable the LPSPI peripheral.
     ///
-    /// The handle to a [`DisabledMaster`](crate::lpspi::DisabledMaster) driver lets you modify
+    /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral. This will clear the transmit
     /// and receive FIFOs.
-    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut DisabledMaster<N>) -> R) -> R {
+    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
         self.clear_fifos();
-        let mut disabled = DisabledMaster::new(&mut self.lpspi);
+        let mut disabled = Disabled::new(&mut self.lpspi);
         func(&mut disabled)
     }
 
     /// Read the status register.
-    pub fn status(&self) -> MasterStatus {
-        MasterStatus::from_bits_truncate(ral::read_reg!(ral::lpspi, self.lpspi, SR))
+    pub fn status(&self) -> Status {
+        Status::from_bits_truncate(ral::read_reg!(ral::lpspi, self.lpspi, SR))
     }
 
     /// Clear the status flags.
@@ -444,9 +444,9 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     /// To clear status flags, set them high, then call `clear_status()`.
     ///
     /// The implementation will ensure that only the W1C bits are written, so it's
-    /// OK to supply `MasterStatus::all()` to clear all bits.
-    pub fn clear_status(&self, flags: MasterStatus) {
-        let flags = flags & MasterStatus::W1C;
+    /// OK to supply `Status::all()` to clear all bits.
+    pub fn clear_status(&self, flags: Status) {
+        let flags = flags & Status::W1C;
         ral::write_reg!(ral::lpspi, self.lpspi, SR, flags.bits());
     }
 
@@ -458,7 +458,7 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     /// Set the interrupt enable bits.
     ///
     /// This writes the bits described by `interrupts` as is to the register.
-    /// To modify the existing interrupts flags, you should first call [`interrupts`](LpspiMaster::interrupts)
+    /// To modify the existing interrupts flags, you should first call [`interrupts`](Lpspi::interrupts)
     /// to get the current state, then modify that state.
     pub fn set_interrupts(&self, interrupts: Interrupts) {
         ral::write_reg!(ral::lpspi, self.lpspi, IER, interrupts.bits());
@@ -489,9 +489,9 @@ impl<P, const N: u8> LpspiMaster<P, N> {
 
     /// Returns the FIFO status.
     #[inline]
-    pub fn fifo_status(&self) -> MasterFifoStatus {
+    pub fn fifo_status(&self) -> FifoStatus {
         let (rxcount, txcount) = ral::read_reg!(ral::lpspi, self.lpspi, FSR, RXCOUNT, TXCOUNT);
-        MasterFifoStatus {
+        FifoStatus {
             rxcount: rxcount as u16,
             txcount: txcount as u16,
         }
@@ -516,10 +516,10 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     }
 
     /// Check for any receiver errors.
-    fn recv_ok(&self) -> Result<(), LpspiMasterError> {
+    fn recv_ok(&self) -> Result<(), LpspiError> {
         let status = self.status();
-        if status.intersects(MasterStatus::REF) {
-            Err(LpspiMasterError::Fifo(Direction::Rx))
+        if status.intersects(Status::RECEIVE_ERROR) {
+            Err(LpspiError::Fifo(Direction::Rx))
         } else {
             Ok(())
         }
@@ -527,18 +527,18 @@ impl<P, const N: u8> LpspiMaster<P, N> {
 
     /// Place `word` into the transmit FIFO.
     ///
-    /// This will result in the value being sent from the LPSPI master.
+    /// This will result in the value being sent from the LPSPI.
     /// You're responsible for making sure that the transmit FIFO can
     /// fit this word.
     pub fn enqueue_data(&self, word: u32) {
         ral::write_reg!(ral::lpspi, self.lpspi, TDR, word);
     }
 
-    pub(crate) fn wait_for_transmit_fifo_space(&mut self) -> Result<(), LpspiMasterError> {
+    pub(crate) fn wait_for_transmit_fifo_space(&mut self) -> Result<(), LpspiError> {
         loop {
             let status = self.status();
-            if status.intersects(MasterStatus::TEF) {
-                return Err(LpspiMasterError::Fifo(Direction::Tx));
+            if status.intersects(Status::TRANSMIT_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Tx));
             }
             let fifo_status = self.fifo_status();
             if !fifo_status.is_full(Direction::Tx) {
@@ -565,10 +565,7 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     }
 
     /// Prepare common properties of the transaction for this driver.
-    pub(crate) fn prepare_transaction<W>(
-        &self,
-        buffer: &[W],
-    ) -> Result<Transaction, LpspiMasterError> {
+    pub(crate) fn prepare_transaction<W>(&self, buffer: &[W]) -> Result<Transaction, LpspiError> {
         Transaction::new_words(buffer).map(|mut transaction| {
             transaction
                 .set_bit_order(self.bit_order)
@@ -578,14 +575,14 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     }
 
     /// Exchanges data with the SPI device.
-    fn exchange<T>(&mut self, buffer: &mut [T]) -> Result<(), LpspiMasterError>
+    fn exchange<T>(&mut self, buffer: &mut [T]) -> Result<(), LpspiError>
     where
         [T]: Word,
     {
-        if self.status().intersects(MasterStatus::MBF) {
-            return Err(LpspiMasterError::Busy);
+        if self.status().intersects(Status::BUSY) {
+            return Err(LpspiError::Busy);
         } else if buffer.is_empty() {
-            return Err(LpspiMasterError::NoData);
+            return Err(LpspiError::NoData);
         }
 
         let transaction = self.prepare_transaction(buffer)?;
@@ -618,14 +615,14 @@ impl<P, const N: u8> LpspiMaster<P, N> {
     ///
     /// Use this method when you know that the receiver queue is disabled
     /// (RXMASK high in TCR).
-    fn write_no_read<W>(&mut self, buffer: &[W]) -> Result<(), LpspiMasterError>
+    fn write_no_read<W>(&mut self, buffer: &[W]) -> Result<(), LpspiError>
     where
         [W]: Word,
     {
-        if self.status().intersects(MasterStatus::MBF) {
-            return Err(LpspiMasterError::Busy);
+        if self.status().intersects(Status::BUSY) {
+            return Err(LpspiError::Busy);
         } else if buffer.is_empty() {
-            return Err(LpspiMasterError::NoData);
+            return Err(LpspiError::NoData);
         }
 
         let mut transaction = self.prepare_transaction(buffer)?;
@@ -697,12 +694,12 @@ impl<P, const N: u8> LpspiMaster<P, N> {
 }
 
 bitflags::bitflags! {
-    /// Status flags for the LPSPI master interface.
-    pub struct MasterStatus : u32 {
+    /// Status flags for the LPSPI interface.
+    pub struct Status : u32 {
         /// Module busy flag.
         ///
         /// This flag is read only.
-        const MBF = 1 << 24;
+        const BUSY = 1 << 24;
 
         //
         // Start W1C bits.
@@ -713,32 +710,32 @@ bitflags::bitflags! {
         /// Indicates that received data has matched one or both of the match
         /// fields. To clear this flag, write this bit to the status register
         /// (W1C).
-        const DMF = 1 << 13;
+        const DATA_MATCH = 1 << 13;
         /// Receive error flag.
         ///
         /// Set when the receive FIFO has overflowed. Before clearing this bit,
         /// empty the receive FIFO. Then, write this bit to clear the flag (W1C).
-        const REF = 1 << 12;
+        const RECEIVE_ERROR = 1 << 12;
         /// Transmit error flag.
         ///
         /// Set when the transmit FIFO has underruns. Before clearing this bit,
         /// end the transfer. Then, write this bit to clear the flag (W1C).
-        const TEF = 1 << 11;
+        const TRANSMIT_ERROR = 1 << 11;
         /// Transfer complete flag.
         ///
         /// Set when the LPSPI returns to an idle state, and the transmit FIFO
         /// is empty. To clear this flag, write this bit (W1C).
-        const TCF = 1 << 10;
+        const TRANSFER_COMPLETE = 1 << 10;
         /// Frame complete flag.
         ///
         /// Set at the end of each frame transfer, when PCS negates. To clear this
         /// flag, write this bit (W1C).
-        const FCF = 1 << 9;
+        const FRAME_COMPLETE = 1 << 9;
         /// Word complete flag.
         ///
         /// Set when the last bit of a received word is sampled. To clear this flag, write
         /// this bit (W1C).
-        const WCF = 1 << 8;
+        const WORD_COMPLETE = 1 << 8;
 
         //
         // End W1C bits.
@@ -748,36 +745,36 @@ bitflags::bitflags! {
         ///
         /// Set when the number of words in the receive FIFO is greater than the watermark.
         /// This flag is read only. To clear the flag, exhaust the receive FIFO.
-        const RDF = 1 << 1;
+        const RECEIVE_DATA = 1 << 1;
         /// Transmit data flag.
         ///
         /// Set when the number of words in the transmit FIFO is less than or equal to the
         /// watermark. This flag is read only. TO clear the flag, fill the transmit FIFO.
-        const TDF = 1 << 0;
+        const TRANSMIT_DATA = 1 << 0;
     }
 }
 
-impl MasterStatus {
+impl Status {
     const W1C: Self = Self::from_bits_truncate(
-        Self::DMF.bits()
-            | Self::REF.bits()
-            | Self::TEF.bits()
-            | Self::TCF.bits()
-            | Self::FCF.bits()
-            | Self::WCF.bits(),
+        Self::DATA_MATCH.bits()
+            | Self::RECEIVE_ERROR.bits()
+            | Self::TRANSMIT_ERROR.bits()
+            | Self::TRANSFER_COMPLETE.bits()
+            | Self::FRAME_COMPLETE.bits()
+            | Self::WORD_COMPLETE.bits(),
     );
 }
 
 /// The number of words in each FIFO.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MasterFifoStatus {
+pub struct FifoStatus {
     /// Number of words in the receive FIFO.
     pub rxcount: u16,
     /// Number of words in the transmit FIFO.
     pub txcount: u16,
 }
 
-impl MasterFifoStatus {
+impl FifoStatus {
     /// Indicates if the FIFO is full for the given direction.
     #[inline]
     pub const fn is_full(self, direction: Direction) -> bool {
@@ -798,32 +795,32 @@ bitflags::bitflags! {
     /// See the status bits for more information.
     pub struct Interrupts : u32 {
         /// Data match interrupt enable.
-        const DMIE = 1 << 13;
+        const DATA_MATCH = 1 << 13;
         /// Receive error interrupt enable.
-        const REIE = 1 << 12;
+        const RECEIVE_ERROR = 1 << 12;
         /// Transmit error interrupt enable.
-        const TEIE = 1 << 11;
+        const TRANSMIT_ERROR = 1 << 11;
         /// Transmit complete interrupt enable.
-        const TCIE = 1 << 10;
+        const TRANSMIT_COMPLETE = 1 << 10;
         /// Frame complete interrupt enable.
-        const FCIE = 1 << 9;
+        const FRAME_COMPLETE = 1 << 9;
         /// Word complete interrupt enable.
-        const WCIE = 1 << 8;
+        const WORD_COMPLETE = 1 << 8;
 
         /// Receive data interrupt enable.
-        const RDIE = 1 << 1;
+        const RECEIVE_DATA = 1 << 1;
         /// Transmit data interrupt enable.
-        const TDIE = 1 << 0;
+        const TRANSMIT_DATA = 1 << 0;
     }
 }
 
 /// An LPSPI peripheral which is temporarily disabled.
-pub struct DisabledMaster<'a, const N: u8> {
+pub struct Disabled<'a, const N: u8> {
     lpspi: &'a ral::lpspi::Instance<N>,
     men: bool,
 }
 
-impl<'a, const N: u8> DisabledMaster<'a, N> {
+impl<'a, const N: u8> Disabled<'a, N> {
     fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
         ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
@@ -887,14 +884,14 @@ impl<'a, const N: u8> DisabledMaster<'a, N> {
     }
 }
 
-impl<const N: u8> Drop for DisabledMaster<'_, N> {
+impl<const N: u8> Drop for Disabled<'_, N> {
     fn drop(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: self.men as u32);
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for LpspiMaster<P, N> {
-    type Error = LpspiMasterError;
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for Lpspi<P, N> {
+    type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u8]) -> Result<&'a [u8], Self::Error> {
         self.exchange(words)?;
@@ -902,8 +899,8 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for LpspiMaster<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for LpspiMaster<P, N> {
-    type Error = LpspiMasterError;
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for Lpspi<P, N> {
+    type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u16]) -> Result<&'a [u16], Self::Error> {
         self.exchange(words)?;
@@ -911,8 +908,8 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for LpspiMaster<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for LpspiMaster<P, N> {
-    type Error = LpspiMasterError;
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for Lpspi<P, N> {
+    type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u32]) -> Result<&'a [u32], Self::Error> {
         self.exchange(words)?;
@@ -920,24 +917,24 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for LpspiMaster<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u8> for LpspiMaster<P, N> {
-    type Error = LpspiMasterError;
+impl<P, const N: u8> eh02::blocking::spi::Write<u8> for Lpspi<P, N> {
+    type Error = LpspiError;
 
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
         self.write_no_read(words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u16> for LpspiMaster<P, N> {
-    type Error = LpspiMasterError;
+impl<P, const N: u8> eh02::blocking::spi::Write<u16> for Lpspi<P, N> {
+    type Error = LpspiError;
 
     fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
         self.write_no_read(words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u32> for LpspiMaster<P, N> {
-    type Error = LpspiMasterError;
+impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N> {
+    type Error = LpspiError;
 
     fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
         self.write_no_read(words)
@@ -1095,11 +1092,11 @@ impl DmaElement for u32 {}
 
 #[cfg(test)]
 mod tests {
-    use super::{Direction, MasterFifoStatus};
+    use super::{Direction, FifoStatus};
 
     #[test]
     fn fifo_status_is_full() {
-        let mut status = MasterFifoStatus {
+        let mut status = FifoStatus {
             txcount: 0,
             rxcount: 0,
         };

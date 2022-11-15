@@ -50,7 +50,7 @@ mod app {
         submodule.set_load_frequency(1);
         submodule.set_initial_count(&module, i16::MIN);
         submodule.set_value(hal::flexpwm::ValueRegister::Val1, i16::MIN + SWITCHING_FREQ);
-        submodule.set_interrupts(hal::flexpwm::Interrupts::CMPIE_VAL1);
+        submodule.set_interrupts(hal::flexpwm::Interrupts::COMPARE_VAL1);
         submodule.set_load_ok(&mut module);
         submodule.set_running(&mut module, true);
 
@@ -60,8 +60,8 @@ mod app {
     #[task(binds = BOARD_PWM, local = [led, submodule, counter: u32 = 0])]
     fn toggle_led(cx: toggle_led::Context) {
         use hal::flexpwm::Status;
-        while cx.local.submodule.status().intersects(Status::CMPF_VAL1) {
-            cx.local.submodule.clear_status(Status::CMPF_VAL1);
+        while cx.local.submodule.status().intersects(Status::COMPARE_VAL1) {
+            cx.local.submodule.clear_status(Status::COMPARE_VAL1);
         }
 
         *cx.local.counter += 1;

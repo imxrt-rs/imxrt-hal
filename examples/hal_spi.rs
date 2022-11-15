@@ -1,4 +1,4 @@
-//! Demonstrates a blocking SPI master.
+//! Demonstrates a blocking SPI peripheral.
 //!
 //! Connect your SDI and SDO pins together, then run this example.
 //! The example prints success / errors to the board's serial console.
@@ -14,7 +14,7 @@ use eh02::{
     blocking::serial::Write as _,
     blocking::spi::{Transfer, Write},
 };
-use hal::lpspi::LpspiMasterError;
+use hal::lpspi::LpspiError;
 
 const GPT1_DELAY_MS: u32 = board::GPT1_FREQUENCY / 1_000 * 500;
 const GPT1_OCR: hal::gpt::OutputCompareRegister = hal::gpt::OutputCompareRegister::OCR1;
@@ -23,22 +23,22 @@ const GPT1_OCR: hal::gpt::OutputCompareRegister = hal::gpt::OutputCompareRegiste
 /// Valid types: u8, u16, u32.
 type Elem = u8;
 
-fn write_error<T>(console: &mut board::Console, result: Result<T, LpspiMasterError>) {
+fn write_error<T>(console: &mut board::Console, result: Result<T, LpspiError>) {
     use hal::lpspi::Direction;
     match result {
-        Err(LpspiMasterError::Busy) => {
+        Err(LpspiError::Busy) => {
             console.bwrite_all(b"Error: BUSY\r\n").ok();
         }
-        Err(LpspiMasterError::Fifo(Direction::Rx)) => {
+        Err(LpspiError::Fifo(Direction::Rx)) => {
             console.bwrite_all(b"Error: RX FIFO\r\n").ok();
         }
-        Err(LpspiMasterError::Fifo(Direction::Tx)) => {
+        Err(LpspiError::Fifo(Direction::Tx)) => {
             console.bwrite_all(b"Error: TX FIFO\r\n").ok();
         }
-        Err(LpspiMasterError::NoData) => {
+        Err(LpspiError::NoData) => {
             console.bwrite_all(b"Error: NO DATA\r\n").ok();
         }
-        Err(LpspiMasterError::FrameSize) => {
+        Err(LpspiError::FrameSize) => {
             console.bwrite_all(b"Error: FRAME SIZE\r\n").ok();
         }
         Ok(_) => {}

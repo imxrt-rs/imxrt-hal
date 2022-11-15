@@ -123,7 +123,7 @@ impl<P, const N: u8> lpuart::Lpuart<P, N> {
 // LPSPI
 use crate::lpspi;
 
-unsafe impl<E, P, const N: u8> peripheral::Source<E> for lpspi::LpspiMaster<P, N>
+unsafe impl<E, P, const N: u8> peripheral::Source<E> for lpspi::Lpspi<P, N>
 where
     E: lpspi::DmaElement,
 {
@@ -141,7 +141,7 @@ where
     }
 }
 
-unsafe impl<E, P, const N: u8> peripheral::Destination<E> for lpspi::LpspiMaster<P, N>
+unsafe impl<E, P, const N: u8> peripheral::Destination<E> for lpspi::Lpspi<P, N>
 where
     E: lpspi::DmaElement,
 {
@@ -159,12 +159,12 @@ where
     }
 }
 
-unsafe impl<E, P, const N: u8> peripheral::Bidirectional<E> for lpspi::LpspiMaster<P, N> where
+unsafe impl<E, P, const N: u8> peripheral::Bidirectional<E> for lpspi::Lpspi<P, N> where
     E: lpspi::DmaElement
 {
 }
 
-impl<P, const N: u8> lpspi::LpspiMaster<P, N> {
+impl<P, const N: u8> lpspi::Lpspi<P, N> {
     /// Use a DMA channel to write data to the LPSPI peripheral.
     ///
     /// The future completes when all data in `buffer` has been written to the
@@ -176,7 +176,7 @@ impl<P, const N: u8> lpspi::LpspiMaster<P, N> {
         &'a mut self,
         channel: &'a mut Channel,
         buffer: &'a [E],
-    ) -> Result<peripheral::Tx<'a, Self, E>, lpspi::LpspiMasterError> {
+    ) -> Result<peripheral::Tx<'a, Self, E>, lpspi::LpspiError> {
         let mut transaction = self.prepare_transaction(buffer)?;
         transaction.disable_receive();
         self.wait_for_transmit_fifo_space()?;
@@ -194,7 +194,7 @@ impl<P, const N: u8> lpspi::LpspiMaster<P, N> {
         &'a mut self,
         channel: &'a mut Channel,
         buffer: &'a mut [E],
-    ) -> Result<peripheral::Rx<'a, Self, E>, lpspi::LpspiMasterError> {
+    ) -> Result<peripheral::Rx<'a, Self, E>, lpspi::LpspiError> {
         let mut transaction = self.prepare_transaction(buffer)?;
         transaction.disable_transmit();
         self.wait_for_transmit_fifo_space()?;
@@ -214,7 +214,7 @@ impl<P, const N: u8> lpspi::LpspiMaster<P, N> {
         rx: &'a mut Channel,
         tx: &'a mut Channel,
         buffer: &'a mut [E],
-    ) -> Result<peripheral::FullDuplex<'a, Self, E>, lpspi::LpspiMasterError> {
+    ) -> Result<peripheral::FullDuplex<'a, Self, E>, lpspi::LpspiError> {
         let transaction = self.prepare_transaction(buffer)?;
         self.wait_for_transmit_fifo_space()?;
         self.enqueue_transaction(&transaction);

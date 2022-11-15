@@ -46,14 +46,14 @@ pub type Spi = ();
 
 #[cfg(feature = "spi")]
 /// SPI peripheral.
-pub type Spi = hal::lpspi::LpspiMaster<SpiPins, 4>;
+pub type Spi = hal::lpspi::Lpspi<SpiPins, 4>;
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio_ad_b1::GPIO_AD_B1_07, // SCL, P16
     iomuxc::gpio_ad_b1::GPIO_AD_B1_06, // SDA, P17
 >;
 
-pub type I2c = hal::lpi2c::Lpi2cMaster<I2cPins, 3>;
+pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 3>;
 
 /// PWM components.
 pub mod pwm {
