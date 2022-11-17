@@ -279,6 +279,9 @@ pub mod lpi2c {
 /// This module re-exports types from the `imxrt-usbd` package. The driver is compatible
 ///  with the [`usb-device`](https://docs.rs/usb-device/latest/usb_device/) ecosystem.
 ///
+/// It also provides [`Instances`](crate::usbd::Instances), an implementation of `imxrt_usbd::Peripherals` over
+/// `imxrt-ral` USB instances.
+///
 /// # Example
 ///
 /// Construct a [`BusAdapter`](crate::usbd::BusAdapter) with USB peripheral instances. See the
@@ -302,13 +305,33 @@ pub mod lpi2c {
 /// let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
 /// hal::ccm::analog::pll3::restart(&mut ccm_analog);
 ///
-/// # static mut ENDPOINT_MEMORY: [u8; 4] = [0; 4];
-/// # let endpoint_memory = unsafe { &mut ENDPOINT_MEMORY };
-/// let usbd = usbd::BusAdapter::new(usb_instances, endpoint_memory);
+/// static ENDPOINT_MEMORY: usbd::EndpointMemory<2048> = usbd::EndpointMemory::new();
+/// static ENDPOINT_STATE: usbd::EndpointState = usbd::EndpointState::max_endpoints();
+///
+/// let usbd = usbd::BusAdapter::new(usb_instances, &ENDPOINT_MEMORY, &ENDPOINT_STATE);
 /// # Some(()) }().unwrap();
 /// ```
 #[cfg(feature = "imxrt-usbd")]
-pub use imxrt_usbd as usbd;
+pub mod usbd {
+    pub use imxrt_usbd::*;
+
+    use crate::ral;
+
+    pub struct Instances<const N: u8> {
+        pub usb: ral::usb::Instance<N>,
+        pub usbnc: ral::usbnc::Instance<N>,
+        pub usbphy: ral::usbphy::Instance<N>,
+    }
+
+    unsafe impl<const N: u8> Peripherals for Instances<N> {
+        fn usb(&self) -> *const () {
+            (&*self.usb as *const ral::usb::RegisterBlock).cast()
+        }
+        fn usbphy(&self) -> *const () {
+            (&*self.usbphy as *const ral::usbphy::RegisterBlock).cast()
+        }
+    }
+}
 
 #[cfg(family = "imxrt10xx")]
 pub use chip::adc;

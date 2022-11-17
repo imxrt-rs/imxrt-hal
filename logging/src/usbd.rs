@@ -1,7 +1,6 @@
 //! USB serial (CDC) backend using imxrt-usbd.
 
 use core::mem::MaybeUninit;
-use imxrt_usbd::Instances;
 use usb_device::device::UsbDeviceState;
 
 const VID_PID: usb_device::device::UsbVidPid = usb_device::device::UsbVidPid(0x5824, 0x27dd);
@@ -12,7 +11,9 @@ const PRODUCT: &str = "imxrt-log";
 /// If you start noticing panics, check to make sure that this buffer
 /// is large enough for all the max packet sizes for all the endpoints.
 const ENDPOINT_BYTES: usize = MAX_PACKET_SIZE * 2 + EP0_CONTROL_PACKET_SIZE * 2 + 128;
-static mut ENDPOINT_MEMORY: [u8; ENDPOINT_BYTES] = [0; ENDPOINT_BYTES];
+static ENDPOINT_MEMORY: imxrt_usbd::EndpointMemory<ENDPOINT_BYTES> =
+    imxrt_usbd::EndpointMemory::new();
+static ENDPOINT_STATE: imxrt_usbd::EndpointState<6> = imxrt_usbd::EndpointState::new();
 
 type Bus = imxrt_usbd::BusAdapter;
 type BusAllocator = usb_device::bus::UsbBusAllocator<Bus>;
@@ -128,8 +129,8 @@ unsafe fn poll() {
 /// # Safety
 ///
 /// This can only be called once.
-pub(crate) unsafe fn init<const N: u8>(
-    peripherals: Instances<N>,
+pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
+    peripherals: P,
     interrupts: crate::Interrupts,
     consumer: super::Consumer,
     config: &UsbdConfig,
@@ -139,7 +140,8 @@ pub(crate) unsafe fn init<const N: u8>(
     let bus = {
         let bus = imxrt_usbd::BusAdapter::without_critical_sections(
             peripherals,
-            &mut ENDPOINT_MEMORY,
+            &ENDPOINT_MEMORY,
+            &ENDPOINT_STATE,
             crate::config::USB_SPEED,
         );
         // Not sure which endpoints the CDC ACM class will pick,
@@ -150,6 +152,7 @@ pub(crate) unsafe fn init<const N: u8>(
                 // CDC class requires that we send the ZLP.
                 // Let the hardware do that for us.
                 bus.enable_zlt(ep_addr);
+                // TODO move after EP allocation.
             }
         }
 
