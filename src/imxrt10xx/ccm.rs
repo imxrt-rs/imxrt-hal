@@ -13,8 +13,7 @@ pub mod output_source;
 
 use crate::ral;
 
-/// Frequency (Hz) of the crystal oscillator.
-pub const XTAL_OSCILLATOR_HZ: u32 = 24_000_000;
+pub use crate::common::ccm::XTAL_OSCILLATOR_HZ;
 
 /// PERCLK clock.
 ///

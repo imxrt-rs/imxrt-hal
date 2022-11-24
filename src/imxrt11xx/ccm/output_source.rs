@@ -11,36 +11,7 @@
 //! The implementation assumes that the output source root clocks
 //! are in the unassigned mode.
 
-use crate::iomuxc;
-
-/// A CCM clock output pin.
-///
-/// This adapter configures the IOMUXC pad, and protects the pad
-/// from accidentally being used for anything else. It does not
-/// enable / disable anything in the CCM to enable the output. Use the functions
-/// in the [`output_source`](crate::ccm::output_source) module
-/// to the CLKO settings.
-pub struct Output<P> {
-    pin: P,
-}
-
-impl<P, const N: u8> Output<P>
-where
-    P: iomuxc::ccm::Pin<Function = iomuxc::ccm::Observable<N>>,
-{
-    /// Create the output pin.
-    #[inline]
-    pub fn new(mut pin: P) -> Self {
-        iomuxc::ccm::prepare(&mut pin);
-        Self { pin }
-    }
-
-    /// Release the output pin.
-    #[inline]
-    pub fn release(self) -> P {
-        self.pin
-    }
-}
+pub use crate::common::ccm::Output;
 
 //
 // Skipping selection getters until they're needed.

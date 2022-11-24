@@ -108,6 +108,7 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
 ///
 /// These modules only depend on a RAL feature.
 mod common {
+    pub mod ccm;
     pub mod dma;
     pub mod flexpwm;
     pub mod gpio;
@@ -116,11 +117,12 @@ mod common {
     pub mod lpspi;
     pub mod lpuart;
     pub mod pit;
+    pub mod timer;
 }
 
 // These common drivers have no associated chip APIs, so
 // export them directly.
-pub use common::{flexpwm, gpio, gpt, lpspi, lpuart, pit};
+pub use common::{flexpwm, gpio, gpt, lpspi, lpuart, pit, timer};
 
 /// Clock control module.
 ///
@@ -344,5 +346,3 @@ pub use chip::trng;
 
 #[cfg(family = "imxrt11xx")]
 pub use chip::usbphy;
-
-pub mod timer;
