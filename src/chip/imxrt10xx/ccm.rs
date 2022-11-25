@@ -3,7 +3,7 @@
 //! This module and its submodules should work across all i.MX RT10xx processors
 //! (with proper family configuration).
 
-pub use crate::chip::config::root_clock_gen::*;
+pub use crate::chip::config::ccm::*;
 
 pub mod ahb_clk;
 pub mod analog;

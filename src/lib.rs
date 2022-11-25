@@ -95,15 +95,6 @@ pub enum RunMode {
     Overdrive,
 }
 
-/// Set the target power for the provided `run_mode`.
-#[cfg(family = "imxrt10xx")]
-pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
-    let millivolts = match run_mode {
-        RunMode::Overdrive => 1250,
-    };
-    dcdc::set_target_vdd_soc(dcdc, millivolts);
-}
-
 /// Modules that need no HAL conditional compilation.
 ///
 /// These modules only depend on a RAL feature.
@@ -335,14 +326,4 @@ pub mod usbd {
     }
 }
 
-#[cfg(family = "imxrt10xx")]
-pub use chip::adc;
-#[cfg(family = "imxrt10xx")]
-pub use chip::dcdc;
-#[cfg(family = "imxrt10xx")]
-pub use chip::tempmon;
-#[cfg(family = "imxrt10xx")]
-pub use chip::trng;
-
-#[cfg(family = "imxrt11xx")]
-pub use chip::usbphy;
+pub use crate::chip::reexports::*;

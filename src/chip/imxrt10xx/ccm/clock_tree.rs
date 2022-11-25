@@ -51,7 +51,7 @@
 //! # Some(()) }
 //! ```
 
-pub use crate::chip::config::clock_tree::{ahb_frequency, configure_ahb_ipg};
+pub use crate::chip::config::ccm::clock_tree::{ahb_frequency, configure_ahb_ipg};
 use crate::{
     ccm::{clock_gate, lpi2c_clk, lpspi_clk, perclk_clk, uart_clk},
     ral::ccm::CCM,

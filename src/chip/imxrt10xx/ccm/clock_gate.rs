@@ -365,7 +365,7 @@ where
     }]
 }
 
-pub use crate::chip::config::root_clock_gates::*;
+pub use crate::chip::config::ccm::clock_gate::*;
 
 /// Produces an iterator for all implemented clock gate locators.
 ///
