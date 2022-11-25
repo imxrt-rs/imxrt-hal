@@ -3,6 +3,8 @@
 //! Use this module to customize features for the
 //! 1010 chips.
 
+pub use imxrt_iomuxc::imxrt1010 as pads;
+
 #[path = "ccm"]
 pub(crate) mod ccm {
     // There's no ARM divider.

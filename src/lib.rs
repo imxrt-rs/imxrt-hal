@@ -77,7 +77,6 @@
 
 #![no_std]
 
-use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
 
 mod chip;
@@ -324,6 +323,31 @@ pub mod usbd {
             (&*self.usbphy as *const ral::usbphy::RegisterBlock).cast()
         }
     }
+}
+
+/// Pad muxing and configurations.
+///
+/// This module re-exports select items from the `imxrt-iomuxc` crate. When a chip feature is enabled, the module also exports
+/// chip-specific items, like `into_pads`. Use [`into_pads`](crate::iomuxc::into_pads) to transform the `imxrt-ral` instance(s)
+/// into pad objects:
+///
+/// ```
+/// use imxrt_hal as hal;
+/// use imxrt_ral as ral;
+///
+/// let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
+/// let pads = hal::iomuxc::into_pads(iomuxc);
+/// ```
+///
+/// [`Pads`](crate::iomuxc::pads::Pads) exposes all pads as individual, owned objects. Use [`configure`](crate::iomuxc::configure)
+/// to specify any pad configurations. Then use the pad object(s) to construct your driver.
+pub mod iomuxc {
+    pub use crate::chip::iomuxc::*;
+    pub(crate) use imxrt_iomuxc::*;
+    pub use imxrt_iomuxc::{
+        alternate, clear_sion, configure, set_sion, Config, Daisy, DriveStrength, ErasedPad,
+        Hysteresis, OpenDrain, Pad, PullKeeper, SlewRate, Speed, WrongPadError,
+    };
 }
 
 pub use crate::chip::reexports::*;

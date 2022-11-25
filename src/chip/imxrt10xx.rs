@@ -35,3 +35,16 @@ pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {
 pub(crate) mod reexports {
     pub use super::{adc, dcdc, set_target_power, tempmon, trng};
 }
+
+pub(crate) mod iomuxc {
+    pub use super::config::pads;
+    use crate::ral;
+
+    /// Transform the `imxrt-ral` IOMUXC instance into pad objects.
+    pub fn into_pads(_: ral::iomuxc::IOMUXC) -> pads::Pads {
+        // Safety: acquiring pads has the same safety implications
+        // as acquiring the IOMUXC instance. The user has already
+        // assumed the unsafety.
+        unsafe { pads::Pads::new() }
+    }
+}

@@ -2,6 +2,8 @@
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 32;
 
+pub use imxrt_iomuxc::imxrt1170 as pads;
+
 #[path = "ccm"]
 pub(crate) mod ccm {
     pub(crate) mod clko {

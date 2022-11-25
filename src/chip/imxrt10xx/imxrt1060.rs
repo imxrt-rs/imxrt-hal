@@ -3,6 +3,8 @@
 //! Use this module to customize features for the
 //! 1060 chips.
 
+pub use imxrt_iomuxc::imxrt1060 as pads;
+
 #[path = "ccm"]
 pub(crate) mod ccm {
     pub mod arm_divider;

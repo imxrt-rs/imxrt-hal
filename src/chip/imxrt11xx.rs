@@ -20,3 +20,16 @@ cfg_if::cfg_if! {
 pub(crate) mod reexports {
     pub use super::usbphy;
 }
+
+pub(crate) mod iomuxc {
+    pub use super::config::pads;
+    use crate::ral;
+
+    /// Transform the `imxrt-ral` IOMUXC instances into pad objects.
+    pub fn into_pads(_: ral::iomuxc::IOMUXC, _: ral::iomuxc_lpsr::IOMUXC_LPSR) -> pads::Pads {
+        // Safety: acquiring pads has the same safety implications
+        // as acquiring the IOMUXC instances. The user has already
+        // assumed the unsafety.
+        unsafe { pads::Pads::new() }
+    }
+}
