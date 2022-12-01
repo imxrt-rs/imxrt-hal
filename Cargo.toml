@@ -93,7 +93,7 @@ imxrt-hal = { path = "." }
 imxrt-log = { path = "logging" }
 imxrt-ral = "0.5"
 imxrt-rt = "0.1"
-imxrt-usbd = "0.1"
+imxrt-usbd = "0.2"
 
 [workspace.package]
 repository = "https://github.com/imxrt-rs/imxrt-hal"
@@ -164,8 +164,6 @@ name = "hal_i2c_lcd1602"
 required-features = ["board/lcd1602"]
 
 [patch.crates-io]
-imxrt-iomuxc =  { git = "https://github.com/mciantyre/imxrt-iomuxc" }
 imxrt-ral =     { git = "https://github.com/mciantyre/imxrt-ral" }
 imxrt-rt =      { git = "https://github.com/mciantyre/imxrt-rt" }
-imxrt-usbd =    { git = "https://github.com/mciantyre/imxrt-usbd" }
 ral-registers = { git = "https://github.com/mciantyre/ral-registers" }
