@@ -5,9 +5,6 @@
 pub mod ccm;
 #[path = "dma.rs"]
 pub mod dma;
-#[path = "lpi2c.rs"]
-pub mod lpi2c;
-
 pub mod usbphy;
 
 cfg_if::cfg_if! {

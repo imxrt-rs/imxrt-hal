@@ -1,3 +1,53 @@
+//! Low-power inter-integrated circuit.
+//!
+//! The `Lpi2c` driver implements all embedded-hal I2C traits. Use these traits to perform
+//! common I2C I/O. The driver also exposes lower-level APIs for the LPI2C controller.
+//!
+//! # Example
+//!
+//! Demonstrates how to create an LPI2C peripheral, and perform a write-read with
+//! a device. This example skips the LPI2C clock configuration. To understand LPI2C
+//! clock configuration, see the [`ccm::lpi2c_clk`](crate::ccm::lpi2c_clk) documentation.
+//!
+//! ```no_run
+//! use imxrt_hal as hal;
+//! use imxrt_ral as ral;
+//! use hal::lpi2c::{self, Lpi2c};
+//! use ral::{ccm::CCM, lpi2c::LPI2C3};
+//! use eh02::blocking::i2c::WriteRead;
+//!
+//! let mut pads = // Handle to all processor pads...
+//!     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
+//!
+//! # || -> Option<()> {
+//! let mut ccm = unsafe { CCM::instance() };
+//! let mut i2c3 = unsafe { LPI2C3::instance() };
+//!
+//! # const LPI2C_CLK_HZ: u32 = 8_000_000;
+//! const LPI2C_400KHz: lpi2c::Timing = lpi2c::Timing::ideal(LPI2C_CLK_HZ, lpi2c::ClockSpeed::KHz400);
+//!
+//! let mut i2c3 = Lpi2c::new(
+//!     i2c3,
+//!     lpi2c::Pins {
+//!         scl: pads.gpio_ad_b1.p07,
+//!         sda: pads.gpio_ad_b1.p06,
+//!     },
+//!     &LPI2C_400KHz,
+//! );
+//!
+//! let mut input = [0; 3];
+//! let output = [0x74];
+//! # const MY_DEVICE_ADDRESS: u8 = 0;
+//!
+//! i2c3.write_read(MY_DEVICE_ADDRESS, &output, &mut input).ok()?;
+//! # Some(()) }();
+//! ```
+//!
+//! # Limitations
+//!
+//! This driver supports standard, fast, and fast+ modes. High speed mode is not
+//! yet supported, and supporting the mode was not considered in the initial driver
+//! design.
 use crate::iomuxc::consts;
 
 use crate::iomuxc::lpi2c;
@@ -27,8 +77,8 @@ where
 
 /// An LPI2C peripheral.
 ///
-/// By default, the I2C clock runs at 100KHz, Use `set_clock_speed` to vary
-/// the I2C bus speed.
+/// See the [module-level documentation](crate::lpi2c) for an example
+/// of how to construct this peripheral.
 pub struct Lpi2c<P, const N: u8> {
     lpi2c: ral::lpi2c::Instance<N>,
     pins: P,
@@ -39,10 +89,7 @@ where
     SCL: lpi2c::Pin<Signal = lpi2c::Scl, Module = consts::Const<N>>,
     SDA: lpi2c::Pin<Signal = lpi2c::Sda, Module = consts::Const<N>>,
 {
-    /// Create an I2C driver from an I2C instance and a pair of I2C pins
-    ///
-    /// See the [`timing` module](crate::lpi2c::timing) to learn how to specify
-    /// LPI2C clock settings.
+    /// Create an I2C driver from an I2C instance and a pair of I2C pins.
     pub fn new(
         mut lpi2c: crate::ral::lpi2c::Instance<N>,
         mut pins: Pins<SCL, SDA>,
@@ -734,12 +781,10 @@ pub struct ClockConfiguration {
     /// Clock high period.
     ///
     /// Minimum number of cycles that the SCL clock is driven high.
-    /// Value of zero represents "one cycle." Only six bits large.
     pub clkhi: u8,
     /// Clock low period.
     ///
     /// Minimum number of cycles that the SCL clock is driven low.
-    /// Value of zero represents "one cycle." Only six bits large.
     pub clklo: u8,
     /// Setup hold delay.
     ///
@@ -747,14 +792,11 @@ pub struct ClockConfiguration {
     /// - START condition hold
     /// - repeated START setup & hold
     /// - START condition setup
-    ///
-    /// Value of zero represents "one cycle." Only six bits large.
     pub sethold: u8,
     /// Data valid delay.
     ///
     /// Minimum number of cycles for SDA data hold. Must be less than
-    /// the minimum SCL low period. Value of zero represents "one cycle."
-    /// Only six bits large.
+    /// the minimum SCL low period.
     pub datavd: u8,
     /// Glitch filter SDA.
     ///
@@ -792,6 +834,18 @@ pub enum Prescaler {
     Prescaler128,
 }
 
+impl Prescaler {
+    /// Returns the divider value for this prescaler.
+    ///
+    /// `Prescaler8` produces the value '8'.
+    pub const fn divider(self) -> u8 {
+        1 << self as u8
+    }
+}
+
+const _: () = assert!(Prescaler::Prescaler1.divider() == 1);
+const _: () = assert!(Prescaler::Prescaler128.divider() == 128);
+
 /// Clock speed.
 #[derive(Clone, Copy, Debug)]
 pub enum ClockSpeed {
@@ -803,10 +857,22 @@ pub enum ClockSpeed {
     MHz1,
 }
 
+impl ClockSpeed {
+    const fn frequency(self) -> u32 {
+        match self {
+            ClockSpeed::KHz100 => 100_000,
+            ClockSpeed::KHz400 => 400_000,
+            ClockSpeed::MHz1 => 1_000_000,
+        }
+    }
+}
+
 /// LPI2C timing parameters.
 ///
 /// The implementation computes BUSIDLE based on the clock configuration values,
 /// but you can override this after construction.
+///
+/// The simplest way to construct a `Timing` is to use [`ideal()`](Timing::ideal).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timing {
     clock_configuration: ClockConfiguration,
@@ -814,7 +880,137 @@ pub struct Timing {
     busidle: u32,
 }
 
+/// Computes SCL and SDA latency cycles.
+///
+/// See table 47.3 in the reference manual. `risetime` is an estimate of the number
+/// of clock cycles for the line to rise. Ideally, this is zero.
+const fn line_latency_cycles(filter: u8, risetime: u8, prescaler: Prescaler) -> u8 {
+    (2 + filter + risetime) / prescaler.divider()
+}
+
+/// Assuming that CLKHI = 2 * CLKLO = CLK, compute CLK. Saturate at u8::MAX.
+///
+/// BAUD = (HZ / (2 ^ PRESCALER)) / (3CLK + 2 + SCL_LATENCY)
+///
+/// Solve for CLK:
+///
+/// CLK = (HZ / (2 ^ PRESCALER) / BAUD - SCL_LATENCY - 2) / 3
+///
+/// Keep in mind that CLKHI and CLKLO are 6 bit fields, so the saturation value is still
+/// out of range.
+const fn compute_clk(hz: u32, baud: ClockSpeed, prescaler: Prescaler, scl_latency: u8) -> u8 {
+    let clk: u32 =
+        (hz / prescaler.divider() as u32 / baud.frequency() - scl_latency as u32 - 2) / 3;
+    if clk > 0xFF {
+        0xFFu8
+    } else {
+        clk as u8
+    }
+}
+
 impl Timing {
+    /// Compute timing parameters assuming an ideal I2C bus.
+    ///
+    /// This constructor assumes that
+    ///
+    /// - the SDA / SCL rise times are negligible (take less than one functional clock cycle).
+    /// - there's no need for glitch filters (FLITSCL = FILTSDA = 0).
+    ///
+    /// These assumptions may not hold true for high clock speeds and I2C bus loadings.
+    /// If that's the case, you may find it's better to define timing parameters yourself.
+    ///
+    /// Note that this function can run at compile time. Consider evaluating in a const
+    /// context to avoid the possibility of panics.
+    ///
+    /// # Panics
+    ///
+    /// After evaluating all prescalars, this function panics if the computed clock period
+    /// cannot be represented in the 6 bits available for the configuration.
+    pub const fn ideal(clock_hz: u32, clock_speed: ClockSpeed) -> Self {
+        const PRESCALERS: [Prescaler; 8] = [
+            Prescaler::Prescaler1,
+            Prescaler::Prescaler2,
+            Prescaler::Prescaler4,
+            Prescaler::Prescaler8,
+            Prescaler::Prescaler16,
+            Prescaler::Prescaler32,
+            Prescaler::Prescaler64,
+            Prescaler::Prescaler128,
+        ];
+        /// 6 bits available for all clock configurations.
+        const CLOCK_PERIOD_MAX_VAL: u8 = 0x3Fu8;
+
+        // Can't write a for loop in a const function...
+        let mut clk = 0xFFu8;
+        let mut idx = 0usize;
+        while idx < PRESCALERS.len() {
+            // Assuming no filters and rise times less than one clock cycle.
+            let scl_latency = line_latency_cycles(0, 0, PRESCALERS[idx]);
+            clk = compute_clk(clock_hz, clock_speed, PRESCALERS[idx], scl_latency);
+            if clk.saturating_mul(2) <= CLOCK_PERIOD_MAX_VAL {
+                break;
+            }
+            idx += 1;
+        }
+
+        assert!(
+            clk.saturating_mul(2) <= CLOCK_PERIOD_MAX_VAL,
+            "Could not compute CLKHI / CLKLO"
+        );
+        let prescaler = PRESCALERS[idx];
+
+        let mut clkhi = clk;
+        if clkhi < 0x01 {
+            clkhi = 0x01;
+        }
+
+        let mut clklo = clk * 2;
+        if clklo < 0x03 {
+            clklo = 0x03;
+        }
+
+        // No need to assert CLKLO x (2 ^ PRESCALE) > SCL_LATENCY.
+        // By SCL_LATENCY expansion,
+        //
+        //  CLKLO x (2 ^ PRESCALE) > (2 + FILTSCL + SCL_RISETIME) / (2 ^ PRESCALE)
+        //
+        // We use 0 for FILTSCL and assume a rise time less than 1 cycle (so, 0).
+        // The inequality becomes
+        //
+        //  CLKLO > 2 / (2 ^ (2 * PRESCALE))
+        //  CLKLO > 2 if PRESCALE = 0 (Prescaler1)
+        //  CLKLO > 0 if PRESCALE > 0 (Prescaler2, Prescaler4, ...)
+        //
+        // So we're covered by the CLKLO >= 0x03 restriction.
+
+        // Wait at least CLKHI cycles for (repeat) start / stop.
+        let mut sethold = clkhi;
+        if sethold < 0x02 {
+            sethold = 0x02;
+        }
+
+        // Assume data valid after CLHI is high for half its cycles.
+        let mut datavd = clkhi / 2;
+        if datavd < 0x01 {
+            datavd = 0x01;
+        }
+
+        Self::new(
+            ClockConfiguration {
+                clkhi,
+                clklo,
+                sethold,
+                datavd,
+                filtsda: 0,
+                filtscl: 0,
+            },
+            prescaler,
+        )
+    }
+
+    /// Computes timing parameters assuming an ideal circuit.
+    ///
+    ///
     /// Define LPI2C timings by the clock configuration values, and a prescaler.
     pub const fn new(clock_configuration: ClockConfiguration, prescaler: Prescaler) -> Self {
         const fn max(left: u32, right: u32) -> u32 {
@@ -849,5 +1045,40 @@ impl Timing {
     pub const fn override_busidle(mut self, busidle: u32) -> Self {
         self.busidle = busidle;
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ClockSpeed, Prescaler, Timing};
+
+    #[test]
+    fn timing_ideal() {
+        let timings = Timing::ideal(8_000_000, ClockSpeed::KHz100);
+        assert_eq!(timings.prescaler, Prescaler::Prescaler1);
+        assert_eq!(timings.clock_configuration.clkhi, 25);
+        assert_eq!(timings.clock_configuration.clklo, 50);
+        assert_eq!(timings.clock_configuration.datavd, 12);
+        assert_eq!(timings.clock_configuration.sethold, 25);
+        assert_eq!(timings.clock_configuration.filtscl, 0);
+        assert_eq!(timings.clock_configuration.filtsda, 0);
+
+        let timings = Timing::ideal(8_000_000, ClockSpeed::KHz400);
+        assert_eq!(timings.prescaler, Prescaler::Prescaler1);
+        assert_eq!(timings.clock_configuration.clkhi, 5);
+        assert_eq!(timings.clock_configuration.clklo, 10);
+        assert_eq!(timings.clock_configuration.datavd, 2);
+        assert_eq!(timings.clock_configuration.sethold, 5);
+        assert_eq!(timings.clock_configuration.filtscl, 0);
+        assert_eq!(timings.clock_configuration.filtsda, 0);
+
+        let timings = Timing::ideal(8_000_000, ClockSpeed::MHz1);
+        assert_eq!(timings.prescaler, Prescaler::Prescaler1);
+        assert_eq!(timings.clock_configuration.clkhi, 1);
+        assert_eq!(timings.clock_configuration.clklo, 3);
+        assert_eq!(timings.clock_configuration.datavd, 1);
+        assert_eq!(timings.clock_configuration.sethold, 2);
+        assert_eq!(timings.clock_configuration.filtscl, 0);
+        assert_eq!(timings.clock_configuration.filtsda, 0);
     }
 }

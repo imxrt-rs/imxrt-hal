@@ -125,7 +125,7 @@ pub const SPI_BAUD_RATE_FREQUENCY: u32 = 1_000_000;
 pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
 /// Target I2C baud rate (Hz).
 pub const I2C_BAUD_RATE: hal::lpi2c::Timing =
-    hal::lpi2c::timing(hal::lpi2c::ClockSpeed::KHz400, RUN_MODE);
+    hal::lpi2c::Timing::ideal(LPI2C_CLK_FREQUENCY, hal::lpi2c::ClockSpeed::KHz400);
 
 #[cfg(chip = "imxrt1010")]
 use iomuxc::imxrt1010::Pads;

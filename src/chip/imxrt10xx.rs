@@ -9,8 +9,6 @@ pub mod ccm;
 pub mod dcdc;
 #[path = "dma.rs"]
 pub mod dma;
-#[path = "lpi2c.rs"]
-pub mod lpi2c;
 pub mod tempmon;
 pub mod trng;
 

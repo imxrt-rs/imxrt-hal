@@ -50,6 +50,8 @@ pub const UART_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpuart_frequency::<1>(
 pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
 pub const LPSPI_CLK_FREQUENCY: u32 =
     hal::ccm::clock_tree::lpspi_frequency::<SPI_INSTANCE>(RUN_MODE);
+pub const LPI2C_CLK_FREQUENCY: u32 =
+    hal::ccm::clock_tree::lpi2c_frequency::<I2C_INSTANCE>(RUN_MODE);
 pub const PWM_PRESCALER: hal::flexpwm::Prescaler = hal::flexpwm::Prescaler::Prescaler8;
 pub const PWM_FREQUENCY: u32 =
     hal::ccm::clock_tree::bus_frequency(RUN_MODE) / PWM_PRESCALER.divider();
