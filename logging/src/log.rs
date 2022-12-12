@@ -63,12 +63,21 @@ pub struct LoggingConfig {
     pub filters: &'static [Filter],
 }
 
-impl Default for LoggingConfig {
-    fn default() -> LoggingConfig {
+impl LoggingConfig {
+    /// Create a default logging config.
+    ///
+    /// Unlike `default()`, this works in `const` contexts.
+    pub const fn new() -> Self {
         LoggingConfig {
             max_level: ::log::STATIC_MAX_LEVEL,
             filters: &[],
         }
+    }
+}
+
+impl Default for LoggingConfig {
+    fn default() -> LoggingConfig {
+        Self::new()
     }
 }
 
