@@ -54,6 +54,14 @@ pub struct Common {
     pub gpt2: hal::gpt::Gpt<2>,
     /// DMA channels.
     pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
+    /// Secure real-time counter.
+    ///
+    /// Examples may enable the SRTC.
+    pub srtc: hal::snvs::srtc::Disabled,
+    /// SNVS LP core registers.
+    ///
+    /// May be used with the SRTC.
+    pub snvs_lp_core: hal::snvs::LpCore,
     /// USB1 core registers.
     pub usb1: Usb1,
     /// USB1 non-core registers.
@@ -77,11 +85,23 @@ impl Common {
             ral::dmamux::DMAMUX::instance()
         });
 
+        let hal::snvs::Snvs {
+            low_power:
+                hal::snvs::LowPower {
+                    core: snvs_lp_core,
+                    srtc,
+                    ..
+                },
+            ..
+        } = hal::snvs::new(unsafe { ral::snvs::SNVS::instance() });
+
         Self {
             pit,
             gpt1,
             gpt2,
             dma,
+            srtc,
+            snvs_lp_core,
             usb1: unsafe { Usb1::instance() },
             usbnc1: unsafe { UsbNc1::instance() },
             usbphy1: unsafe { UsbPhy1::instance() },

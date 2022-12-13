@@ -180,3 +180,9 @@ where
     // FlexPWM4 -> LPCG82
     Locator::new(N as usize + 78)
 }
+
+/// Returns the SVNS clock gate locator.
+#[inline(always)]
+pub const fn snvs() -> Locator {
+    Locator::new(38)
+}

@@ -340,10 +340,16 @@ pub const fn trng() -> Locator {
     locator!(CCGR6, CG6)
 }
 
-/// Returns the SNVS clock gate locator.
+/// Returns the SNVS LP clock gate locator.
 #[inline(always)]
-pub const fn snvs() -> Locator {
+pub const fn snvs_lp() -> Locator {
     locator!(CCGR5, CG15)
+}
+
+/// Returns the SNVS HP clock gate locator.
+#[inline(always)]
+pub const fn snvs_hp() -> Locator {
+    locator!(CCGR5, CG14)
 }
 
 /// Returns the USB clock gate locator.

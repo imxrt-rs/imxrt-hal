@@ -90,7 +90,8 @@ pub(crate) mod ccm {
             clock_gate::gpio::<4>(),
             clock_gate::gpio::<5>(),
             clock_gate::trng(),
-            clock_gate::snvs(),
+            clock_gate::snvs_lp(),
+            clock_gate::snvs_hp(),
             clock_gate::usb(),
         ];
     }

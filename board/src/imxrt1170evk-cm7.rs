@@ -22,6 +22,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpspi::<SPI_INSTANCE>(),
     clock_gate::flexpwm::<{ PWM_INSTANCE }>(),
     clock_gate::lpi2c::<{ I2C_INSTANCE }>(),
+    clock_gate::snvs(),
 ];
 
 pub(crate) unsafe fn configure() {

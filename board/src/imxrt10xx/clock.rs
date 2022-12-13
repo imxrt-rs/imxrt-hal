@@ -52,6 +52,8 @@ const COMMON_CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::dma(),
     clock_gate::usb(),
     clock_gate::trng(),
+    clock_gate::snvs_lp(),
+    clock_gate::snvs_hp(),
 ];
 
 /// The PIT clock frequency (Hz).
