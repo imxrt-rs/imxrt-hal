@@ -288,11 +288,7 @@ pub mod usbd {
 /// to specify any pad configurations. Then use the pad object(s) to construct your driver.
 pub mod iomuxc {
     pub use crate::chip::iomuxc::*;
-    pub(crate) use imxrt_iomuxc::*;
-    pub use imxrt_iomuxc::{
-        alternate, clear_sion, configure, set_sion, Config, Daisy, DriveStrength, ErasedPad,
-        Hysteresis, OpenDrain, Pad, PullKeeper, SlewRate, Speed, WrongPadError,
-    };
+    pub use imxrt_iomuxc::prelude::*;
 }
 
 pub use crate::chip::reexports::*;
