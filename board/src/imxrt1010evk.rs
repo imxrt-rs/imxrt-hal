@@ -31,6 +31,11 @@ pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::loggi
 
 /// The board LED.
 pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
+
+/// The SW4 "user" button.
+pub type Button = hal::gpio::Input<ButtonPad>;
+type ButtonPad = iomuxc::gpio_sd::GPIO_SD_05;
+
 /// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
 /// The UART routes to the DAP coprocessor, so the specific pins are not
@@ -106,9 +111,25 @@ pub type Tp34 = iomuxc::gpio_sd::GPIO_SD_02;
 /// Or, use it to evaluate clocks via `CCM_CLKO2`.
 pub type Tp31 = iomuxc::gpio_sd::GPIO_SD_01;
 
+/// Opaque structure for managing GPIO ports.
+///
+/// Exposes methods to configure your board's specific GPIOs.
+pub struct GpioPorts {
+    gpio2: hal::gpio::Port<2>,
+}
+
+impl GpioPorts {
+    /// Returns the GPIO port for the button.
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<2> {
+        &mut self.gpio2
+    }
+}
+
 /// IMXRT1010EVK specific peripherals.
 pub struct Specifics {
     pub led: Led,
+    pub button: Button,
+    pub ports: GpioPorts,
     pub console: Console,
     pub spi: Spi,
     pub i2c: I2c,
@@ -130,7 +151,11 @@ impl Specifics {
 
         let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
+        let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
+        let mut gpio2 = hal::gpio::Port::new(gpio2);
+
         let led = gpio1.output(iomuxc.gpio.p11);
+        let button = gpio2.input(iomuxc.gpio_sd.p05);
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
         let mut console = hal::lpuart::Lpuart::new(
@@ -208,6 +233,8 @@ impl Specifics {
         );
         Self {
             led,
+            button,
+            ports: GpioPorts { gpio2 },
             console,
             spi,
             i2c,
@@ -255,6 +282,13 @@ fn configure_pins(
     iomuxc::configure(&mut gpio.p02, I2C_PIN_CONFIG);
     iomuxc::configure(&mut gpio.p01, I2C_PIN_CONFIG);
 
+    const BUTTON_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+        .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup100k))
+        .set_hysteresis(iomuxc::Hysteresis::Enabled);
+
+    let button: &mut ButtonPad = &mut gpio_sd.p05;
+    iomuxc::configure(button, BUTTON_CONFIG);
+
     // Set the pin muxing for the two test points.
     crate::iomuxc::ccm::prepare(&mut gpio_sd.p01);
     crate::iomuxc::ccm::prepare(&mut gpio_sd.p02);
@@ -294,6 +328,7 @@ pub mod interrupt {
     use crate::ral::Interrupt;
 
     pub const BOARD_CONSOLE: Interrupt = Interrupt::LPUART1;
+    pub const BOARD_BUTTON: Interrupt = Interrupt::GPIO2_COMBINED_0_15;
     pub const BOARD_SPI: Interrupt = Interrupt::LPSPI1;
     pub const BOARD_PWM: Interrupt = Interrupt::PWM1_2;
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7;
@@ -306,6 +341,7 @@ pub mod interrupt {
 
     pub const INTERRUPTS: &[(Interrupt, syms::Vector)] = &[
         (BOARD_CONSOLE, syms::BOARD_CONSOLE),
+        (BOARD_BUTTON, syms::BOARD_BUTTON),
         (BOARD_SPI, syms::BOARD_SPI),
         (BOARD_PWM, syms::BOARD_PWM),
         (BOARD_DMA_A, syms::BOARD_DMA_A),

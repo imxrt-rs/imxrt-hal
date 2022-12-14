@@ -208,6 +208,7 @@ mod board_interrupts {
     pub type Vector = unsafe extern "C" fn();
     extern "C" {
         pub fn BOARD_CONSOLE();
+        pub fn BOARD_BUTTON();
         pub fn BOARD_SPI();
         pub fn BOARD_PWM();
         pub fn BOARD_DMA_A();
