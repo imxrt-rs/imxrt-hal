@@ -58,6 +58,10 @@ pub const PWM_FREQUENCY: u32 =
     hal::ccm::clock_tree::bus_frequency(RUN_MODE) / PWM_PRESCALER.divider();
 
 pub type Led = hal::gpio::Output<iomuxc::gpio_ad::GPIO_AD_04>;
+
+/// SW7, the "CPU wakeup" button.
+pub type Button = hal::gpio::Input<()>;
+
 pub type ConsolePins = hal::lpuart::Pins<
     iomuxc::gpio_ad::GPIO_AD_24, // TX, interfaced with debug chip
     iomuxc::gpio_ad::GPIO_AD_25, // RX, interfaced with debug chip
@@ -129,8 +133,20 @@ pub struct Pwm {
     pub outputs: pwm::Outputs,
 }
 
+pub struct GpioPorts {
+    gpio13: hal::gpio::Port<13>,
+}
+
+impl GpioPorts {
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<13> {
+        &mut self.gpio13
+    }
+}
+
 pub struct Specifics {
     pub led: Led,
+    pub button: Button,
+    pub ports: GpioPorts,
     pub console: Console,
     pub tp1002: Tp1002,
     pub tp1003: Tp1003,
@@ -143,6 +159,18 @@ impl Specifics {
     pub(crate) fn new(common: &mut crate::Common) -> Self {
         #[cfg(target_arch = "arm")]
         rtt_target::rtt_init_print!();
+
+        // Manually configuring IOMUXC_SNVS pads, since there's no
+        // equivalent API in imxrt-iomuxc.
+        let iomuxc_snvs = unsafe { ral::iomuxc_snvs::IOMUXC_SNVS::instance() };
+        // ALT5 => GPIO13[00]
+        ral::write_reg!(ral::iomuxc_snvs, iomuxc_snvs, SW_MUX_CTL_PAD_WAKEUP_DIG, MUX_MODE: 5);
+        // Pull up the pin to be brought to GND on switch press. No need for a high drive.
+        ral::write_reg!(ral::iomuxc_snvs, iomuxc_snvs, SW_PAD_CTL_PAD_WAKEUP_DIG, PUS: 1, PUE: 1, DSE: 0);
+
+        let gpio13 = unsafe { ral::gpio::GPIO13::instance() };
+        let mut gpio13 = hal::gpio::Port::new(gpio13);
+        let button = hal::gpio::Input::without_pin(&mut gpio13, 0);
 
         let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
         let mut iomuxc = super::convert_iomuxc(iomuxc);
@@ -221,6 +249,8 @@ impl Specifics {
         Self {
             led,
             console,
+            button,
+            ports: GpioPorts { gpio13 },
             tp1002: iomuxc.gpio_emc_b1.p40,
             tp1003: iomuxc.gpio_emc_b1.p41,
             spi,
@@ -243,6 +273,7 @@ pub mod interrupt {
     use crate::ral::Interrupt;
 
     pub const BOARD_CONSOLE: Interrupt = Interrupt::LPUART1;
+    pub const BOARD_BUTTON: Interrupt = Interrupt::GPIO13_COMBINED_0_31;
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7_DMA23;
     pub const BOARD_DMA_B: Interrupt = Interrupt::DMA11_DMA27;
     pub const BOARD_PIT: Interrupt = Interrupt::PIT1;
@@ -255,6 +286,7 @@ pub mod interrupt {
 
     pub const INTERRUPTS: &[(Interrupt, syms::Vector)] = &[
         (BOARD_CONSOLE, syms::BOARD_CONSOLE),
+        (BOARD_BUTTON, syms::BOARD_BUTTON),
         (BOARD_DMA_A, syms::BOARD_DMA_A),
         (BOARD_DMA_B, syms::BOARD_DMA_B),
         (BOARD_PIT, syms::BOARD_PIT),

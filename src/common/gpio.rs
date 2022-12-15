@@ -65,9 +65,7 @@ impl<const N: u8> Port<N> {
         P: iomuxc::gpio::Pin<N>,
     {
         iomuxc::gpio::prepare(&mut pin);
-        let output = Output::new::<N>(pin, self.register_block());
-        ral::modify_reg!(ral::gpio, self.gpio, GDIR, |gdir| gdir | output.mask());
-        output
+        Output::new(pin, self.register_block(), P::OFFSET)
     }
 
     /// Allocate an input GPIO.
@@ -76,19 +74,14 @@ impl<const N: u8> Port<N> {
         P: iomuxc::gpio::Pin<N>,
     {
         iomuxc::gpio::prepare(&mut pin);
-        let input = Input::new::<N>(pin, self.register_block());
-        ral::modify_reg!(ral::gpio, self.gpio, GDIR, |gdir| gdir & !input.mask());
-        input
+        Input::new(pin, self.register_block(), P::OFFSET)
     }
 
     /// Enable or disable GPIO input interrupts.
     ///
     /// Specify `None` to disable interrupts. Or, provide a trigger
     /// to configure the interrupt.
-    pub fn set_interrupt<P>(&mut self, pin: &Input<P>, trigger: Option<Trigger>)
-    where
-        P: iomuxc::gpio::Pin<N>,
-    {
+    pub fn set_interrupt<P>(&mut self, pin: &Input<P>, trigger: Option<Trigger>) {
         self.set_interrupt_enable(pin, false);
         if let Some(trigger) = trigger {
             self.set_interrupt_trigger(pin, trigger);
@@ -141,15 +134,10 @@ pub struct Output<P> {
 unsafe impl<P: Send> Send for Output<P> {}
 
 impl<P> Output<P> {
-    fn new<const N: u8>(pin: P, gpio: &'static ral::gpio::RegisterBlock) -> Self
-    where
-        P: iomuxc::gpio::Pin<N>,
-    {
-        Self {
-            pin,
-            gpio,
-            offset: P::OFFSET,
-        }
+    fn new(pin: P, gpio: &'static ral::gpio::RegisterBlock, offset: u32) -> Self {
+        let output = Self { pin, gpio, offset };
+        ral::modify_reg!(ral::gpio, gpio, GDIR, |gdir| gdir | output.mask());
+        output
     }
 
     const fn mask(&self) -> u32 {
@@ -198,6 +186,24 @@ impl<P> Output<P> {
     }
 }
 
+impl Output<()> {
+    /// Allocate an output GPIO without a pin.
+    ///
+    /// Prefer using [`Port::output`](Port::output) to create a GPIO ouptut with a
+    /// pin resource. That method ensures that pin resources are managed throughout
+    /// your program, and that the pin is configured to operate as a GPIO output.
+    ///
+    /// You may use this method to allocate duplicate `Output` object for the same
+    /// physical GPIO output. This is considered safe, since the `Output` API is
+    /// reentrant.
+    ///
+    /// If you use this constructor, you're responsible for configuring the IOMUX
+    /// multiplexer register.
+    pub fn without_pin<const N: u8>(port: &mut Port<N>, offset: u32) -> Self {
+        Self::new((), port.register_block(), offset)
+    }
+}
+
 /// An input GPIO.
 pub struct Input<P> {
     pin: P,
@@ -228,15 +234,10 @@ pub enum Trigger {
 }
 
 impl<P> Input<P> {
-    fn new<const N: u8>(pin: P, gpio: &'static ral::gpio::RegisterBlock) -> Self
-    where
-        P: iomuxc::gpio::Pin<N>,
-    {
-        Self {
-            pin,
-            gpio,
-            offset: P::OFFSET,
-        }
+    fn new(pin: P, gpio: &'static ral::gpio::RegisterBlock, offset: u32) -> Self {
+        let input = Self { pin, gpio, offset };
+        ral::modify_reg!(ral::gpio, gpio, GDIR, |gdir| gdir & !input.mask());
+        input
     }
 
     const fn mask(&self) -> u32 {
@@ -281,6 +282,25 @@ impl<P> Input<P> {
     /// Mutably access the underling pin.
     pub fn pin_mut(&mut self) -> &mut P {
         &mut self.pin
+    }
+}
+
+impl Input<()> {
+    /// Allocate an input GPIO without a pin.
+    ///
+    /// Prefer using [`Port::input`](Port::input) to create a GPIO ouptut with a
+    /// pin resource. That method ensures that pin resources are managed throughout
+    /// your program, and that the pin is configured to operate as a GPIO input.
+    ///
+    /// You may use this method to allocate duplicate `Input` object for the same
+    /// physical GPIO input. This is considered safe, since the `Input` API is
+    /// reentrant. Any non-reentrant methods are attached to [`Port`], which cannot
+    /// be constructed without an `unsafe` constructor of the register block.
+    ///
+    /// If you use this constructor, you're responsible for configuring the IOMUX
+    /// multiplexer register.
+    pub fn without_pin<const N: u8>(port: &mut Port<N>, offset: u32) -> Self {
+        Self::new((), port.register_block(), offset)
     }
 }
 
