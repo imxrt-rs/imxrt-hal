@@ -98,8 +98,9 @@ pub enum RunMode {
 ///
 /// These modules only depend on a RAL feature.
 mod common {
+    pub use imxrt_dma as dma;
+
     pub mod ccm;
-    pub mod dma;
     pub mod flexpwm;
     pub mod gpio;
     pub mod gpt;
@@ -196,7 +197,7 @@ pub mod ccm {
 /// # async fn a() -> Option<()> {
 /// # use imxrt_hal as hal;
 /// # use imxrt_ral as ral;
-/// # let mut channel = unsafe { hal::dma::channel::Channel::new(13) };
+/// # let mut channel = unsafe { hal::dma::DMA.channel(13) };
 /// let source = [4u32, 5, 6, 7];
 /// let mut destination = [0u32; 4];
 ///

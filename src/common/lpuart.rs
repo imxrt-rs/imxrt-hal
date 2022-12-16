@@ -47,7 +47,7 @@
 //! }
 //!
 //! // Schedule a DMA receive...
-//! # let mut dma_channel = unsafe { hal::dma::channel::Channel::new(13) };
+//! # let mut dma_channel = unsafe { hal::dma::DMA.channel(13) };
 //! let mut buffer = [0u8; 64];
 //! lpuart2.dma_read(&mut dma_channel, &mut buffer)
 //!     .await.ok()?;

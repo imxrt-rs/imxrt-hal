@@ -12,6 +12,24 @@ use crate::common::dma::channel::Channel;
 /// increase.
 pub const CHANNEL_COUNT: usize = crate::chip::config::DMA_CHANNEL_COUNT;
 
+/// The DMA driver.
+///
+/// This DMA driver is configured for your chip. You could use it to allocate
+/// channels; however, it's safer to use [`channels()`] to acquire your DMA
+/// channels.
+///
+/// This driver provides access to the wakers that are provided to DMA futures.
+/// If you're implementing an async runtime, you should use this object to wake
+/// DMA channel wakers on interrupt.
+// Safety: pointers come from RAL, and are correct for the selected chip.
+// DMA channel count is also valid for the chip selection.
+pub static DMA: crate::common::dma::Dma<{ CHANNEL_COUNT }> = unsafe {
+    crate::common::dma::Dma::new(
+        crate::ral::dma::DMA.cast(),
+        crate::ral::dmamux::DMAMUX.cast(),
+    )
+};
+
 /// Allocate all DMA channels.
 ///
 /// The number of channels depends on [`CHANNEL_COUNT`], which may change
@@ -24,9 +42,9 @@ pub fn channels(_: ral::dma::DMA, _: ral::dmamux::DMAMUX) -> [Option<Channel>; C
     let mut channels: [Option<Channel>; CHANNEL_COUNT] = [NO_CHANNEL; CHANNEL_COUNT];
 
     for (idx, channel) in channels.iter_mut().enumerate() {
-        // Safety: own the DMA instances, so we're OK to fabricate the channels.
+        // Safety: we own the DMA instances, so we're OK to fabricate the channels.
         // It would be unsafe for the user to subsequently access the DMA instances.
-        let mut chan = unsafe { Channel::new(idx) };
+        let mut chan = unsafe { DMA.channel(idx) };
         chan.reset();
         *channel = Some(chan);
     }

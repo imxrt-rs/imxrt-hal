@@ -48,6 +48,9 @@ version = "0.1"
 # imxrt-rs dependencies
 #######################
 
+[dependencies.imxrt-dma]
+workspace = true
+
 [dependencies.imxrt-iomuxc]
 workspace = true
 
@@ -88,6 +91,7 @@ members = [
 ]
 
 [workspace.dependencies]
+imxrt-dma = "0.1"
 imxrt-iomuxc = "0.2"
 imxrt-hal = { path = "." }
 imxrt-log = { path = "logging" }
@@ -164,6 +168,7 @@ name = "hal_i2c_lcd1602"
 required-features = ["board/lcd1602"]
 
 [patch.crates-io]
+imxrt-dma =     { git = "https://github.com/mciantyre/imxrt-dma" }
 imxrt-ral =     { git = "https://github.com/mciantyre/imxrt-ral" }
 imxrt-rt =      { git = "https://github.com/mciantyre/imxrt-rt" }
 ral-registers = { git = "https://github.com/mciantyre/ral-registers" }
