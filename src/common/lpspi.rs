@@ -53,6 +53,11 @@
 //!
 //! let mut buffer: [u8; 3] = [1, 2, 3];
 //! spi.transfer(&mut buffer).ok()?;
+//!
+//! let (spi4, pins) = spi.release();
+//!
+//! // Re-construct without pins:
+//! let mut spi = Lpspi::without_pins(spi4);
 //! # Some(()) }();
 //! ```
 //!
@@ -350,7 +355,7 @@ where
     SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
     PCS0: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
 {
-    /// Create a new LPISPI driver from the RAL SPI instance and a set of pins.
+    /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
     /// The LPSPI clock speed is unspecified.
     pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK, PCS0>) -> Self {
@@ -358,7 +363,25 @@ where
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
         lpspi::prepare(&mut pins.pcs0);
+        Self::init(lpspi, pins)
+    }
+}
 
+impl<const N: u8> Lpspi<(), N> {
+    /// Create a new LPSPI driver from the RAL LPSPI instance.
+    ///
+    /// This is similar to [`new()`](Self::new), but it does not configure
+    /// pins. You're responsible for configuring pins, and for making sure
+    /// the pin configuration doesn't change while this driver is in use.
+    pub fn without_pins(lpspi: ral::lpspi::Instance<N>) -> Self {
+        Self::init(lpspi, ())
+    }
+}
+
+impl<P, const N: u8> Lpspi<P, N> {
+    pub const N: u8 = N;
+
+    fn init(lpspi: ral::lpspi::Instance<N>, pins: P) -> Self {
         let mut spi = Lpspi {
             lpspi,
             pins,
@@ -379,10 +402,6 @@ where
         ral::write_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_1);
         spi
     }
-}
-
-impl<P, const N: u8> Lpspi<P, N> {
-    pub const N: u8 = N;
 
     /// Release the SPI peripheral components
     pub fn release(self) -> (ral::lpspi::Instance<N>, P) {

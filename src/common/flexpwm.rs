@@ -6,7 +6,10 @@
 //!
 //! - is signaled through a [`Status`] flag (see [`Submodule::status`]).
 //! - can generate an interrupt (see [`Submodule::interrupts`]).
-//! - set a PWM [`Output`] high or low, depending on the turn on / off values.
+//! - sets a PWM [`Output`] high or low, depending on the turn on / off values.
+//!
+//! > Note: PWM outputs can also be manipulated directly with [`Submodule`], without
+//! > using [`Output`].
 //!
 //! The PWM driver does not implement any of the embedded-hal PWM traits. You should
 //! use these APIs to create your own PWM implementation that satisfies your driver.
@@ -164,6 +167,12 @@ impl<const N: u8> Pwm<N> {
             Channel::A => crate::ral::modify_reg!(crate::ral::pwm, self.pwm, OUTEN, PWMA_EN: mask),
             Channel::B => crate::ral::modify_reg!(crate::ral::pwm, self.pwm, OUTEN, PWMB_EN: mask),
         }
+    }
+
+    fn rmw_outen(&mut self, channel: Channel, mask: Mask, enable: bool) {
+        let mut outen = self.output_enable(channel);
+        outen.set(mask, enable);
+        self.set_output_enable(channel, outen);
     }
 }
 
@@ -409,6 +418,22 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
         }
     }
 
+    /// Get the turn on value for a channel.
+    ///
+    /// This is the same as using [`turn_on()`] to produce a value register, then
+    /// calling [`value()`](Self::value) with that result.
+    pub fn turn_on(&self, channel: Channel) -> i16 {
+        self.value(turn_on(channel))
+    }
+
+    /// Get the turn off value for a channel.
+    ///
+    /// This is the same as using [`turn_off()`] to produce a value register, then
+    /// calling [`value()`](Self::value) with that result.
+    pub fn turn_off(&self, channel: Channel) -> i16 {
+        self.value(turn_off(channel))
+    }
+
     /// Set one of the six value registers to compare at `value`.
     pub fn set_value(&self, value_register: ValueRegister, value: i16) {
         match value_register {
@@ -419,6 +444,22 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
             ValueRegister::Val4 => crate::ral::write_reg!(self::ral, self, SMVAL4, value),
             ValueRegister::Val5 => crate::ral::write_reg!(self::ral, self, SMVAL5, value),
         }
+    }
+
+    /// Set the turn on compare for a channel.
+    ///
+    /// This is the same as using [`turn_on()`] to produce a value register, then
+    /// calling [`set_value()`](Self::set_value) with that result.
+    pub fn set_turn_on(&self, channel: Channel, compare: i16) {
+        self.set_value(turn_on(channel), compare);
+    }
+
+    /// Set the turn off compare for a channel.
+    ///
+    /// This is the same as using [`turn_off()`] to produce a value register, then
+    /// calling [`set_value()`](Self::set_value) with that result.
+    pub fn set_turn_off(&self, channel: Channel, compare: i16) {
+        self.set_value(turn_off(channel), compare);
     }
 
     /// Returns `true` if this submodule's `LDOK` bit is set.
@@ -439,6 +480,16 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     /// Returns `true` if the submodule is running.
     pub fn is_running(&self, pwm: &Pwm<N>) -> bool {
         pwm.run().intersects(Self::MASK)
+    }
+
+    /// Indicates if a PWM output channel is enabled.
+    pub fn output_enable(&self, pwm: &Pwm<N>, channel: Channel) -> bool {
+        pwm.output_enable(channel).intersects(Self::MASK)
+    }
+
+    /// Enable or disable an output channel.
+    pub fn set_output_enable(&self, pwm: &mut Pwm<N>, channel: Channel, enable: bool) {
+        pwm.rmw_outen(channel, Self::MASK, enable);
     }
 
     /// Set or clear the running bit for this submodule.

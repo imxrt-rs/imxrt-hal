@@ -227,10 +227,7 @@ impl<P, const N: u8> lpspi::Lpspi<P, N> {
 use crate::adc;
 
 #[cfg(family = "imxrt10xx")]
-unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N>
-where
-    P: crate::iomuxc::adc::Pin<N>,
-{
+unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N> {
     fn source_signal(&self) -> u32 {
         ADC_DMA_RX_MAPPING[if N == ral::SOLE_INSTANCE {
             N as usize

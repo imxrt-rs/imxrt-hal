@@ -71,28 +71,26 @@ where
     }
     /// Enable or disable this output.
     pub fn set_output_enable(&self, pwm: &mut super::Pwm<N>, enable: bool) {
-        let mut output_enable = pwm.output_enable(self.channel);
-        output_enable.set(Self::MASK, enable);
-        pwm.set_output_enable(self.channel, output_enable);
+        pwm.rmw_outen(self.channel, Self::MASK, enable);
     }
     /// Returns the turn on counter value.
     ///
     /// When the PWM counter reaches this value, the output sets.
     pub fn turn_on(&self, sm: &super::Submodule<N, M>) -> i16 {
-        sm.value(super::turn_on(self.channel))
+        sm.turn_on(self.channel)
     }
     /// Returns the turn off counter value.
     ///
     /// When the PWM counter reaches this value, the output clears.
     pub fn turn_off(&self, sm: &super::Submodule<N, M>) -> i16 {
-        sm.value(super::turn_off(self.channel))
+        sm.turn_off(self.channel)
     }
     /// Set the turn on counter value.
     pub fn set_turn_on(&self, sm: &super::Submodule<N, M>, compare: i16) {
-        sm.set_value(super::turn_on(self.channel), compare)
+        sm.set_turn_on(self.channel, compare)
     }
     /// Set the turn off counter value.
     pub fn set_turn_off(&self, sm: &super::Submodule<N, M>, compare: i16) {
-        sm.set_value(super::turn_off(self.channel), compare)
+        sm.set_turn_off(self.channel, compare)
     }
 }

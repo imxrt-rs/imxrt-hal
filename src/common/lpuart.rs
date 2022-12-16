@@ -51,6 +51,12 @@
 //! let mut buffer = [0u8; 64];
 //! lpuart2.dma_read(&mut dma_channel, &mut buffer)
 //!     .await.ok()?;
+//!
+//! // Release the peripheral instance...
+//! let (lpuart2, pins) = lpuart2.release();
+//!
+//! // Reconstruct without the pins...
+//! let mut lpuart2 = Lpuart::without_pins(lpuart2);
 //! # Some(()) }
 //! ```
 
@@ -106,15 +112,32 @@ where
     pub fn new(lpuart: Instance<N>, mut pins: Pins<TX, RX>) -> Self {
         iomuxc::lpuart::prepare(&mut pins.tx);
         iomuxc::lpuart::prepare(&mut pins.rx);
-        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 1);
-        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 0);
-        ral::modify_reg!(ral::lpuart, lpuart, CTRL, TE: TE_1, RE: RE_1);
-        Self { pins, lpuart }
+        Self::init(lpuart, pins)
+    }
+}
+
+impl<const N: u8> Lpuart<(), N> {
+    /// Create a new LPUART peripheral from its peripheral registers
+    /// without any pins.
+    ///
+    /// This is similar to [`new()`](Self::new), but it does not configure
+    /// pins to function as inputs and outputs. You're responsible
+    /// for configuring TX and RX pins and for making sure the pin state
+    /// doesn't change.
+    pub fn without_pins(lpuart: Instance<N>) -> Self {
+        Self::init(lpuart, ())
     }
 }
 
 impl<P, const N: u8> Lpuart<P, N> {
     pub const N: u8 = N;
+
+    fn init(lpuart: Instance<N>, pins: P) -> Self {
+        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 1);
+        ral::write_reg!(ral::lpuart, lpuart, GLOBAL, RST: 0);
+        ral::modify_reg!(ral::lpuart, lpuart, CTRL, TE: TE_1, RE: RE_1);
+        Self { pins, lpuart }
+    }
 
     /// Resets all internal logic and registers.
     pub fn reset(&mut self) {

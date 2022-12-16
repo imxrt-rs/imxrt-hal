@@ -20,6 +20,12 @@
 //! let mut a1 = adc::AnalogInput::new(pads.gpio_ad_b1.p02);
 //!
 //! let reading: u16 = adc1.read_blocking(&mut a1);
+//!
+//! // Read without constructing an analog pin:
+//! let adc2 = unsafe { ral::adc::ADC2::instance() };
+//! let mut adc2 = adc::Adc::new(adc2, adc::ClockSelect::ADACK, adc::ClockDivision::Div2);
+//!
+//! let reading = adc2.read_blocking_channel(7);
 //! # Some(()) }();
 //! ```
 
@@ -240,7 +246,24 @@ impl<const N: u8> Adc<N> {
     where
         P: Pin<N>,
     {
-        let channel = <P as Pin<N>>::INPUT;
+        self.read_blocking_channel(P::INPUT)
+    }
+
+    /// Perform a blocking read using the specified ADC channel.
+    ///
+    /// Unlike [`read_blocking()`](Self::read_blocking), which ensures
+    /// that the pin is configured as an ADC input, you're responsible
+    /// for configuring the pin as an ADC input before using this method.
+    /// Otherwise, this method may not produce a (correct) value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the ADC channel is greater than 15.
+    pub fn read_blocking_channel(&mut self, channel: u32) -> u16 {
+        // There's only 15 channels on the 1010 (0 through 14).
+        // Nevertheless, the HC0 register documents that you can
+        // pass in channel 15.
+        assert!(channel < 16);
         ral::modify_reg!(ral::adc, self.reg, HC0, |_| channel);
         while (ral::read_reg!(ral::adc, self.reg, HS, COCO0) == 0) {}
 
@@ -268,18 +291,38 @@ where
 /// find it easier to use the interface available in [`dma`](crate::dma).
 pub struct DmaSource<P, const N: u8> {
     adc: Adc<N>,
-    _pin: AnalogInput<P, N>,
+    channel: u32,
+    _pin: P,
+}
+
+impl<P, const N: u8> DmaSource<AnalogInput<P, N>, N>
+where
+    P: Pin<N>,
+{
+    /// Create a new DMA source object for a DMA transfer.
+    pub fn new(adc: Adc<N>, pin: AnalogInput<P, N>) -> Self {
+        Self {
+            adc,
+            _pin: pin,
+            channel: P::INPUT,
+        }
+    }
+}
+
+impl<const N: u8> DmaSource<(), N> {
+    /// Create an ADC DMA source without a configured ADC input.
+    ///
+    /// You're responsible for configuring the pin as an ADC input.
+    pub fn without_pin(adc: Adc<N>, channel: u32) -> Self {
+        Self {
+            adc,
+            _pin: (),
+            channel,
+        }
+    }
 }
 
 impl<P, const N: u8> DmaSource<P, N> {
-    /// Create a new DMA source object for a DMA transfer.
-    pub fn new(adc: Adc<N>, pin: AnalogInput<P, N>) -> Self
-    where
-        P: Pin<N>,
-    {
-        Self { adc, _pin: pin }
-    }
-
     /// Returns a pointer to the ADC's `R0` register.
     ///
     /// You should use this pointer when coordinating a DMA transfer.
@@ -292,13 +335,9 @@ impl<P, const N: u8> DmaSource<P, N> {
     ///
     /// This is necessary to start a transfer. However, this in itself
     /// does not start a DMA transfer.
-    pub fn enable_dma(&mut self)
-    where
-        P: Pin<N>,
-    {
-        let channel = <P as Pin<N>>::INPUT;
+    pub fn enable_dma(&mut self) {
         ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 1, DMAEN: 1);
-        ral::modify_reg!(ral::adc, self.adc.reg, HC0, |_| channel);
+        ral::modify_reg!(ral::adc, self.adc.reg, HC0, |_| self.channel);
     }
 
     /// Disable the ADC's DMA support.

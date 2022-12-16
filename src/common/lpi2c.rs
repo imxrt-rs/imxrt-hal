@@ -40,6 +40,12 @@
 //! # const MY_DEVICE_ADDRESS: u8 = 0;
 //!
 //! i2c3.write_read(MY_DEVICE_ADDRESS, &output, &mut input).ok()?;
+//!
+//! // Release the driver components...
+//! let (i2c3, pins) = i2c3.release();
+//!
+//! // Re-construct without pins...
+//! let mut i2c3 = Lpi2c::without_pins(i2c3, &LPI2C_400KHz);
 //! # Some(()) }();
 //! ```
 //!
@@ -89,15 +95,33 @@ where
     SCL: lpi2c::Pin<Signal = lpi2c::Scl, Module = consts::Const<N>>,
     SDA: lpi2c::Pin<Signal = lpi2c::Sda, Module = consts::Const<N>>,
 {
-    /// Create an I2C driver from an I2C instance and a pair of I2C pins.
+    /// Create an LPI2C driver from an LPI2C instance and a pair of I2C pins.
     pub fn new(
-        mut lpi2c: crate::ral::lpi2c::Instance<N>,
+        lpi2c: crate::ral::lpi2c::Instance<N>,
         mut pins: Pins<SCL, SDA>,
         timings: &Timing,
     ) -> Self {
         lpi2c::prepare(&mut pins.scl);
         lpi2c::prepare(&mut pins.sda);
+        Self::init(lpi2c, pins, timings)
+    }
+}
 
+impl<const N: u8> Lpi2c<(), N> {
+    /// Create an I2C driver from an LPI2C instance.
+    ///
+    /// This is similar to [`new()`](Self::new), but it does not configure pins.
+    /// You're responsible for configuring pins, and for making sure
+    /// the pin configuration doesn't change while this driver is in use.
+    pub fn without_pins(lpi2c: ral::lpi2c::Instance<N>, timings: &Timing) -> Self {
+        Self::init(lpi2c, (), timings)
+    }
+}
+
+impl<P, const N: u8> Lpi2c<P, N> {
+    pub const N: u8 = N;
+
+    fn init(mut lpi2c: ral::lpi2c::Instance<N>, pins: P, timings: &Timing) -> Self {
         ral::write_reg!(ral::lpi2c, lpi2c, MCR, RST: RST_1);
         while ral::read_reg!(ral::lpi2c, lpi2c, MCR, RST == RST_1) {
             ral::write_reg!(ral::lpi2c, lpi2c, MCR, RST: RST_0);
@@ -111,10 +135,11 @@ where
 
         Lpi2c { lpi2c, pins }
     }
-}
 
-impl<P, const N: u8> Lpi2c<P, N> {
-    pub const N: u8 = N;
+    /// Release the LPI2C components.
+    pub fn release(self) -> (ral::lpi2c::Instance<N>, P) {
+        (self.lpi2c, self.pins)
+    }
 
     /// Read the controller status bits.
     #[inline]
