@@ -324,7 +324,7 @@ impl<const M: u8> CAN<M>
     }
 
     pub fn set_baud_rate(&mut self, baud: u32) {
-        let clock_freq = 24_000_000;
+        let clock_freq = self.get_clock();
 
         let mut divisor = 0;
         let mut best_divisor: u32 = 0;
