@@ -14,6 +14,17 @@ use crate::ral;
 
 pub use crate::common::ccm::XTAL_OSCILLATOR_HZ;
 
+// pub struct Handle {
+//     pub(crate) base: ral::ccm::Instance,
+//     pub(crate) analog: ral::ccm_analog::Instance,
+// }
+// 
+// impl Handle {
+//     pub fn raw(&mut self) -> (&ral::ccm::Instance, &ral::ccm_analog::Instance) {
+//         (&self.base, &self.analog)
+//     }
+// }
+
 /// PERCLK clock.
 ///
 /// The PERCLK clock controls GPT and PIT timers.

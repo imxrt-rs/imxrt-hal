@@ -93,6 +93,7 @@ mod chip;
 mod common {
     pub use imxrt_dma as dma;
 
+    pub mod can;
     pub mod ccm;
     pub mod flexpwm;
     pub mod gpio;

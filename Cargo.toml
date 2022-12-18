@@ -45,6 +45,10 @@ version = "0.2.6"
 package = "embedded-hal"
 version = "1.0.0"
 
+[dependencies.ecan]
+package = "embedded-can"
+version = "0.4.1"
+
 [dependencies.eio06]
 package = "embedded-io"
 version = "0.6.1"
