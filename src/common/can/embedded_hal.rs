@@ -4,8 +4,8 @@ use super::{Data, Frame, Error, CAN};
 use crate::iomuxc::consts::Unsigned;
 
 use embedded_can;
-pub use embedded_can::{ExtendedId, Id, StandardId};
 pub(crate) use embedded_can::ErrorKind;
+pub use embedded_can::{ExtendedId, Id, StandardId};
 
 impl<const M: u8> embedded_can::nb::Can for CAN<M>
 {

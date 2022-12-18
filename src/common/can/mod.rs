@@ -1,7 +1,7 @@
 //! Flexible Controller Area Network (FlexCAN)
 //!
 //! The FlexCAN module provides a CanBus peripheral that implements
-//! the `embedded_hal::can` traits.
+//! the `embedded_can` traits.
 //!//!
 //! # Example
 //!
@@ -49,8 +49,8 @@ pub use frame::{CodeReg, Data, FlexCanMailboxCSCode, Frame, IdReg};
 use ral::{modify_reg, read_reg, write_reg};
 
 use crate::ccm;
-use crate::iomuxc::consts::{Unsigned, U1, U2};
 use crate::iomuxc::flexcan;
+use crate::iomuxc::consts::{Unsigned, U1, U2};
 use crate::ral;
 
 use core::marker::PhantomData;
