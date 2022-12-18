@@ -4,7 +4,7 @@ mod tests;
 use core::convert::TryFrom;
 use core::ops::{Deref, DerefMut};
 
-use super::id::{ExtendedId, Id, StandardId};
+use super::{ExtendedId, Id, StandardId};
 
 /// A CAN data or remote frame.
 #[derive(Clone, Debug, Eq)]
@@ -143,27 +143,21 @@ pub enum FlexCanMailboxCSCode {
     Unknown,
 }
 
-impl ::core::convert::TryFrom<u8> for FlexCanMailboxCSCode {
-    type Error = ();
-
+impl ::core::convert::From<u8> for FlexCanMailboxCSCode {
     #[inline(always)]
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
+    fn from(value: u8) -> Self {
         match value {
-            v if v == FlexCanMailboxCSCode::RxInactive as u8 => {
-                Ok(FlexCanMailboxCSCode::RxInactive)
-            }
-            v if v == FlexCanMailboxCSCode::RxEmpty as u8 => Ok(FlexCanMailboxCSCode::RxEmpty),
-            v if v == FlexCanMailboxCSCode::RxFull as u8 => Ok(FlexCanMailboxCSCode::RxFull),
-            v if v == FlexCanMailboxCSCode::RxOverrun as u8 => Ok(FlexCanMailboxCSCode::RxOverrun),
-            v if v == FlexCanMailboxCSCode::RxAnswer as u8 => Ok(FlexCanMailboxCSCode::RxAnswer),
-            v if v == FlexCanMailboxCSCode::RxBusy as u8 => Ok(FlexCanMailboxCSCode::RxBusy),
-            v if v == FlexCanMailboxCSCode::TxInactive as u8 => {
-                Ok(FlexCanMailboxCSCode::TxInactive)
-            }
-            v if v == FlexCanMailboxCSCode::TxAbort as u8 => Ok(FlexCanMailboxCSCode::TxAbort),
-            v if v == FlexCanMailboxCSCode::TxOnce as u8 => Ok(FlexCanMailboxCSCode::TxOnce),
-            v if v == FlexCanMailboxCSCode::TxAnswer as u8 => Ok(FlexCanMailboxCSCode::TxAnswer),
-            _ => Ok(FlexCanMailboxCSCode::Unknown),
+            v if v == FlexCanMailboxCSCode::RxInactive as u8 => FlexCanMailboxCSCode::RxInactive,
+            v if v == FlexCanMailboxCSCode::RxEmpty as u8 => FlexCanMailboxCSCode::RxEmpty,
+            v if v == FlexCanMailboxCSCode::RxFull as u8 => FlexCanMailboxCSCode::RxFull,
+            v if v == FlexCanMailboxCSCode::RxOverrun as u8 => FlexCanMailboxCSCode::RxOverrun,
+            v if v == FlexCanMailboxCSCode::RxAnswer as u8 => FlexCanMailboxCSCode::RxAnswer,
+            v if v == FlexCanMailboxCSCode::RxBusy as u8 => FlexCanMailboxCSCode::RxBusy,
+            v if v == FlexCanMailboxCSCode::TxInactive as u8 => FlexCanMailboxCSCode::TxInactive,
+            v if v == FlexCanMailboxCSCode::TxAbort as u8 => FlexCanMailboxCSCode::TxAbort,
+            v if v == FlexCanMailboxCSCode::TxOnce as u8 => FlexCanMailboxCSCode::TxOnce,
+            v if v == FlexCanMailboxCSCode::TxAnswer as u8 => FlexCanMailboxCSCode::TxAnswer,
+            _ => FlexCanMailboxCSCode::Unknown,
         }
     }
 }
@@ -175,8 +169,8 @@ impl FlexCanMailboxCSCode {
     }
 
     #[inline(always)]
-    pub fn from_code_reg(reg: u32) -> Result<Self, ()> {
-        Self::try_from(((reg & CodeReg::CODE_MASK) >> CodeReg::CODE_SHIFT) as u8)
+    pub fn from_code_reg(reg: u32) -> Self {
+        Self::from(((reg & CodeReg::CODE_MASK) >> CodeReg::CODE_SHIFT) as u8)
     }
 
     #[inline(always)]

@@ -1,9 +1,10 @@
 //! `embedded_hal` trait impls.
 
-use super::{Data, ExtendedId, Frame, Id, NoDataError, StandardId, CAN};
-
+use super::{Data, Frame, NoDataError, CAN};
 use crate::iomuxc::consts::Unsigned;
+
 use embedded_hal::can;
+pub use embedded_hal::can::{ExtendedId, Id, StandardId};
 
 impl<M> can::Can for CAN<M>
 where
