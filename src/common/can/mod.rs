@@ -1,10 +1,9 @@
 mod embedded_hal;
 pub mod filter;
 mod frame;
-mod id;
 
+pub use self::embedded_hal::{ExtendedId, Id, StandardId};
 pub use frame::{CodeReg, Data, FlexCanMailboxCSCode, Frame, IdReg};
-pub use id::{ExtendedId, Id, StandardId};
 use ral::{modify_reg, read_reg, write_reg};
 
 use crate::ccm;
@@ -750,20 +749,15 @@ impl<const M: u8> CAN<M>
         }
 
         let code = self.read_mailbox_code(mailbox_number);
-        let c = match FlexCanMailboxCSCode::from_code_reg(code) {
-            Ok(c) => Some(c),
-            Err(_e) => None,
-        };
+        let c = FlexCanMailboxCSCode::from_code_reg(code);
 
         let mailbox_addr = self.mailbox_number_to_address(mailbox_number);
 
         match c {
             // return None from a transmit mailbox
-            Some(c) if c.is_tx_mailbox() => None,
+            c if c.is_tx_mailbox() => None,
             // full or overrun
-            Some(c)
-                if (c == FlexCanMailboxCSCode::RxFull) | (c == FlexCanMailboxCSCode::RxOverrun) =>
-            {
+            c if (c == FlexCanMailboxCSCode::RxFull) | (c == FlexCanMailboxCSCode::RxOverrun) => {
                 let id =
                     unsafe { core::ptr::read_volatile((mailbox_addr + 0x4_u32) as *const u32) };
                 let data0 =
@@ -979,7 +973,7 @@ impl<const M: u8> CAN<M>
     #[inline(always)]
     pub fn transmit(&mut self, frame: &Frame) -> nb::Result<(), Infallible> {
         for i in self.mailbox_offset()..self.get_max_mailbox() {
-            if let Ok(FlexCanMailboxCSCode::TxInactive) =
+            if let FlexCanMailboxCSCode::TxInactive =
                 FlexCanMailboxCSCode::from_code_reg(self.read_mailbox_code(i))
             {
                 self.write_tx_mailbox(i, frame);

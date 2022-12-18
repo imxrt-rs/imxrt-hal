@@ -1,11 +1,12 @@
 //! `embedded_hal` trait impls.
 
-use super::{Data, ExtendedId, Frame, Id, NoDataError, StandardId, CAN};
-
+use super::{Data, Frame, NoDataError, CAN};
 use crate::iomuxc::consts::Unsigned;
-use ecan;
 
-impl<const M: u8> ecan::nb::Can for CAN<M>
+use embedded_can;
+pub use embedded_can::{ExtendedId, Id, StandardId};
+
+impl<const M: u8> embedded_can::nb::Can for CAN<M>
 {
     type Frame = Frame;
 
@@ -27,19 +28,19 @@ impl<const M: u8> ecan::nb::Can for CAN<M>
     }
 }
 
-impl ecan::Error for NoDataError {
-    fn kind(&self) -> ecan::ErrorKind {
-        ecan::ErrorKind::Overrun
+impl embedded_can::Error for NoDataError {
+    fn kind(&self) -> embedded_can::ErrorKind {
+        embedded_can::ErrorKind::Overrun
     }
 }
 
-impl ecan::Frame for Frame {
-    fn new(id: impl Into<ecan::Id>, data: &[u8]) -> Option<Self> {
+impl embedded_can::Frame for Frame {
+    fn new(id: impl Into<Id>, data: &[u8]) -> Option<Self> {
         let id = match id.into() {
-            ecan::Id::Standard(id) => unsafe {
+            Id::Standard(id) => unsafe {
                 Id::Standard(StandardId::new_unchecked(id.as_raw()))
             },
-            ecan::Id::Extended(id) => unsafe {
+            Id::Extended(id) => unsafe {
                 Id::Extended(ExtendedId::new_unchecked(id.as_raw()))
             },
         };
@@ -48,12 +49,12 @@ impl ecan::Frame for Frame {
         Some(Frame::new_data(id, data))
     }
 
-    fn new_remote(id: impl Into<ecan::Id>, dlc: usize) -> Option<Self> {
+    fn new_remote(id: impl Into<Id>, dlc: usize) -> Option<Self> {
         let id = match id.into() {
-            ecan::Id::Standard(id) => unsafe {
+            Id::Standard(id) => unsafe {
                 Id::Standard(StandardId::new_unchecked(id.as_raw()))
             },
-            ecan::Id::Extended(id) => unsafe {
+            Id::Extended(id) => unsafe {
                 Id::Extended(ExtendedId::new_unchecked(id.as_raw()))
             },
         };
@@ -76,13 +77,13 @@ impl ecan::Frame for Frame {
     }
 
     #[inline]
-    fn id(&self) -> ecan::Id {
+    fn id(&self) -> Id {
         match self.id() {
             Id::Standard(id) => unsafe {
-                ecan::Id::Standard(ecan::StandardId::new_unchecked(id.as_raw()))
+                Id::Standard(StandardId::new_unchecked(id.as_raw()))
             },
             Id::Extended(id) => unsafe {
-                ecan::Id::Extended(ecan::ExtendedId::new_unchecked(id.as_raw()))
+                Id::Extended(ExtendedId::new_unchecked(id.as_raw()))
             },
         }
     }

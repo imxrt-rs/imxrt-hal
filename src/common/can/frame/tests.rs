@@ -1,7 +1,4 @@
-use crate::can::{
-    frame::Frame,
-    id::{ExtendedId, StandardId},
-};
+use crate::can::{frame::Frame, ExtendedId, StandardId};
 
 #[test]
 fn data_greater_remote() {
