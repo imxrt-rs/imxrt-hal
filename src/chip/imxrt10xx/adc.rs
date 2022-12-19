@@ -269,6 +269,13 @@ impl<const N: u8> Adc<N> {
 
         ral::read_reg!(ral::adc, self.reg, R0) as u16
     }
+
+    /// Release the ADC's register block.
+    ///
+    /// You can use this to re-construct the driver with new configurations.
+    pub fn release(self) -> ral::adc::Instance<N> {
+        self.reg
+    }
 }
 
 #[cfg(feature = "eh02-unproven")]
