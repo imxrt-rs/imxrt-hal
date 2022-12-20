@@ -119,6 +119,7 @@ impl<const N: u8> Lpi2c<(), N> {
 }
 
 impl<P, const N: u8> Lpi2c<P, N> {
+    /// The peripheral instance.
     pub const N: u8 = N;
 
     fn init(mut lpi2c: ral::lpi2c::Instance<N>, pins: P, timings: &Timing) -> Self {
@@ -506,22 +507,36 @@ pub enum Response {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ControllerCommand {
-    /// Transmit a byte.
-    Transmit { byte: u8 },
-    /// Receive `count` number of bytes.
-    Receive { count: u8 },
+    /// A transmit command.
+    Transmit {
+        /// The data byte to enqueue.
+        byte: u8,
+    },
+    /// A receive command.
+    Receive {
+        /// How many bytes to receive.
+        count: u8,
+    },
     /// Generate a STOP condition.
     Stop,
-    /// Receive and discard `drop` number of bytes.
-    ReceiveAndDiscard { drop: u8 },
+    /// Receive and discard.
+    ReceiveAndDiscard {
+        /// How many bytes to receive and drop.
+        drop: u8,
+    },
     /// Generate a (repeated) start, transmit the
     /// address `addr`, and expect the `expect` response
     /// from a device.
-    ///
-    /// You're responsible for shifting the address, and setting
-    /// the read/write bit. Consider using the `read()` and `write()`
-    /// methods for this purpose.
-    Start { addr: u8, expect: Response },
+    Start {
+        /// The device you're addressing.
+        ///
+        /// You're responsible for shifting the address, and setting
+        /// the read/write bit. Consider using the `read()` and `write()`
+        /// methods for this purpose.
+        addr: u8,
+        /// The expected response from the device.
+        expect: Response,
+    },
 }
 
 impl ControllerCommand {

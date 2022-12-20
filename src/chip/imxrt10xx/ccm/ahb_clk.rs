@@ -33,7 +33,9 @@ pub fn divider(ccm: &CCM) -> u32 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Selection {
+    /// Derive from PRE_PERIPH_CLK.
     PrePeriphClkSel = 0,
+    /// Derive from PERIPH_CLK2.
     PeriphClk2Sel = 1,
 }
 

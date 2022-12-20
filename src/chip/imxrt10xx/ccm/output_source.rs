@@ -66,7 +66,9 @@ pub mod clko1 {
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Output {
+        /// Use CLKO1's selection.
         Clko1 = 0,
+        /// Use CLKO2's selection.
         Clko2 = 1,
     }
 

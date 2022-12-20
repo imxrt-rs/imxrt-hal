@@ -251,6 +251,7 @@
 //! [log-docs]: https://docs.rs/log/0.4/log/
 
 #![no_std]
+#![warn(missing_docs)]
 
 #[cfg(feature = "defmt")]
 pub mod defmt;

@@ -6,9 +6,13 @@ use crate::ral::{self, ccm::CCM};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Selection {
+    /// PLL2.
     Pll2 = 0,
+    /// PFD3 of PLL3.
     Pll3Pfd3 = 1,
+    /// PFD3 of PLL2.
     Pll2Pfd3 = 2,
+    /// PLL6.
     Pll6 = 3,
 }
 

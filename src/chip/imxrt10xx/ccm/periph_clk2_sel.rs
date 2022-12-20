@@ -8,8 +8,11 @@ use crate::ral::{self, ccm::CCM};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Selection {
+    /// Use PLL3 (possibly bypassed by an upstream mux).
     Pll3Sw = 0,
+    /// Crystall oscillator.
     Osc = 1,
+    /// The PLL2 bypass.
     Pll2Bypass = 2,
 }
 

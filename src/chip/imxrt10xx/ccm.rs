@@ -140,8 +140,11 @@ pub(crate) fn wait_handshake(ccm: &crate::ral::ccm::CCM) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum LowPowerMode {
+    /// Remain in run mode when entering low power.
     RemainInRun = 0,
+    /// Move to wait mode when entering low power.
     TransferToWait = 1,
+    /// Stop when entering low power.
     TransferToStop = 2,
 }
 

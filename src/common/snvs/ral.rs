@@ -70,7 +70,9 @@ pub mod lp {
         }
     }
 
+    /// The core SNVS registers.
     pub type Core = super::Instance<core::RegisterBlock>;
+    /// SRTC-specific registers.
     pub type Srtc = super::Instance<srtc::RegisterBlock>;
 }
 

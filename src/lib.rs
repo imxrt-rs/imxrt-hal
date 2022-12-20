@@ -76,6 +76,7 @@
 //! `"unproven"` feature enabled in embedded-hal 0.2.
 
 #![no_std]
+#![warn(missing_docs)]
 
 use imxrt_ral as ral;
 
@@ -255,9 +256,18 @@ pub mod usbd {
 
     use crate::ral;
 
+    /// Aggregate of `imxrt-ral` USB peripheral instances.
+    ///
+    /// This takes ownership of USB peripheral instances and implements
+    /// [`Peripherals`]. You can use this type to allocate a USB device
+    /// driver. See the [module-level documentation](crate::usbd) for an
+    /// example.
     pub struct Instances<const N: u8> {
+        /// USB core registers.
         pub usb: ral::usb::Instance<N>,
+        /// USB non-core registers.
         pub usbnc: ral::usbnc::Instance<N>,
+        /// USBPHY registers.
         pub usbphy: ral::usbphy::Instance<N>,
     }
 

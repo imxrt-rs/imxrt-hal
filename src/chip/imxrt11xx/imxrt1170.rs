@@ -7,6 +7,7 @@ pub use imxrt_iomuxc::imxrt1170 as pads;
 #[path = "ccm"]
 pub(crate) mod ccm {
     pub(crate) mod clko {
+        /// CLKO1 output clock selections.
         #[repr(u32)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum Clko1Selection {
@@ -28,6 +29,7 @@ pub(crate) mod ccm {
             SysPll1Div5,
         }
 
+        /// CLKO2 output clock selections.
         #[repr(u32)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum Clko2Selection {

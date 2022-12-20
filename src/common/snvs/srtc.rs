@@ -94,6 +94,7 @@ impl Disabled {
 pub enum EnabledState {
     /// The SRTC was already enabled, and it's currently counting from `seconds`
     AlreadyCounting {
+        /// The enabled and counting SRTC
         srtc: Srtc,
         /// The current whole-second time on the SRTC
         seconds: u32,

@@ -102,7 +102,13 @@ pub fn new<const N: u8>(pit: crate::ral::pit::Instance<N>) -> Channels {
 mod private {
     pub trait Sealed {}
 }
+/// Describes a valid PIT channel.
 pub trait Valid {}
+/// Type-level constant for PIT channels.
+///
+/// When combined with [`Valid`], this can constrain an API to accept
+/// only valid PIT channel constants. See [`Pit::new()`](crate::pit::Pit::new)
+/// for an example.
 pub enum Const<const N: u8> {}
 impl private::Sealed for Const<0> {}
 impl private::Sealed for Const<1> {}

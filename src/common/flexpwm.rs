@@ -110,6 +110,7 @@ bitflags::bitflags! {
 }
 
 impl<const N: u8> Pwm<N> {
+    /// The peripheral instance.
     pub const N: u8 = N;
 
     // TODO: MCTRL should be byte accessible (unlike other PWM modules, which are explicitly
@@ -668,13 +669,23 @@ bitflags::bitflags! {
 }
 
 /// PWM value registers.
+///
+/// These value registers describe when PWM counters reset, and when outputs
+/// turn on and off. Consider using more descriptive constants, enums, and
+/// const functions to describe these values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueRegister {
+    /// The [`HALF_RELOAD_VALUE_REGISTER`].
     Val0,
+    /// The [`FULL_RELOAD_VALUE_REGISTER`].
     Val1,
+    /// The [`turn_on()`] register for [`Channel::A`].
     Val2,
+    /// The [`turn_off()`] register for [`Channel::A`].
     Val3,
+    /// The [`turn_on()`] register for [`Channel::B`].
     Val4,
+    /// The [`turn_off()`] register for [`Channel::B`].
     Val5,
 }
 

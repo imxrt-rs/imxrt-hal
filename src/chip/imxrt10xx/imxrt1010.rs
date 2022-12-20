@@ -79,6 +79,7 @@ pub(crate) mod ccm {
     }
 
     pub(crate) mod clko {
+        /// CLKO1 output clock selections.
         #[repr(u32)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum Clko1Selection {
@@ -88,7 +89,7 @@ pub(crate) mod ccm {
             Pll2Div2 = 0b0001,
             /// ENET PLL divided by 2.
             EnetPllDiv2 = 0b0010,
-            // Core clock (AHB) root.
+            /// Core clock (AHB) root.
             AhbClk = 0b1011,
             /// IPG clock root.
             IpgClk = 0b1100,
@@ -98,6 +99,7 @@ pub(crate) mod ccm {
             Pll4MainClk = 0b1111,
         }
 
+        /// CLKO2 output clock selections.
         #[repr(u32)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum Clko2Selection {

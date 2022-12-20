@@ -379,6 +379,7 @@ impl<const N: u8> Lpspi<(), N> {
 }
 
 impl<P, const N: u8> Lpspi<P, N> {
+    /// The peripheral instance.
     pub const N: u8 = N;
 
     fn init(lpspi: ral::lpspi::Instance<N>, pins: P) -> Self {

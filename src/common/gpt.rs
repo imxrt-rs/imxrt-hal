@@ -143,8 +143,11 @@ pub enum ClockSource {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(usize)]
 pub enum OutputCompareRegister {
+    /// The first output compare register.
     OCR1 = 0,
+    /// The second output compare register.
     OCR2 = 1,
+    /// The third output compare register.
     OCR3 = 2,
 }
 

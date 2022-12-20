@@ -98,11 +98,13 @@ pub(crate) mod ccm {
 
     // TODO
     pub(crate) mod clko {
+        /// CLKO1 output clock selections.
         // #[repr(u32)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
         pub enum Clko1Selection {}
 
+        /// CLKO2 output clock selections.
         // #[repr(u32)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 

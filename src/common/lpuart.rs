@@ -130,6 +130,7 @@ impl<const N: u8> Lpuart<(), N> {
 }
 
 impl<P, const N: u8> Lpuart<P, N> {
+    /// The peripheral instance.
     pub const N: u8 = N;
 
     fn init(lpuart: Instance<N>, pins: P) -> Self {

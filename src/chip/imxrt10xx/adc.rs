@@ -88,18 +88,26 @@ pub enum ConversionSpeed {
 /// Denotes how much hardware averaging to do
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AveragingCount {
+    /// 1 sample average.
     Avg1,
+    /// 4 sample average.
     Avg4,
+    /// 8 sample average.
     Avg8,
+    /// 16 sample average.
     Avg16,
+    /// 32 sample average.
     Avg32,
 }
 
-// Specifies the resolution the ADC
+/// Specifies the resolution the ADC
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolutionBits {
+    /// 8 bit resolution.
     Res8,
+    /// 10 bit resolution.
     Res10,
+    /// 12 bit resolution.
     Res12,
 }
 
