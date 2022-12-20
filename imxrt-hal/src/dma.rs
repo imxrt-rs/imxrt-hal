@@ -459,13 +459,11 @@ pub enum Error<P> {
 /// ```
 pub struct Unclocked([Option<Channel>; 32]);
 impl Unclocked {
-    pub(crate) fn new(dma: ral::dma0::Instance, mux: ral::dmamux::Instance) -> Self {
-        // Explicitly dropping instances
+    pub(crate) fn new(_: ral::dma0::Instance, _: ral::dmamux::Instance) -> Self {
+        // Taking ownership of, then dropping, DMA instances.
         //
         // Users should see these as "taken" by the HAL's DMA module, although they're not
         // used in the implementation.
-        drop(dma);
-        drop(mux);
 
         Unclocked([
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,

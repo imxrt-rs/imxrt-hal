@@ -45,14 +45,14 @@ pub enum ClockDivision {
     Div8, // Input clock / 8
 }
 
-impl ClockSelect {
-    pub fn default() -> Self {
+impl Default for ClockSelect {
+    fn default() -> Self {
         ClockSelect::ADACK
     }
 }
 
-impl ClockDivision {
-    pub fn default() -> Self {
+impl Default for ClockDivision {
+    fn default() -> Self {
         ClockDivision::Div2
     }
 }

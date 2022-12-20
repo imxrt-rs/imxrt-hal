@@ -63,7 +63,7 @@ pub fn set_arm_clock(
         }
     }
     let mult = (hz * div_arm * div_ahb + 6_000_000) / 12_000_000;
-    let mult = mult.min(108).max(54);
+    let mult = mult.clamp(54, 108);
     log::debug!(
         "Frequency 12MHz * {mult} / {div_arm} / {div_ahb}",
         mult = mult,

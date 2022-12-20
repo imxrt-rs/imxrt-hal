@@ -183,7 +183,7 @@ impl ClockSpeed {
         }
 
         // 0 <= div <= 255, and the true coefficient is really div + 2
-        let div = div.saturating_sub(2).min(255).max(0);
+        let div = div.saturating_sub(2).clamp(0, 255);
         ral::write_reg!(
             ral::lpspi,
             reg,

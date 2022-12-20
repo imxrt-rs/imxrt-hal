@@ -874,7 +874,7 @@ pub mod uart {
             let sbr = base_clock
                 .checked_div(osr)
                 .ok_or(TimingsError::DivideByZero)?;
-            let sbr = sbr.max(1).min(8191);
+            let sbr = sbr.clamp(1, 8191);
             let effective_baud = effective_clock
                 .checked_div(osr * sbr)
                 .ok_or(TimingsError::DivideByZero)?;
