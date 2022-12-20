@@ -319,7 +319,7 @@ fn set_timings<const N: u8>(lpi2c: &mut ral::lpi2c::Instance<N>, timings: &Timin
     ral::modify_reg!(ral::lpi2c, lpi2c, MCFGR2,
         FILTSDA: clock_config.filtsda as u32,
         FILTSCL: clock_config.filtscl as u32,
-        BUSIDLE: timings.busidle as u32
+        BUSIDLE: timings.busidle
     );
 }
 

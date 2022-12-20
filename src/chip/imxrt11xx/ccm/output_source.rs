@@ -33,16 +33,11 @@ fn set_selection(clock_root: &clockroot::RegisterBlock, selection: u32) {
 }
 
 fn set_divider(clock_root: &clockroot::RegisterBlock, divider: u32) {
-    ral::modify_reg!(
-        clockroot,
-        clock_root,
-        CLOCK_ROOT_CONTROL,
-        DIV: divider as u32
-    );
+    ral::modify_reg!(clockroot, clock_root, CLOCK_ROOT_CONTROL, DIV: divider);
 }
 
 fn divider(clock_root: &clockroot::RegisterBlock) -> u32 {
-    ral::read_reg!(clockroot, clock_root, CLOCK_ROOT_CONTROL, DIV) as u32
+    ral::read_reg!(clockroot, clock_root, CLOCK_ROOT_CONTROL, DIV)
 }
 
 macro_rules! api {

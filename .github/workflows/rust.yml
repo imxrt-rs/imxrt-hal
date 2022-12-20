@@ -45,7 +45,7 @@ jobs:
       name: Lint imxrt-hal
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        args: --features=${{ matrix.chips }} --package=imxrt-hal # -- -D warnings
+        args: --features=${{ matrix.chips }} --package=imxrt-hal -- -D warnings
 
   # Indirectly checks & lints the HAL with the HAL's chip feature, and also
   # checks & lints the imxrt-log package.
@@ -72,7 +72,7 @@ jobs:
       name: Lint imxrt-log
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        args: --features=${{ matrix.chips }} --package=imxrt-log # -- -D warnings
+        args: --features=${{ matrix.chips }} --package=imxrt-log -- -D warnings
   
   # Lint and build examples for boards.
   examples:

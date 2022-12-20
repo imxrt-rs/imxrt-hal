@@ -192,7 +192,7 @@ impl<const N: u8> Gpt<N> {
     /// A change in the divider cause the prescaler counter
     /// to reset and a new count period to start immediately.
     pub fn set_divider(&mut self, divider: u32) {
-        let prescaler = divider.min(4096).max(1) - 1;
+        let prescaler = divider.clamp(1, 4096) - 1;
         ral::modify_reg!(ral::gpt, self.gpt, PR, PRESCALER: prescaler);
     }
 
@@ -208,7 +208,7 @@ impl<const N: u8> Gpt<N> {
     /// before selected by the clock selection. If 24M
     /// crystal clock is not selected, this feild takes no effect.
     pub fn set_divider_24mhz(&mut self, divider: u32) {
-        let prescaler = divider.min(16).max(1) - 1;
+        let prescaler = divider.clamp(1, 16) - 1;
         ral::modify_reg!(ral::gpt, self.gpt, PR, PRESCALER24M: prescaler);
     }
 

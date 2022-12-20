@@ -235,15 +235,14 @@ impl Specifics {
         };
         let i2c = {
             let lpi2c5 = unsafe { ral::lpi2c::LPI2C5::instance() };
-            let i2c = I2c::new(
+            I2c::new(
                 lpi2c5,
                 I2cPins {
                     scl: iomuxc.gpio_lpsr.p05,
                     sda: iomuxc.gpio_lpsr.p04,
                 },
                 &super::I2C_BAUD_RATE,
-            );
-            i2c
+            )
         };
 
         Self {
