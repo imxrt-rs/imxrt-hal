@@ -1,3 +1,44 @@
+//! Flexible Controller Area Network (FlexCAN)
+//!
+//! The FlexCAN module provides a CanBus peripheral that implements
+//! the `embedded_hal::can` traits. 
+//!//!
+//! # Example
+//!
+//! ```no_run
+//! use imxrt_hal;
+//! use embedded_hal::serial::{Read, Write};
+//!
+//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//! 
+//! let (can1_builder, _) = peripherals.can.clock(
+//!     &mut peripherals.ccm.handle,
+//!     bsp::hal::ccm::can::ClockSelect::OSC,
+//!     bsp::hal::ccm::can::PrescalarSelect::DIVIDE_1,
+//! );
+//! 
+//! let mut can1 = can1_builder.build(pins.p22, pins.p23);
+//! 
+//! can1.set_baud_rate(1_000_000);
+//! can1.set_max_mailbox(16);
+//! can1.enable_fifo();
+//! can1.set_fifo_interrupt(true);
+//! can1.set_fifo_accept_all();
+//! 
+//! // create a `Frame` with `StandardID` 0x00 
+//! // and `Data` [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
+//! let id = imxrt_hal::can::Id::from(imxrt_hal::can::StandardId::new(0x00).unwrap());
+//! let data: [u8; 8] = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+//! let frame = imxrt_hal::can::Frame::new_data(id, data);
+//!
+//! // read all available mailboxes for any available frames
+//! can1.read_mailboxes();
+//! 
+//! // transmit the frame
+//! can1.transmit(&frame);
+//! ```
+
+
 mod embedded_hal;
 pub mod filter;
 mod frame;
@@ -14,11 +55,18 @@ use crate::ral;
 use core::convert::Infallible;
 use core::marker::PhantomData;
 
-/// Error that indicates that no received frames are available
-/// in the FlexCAN mailboxes
+/// Error from the FlexCan peripheral.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct NoDataError {
-    _priv: (),
+pub enum Error {
+    /// Error indicating that no received data is 
+    /// available in the mailboxes
+    NoRxData,
+    /// Error indicating that no transmit mailboxes
+    /// are available
+    NoTxMailbox, 
+    /// A wrapper around the [`embedded_hal::ErrorKind`]
+    /// enum
+    EmbeddedHal(embedded_hal::ErrorKind),
 }
 
 /// Unclocked Can modules
@@ -247,7 +295,7 @@ where
         M::USIZE == 2
     }
 
-    pub fn base_address(&self) -> u32 {
+    pub(crate) fn base_address(&self) -> u32 {
         let addr: *const ral::can::RegisterBlock = &*self.reg;
         addr as u32
     }
@@ -973,7 +1021,7 @@ where
     }
 
     #[inline(always)]
-    pub fn transmit(&mut self, frame: &Frame) -> nb::Result<(), Infallible> {
+    pub fn transmit(&mut self, frame: &Frame) -> nb::Result<(), Error> {
         for i in self.mailbox_offset()..self.get_max_mailbox() {
             if let FlexCanMailboxCSCode::TxInactive =
                 FlexCanMailboxCSCode::from_code_reg(self.read_mailbox_code(i))
@@ -982,7 +1030,7 @@ where
                 return Ok(());
             }
         }
-        Ok(())
+        Err(nb::Error::Other(Error::NoTxMailbox))
     }
 }
 

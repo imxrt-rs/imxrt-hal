@@ -34,7 +34,7 @@ features = ["device"]
 bench = false
 
 [features]
-default = ["embedded-hal/unproven", "imxrt1062"] # Allows us to access the new digital pin traits
+default = ["embedded-hal/unproven"] # Allows us to access the new digital pin traits
 
 # Device specific feature flags
 # these need fixes and conditional sections in CCM
