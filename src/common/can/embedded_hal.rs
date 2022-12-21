@@ -1,36 +1,41 @@
 //! `embedded_hal` trait impls.
 
-use super::{Data, Frame, NoDataError, CAN};
+use super::{Data, Frame, Error, CAN};
 use crate::iomuxc::consts::Unsigned;
 
 use embedded_can;
 pub use embedded_can::{ExtendedId, Id, StandardId};
+pub(crate) use embedded_can::ErrorKind;
 
 impl<const M: u8> embedded_can::nb::Can for CAN<M>
 {
     type Frame = Frame;
 
-    type Error = NoDataError;
+    type Error = Error;
 
     fn transmit(&mut self, frame: &Self::Frame) -> nb::Result<Option<Self::Frame>, Self::Error> {
         match self.transmit(frame) {
             Ok(_status) => Ok(Some(frame.clone())),
             Err(nb::Error::WouldBlock) => Err(nb::Error::WouldBlock),
-            Err(nb::Error::Other(e)) => match e {},
+            Err(nb::Error::Other(e)) => Err(nb::Error::Other(e)),
         }
     }
 
     fn receive(&mut self) -> nb::Result<Self::Frame, Self::Error> {
         match self.read_mailboxes() {
             Some(d) => Ok(d.frame),
-            None => Err(nb::Error::Other(NoDataError { _priv: () })),
+            None => Err(nb::Error::Other(Error::NoRxData)),
         }
     }
 }
 
-impl embedded_can::Error for NoDataError {
+impl embedded_can::Error for Error {
     fn kind(&self) -> embedded_can::ErrorKind {
-        embedded_can::ErrorKind::Overrun
+        match self {
+            Self::NoRxData => embedded_can::ErrorKind::Other,
+            Self::NoTxMailbox => embedded_can::ErrorKind::Other,
+            Self::EmbeddedHal(e) => e.kind()
+        }
     }
 }
 

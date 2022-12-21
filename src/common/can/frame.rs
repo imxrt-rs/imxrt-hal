@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-use core::convert::TryFrom;
 use core::ops::{Deref, DerefMut};
 
 use super::{ExtendedId, Id, StandardId};
@@ -236,16 +235,27 @@ impl CodeReg {
     }
 
     /// Get the 4 bit code content for a CodeReg.
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if a matching [`FlexCanMailboxCSCode`] is not found.
+    /// 
+    /// This may return the variant [`FlexCanMailboxCSCode::Unknown`], 
+    /// which must be handled appropriately for the intended usage.
     #[inline(always)]
     pub fn code(&self) -> FlexCanMailboxCSCode {
-        FlexCanMailboxCSCode::try_from(((self.0 & Self::CODE_MASK) >> Self::CODE_SHIFT) as u8)
-            .unwrap()
+        FlexCanMailboxCSCode::from(((self.0 & Self::CODE_MASK) >> Self::CODE_SHIFT) as u8)
     }
 
+    /// The frame timestamp, captured from the peripheral's free-running timer.
+    ///
+    /// The timestamp represents the time at which a TX or RX frame appears on
+    /// the bus. The counter increments at the CAN bus baud rate. The counter pauses
+    /// when the driver is frozen, or the processor is in debug mode.
+    ///
+    /// A frame's timestamp resets to zero when either
+    ///
+    /// - the counter wraps around at the 16 bit boundary.
+    /// - a message is received in mailbox 0. This happens if time sync is enabled,
+    ///   and if the message passed the mailbox filter.
+    ///
+    /// Users may also override the timestamp to any specific value.
     pub fn timestamp(&self) -> u16 {
         ((self.0 & Self::TIMESTAMP_MASK) >> Self::TIMESTAMP_SHIFT) as u16
     }
@@ -301,11 +311,9 @@ impl IdReg {
     const STANDARD_SHIFT: u32 = 18;
     const EXTENDED_SHIFT: u32 = 0;
 
-    /// Creates a new standard identifier (11bit, Range: 0..0x7FF)
-    ///
-    /// Panics for IDs outside the allowed range.
+    /// Creates a new `IdReg` 
     #[inline(always)]
-    pub fn new(id: u32) -> Self {
+    fn new(id: u32) -> Self {
         Self(id)
     }
 
@@ -315,20 +323,22 @@ impl IdReg {
         self.0
     }
 
-    /// Creates a new standard identifier (11bit, Range: 0..0x7FF)
+    /// Creates a new standard identifier (11bit, Range: 0..=0x7FF)
     ///
     /// Panics for IDs outside the allowed range.
     #[inline(always)]
     pub fn new_standard(id: StandardId) -> Self {
+        assert!(id.as_raw() <= StandardId::MAX.as_raw());
         let id = u32::from(id.as_raw()) << Self::STANDARD_SHIFT;
         Self::new(id)
     }
 
-    /// Creates a new extendended identifier (29bit , Range: 0..0x1FFFFFFF).
+    /// Creates a new extendended identifier (29bit , Range: 0..=0x1FFFFFFF).
     ///
     /// Panics for IDs outside the allowed range.
     #[inline(always)]
     pub fn new_extended(id: ExtendedId) -> Self {
+        assert!(id.as_raw() <= ExtendedId::MAX.as_raw());
         let id = u32::from(id.as_raw()) << Self::EXTENDED_SHIFT;
         Self::new(id)
     }
