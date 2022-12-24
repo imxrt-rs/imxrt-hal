@@ -1,0 +1,65 @@
+[package]
+name = "imxrt-log"
+version = "0.1.0"
+edition = { workspace  = true }
+description = "Logging extensions for i.MX RT processors."
+repository = { workspace  = true }
+keywords = { workspace  = true }
+categories = { workspace  = true }
+license = { workspace  = true }
+readme = "README.md"
+
+[dependencies]
+critical-section = "1"
+bbqueue = "0.5"
+
+[dependencies.defmt]
+optional = true
+version = "0.3"
+
+[dependencies.log]
+optional = true
+version = "0.4"
+
+[dependencies.usb-device]
+optional = true
+version = "0.2"
+
+[dependencies.usbd-serial]
+optional = true
+version = "0.1"
+
+[dependencies.imxrt-hal]
+optional = true
+workspace = true
+
+[dependencies.imxrt-usbd]
+optional = true
+workspace = true
+
+# Need to take this on for independent imxrt-log
+# builds. This is needed for services like docs.rs.
+# Note that we're using v2 of the Cargo feature resolver,
+# so this can't just be a dev-dependency.
+[dependencies.imxrt-ral]
+optional = true
+workspace = true
+
+[features]
+default = ["defmt", "log", "lpuart", "usbd"]
+lpuart = ["imxrt-hal"]
+usbd = ["dep:imxrt-usbd", "dep:usb-device", "dep:usbd-serial"]
+
+[dev-dependencies.cortex-m]
+version = "0.7"
+
+[dev-dependencies.cortex-m-rt]
+version = "0.7"
+features = ["device"]
+
+[dev-dependencies.imxrt-ral]
+workspace = true
+
+[package.metadata.docs.rs]
+default-target = "thumbv7em-none-eabihf"
+features = ["imxrt-ral/imxrt1062", "imxrt-hal/imxrt1060"]
