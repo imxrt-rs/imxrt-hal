@@ -124,7 +124,7 @@ impl PartialEq for Frame {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum FlexCanMailboxCSCode {
     RxInactive = 0b0000,
@@ -235,8 +235,8 @@ impl CodeReg {
     }
 
     /// Get the 4 bit code content for a CodeReg.
-    /// 
-    /// This may return the variant [`FlexCanMailboxCSCode::Unknown`], 
+    ///
+    /// This may return the variant [`FlexCanMailboxCSCode::Unknown`],
     /// which must be handled appropriately for the intended usage.
     #[inline(always)]
     pub fn code(&self) -> FlexCanMailboxCSCode {
@@ -311,7 +311,7 @@ impl IdReg {
     const STANDARD_SHIFT: u32 = 18;
     const EXTENDED_SHIFT: u32 = 0;
 
-    /// Creates a new `IdReg` 
+    /// Creates a new `IdReg`
     #[inline(always)]
     fn new(id: u32) -> Self {
         Self(id)

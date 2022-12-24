@@ -52,7 +52,6 @@ use crate::iomuxc::consts::{Unsigned, U1, U2};
 use crate::iomuxc::flexcan;
 use crate::ral;
 
-use core::convert::Infallible;
 use core::marker::PhantomData;
 
 /// Error from the FlexCan peripheral.
