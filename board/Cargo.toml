@@ -1,0 +1,109 @@
+[package]
+name = "board"
+version = "0.1.0"
+edition = { workspace = true }
+# Only for testing, documentation.
+publish = false
+
+[dependencies.defmt]
+version = "0.3"
+
+[dependencies.imxrt-hal]
+workspace = true
+
+[dependencies.imxrt-iomuxc]
+workspace = true
+
+[dependencies.imxrt-ral]
+workspace = true
+
+[dependencies.imxrt-rt]
+workspace = true
+
+[build-dependencies.imxrt-rt]
+workspace = true
+
+[dependencies.imxrt-log]
+workspace = true
+optional = true
+
+[dependencies.imxrt-usbd]
+workspace = true
+
+[dependencies.cortex-m]
+version = "0.7"
+features = ["critical-section-single-core"]
+
+# Use existing FCB, instead of defining inline.
+[target.thumbv7em-none-eabihf.dependencies.teensy4-fcb]
+optional = true
+version = "0.3"
+
+[target.thumbv7em-none-eabihf.dependencies.teensy4-panic]
+optional = true
+version = "0.2"
+
+# Other boards may choose to define their FCB inline.
+[dependencies.imxrt-boot-gen]
+optional = true
+version = "0.2"
+
+[dependencies.lcd_1602_i2c]
+version = "0.3"
+optional = true
+
+[target.thumbv7em-none-eabihf.dependencies.rtt-target]
+version = "0.3"
+optional = true
+features = ["cortex-m"]
+
+[target.thumbv7em-none-eabihf.dependencies.panic-rtt-target]
+version = "0.1"
+optional = true
+features = ["cortex-m"]
+
+[target.thumbv7em-none-eabihf.dependencies.imxrt1010evk-fcb]
+version = "0.1"
+optional = true
+
+[target.thumbv7em-none-eabihf.dependencies.imxrt1170evk-fcb]
+version = "0.1"
+optional = true
+
+[features]
+imxrt1010evk = [
+    "imxrt-iomuxc/imxrt1010",
+    "imxrt-ral/imxrt1011",
+    "imxrt-hal/imxrt1010",
+    "imxrt1010evk-fcb",
+    "rtt-target",
+    "panic-rtt-target",
+    "imxrt-log",
+]
+teensy4 = [
+    "imxrt-iomuxc/imxrt1060",
+    "imxrt-ral/imxrt1062",
+    "imxrt-hal/imxrt1060",
+    "teensy4-fcb",
+    "teensy4-panic",
+    "imxrt-log",
+]
+imxrt1170evk-cm7 = [
+    "imxrt-iomuxc/imxrt1170",
+    "imxrt-ral/imxrt1176_cm7",
+    "imxrt-hal/imxrt1170",
+    "imxrt1170evk-fcb",
+    "rtt-target",
+    "panic-rtt-target",
+    "imxrt-log",
+]
+
+# Some boards (Teensy 4) require a resource
+# configuration to enable the (easily accessible)
+# SPI peripheral. Turn on this feature to activate
+# the SPI peripheral.
+#
+# See board-specific documentation for its effects.
+spi = []
+
+lcd1602 = ["dep:lcd_1602_i2c"]
