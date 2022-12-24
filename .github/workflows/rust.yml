@@ -1,0 +1,152 @@
+name: Check Rust code
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: rustfmt
+    - uses: actions-rs/cargo@v1
+      name: Check formatting
+      with:
+        command: fmt
+        args: --all -- --check
+
+  # Checks the common HAL for all chips supported by imxrt-ral.
+  lint-hal:
+    needs: format
+    strategy:
+      matrix:
+        chips:
+        - imxrt-ral/imxrt1011
+        - imxrt-ral/imxrt1021
+        - imxrt-ral/imxrt1051
+        - imxrt-ral/imxrt1052
+        - imxrt-ral/imxrt1061
+        - imxrt-ral/imxrt1062
+        - imxrt-ral/imxrt1064
+        - imxrt-ral/imxrt1176_cm4
+        - imxrt-ral/imxrt1176_cm7
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
+    - uses: actions-rs/clippy-check@v1
+      name: Lint imxrt-hal
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --features=${{ matrix.chips }} --package=imxrt-hal -- -D warnings
+
+  # Indirectly checks & lints the HAL with the HAL's chip feature, and also
+  # checks & lints the imxrt-log package.
+  lint-log:
+    needs: lint-hal
+    strategy:
+      matrix:
+        chips:
+        - imxrt-ral/imxrt1011,imxrt1010
+        - imxrt-ral/imxrt1061,imxrt1060
+        - imxrt-ral/imxrt1062,imxrt1060
+        - imxrt-ral/imxrt1064,imxrt1060
+        - imxrt-ral/imxrt1176_cm4,imxrt1170
+        - imxrt-ral/imxrt1176_cm7,imxrt1170
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
+    - uses: actions-rs/clippy-check@v1
+      name: Lint imxrt-log
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --features=${{ matrix.chips }} --package=imxrt-log --package=imxrt-hal -- -D warnings
+  
+  # Lint and build examples for boards.
+  examples:
+    needs: lint-hal
+    strategy:
+      matrix:
+        config:
+        # Boards that support all examples, and should build with additional drivers.
+        - --examples --features=board/teensy4,board/lcd1602
+        - --examples --features=board/imxrt1010evk,board/lcd1602
+        # SPI examples (might break other examples)
+        - --example=hal_spi --example=rtic_spi --example=async_dma_spi --features=board/teensy4,board/spi
+        - --example=hal_spi --example=rtic_spi --example=async_dma_spi --features=board/imxrt1010evk,board/spi
+        - --example=hal_spi --example=rtic_spi --example=async_dma_spi --features=board/imxrt1170evk-cm7,board/spi
+        # The i.MX RT 1170 EVK (CM7) target is WIP. The list below describes the working examples.
+        - --features=board/imxrt1170evk-cm7,board/lcd1602 --example=hal_led
+          --example=hal_gpio_input --example=rtic_gpio_input
+          --example=hal_uart --example=rtic_uart --example=rtic_dma_uart --example=async_dma_uart
+          --example=hal_gpt --example=rtic_gpt
+          --example=hal_pit --example=rtic_pit
+          --example=hal_logging --example=rtic_logging
+          --example=hal_clock_out
+          --example=hal_pwm --example=rtic_pwm
+          --example=hal_i2c_mpu9250 --example=hal_i2c_lcd1602
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: clippy
+        target: thumbv7em-none-eabihf
+    - name: Lint board and examples
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf
+    - name: Build examples
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
+
+  tests:
+    needs: format
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+    - name: Run unit, integration tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --features=board/teensy4 --workspace --tests
+    - name: Run documentation tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --features=board/teensy4 --workspace --doc
+
+  # Ensures that documentation builds, and that links are valid
+  docs:
+    needs: format
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Check documentation, doclinks throughout workspace
+      run: cargo doc --workspace --no-deps --features=board/teensy4
