@@ -86,19 +86,6 @@ use imxrt_ral as ral;
 
 mod chip;
 
-/// SOC run mode.
-///
-/// Each MCU specifies its own core clock speed
-/// and power settings for these variants. They're
-/// typically follow the recommendations in the
-/// data sheet.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum RunMode {
-    /// The fastest, highest-power mode.
-    Overdrive,
-}
-
 /// Modules that need no HAL conditional compilation.
 ///
 /// These modules only depend on a RAL feature.
@@ -132,9 +119,6 @@ pub use common::{flexpwm, gpio, gpt, lpi2c, lpspi, lpuart, pit, snvs, timer};
 /// Use [`clock_gate`](crate::ccm::clock_gate) APIs to enable or disable the clock gates for
 /// various peripherals. You'll need to enable clock gates before you
 /// start using peripherals.
-///
-/// Use [`clock_tree`](crate::ccm::clock_tree) APIs to control root clocks based on a run mode.
-/// These higher-level APIs are consistent across all chip families.
 ///
 /// The remaining modules provide lower-level APIs for the CCM clock
 /// tree. These APIs may not be portable across chip families.

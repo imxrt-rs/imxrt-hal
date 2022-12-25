@@ -8,7 +8,6 @@ pub use crate::chip::config::ccm::*;
 pub mod ahb_clk;
 pub mod analog;
 pub mod clock_gate;
-pub mod clock_tree;
 pub mod output_source;
 
 use crate::ral;

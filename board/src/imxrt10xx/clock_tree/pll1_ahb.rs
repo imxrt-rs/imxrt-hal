@@ -3,7 +3,7 @@
 //! It supports the 1060. It should also support the 1050.
 
 use crate::ral;
-use crate::{ccm, RunMode};
+use crate::{hal::ccm, RunMode};
 
 /// Specify the PLL1 DIV_SEL for a given run mode.
 const fn div_sel(run_mode: RunMode) -> u32 {
@@ -37,7 +37,7 @@ const _: () = assert!(600_000_000 == ahb_frequency(RunMode::Overdrive));
 ///
 /// When this call returns, the AHB and IPG clocks frequencies match the
 /// values returned by the [`ahb_frequency()`] and
-/// [`ipg_frequency()`](crate::chip::ccm::clock_tree::ipg_frequency) functions.
+/// [`ipg_frequency()`](super::clock_tree::ipg_frequency) functions.
 ///
 /// This function will disable the clock gates for various peripherals. It may
 /// leave these clock gates disabled.
@@ -74,5 +74,5 @@ pub fn configure_ahb_ipg(
         }
     }
 
-    ccm::ipg_clk::set_divider(ccm, crate::chip::ccm::clock_tree::ipg_divider(run_mode));
+    ccm::ipg_clk::set_divider(ccm, super::clock_tree::ipg_divider(run_mode));
 }

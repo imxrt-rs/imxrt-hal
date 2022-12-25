@@ -7,7 +7,6 @@
 //!  for the 10xx family.
 
 pub mod clock_gate;
-pub mod clock_tree;
 pub mod output_source;
 
 pub use crate::common::ccm::XTAL_OSCILLATOR_HZ;

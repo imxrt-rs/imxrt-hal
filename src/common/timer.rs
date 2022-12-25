@@ -185,22 +185,27 @@ impl<const HZ: u32> TimerDurationExt for fugit::TimerDurationU64<HZ> {
 /// use imxrt_ral as ral;
 ///
 /// use hal::{
-///     ccm::{clock_gate, clock_tree},
+///     ccm::{self, clock_gate, perclk_clk},
 ///     timer::BlockingPitChan,
 /// };
 ///
-/// const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
-///
 /// let mut ccm = unsafe { ral::ccm::CCM::instance() };
-/// let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
 ///
-/// clock_tree::configure_ahb_ipg(RUN_MODE, &mut ccm, &mut ccm_analog);
-/// clock_tree::configure_perclk(RUN_MODE, &mut ccm);
+/// // Before touching the PERCLK clock roots, turn off all downstream clock gates.
+/// clock_gate::PERCLK_CLOCK_GATES.iter().for_each(|loc| loc.set(&mut ccm, clock_gate::OFF));
+///
+/// // Configure PERCLK to match this frequency:
+/// const PERCLK_CLK_FREQUENCY_HZ: u32 = ccm::XTAL_OSCILLATOR_HZ / PERCLK_CLK_DIVIDER;
+/// const PERCLK_CLK_DIVIDER: u32 = 24;
+/// perclk_clk::set_selection(&mut ccm, perclk_clk::Selection::Oscillator);
+/// perclk_clk::set_divider(&mut ccm, PERCLK_CLK_DIVIDER);
+///
+/// // Turn on the PIT clock gate.
 /// clock_gate::pit().set(&mut ccm, clock_gate::ON);
 ///
-/// // The above clock_tree configuration ensures that the
-/// // PIT clock operates at this frequency:
-/// const PIT_FREQUENCY_HZ: u32 = clock_tree::perclk_frequency(RUN_MODE);
+/// // There's no other divider, so the PIT frequency is the root
+/// // clock frequency.
+/// const PIT_FREQUENCY_HZ: u32 = PERCLK_CLK_FREQUENCY_HZ;
 ///
 /// let pit = unsafe { ral::pit::PIT::instance() };
 /// let (pit0, _, _, _) = hal::pit::new(pit);
@@ -585,22 +590,27 @@ impl<T> eh02::timer::Periodic for RawCountDown<T> {}
 /// use imxrt_hal as hal;
 /// use imxrt_ral as ral;
 ///
-/// use hal::ccm::{clock_gate, clock_tree};
-///
-/// const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
+/// use hal::ccm::{self, clock_gate, perclk_clk};
 ///
 /// let mut ccm = unsafe { ral::ccm::CCM::instance() };
-/// let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
 ///
-/// clock_tree::configure_ahb_ipg(RUN_MODE, &mut ccm, &mut ccm_analog);
-/// clock_tree::configure_perclk(RUN_MODE, &mut ccm);
+/// // Before touching the PERCLK clock roots, turn off all downstream clock gates.
+/// clock_gate::PERCLK_CLOCK_GATES.iter().for_each(|loc| loc.set(&mut ccm, clock_gate::OFF));
+///
+/// // Configure PERCLK to match this frequency:
+/// const PERCLK_CLK_FREQUENCY_HZ: u32 = ccm::XTAL_OSCILLATOR_HZ / PERCLK_CLK_DIVIDER;
+/// const PERCLK_CLK_DIVIDER: u32 = 24;
+/// perclk_clk::set_selection(&mut ccm, perclk_clk::Selection::Oscillator);
+/// perclk_clk::set_divider(&mut ccm, PERCLK_CLK_DIVIDER);
+///
+/// // Enable the clock gate for our GPT.
 /// clock_gate::gpt_bus::<1>().set(&mut ccm, clock_gate::ON);
 /// clock_gate::gpt_serial::<1>().set(&mut ccm, clock_gate::ON);
 ///
+/// // GPT1 counts with this frequency:
+/// const GPT1_FREQUENCY_HZ: u32 = PERCLK_CLK_FREQUENCY_HZ / GPT1_DIVIDER;
 /// const GPT1_DIVIDER: u32 = 100;
 /// const GPT1_CLOCK_SOURCE: hal::gpt::ClockSource = hal::gpt::ClockSource::HighFrequencyReferenceClock;
-/// // Once we configure the GPT, it will run at this frequency.
-/// const GPT1_FREQUENCY_HZ: u32 = clock_tree::perclk_frequency(RUN_MODE) / GPT1_DIVIDER;
 ///
 /// let gpt1 = unsafe { ral::gpt::GPT1::instance() };
 /// let mut gpt1 = hal::gpt::Gpt::new(gpt1);

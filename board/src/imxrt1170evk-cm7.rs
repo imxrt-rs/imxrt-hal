@@ -2,6 +2,12 @@
 
 use crate::{hal, iomuxc::imxrt1170 as iomuxc, ral, GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE};
 
+mod imxrt11xx {
+    pub(super) mod clock_tree;
+}
+
+use imxrt11xx::clock_tree;
+
 #[cfg(target_arch = "arm")]
 pub use imxrt1170evk_fcb as _;
 #[cfg(target_arch = "arm")]
@@ -35,27 +41,23 @@ pub(crate) unsafe fn configure() {
 }
 
 fn prepare_clock_tree(ccm: &mut ral::ccm::CCM) {
-    use crate::hal::ccm;
-    ccm::clock_tree::configure_bus(RUN_MODE, ccm);
-    ccm::clock_tree::configure_gpt::<1>(RUN_MODE, ccm);
-    ccm::clock_tree::configure_gpt::<2>(RUN_MODE, ccm);
-    ccm::clock_tree::configure_lpuart::<{ CONSOLE_INSTANCE }>(RUN_MODE, ccm);
-    ccm::clock_tree::configure_lpspi::<SPI_INSTANCE>(RUN_MODE, ccm);
-    ccm::clock_tree::configure_lpi2c::<{ I2C_INSTANCE }>(RUN_MODE, ccm);
+    clock_tree::configure_bus(RUN_MODE, ccm);
+    clock_tree::configure_gpt::<1>(RUN_MODE, ccm);
+    clock_tree::configure_gpt::<2>(RUN_MODE, ccm);
+    clock_tree::configure_lpuart::<{ CONSOLE_INSTANCE }>(RUN_MODE, ccm);
+    clock_tree::configure_lpspi::<SPI_INSTANCE>(RUN_MODE, ccm);
+    clock_tree::configure_lpi2c::<{ I2C_INSTANCE }>(RUN_MODE, ccm);
 }
 
-pub const PIT_FREQUENCY: u32 = hal::ccm::clock_tree::bus_frequency(RUN_MODE);
-pub const GPT1_FREQUENCY: u32 = hal::ccm::clock_tree::gpt_frequency::<1>(RUN_MODE) / GPT1_DIVIDER;
-pub const GPT2_FREQUENCY: u32 = hal::ccm::clock_tree::gpt_frequency::<2>(RUN_MODE) / GPT2_DIVIDER;
-pub const UART_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpuart_frequency::<1>(RUN_MODE);
+pub const PIT_FREQUENCY: u32 = clock_tree::bus_frequency(RUN_MODE);
+pub const GPT1_FREQUENCY: u32 = clock_tree::gpt_frequency::<1>(RUN_MODE) / GPT1_DIVIDER;
+pub const GPT2_FREQUENCY: u32 = clock_tree::gpt_frequency::<2>(RUN_MODE) / GPT2_DIVIDER;
+pub const UART_CLK_FREQUENCY: u32 = clock_tree::lpuart_frequency::<1>(RUN_MODE);
 pub const CONSOLE_BAUD: hal::lpuart::Baud = hal::lpuart::Baud::compute(UART_CLK_FREQUENCY, 115200);
-pub const LPSPI_CLK_FREQUENCY: u32 =
-    hal::ccm::clock_tree::lpspi_frequency::<SPI_INSTANCE>(RUN_MODE);
-pub const LPI2C_CLK_FREQUENCY: u32 =
-    hal::ccm::clock_tree::lpi2c_frequency::<I2C_INSTANCE>(RUN_MODE);
+pub const LPSPI_CLK_FREQUENCY: u32 = clock_tree::lpspi_frequency::<SPI_INSTANCE>(RUN_MODE);
+pub const LPI2C_CLK_FREQUENCY: u32 = clock_tree::lpi2c_frequency::<I2C_INSTANCE>(RUN_MODE);
 pub const PWM_PRESCALER: hal::flexpwm::Prescaler = hal::flexpwm::Prescaler::Prescaler8;
-pub const PWM_FREQUENCY: u32 =
-    hal::ccm::clock_tree::bus_frequency(RUN_MODE) / PWM_PRESCALER.divider();
+pub const PWM_FREQUENCY: u32 = clock_tree::bus_frequency(RUN_MODE) / PWM_PRESCALER.divider();
 
 pub type Led = hal::gpio::Output<iomuxc::gpio_ad::GPIO_AD_04>;
 

@@ -22,9 +22,15 @@ use panic_rtt_target as _;
 
 mod imxrt10xx {
     pub mod clock;
+    pub mod power;
+
+    #[path = "clock_tree/pll6_ahb.rs"]
+    mod ahb;
+
+    mod clock_tree;
 }
 
-pub use imxrt10xx::clock::*;
+pub use imxrt10xx::{clock::*, power::*};
 
 /// You'll find log messages using the serial console, through the DAP.
 pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Lpuart;

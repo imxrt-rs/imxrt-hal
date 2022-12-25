@@ -13,6 +13,7 @@
 //! See the 10xx documentation for an example.
 
 use crate::{
+    hal::ccm::XTAL_OSCILLATOR_HZ,
     ral::{self, ccm::CCM},
     RunMode,
 };
@@ -51,7 +52,7 @@ impl ClockSource {
             (ClockSource::SysPll1, _) => 1_000_000_000,
             (ClockSource::SysPll2, _) => 528_000_000,
             (ClockSource::SysPll3, _) => 480_000_000,
-            (ClockSource::XtalOsc24MHz, _) => super::XTAL_OSCILLATOR_HZ,
+            (ClockSource::XtalOsc24MHz, _) => XTAL_OSCILLATOR_HZ,
             (ClockSource::RcOsc400MHz, _) => 400_000_000,
         }
     }

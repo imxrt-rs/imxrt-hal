@@ -5,6 +5,7 @@
 //! API for 10xx and 11xx clocking. It's likely that we will be able to build a common
 //! API, so we'll revisit this separation later.
 
+use super::clock_tree;
 use crate::{board_impl, hal, ral, GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE};
 
 /// Configure board clocks and power.
@@ -18,7 +19,7 @@ pub(crate) unsafe fn configure() {
     let mut dcdc = ral::dcdc::DCDC::instance();
 
     hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
-    hal::set_target_power(&mut dcdc, RUN_MODE);
+    super::power::set_target_power(&mut dcdc, RUN_MODE);
     prepare_clock_tree(&mut ccm, &mut ccm_analog);
 
     COMMON_CLOCK_GATES
@@ -34,11 +35,11 @@ fn prepare_clock_tree(
     ccm_analog: &mut crate::ral::ccm_analog::CCM_ANALOG,
 ) {
     use crate::hal::ccm;
-    ccm::clock_tree::configure_ahb_ipg(RUN_MODE, ccm, ccm_analog);
-    ccm::clock_tree::configure_lpi2c(RUN_MODE, ccm);
-    ccm::clock_tree::configure_lpspi(RUN_MODE, ccm);
-    ccm::clock_tree::configure_perclk(RUN_MODE, ccm);
-    ccm::clock_tree::configure_uart(RUN_MODE, ccm);
+    clock_tree::configure_ahb_ipg(RUN_MODE, ccm, ccm_analog);
+    clock_tree::configure_lpi2c(RUN_MODE, ccm);
+    clock_tree::configure_lpspi(RUN_MODE, ccm);
+    clock_tree::configure_perclk(RUN_MODE, ccm);
+    clock_tree::configure_uart(RUN_MODE, ccm);
     ccm::analog::pll3::restart(ccm_analog);
 }
 
@@ -57,22 +58,21 @@ const COMMON_CLOCK_GATES: &[clock_gate::Locator] = &[
 ];
 
 /// The PIT clock frequency (Hz).
-pub const PIT_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE);
+pub const PIT_FREQUENCY: u32 = clock_tree::perclk_frequency(RUN_MODE);
 
 /// The GPT1 clock frequency (Hz).
-pub const GPT1_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE) / GPT1_DIVIDER;
+pub const GPT1_FREQUENCY: u32 = clock_tree::perclk_frequency(RUN_MODE) / GPT1_DIVIDER;
 /// The GPT2 clock frequency (Hz).
-pub const GPT2_FREQUENCY: u32 = hal::ccm::clock_tree::perclk_frequency(RUN_MODE) / GPT2_DIVIDER;
+pub const GPT2_FREQUENCY: u32 = clock_tree::perclk_frequency(RUN_MODE) / GPT2_DIVIDER;
 
 /// The UART clock frequency (Hz).
-pub const UART_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::uart_frequency(RUN_MODE);
+pub const UART_CLK_FREQUENCY: u32 = clock_tree::uart_frequency(RUN_MODE);
 
 /// The LPSPI clock frequency (Hz).
-pub const LPSPI_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpspi_frequency(RUN_MODE);
+pub const LPSPI_CLK_FREQUENCY: u32 = clock_tree::lpspi_frequency(RUN_MODE);
 
 /// The LPI2C clock frequency (Hz).
-pub const LPI2C_CLK_FREQUENCY: u32 = hal::ccm::clock_tree::lpi2c_frequency(RUN_MODE);
+pub const LPI2C_CLK_FREQUENCY: u32 = clock_tree::lpi2c_frequency(RUN_MODE);
 
 pub const PWM_PRESCALER: hal::flexpwm::Prescaler = hal::flexpwm::Prescaler::Prescaler8;
-pub const PWM_FREQUENCY: u32 =
-    hal::ccm::clock_tree::ipg_frequency(RUN_MODE) / PWM_PRESCALER.divider();
+pub const PWM_FREQUENCY: u32 = clock_tree::ipg_frequency(RUN_MODE) / PWM_PRESCALER.divider();

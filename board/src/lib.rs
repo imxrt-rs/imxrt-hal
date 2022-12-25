@@ -15,6 +15,19 @@ use imxrt_rt as _;
 
 mod ral_shim;
 
+/// SOC run mode.
+///
+/// Each MCU specifies its own core clock speed
+/// and power settings for these variants. They're
+/// typically follow the recommendations in the
+/// data sheet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RunMode {
+    /// The fastest, highest-power mode.
+    Overdrive,
+}
+
 pub use ral_shim::{BOARD_DMA_A_INDEX, BOARD_DMA_B_INDEX, NVIC_PRIO_BITS};
 
 #[cfg(board = "imxrt1010evk")]
@@ -133,7 +146,7 @@ pub fn new() -> (Common, Specifics) {
 }
 
 /// The board's run mode.
-pub const RUN_MODE: hal::RunMode = hal::RunMode::Overdrive;
+pub const RUN_MODE: RunMode = RunMode::Overdrive;
 
 const GPT1_DIVIDER: u32 = 10;
 const GPT2_DIVIDER: u32 = 100;

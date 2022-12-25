@@ -11,7 +11,13 @@
 use crate::{hal, iomuxc::imxrt1060 as iomuxc, ral};
 
 mod imxrt10xx {
-    pub mod clock;
+    pub(crate) mod clock;
+    pub(crate) mod power;
+
+    #[path = "clock_tree/pll1_ahb.rs"]
+    mod ahb;
+
+    mod clock_tree;
 }
 
 pub use imxrt10xx::clock::*;

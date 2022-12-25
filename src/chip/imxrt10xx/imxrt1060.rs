@@ -25,11 +25,6 @@ pub(crate) mod ccm {
         pub mod pll1;
     }
 
-    pub(crate) mod clock_tree {
-        mod pll1_ahb;
-        pub use pll1_ahb::{ahb_frequency, configure_ahb_ipg};
-    }
-
     /// Re-exported by the common clock_gate module.
     pub(crate) mod clock_gate {
         use crate::chip::ccm::clock_gate;
