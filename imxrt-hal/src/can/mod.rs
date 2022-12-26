@@ -1,31 +1,33 @@
 //! Flexible Controller Area Network (FlexCAN)
 //!
 //! The FlexCAN module provides a CanBus peripheral that implements
-//! the `embedded_hal::can` traits. 
+//! the `embedded_hal::can` traits.
 //!//!
 //! # Example
 //!
 //! ```no_run
 //! use imxrt_hal;
-//! use embedded_hal::serial::{Read, Write};
 //!
 //! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
-//! 
+//!
 //! let (can1_builder, _) = peripherals.can.clock(
 //!     &mut peripherals.ccm.handle,
-//!     bsp::hal::ccm::can::ClockSelect::OSC,
-//!     bsp::hal::ccm::can::PrescalarSelect::DIVIDE_1,
+//!     imxrt_hal::ccm::can::ClockSelect::OSC,
+//!     imxrt_hal::ccm::can::PrescalarSelect::DIVIDE_1,
 //! );
-//! 
-//! let mut can1 = can1_builder.build(pins.p22, pins.p23);
-//! 
+//!
+//! let mut can1 = can1_builder.build(
+//!     peripherals.iomuxc.ad_b1.p08, 
+//!     peripherals.iomuxc.ad_b1.p09
+//! );
+//!
 //! can1.set_baud_rate(1_000_000);
 //! can1.set_max_mailbox(16);
 //! can1.enable_fifo();
 //! can1.set_fifo_interrupt(true);
 //! can1.set_fifo_accept_all();
-//! 
-//! // create a `Frame` with `StandardID` 0x00 
+//!
+//! // create a `Frame` with `StandardID` 0x00
 //! // and `Data` [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
 //! let id = imxrt_hal::can::Id::from(imxrt_hal::can::StandardId::new(0x00).unwrap());
 //! let data: [u8; 8] = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
@@ -33,11 +35,10 @@
 //!
 //! // read all available mailboxes for any available frames
 //! can1.read_mailboxes();
-//! 
+//!
 //! // transmit the frame
 //! can1.transmit(&frame);
 //! ```
-
 
 mod embedded_hal;
 pub mod filter;
@@ -57,12 +58,12 @@ use core::marker::PhantomData;
 /// Error from the FlexCan peripheral.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
-    /// Error indicating that no received data is 
+    /// Error indicating that no received data is
     /// available in the mailboxes
     NoRxData,
     /// Error indicating that no transmit mailboxes
     /// are available
-    NoTxMailbox, 
+    NoTxMailbox,
     /// A wrapper around the [`embedded_hal::ErrorKind`]
     /// enum
     EmbeddedHal(embedded_hal::ErrorKind),
