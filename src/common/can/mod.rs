@@ -17,7 +17,7 @@
 //! );
 //!
 //! let mut can1 = can1_builder.build(
-//!     peripherals.iomuxc.ad_b1.p08, 
+//!     peripherals.iomuxc.ad_b1.p08,
 //!     peripherals.iomuxc.ad_b1.p09
 //! );
 //!
@@ -88,17 +88,17 @@ impl Unclocked {
         clock_select: ccm::can::ClockSelect,
         divider: ccm::can::PrescalarSelect,
     ) -> (Builder<1>, Builder<2>) {
-        // let (ccm, _) = handle.raw();
         let ccm = handle;
-        // First, disable clocks
+
+        // First, disable the clocks for Can1 and Can2
         ral::modify_reg!(
             ral::ccm,
             ccm,
-            CCGR1,
-            CG0: 0,
-            CG1: 0,
-            CG2: 0,
-            CG3: 0
+            CCGR0,
+            CG7: 0b00,
+            CG8: 0b00,
+            CG9: 0b00,
+            CG10: 0b00
         );
 
         let clk_sel = match clock_select {
@@ -114,15 +114,15 @@ impl Unclocked {
             CAN_CLK_SEL: clk_sel
         );
 
-        // Enable clocks
+        // Enable the clocks for Can1 and Can2
         ral::modify_reg!(
             ral::ccm,
             ccm,
-            CCGR1,
-            CG0: 0b11,
-            CG1: 0b11,
-            CG2: 0b11,
-            CG3: 0b11
+            CCGR0,
+            CG7: 0b11,
+            CG8: 0b11,
+            CG9: 0b11,
+            CG10: 0b11
         );
 
         let source_clock = clock_select as u32 / divider as u32;
@@ -150,8 +150,7 @@ impl<const M: u8> Builder<M>
         }
     }
 
-    /// Builds a Can peripheral. The return
-    /// is a configured FlexCan peripheral running at 24MHz.
+    /// Builds a Can peripheral.
     pub fn build<TX, RX>(self, mut tx: TX, mut rx: RX) -> CAN<M>
     where
         TX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Tx>,
@@ -194,10 +193,6 @@ impl<const M: u8> CAN<M>
         can
     }
 
-    pub fn instance(&mut self) -> &mut ral::can::Instance<M> {
-        &mut self.reg
-    }
-
     pub fn print_registers(&self) {
         // log::info!("MCR: {:X}", ral::read_reg!(ral::can, self.reg, MCR));
         // log::info!("CTRL1: {:X}", ral::read_reg!(ral::can, self.reg, CTRL1));
@@ -238,8 +233,6 @@ impl<const M: u8> CAN<M>
     }
 
     pub fn begin(&mut self) {
-        self.set_ccm_ccg();
-
         ral::modify_reg!(ral::can, self.reg, MCR, MDIS: MDIS_0);
 
         self.enter_freeze_mode();
@@ -324,20 +317,6 @@ impl<const M: u8> CAN<M>
 
     pub fn set_rrs(&mut self, rrs: bool) {
         ral::modify_reg!(ral::can, self.reg, CTRL2, RRS: rrs as u32)
-    }
-
-    fn set_ccm_ccg(&mut self) {
-        match self.instance_number() {
-            1 => {
-                unsafe { modify_reg!(ral::ccm, CCM, CCGR0, |reg| reg | 0x3C000) };
-            }
-            2 => {
-                unsafe { modify_reg!(ral::ccm, CCM, CCGR0, |reg| reg | 0x3C0000) };
-            }
-            u => {
-                // log::error!("Invalid Can instance (set_ccm_ccg): {:?}", u);
-            }
-        }
     }
 
     pub fn get_clock(&self) -> u32 {
@@ -610,16 +589,16 @@ impl<const M: u8> CAN<M>
         })
     }
 
-    pub fn set_fifo_filter(
-        &mut self,
-        filter_id: u8,
-        id: u32,
-        ide: filter::FlexCanIde,
-        remote: filter::FlexCanIde,
-    ) {
+    pub fn set_fifo_filter(&mut self, filter: filter::FlexCanFilter) {
         if !self.fifo_enabled() {
             return;
         }
+        let filter::FlexCanFilter {
+            filter_id,
+            id,
+            ide,
+            remote,
+        } = filter;
         let max_fifo_filters = (read_reg!(ral::can, self.reg, CTRL2, RFFN) + 1) * 8;
         if filter_id as u32 >= max_fifo_filters {
             return;
@@ -708,10 +687,6 @@ impl<const M: u8> CAN<M>
         })
     }
 
-    pub fn set_fifo_filter_2(&mut self, filter: filter::FlexCanFilter) {
-        self.set_fifo_filter(filter.filter_id, filter.id, filter.ide, filter.remote)
-    }
-
     pub fn set_fifo_interrupt(&mut self, enabled: bool) {
         /* FIFO must be enabled first */
         if !self.fifo_enabled() {
@@ -750,23 +725,6 @@ impl<const M: u8> CAN<M>
             /* return offset 0 since FIFO is disabled */
             0
         }
-    }
-
-    #[allow(dead_code)]
-    fn read_fifo(&self) -> Option<()> {
-        // if FIFO enabled and interrupt not enabled
-        if !self.fifo_enabled() {
-            return None;
-        };
-        // FIFO interrupt enabled, polling blocked
-        if (ral::read_reg!(ral::can, self.reg, IMASK1) & (0x00000020 as u32)) != 0 {
-            return None;
-        }
-        // message available
-        if (ral::read_reg!(ral::can, self.reg, IFLAG1) & (0x00000020 as u32)) != 0 {
-            return None;
-        }
-        Some(())
     }
 
     #[inline(always)]
@@ -1030,9 +988,4 @@ impl<const M: u8> CAN<M>
         }
         Err(nb::Error::Other(Error::NoTxMailbox))
     }
-}
-
-/// Interface to the Can transmitter part.
-pub struct Tx<I> {
-    _can: PhantomData<I>,
 }

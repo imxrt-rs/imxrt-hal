@@ -25,3 +25,10 @@ pub struct FlexCanFilter {
     pub remote: FlexCanIde
 }
 
+impl FlexCanFilter {
+    /// Create a new [`FlexCanFilter`].
+    pub fn new(filter_id: u8, id: u32, ide: FlexCanIde, remote: FlexCanIde) -> Self {
+        Self { filter_id, id, ide, remote }
+    }
+}
+
