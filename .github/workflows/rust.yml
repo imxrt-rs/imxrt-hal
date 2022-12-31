@@ -10,6 +10,8 @@ jobs:
         feature: ["imxrt1061", "imxrt1062", "imxrt1064"]
     steps:
     - uses: actions/checkout@v2
+    - name: Install lastest, stable Rust toolchain
+      run: rustup toolchain install stable --profile=minimal --component=clippy,rustfmt
     - name: Build imxrt-hal for (${{ matrix.feature }}) HAL
       run: cd imxrt-hal && cargo build --verbose --features ${{ matrix.feature }}
     - name: Run tests (${{ matrix.feature }}) for HAL

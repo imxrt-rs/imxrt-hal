@@ -1,11 +1,11 @@
 //! `embedded_hal` trait impls.
 
-use super::{Data, Frame, Error, CAN};
+use super::{Data, Error, Frame, CAN};
 use crate::iomuxc::consts::Unsigned;
 
 use embedded_hal::can;
-pub use embedded_hal::can::{ExtendedId, Id, StandardId};
 pub(crate) use embedded_hal::can::ErrorKind;
+pub use embedded_hal::can::{ExtendedId, Id, StandardId};
 
 impl<M> can::Can for CAN<M>
 where
@@ -36,7 +36,7 @@ impl can::Error for Error {
         match self {
             Self::NoRxData => can::ErrorKind::Other,
             Self::NoTxMailbox => can::ErrorKind::Other,
-            Self::EmbeddedHal(e) => e.kind()
+            Self::EmbeddedHal(e) => e.kind(),
         }
     }
 }
