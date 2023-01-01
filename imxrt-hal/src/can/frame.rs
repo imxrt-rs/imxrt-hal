@@ -124,7 +124,7 @@ impl PartialEq for Frame {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum FlexCanMailboxCSCode {
     RxInactive = 0b0000,
@@ -339,7 +339,7 @@ impl IdReg {
     #[inline(always)]
     pub fn new_extended(id: ExtendedId) -> Self {
         assert!(id.as_raw() <= ExtendedId::MAX.as_raw());
-        let id = u32::from(id.as_raw()) << Self::EXTENDED_SHIFT;
+        let id = id.as_raw() << Self::EXTENDED_SHIFT;
         Self::new(id)
     }
 

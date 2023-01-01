@@ -369,7 +369,7 @@ where
                 if result <= 25 {
                     error = (baud - (clock_freq / (result * (divisor + 1)))) as i16;
                     if error < 0 {
-                        error = -1 * error;
+                        error *= -1;
                     }
                     if error < best_error {
                         best_error = error;
@@ -385,26 +385,23 @@ where
             divisor = best_divisor;
             result = clock_freq / baud / (divisor + 1);
 
-            if !(result < 5) || (result > 25) || (best_error > 300) {
-                result -= 5;
+            if (result < 5) || (result > 25) || (best_error > 300) { return };
 
-                match this.result_to_bit_table(result as u8) {
-                    Some(t) => {
-                        modify_reg!(
-                            ral::can,
-                            this.reg,
-                            CTRL1,
-                            PROPSEG: t[0],
-                            RJW: 1,
-                            PSEG1: t[1],
-                            PSEG2: t[2],
-                            ERRMSK: ERRMSK_1,
-                            LOM: LOM_0,
-                            PRESDIV: divisor)
-                    }
-                    _ => {}
-                }
-            }
+            result -= 5;
+
+            if let Some(t) = this.result_to_bit_table(result as u8) {
+                modify_reg!(
+                    ral::can,
+                    this.reg,
+                    CTRL1,
+                    PROPSEG: t[0],
+                    RJW: 1,
+                    PSEG1: t[1],
+                    PSEG2: t[2],
+                    ERRMSK: ERRMSK_1,
+                    LOM: LOM_0,
+                    PRESDIV: divisor)
+            };            
         });
     }
 
@@ -505,7 +502,7 @@ where
                         };
                         this.write_mailbox(i, Some(code), None, None);
                         let eacen = read_reg!(ral::can, this.reg, CTRL2, EACEN == EACEN_1);
-                        let rximr = 0_32 | {
+                        let rximr = {
                             if eacen {
                                 1_u32 << 30
                             } else {
@@ -609,9 +606,9 @@ where
         self.while_frozen(|this| match read_reg!(ral::can, this.reg, MCR, IDAM) {
             ral::can::MCR::IDAM::RW::IDAM_0 => {
                 let mask: u32 = if ide != filter::FlexCanIde::Ext {
-                    ((((id) ^ (id)) ^ 0x7FF) << 19) | 0xC0000001
+                    ((id ^ 0x7FF) << 19) | 0xC0000001
                 } else {
-                    ((((id) ^ (id)) ^ 0x1FFFFFFF) << 1) | 0xC0000001
+                    ((id ^ 0x1FFFFFFF) << 1) | 0xC0000001
                 };
                 let mut filter: u32 = (if ide == filter::FlexCanIde::Ext { 1 } else { 0 } << 30);
                 filter |= if remote == filter::FlexCanIde::Rtr {
@@ -633,18 +630,18 @@ where
             }
             ral::can::MCR::IDAM::RW::IDAM_1 => {
                 let mut mask: u32 = if ide != filter::FlexCanIde::Ext {
-                    (((id) ^ (id)) ^ 0x7FF) << 19
+                    (id ^ 0x7FF) << 19
                 } else {
-                    (((id) ^ (id)) ^ 0x1FFFFFFF) << 16
+                    (id ^ 0x1FFFFFFF) << 16
                 } | if remote == filter::FlexCanIde::Rtr {
                     1 << 31
                 } else {
                     0
                 };
                 mask |= if ide != filter::FlexCanIde::Ext {
-                    (((id) ^ (id)) ^ 0x7FF) << 3
+                    (id ^ 0x7FF) << 3
                 } else {
-                    (((id) ^ (id)) ^ 0x1FFFFFFF) << 0
+                    id ^ 0x1FFFFFFF
                 } | if remote == filter::FlexCanIde::Rtr {
                     1 << 15
                 } else {
@@ -669,7 +666,7 @@ where
                         (id & 0x7FF) << 19
                     })
                     | (if ide == filter::FlexCanIde::Ext {
-                        (id >> (29 - 14)) << 0
+                        id >> (29 - 14)
                     } else {
                         (id & 0x7FF) << 3
                     });
@@ -717,12 +714,12 @@ where
         if self.fifo_enabled() {
             let max_mailbox = self.get_max_mailbox() as u32;
             let num_rx_fifo_filters = (read_reg!(ral::can, self.reg, CTRL2, RFFN) + 1) * 2;
-            let remaining_mailboxes = max_mailbox - 6_u32 - num_rx_fifo_filters;
+            let remaining_mailboxes = (max_mailbox - 6_u32 - num_rx_fifo_filters) as i32;
             /* return offset MB position after FIFO area */
-            if max_mailbox < max_mailbox - remaining_mailboxes {
+            if remaining_mailboxes > max_mailbox as i32 {
                 max_mailbox as u8
             } else {
-                (max_mailbox - remaining_mailboxes) as u8
+                (max_mailbox as i32 - remaining_mailboxes) as u8
             }
         } else {
             /* return offset 0 since FIFO is disabled */
@@ -813,7 +810,7 @@ where
     ) {
         let mailbox_addr = self.mailbox_number_to_address(mailbox_number);
         if let Some(code) = code {
-            unsafe { core::ptr::write_volatile((mailbox_addr + 0_u32) as *mut u32, code) };
+            unsafe { core::ptr::write_volatile((mailbox_addr) as *mut u32, code) };
         }
         if let Some(id) = id {
             unsafe { core::ptr::write_volatile((mailbox_addr + 0x4_u32) as *mut u32, id) };
@@ -896,21 +893,15 @@ where
             /* enable mailbox interrupt */
             self.write_imask_bit(mailbox_number, true);
             return;
-        } else {
-            match self.read_mailbox(mailbox_number) {
-                Some(d) => {
-                    if (d.frame.code.to_code_reg() & 0x0F000000) >> 3 != 0 {
-                        /* transmit interrupt keeper */
-                        self.write_imask_bit(mailbox_number, true);
-                        return;
-                    }
-                }
-                _ => {}
+        } else if let Some(d) = self.read_mailbox(mailbox_number) {
+            if (d.frame.code.to_code_reg() & 0x0F000000) >> 3 != 0 {
+                /* transmit interrupt keeper */
+                self.write_imask_bit(mailbox_number, true);
+                return;
             }
         }
         /* disable mailbox interrupt */
         self.write_imask_bit(mailbox_number, false);
-        return;
     }
 
     pub fn read_mailboxes(&mut self) -> Option<MailboxData> {
@@ -946,11 +937,8 @@ where
                 self._mailbox_reader_index += 1;
                 continue; /* don't read interrupt enabled mailboxes */
             }
-            match self.read_mailbox(self._mailbox_reader_index) {
-                Some(mailbox_data) => {
-                    return Some(mailbox_data);
-                }
-                _ => {}
+            if let Some(mailbox_data) = self.read_mailbox(self._mailbox_reader_index) {
+                return Some(mailbox_data);
             }
             self._mailbox_reader_index += 1;
         }
