@@ -382,7 +382,7 @@ impl<const M: u8> CAN<M>
             divisor = best_divisor;
             result = clock_freq / baud / (divisor + 1);
 
-            if (result < 5) || (result > 25) || (best_error > 300) {
+            if !(5..=25).contains(&result) || (best_error > 300) {
                 return;
             };
 
@@ -622,7 +622,7 @@ impl<const M: u8> CAN<M>
                 };
                 this.write_mailbox_idflt_tab(filter_id, Some(filter));
                 let offset = this.mailbox_offset();
-                if filter_id < offset.clamp(0, 32) as u8 {
+                if filter_id < offset.clamp(0, 32) {
                     this.write_mailbox_rximr(filter_id, Some(mask));
                 }
                 write_reg!(ral::can, this.reg, RXFGMASK, 0x3FFFFFFF);
@@ -671,7 +671,7 @@ impl<const M: u8> CAN<M>
                     });
                 this.write_mailbox_idflt_tab(filter_id, Some(filter));
                 let offset = this.mailbox_offset();
-                if filter_id < offset.clamp(0, 32) as u8 {
+                if filter_id < offset.clamp(0, 32) {
                     this.write_mailbox_rximr(filter_id, Some(mask));
                 }
                 write_reg!(ral::can, this.reg, RXFGMASK, 0x7FFF7FFF);
