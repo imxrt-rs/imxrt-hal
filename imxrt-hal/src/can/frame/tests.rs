@@ -21,7 +21,7 @@ fn lower_ids_win_arbitration() {
 
     // Standard IDs have priority over Extended IDs if the Base ID matches.
     let ext_one = Frame::new_data(
-        ExtendedId::new(0b00000000001_000000000000000000).unwrap(),
+        ExtendedId::new(0b0_0000_0000_0100_0000_0000_0000_0000).unwrap(),
         [],
     );
     assert!(!ext_one.is_standard());
@@ -29,7 +29,7 @@ fn lower_ids_win_arbitration() {
 
     // Ext. ID with Base ID 0 has priority over Standard ID 1.
     let ext_zero = Frame::new_data(
-        ExtendedId::new(0b00000000000_100000000000000000).unwrap(),
+        ExtendedId::new(0b0_0000_0000_0010_0000_0000_0000_0000).unwrap(),
         [],
     );
     assert!(!ext_zero.is_standard());
