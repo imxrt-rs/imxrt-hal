@@ -609,12 +609,8 @@ impl<const M: u8> CAN<M>
                 } else {
                     ((id ^ 0x1FFFFFFF) << 1) | 0xC0000001
                 };
-                let mut filter: u32 = (if ide == filter::FlexCanIde::Ext { 1 } else { 0 } << 30);
-                filter |= if remote == filter::FlexCanIde::Rtr {
-                    1
-                } else {
-                    0
-                } << 31;
+                let mut filter: u32 = u32::from(ide == filter::FlexCanIde::Ext) << 30;
+                filter |= u32::from(remote == filter::FlexCanIde::Rtr) << 31;
                 filter |= if ide == filter::FlexCanIde::Ext {
                     (id & 0x1FFFFFFF) << 1
                 } else {
@@ -647,18 +643,10 @@ impl<const M: u8> CAN<M>
                     0
                 } & 0xFFFF;
                 mask |= (1 << 30) | (1 << 14);
-                let filter: u32 = (if ide == filter::FlexCanIde::Ext { 1 } else { 0 } << 30)
-                    | (if ide == filter::FlexCanIde::Ext { 1 } else { 0 } << 14)
-                    | (if remote == filter::FlexCanIde::Rtr {
-                        1
-                    } else {
-                        0
-                    } << 31)
-                    | (if remote == filter::FlexCanIde::Rtr {
-                        1
-                    } else {
-                        0
-                    } << 15)
+                let filter: u32 = u32::from(ide == filter::FlexCanIde::Ext) << 30
+                    | u32::from(ide == filter::FlexCanIde::Ext) << 14
+                    | u32::from(remote == filter::FlexCanIde::Rtr) << 31
+                    | u32::from(remote == filter::FlexCanIde::Rtr) << 15
                     | (if ide == filter::FlexCanIde::Ext {
                         (id >> (29 - 14)) << 16
                     } else {
