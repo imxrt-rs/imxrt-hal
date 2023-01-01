@@ -382,7 +382,9 @@ impl<const M: u8> CAN<M>
             divisor = best_divisor;
             result = clock_freq / baud / (divisor + 1);
 
-            if (result < 5) || (result > 25) || (best_error > 300) { return };
+            if (result < 5) || (result > 25) || (best_error > 300) {
+                return;
+            };
 
             result -= 5;
 
@@ -398,7 +400,7 @@ impl<const M: u8> CAN<M>
                     ERRMSK: ERRMSK_1,
                     LOM: LOM_0,
                     PRESDIV: divisor)
-            };            
+            };
         });
     }
 
