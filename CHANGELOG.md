@@ -2,6 +2,47 @@
 
 ## [Unreleased]
 
+## [0.5.0] 2022-01-05
+
+`imxrt-hal` provides common peripherals for all chips supported by `imxrt-ral`,
+including multi-core 1176 chips. There are about 12 common peripherals that are
+expected to work across 10 supported i.MX RT processors.
+
+`imxrt-hal` now includes extra APIs for the following i.MX RT processors:
+
+- 1010
+- 1060
+- 1064
+- 1170
+
+Note that these extra APIs may not be portable across all i.MX RT processors.
+
+Many drivers are re-written with new interfaces; see the API documentation and
+examples for specifics. All drivers maintain their `embedded-hal` 0.2
+implementations, which should help those who are migrating generic firmware
+from older `imxrt-hal` releases.
+
+In order to support more i.MX RT processors, `imxrt-hal` has new build
+requirements. These requirements differ from the 0.4 release. Study the API
+documentation to understand how to build and use 0.5 of `imxrt-hal`.
+
+If you want to try out `imxrt-hal` on development hardware, the project now
+maintains in-tree hardware examples. Consult the repository documentation for
+more information on supported hardware, and how to build and flash examples.
+
+### Fixed
+
+This release includes a fix for the LPSPI spurious chip select toggling
+([#111](https://github.com/imxrt-rs/imxrt-hal/issues/111)). The new LPSPI
+driver will assert chip select until all data from a `u8`/`u16`/`u32`
+buffer is sent out / received from the device.
+
+### Maintenance
+
+The previous `master` branch, from which other releases were cut, is renamed
+to `pre-v0.5` in the primary repository. The `main` branch now represents the
+default branch, and it contains the tag for this release.
+
 ## [0.4.5] 2021-12-02
 
 ### Added
@@ -210,7 +251,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.5...maint-v0.4
+[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.0...main
+[0.5.0]: https://github.com/imxrt-rs/imxrt-hal/releases/tag/0.5.0
 [0.4.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.4...0.4.5
 [0.4.4]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.3...0.4.4
 [0.4.3]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.2...0.4.3
