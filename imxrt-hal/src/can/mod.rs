@@ -354,23 +354,31 @@ where
     }
 
     pub fn set_baud_rate(&mut self, baud: u32) {
+
+        fn calc_result(baud: u32, clock_freq: u32, divisor: u32) -> u32 {
+            clock_freq / baud / (divisor + 1)
+        }
+
+        fn calc_error(baud: u32, clock_freq: u32, result: u32, divisor: u32) -> u32 {
+            baud.abs_diff(clock_freq / (result * (divisor + 1)))
+        }
+
         let clock_freq = self.get_clock();
 
         let mut divisor = 0;
         let mut best_divisor: u32 = 0;
-        let mut result: u32 = clock_freq / baud / (divisor + 1);
-        let mut error: i16 = (baud - (clock_freq / (result * (divisor + 1)))) as i16;
+        
+        let mut result: u32 = calc_result(baud, clock_freq, divisor);
+        
+        let mut error = calc_error(baud, clock_freq, result, divisor);
         let mut best_error = error;
 
         self.while_frozen(|this| {
             while result > 5 {
                 divisor += 1;
-                result = clock_freq / baud / (divisor + 1);
+                result = calc_result(baud, clock_freq, divisor);
                 if result <= 25 {
-                    error = (baud - (clock_freq / (result * (divisor + 1)))) as i16;
-                    if error < 0 {
-                        error *= -1;
-                    }
+                    error = calc_error(baud, clock_freq, result, divisor);
                     if error < best_error {
                         best_error = error;
                         best_divisor = divisor;
