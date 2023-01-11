@@ -28,6 +28,7 @@ pub mod iomuxc {
 }
 
 pub mod adc;
+pub mod can;
 pub mod ccm;
 pub mod dma;
 pub mod gpio;
@@ -55,6 +56,7 @@ pub mod dcdc {
 pub struct Peripherals {
     pub adc: adc::Unclocked,
     pub iomuxc: iomuxc::Pads,
+    pub can: can::Unclocked,
     pub ccm: ccm::CCM,
     pub pit: pit::UnclockedPIT,
     pub dcdc: dcdc::DCDC,
@@ -89,6 +91,10 @@ impl Peripherals {
                 adc2: ral::adc::ADC2::steal(),
             },
             iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::steal()),
+            can: can::Unclocked {
+                can1: ral::can::CAN1::steal(),
+                can2: ral::can::CAN2::steal(),
+            },
             ccm: ccm::CCM::new(ral::ccm::CCM::steal(), ral::ccm_analog::CCM_ANALOG::steal()),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::steal()),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::steal()),
@@ -139,6 +145,10 @@ impl Peripherals {
                 adc2: ral::adc::ADC2::take()?,
             },
             iomuxc: iomuxc::pads(ral::iomuxc::IOMUXC::take()?),
+            can: can::Unclocked {
+                can1: ral::can::CAN1::take()?,
+                can2: ral::can::CAN2::take()?,
+            },
             ccm: ccm::CCM::new(ral::ccm::CCM::take()?, ral::ccm_analog::CCM_ANALOG::take()?),
             pit: pit::UnclockedPIT::new(ral::pit::PIT::take()?),
             dcdc: dcdc::DCDC(ral::dcdc::DCDC::take()?),
