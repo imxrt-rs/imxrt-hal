@@ -7,6 +7,7 @@ BSP.
 
 - Teensy 4.0 and Teensy 4.1 boards with the `teensy4` feature.
 - the IMXRT1010EVK board with the `imxrt1010evk` feature.
+- the IMXRT1060EVK board with the `imxrt1060evk` feature.
 - the Cortex M7 on the IMXRT1170EVK board with the `imxrt1170evk-cm7` feature.
 
 A board may only support a subset of all examples. To understand which examples

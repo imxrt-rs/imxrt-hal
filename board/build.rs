@@ -34,6 +34,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("cargo:rustc-cfg=chip=\"imxrt1010\"");
                 println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
             }
+            "imxrt1060evk" => {
+                RuntimeBuilder::from_flexspi(Family::Imxrt1060, 8 * 1024 * 1024)
+                    .rodata(Memory::Dtcm)
+                    .build()?;
+                println!("cargo:rustc-cfg=board=\"imxrt1060evk\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1060\"");
+                println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
+            }
             // Dashes replaced by underscores when signaled through
             // environment variables.
             "imxrt1170evk_cm7" => {

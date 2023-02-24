@@ -34,6 +34,10 @@ pub use ral_shim::{BOARD_DMA_A_INDEX, BOARD_DMA_B_INDEX, NVIC_PRIO_BITS};
 #[path = "imxrt1010evk.rs"]
 mod board_impl;
 
+#[cfg(board = "imxrt1060evk")]
+#[path = "imxrt1060evk.rs"]
+mod board_impl;
+
 #[cfg(board = "teensy4")]
 #[path = "teensy4.rs"]
 mod board_impl;
