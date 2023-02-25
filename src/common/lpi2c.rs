@@ -700,10 +700,10 @@ impl<P, const N: u8> blocking::WriteIterRead for Lpi2c<P, N> {
 
 impl<P, const N: u8> blocking::Transactional for Lpi2c<P, N> {
     type Error = ControllerStatus;
-    fn exec<'a>(
+    fn exec(
         &mut self,
         address: u8,
-        operations: &mut [blocking::Operation<'a>],
+        operations: &mut [blocking::Operation],
     ) -> Result<(), Self::Error> {
         let mut runner = transaction::Runner::new(self)?;
         for operation in operations {

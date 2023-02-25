@@ -92,19 +92,14 @@ pub enum Direction {
 }
 
 /// Bit order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum BitOrder {
     /// Data is transferred most significant bit first (default).
+    #[default]
     Msb,
     /// Data is transferred least significant bit first.
     Lsb,
-}
-
-impl Default for BitOrder {
-    fn default() -> Self {
-        BitOrder::Msb
-    }
 }
 
 /// Possible errors when interfacing the LPSPI.

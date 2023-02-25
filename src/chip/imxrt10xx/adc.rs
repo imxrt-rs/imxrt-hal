@@ -37,39 +37,29 @@ use eh02::adc::{Channel, OneShot};
 
 /// The clock input for an ADC
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ClockSelect {
     /// IPG clock
     IPG,
     /// IPG clock / 2
     IPG_2,
     /// ADC Asynchronous clock
+    #[default]
     ADACK,
 }
 
 /// How much to divide the clock input
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ClockDivision {
     /// Input clock / 1
     Div1,
     /// Input clock
+    #[default]
     Div2,
     /// Input clock / 4
     Div4,
     /// Input clock / 8
     Div8,
-}
-
-impl Default for ClockSelect {
-    fn default() -> Self {
-        ClockSelect::ADACK
-    }
-}
-
-impl Default for ClockDivision {
-    fn default() -> Self {
-        ClockDivision::Div2
-    }
 }
 
 /// Conversion speeds done by clock cycles
