@@ -66,6 +66,7 @@ features = ["imxrt-ral/imxrt1062", "imxrt1060"]
 [features]
 default = ["imxrt-usbd"]
 imxrt1010 = ["imxrt-iomuxc/imxrt1010"]
+imxrt1020 = ["imxrt-iomuxc/imxrt1020"]
 imxrt1060 = ["imxrt-iomuxc/imxrt1060"]
 imxrt1064 = ["imxrt-iomuxc/imxrt1060"]
 imxrt1170 = ["imxrt-iomuxc/imxrt1170"]
@@ -86,7 +87,7 @@ members = [
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
-imxrt-iomuxc = "0.2"
+imxrt-iomuxc = "0.2.1"
 imxrt-hal = { version = "0.5", path = "." }
 imxrt-log = { path = "logging" }
 imxrt-ral = "0.5"
