@@ -117,8 +117,21 @@ jobs:
         command: build
         args: ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
 
+  # Run unit, integration tests.
+  #
+  # Select just one compatible RAL feature to pair with the HAL. The goal is to
+  # cover all HAL configurations just once. The linting job gives us complete
+  # build coverage.
+  #
+  # This ends up testing imxrt-log multiple times. That's OK.
   tests:
     needs: format
+    strategy:
+      matrix:
+        chips:
+        - imxrt-ral/imxrt1011,imxrt1010
+        - imxrt-ral/imxrt1062,imxrt1060
+        - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -130,12 +143,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
-        args: --features=board/teensy4 --workspace --tests
-    - name: Run documentation tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --features=board/teensy4 --workspace --doc
+        args: --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
 
   # Ensures that documentation builds, and that links are valid
   docs:
@@ -148,5 +156,10 @@ jobs:
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+    - name: Run documentation tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --features=board/teensy4 --workspace --doc
     - name: Check documentation, doclinks throughout workspace
       run: cargo doc --workspace --no-deps --features=board/teensy4
