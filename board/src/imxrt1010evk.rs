@@ -320,7 +320,7 @@ pub mod clock_out {
         Clko2::LpspiClk,
         Clko2::Sai1Clk,
         Clko2::Sai3Clk,
-        Clko2::TracClk,
+        Clko2::TraceClk,
         Clko2::FlexspiClk,
         Clko2::UartClk,
         Clko2::Spdif0Clk,

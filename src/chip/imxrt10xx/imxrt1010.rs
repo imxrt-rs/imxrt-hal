@@ -109,13 +109,25 @@ pub(crate) mod ccm {
             /// SAI3 clock root.
             Sai3Clk = 0b10100,
             /// Trace clock root.
-            TracClk = 0b10110,
+            TraceClk = 0b10110,
             /// FlexSPI clock root.
             FlexspiClk = 0b11011,
             /// UART clock root.
             UartClk = 0b11100,
             /// SPDIF0 clock root.
             Spdif0Clk = 0b11101,
+        }
+
+        impl Clko2Selection {
+            /// Trace clock root.
+            ///
+            /// Prefer [`TraceClk`](Self::TraceClk), which is correctly spelled.
+            #[deprecated(
+                since = "0.5.1",
+                note = "Use the correctly-spelled 'TraceClk' variant."
+            )]
+            #[allow(non_upper_case_globals)]
+            pub const TracClk: Clko2Selection = Clko2Selection::TraceClk;
         }
     }
 }

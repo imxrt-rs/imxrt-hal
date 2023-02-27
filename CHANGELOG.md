@@ -5,6 +5,9 @@
 Add support for i.MX RT 1020 processors. Enable support with the `"imxrt1020"`
 imxrt-hal feature, and separately select your imxrt-ral feature.
 
+_Deprecate_ the `clko2::Selection::TracClk` item. Prefer the correctly-spelled
+variant, `clko2::Selection::TraceClk`.
+
 ## [0.5.0] 2022-01-05
 
 `imxrt-hal` provides common peripherals for all chips supported by `imxrt-ral`,
