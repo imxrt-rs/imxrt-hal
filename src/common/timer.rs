@@ -383,28 +383,11 @@ fn prepare_gpt<const N: u8>(gpt: &mut gpt::Gpt<N>) {
 /// A single PIT channel that acts as a blocking timer.
 pub type BlockingPit<const N: u8, const HZ: u32> = Blocking<pit::Pit<N>, HZ>;
 
-/// A single PIT channel that acts as a blocking timer.
-///
-/// Prefer [`BlockingPit`], which is easier to type. It is also more
-/// distinct than [`BlockingPitChain`], which varies from `BlockingPitChan`
-/// by only one letter.
-#[deprecated(since = "0.5.1", note = "Use BlockingPit")]
-pub type BlockingPitChan<const N: u8, const HZ: u32> = BlockingPit<N, HZ>;
-
 impl<const N: u8, const HZ: u32> BlockingPit<N, HZ> {
     /// Create a blocking adapter from a PIT channel.
     pub fn from_pit(mut pit: pit::Pit<N>) -> Self {
         prepare_pit(&mut pit);
         Self::new(pit)
-    }
-
-    /// Create a blocking adapter from a PIT channel.
-    ///
-    /// Prefer [`from_pit`](Self::from_pit), which is easier to type
-    /// and matches the name of the type we're converting.
-    #[deprecated(since = "0.5.1", note = "Use from_pit")]
-    pub fn from_pit_channel(pit: pit::Pit<N>) -> Self {
-        Self::from_pit(pit)
     }
 }
 
@@ -529,28 +512,11 @@ where
 /// A count down timer over a PIT channel.
 pub type RawCountDownPit<const N: u8> = RawCountDown<pit::Pit<N>>;
 
-/// A count down timer over a PIT channel.
-///
-/// Prefer [`RawCountDownPit`], which is easier to type. It is also more
-/// distinct than [`RawCountDownPitChain`], which varies from `RawCountDownPitChan`
-/// by only one letter.
-#[deprecated(since = "0.5.1", note = "Use RawCountDownPit")]
-pub type RawCountDownPitChan<const N: u8> = RawCountDownPit<N>;
-
 impl<const N: u8> RawCountDownPit<N> {
     /// Create a count down timer from a PIT channel.
     pub fn from_pit(mut pit: pit::Pit<N>) -> Self {
         prepare_pit(&mut pit);
         Self::new(pit)
-    }
-
-    /// Create a count down timer from a PIT channel.
-    ///
-    /// Prefer [`from_pit`](Self::from_pit), which is easier to type
-    /// and matches the name of the type we're converting.
-    #[deprecated(since = "0.5.1", note = "Use from_pit")]
-    pub fn from_pit_channel(pit: pit::Pit<N>) -> Self {
-        Self::from_pit(pit)
     }
 }
 

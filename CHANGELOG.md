@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+**BREAKING** Remove deprecated APIs `clko2::Selection::TracClk` and
+`timer::*PitChan`.
+
 ## [0.5.1] 2023-03-07
 
 Add support for i.MX RT 1020 processors. Enable support with the `"imxrt1020"`
