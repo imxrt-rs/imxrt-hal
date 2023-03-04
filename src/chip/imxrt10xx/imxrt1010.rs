@@ -117,18 +117,6 @@ pub(crate) mod ccm {
             /// SPDIF0 clock root.
             Spdif0Clk = 0b11101,
         }
-
-        impl Clko2Selection {
-            /// Trace clock root.
-            ///
-            /// Prefer [`TraceClk`](Self::TraceClk), which is correctly spelled.
-            #[deprecated(
-                since = "0.5.1",
-                note = "Use the correctly-spelled 'TraceClk' variant."
-            )]
-            #[allow(non_upper_case_globals)]
-            pub const TracClk: Clko2Selection = Clko2Selection::TraceClk;
-        }
     }
 
     ccm_flexio!(
