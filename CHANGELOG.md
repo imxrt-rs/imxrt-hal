@@ -8,6 +8,14 @@ imxrt-hal feature, and separately select your imxrt-ral feature.
 _Deprecate_ the `clko2::Selection::TracClk` item. Prefer the correctly-spelled
 variant, `clko2::Selection::TraceClk`.
 
+_Deprecate_ the following items in the `timer` module:
+
+- `timer::BlockingPitChan` and constructor `from_pit_channel`.
+- `timer::RawCountDownPitChan`and constructor `from_pit_channel`.
+
+The type names differ from `*PitChain` by one letter. Prefer the spellings
+without `*Chan` and `*_channel`.
+
 ## [0.5.0] 2022-01-05
 
 `imxrt-hal` provides common peripherals for all chips supported by `imxrt-ral`,

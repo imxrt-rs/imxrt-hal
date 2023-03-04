@@ -186,7 +186,7 @@ impl<const HZ: u32> TimerDurationExt for fugit::TimerDurationU64<HZ> {
 ///
 /// use hal::{
 ///     ccm::{self, clock_gate, perclk_clk},
-///     timer::BlockingPitChan,
+///     timer::BlockingPit,
 /// };
 ///
 /// let mut ccm = unsafe { ral::ccm::CCM::instance() };
@@ -210,7 +210,7 @@ impl<const HZ: u32> TimerDurationExt for fugit::TimerDurationU64<HZ> {
 /// let pit = unsafe { ral::pit::PIT::instance() };
 /// let (pit0, _, _, _) = hal::pit::new(pit);
 ///
-/// let mut blocking = BlockingPitChan::<0, PIT_FREQUENCY_HZ>::from_pit_channel(pit0);
+/// let mut blocking = BlockingPit::<0, PIT_FREQUENCY_HZ>::from_pit(pit0);
 /// // Block for milliseconds:
 /// blocking.block_ms(1000);
 /// // Block for microseconds:
@@ -265,7 +265,7 @@ where
     /// ```compile_fail
     /// // See struct-level documentation for configuration...
     /// # let pit0 = unsafe { imxrt_hal::pit::Pit::<0>::new(&imxrt_ral::pit::PIT::instance()) };
-    /// # let mut blocking = imxrt_hal::timer::BlockingPitChan::<0, PIT_FREQUENCY_HZ>::from_pit_channel(pit0);
+    /// # let mut blocking = imxrt_hal::timer::BlockingPit::<0, PIT_FREQUENCY_HZ>::from_pit(pit0);
     /// # const PIT_FREQUENCY_HZ: u32 = 75000000;
     /// // 99 seconds, expressed in microseconds, cannot fit within a u32 counter
     /// // that counts at PIT_FREQUENCY_HZ. This fails to compile:
@@ -276,7 +276,7 @@ where
     ///
     /// ```no_run
     /// # let pit0 = unsafe { imxrt_hal::pit::Pit::<0>::new(&imxrt_ral::pit::PIT::instance()) };
-    /// # let mut blocking = imxrt_hal::timer::BlockingPitChan::<0, PIT_FREQUENCY_HZ>::from_pit_channel(pit0);
+    /// # let mut blocking = imxrt_hal::timer::BlockingPit::<0, PIT_FREQUENCY_HZ>::from_pit(pit0);
     /// # const PIT_FREQUENCY_HZ: u32 = 75000000;
     /// // However, 99 milliseconds, expressed in microseconds, can fit within a u32
     /// // counter that counts at PIT_FREQENCY_HZ.
@@ -346,7 +346,7 @@ where
 
 /// Prepares a PIT channel to be adapted by blocking / count down
 /// adapters.
-fn prepare_pit_channel<const N: u8>(pit: &mut pit::Pit<N>) {
+fn prepare_pit<const N: u8>(pit: &mut pit::Pit<N>) {
     pit.disable();
     pit.clear_elapsed();
     pit.set_chained(false);
@@ -381,13 +381,30 @@ fn prepare_gpt<const N: u8>(gpt: &mut gpt::Gpt<N>) {
 }
 
 /// A single PIT channel that acts as a blocking timer.
-pub type BlockingPitChan<const N: u8, const HZ: u32> = Blocking<pit::Pit<N>, HZ>;
+pub type BlockingPit<const N: u8, const HZ: u32> = Blocking<pit::Pit<N>, HZ>;
 
-impl<const N: u8, const HZ: u32> BlockingPitChan<N, HZ> {
+/// A single PIT channel that acts as a blocking timer.
+///
+/// Prefer [`BlockingPit`], which is easier to type. It is also more
+/// distinct than [`BlockingPitChain`], which varies from `BlockingPitChan`
+/// by only one letter.
+#[deprecated(since = "0.5.1", note = "Use BlockingPit")]
+pub type BlockingPitChan<const N: u8, const HZ: u32> = BlockingPit<N, HZ>;
+
+impl<const N: u8, const HZ: u32> BlockingPit<N, HZ> {
     /// Create a blocking adapter from a PIT channel.
-    pub fn from_pit_channel(mut pit: pit::Pit<N>) -> Self {
-        prepare_pit_channel(&mut pit);
+    pub fn from_pit(mut pit: pit::Pit<N>) -> Self {
+        prepare_pit(&mut pit);
         Self::new(pit)
+    }
+
+    /// Create a blocking adapter from a PIT channel.
+    ///
+    /// Prefer [`from_pit`](Self::from_pit), which is easier to type
+    /// and matches the name of the type we're converting.
+    #[deprecated(since = "0.5.1", note = "Use from_pit")]
+    pub fn from_pit_channel(pit: pit::Pit<N>) -> Self {
+        Self::from_pit(pit)
     }
 }
 
@@ -510,13 +527,30 @@ where
 }
 
 /// A count down timer over a PIT channel.
-pub type RawCountDownPitChan<const N: u8> = RawCountDown<pit::Pit<N>>;
+pub type RawCountDownPit<const N: u8> = RawCountDown<pit::Pit<N>>;
 
-impl<const N: u8> RawCountDownPitChan<N> {
+/// A count down timer over a PIT channel.
+///
+/// Prefer [`RawCountDownPit`], which is easier to type. It is also more
+/// distinct than [`RawCountDownPitChain`], which varies from `RawCountDownPitChan`
+/// by only one letter.
+#[deprecated(since = "0.5.1", note = "Use RawCountDownPit")]
+pub type RawCountDownPitChan<const N: u8> = RawCountDownPit<N>;
+
+impl<const N: u8> RawCountDownPit<N> {
     /// Create a count down timer from a PIT channel.
-    pub fn from_pit_channel(mut pit: pit::Pit<N>) -> Self {
-        prepare_pit_channel(&mut pit);
+    pub fn from_pit(mut pit: pit::Pit<N>) -> Self {
+        prepare_pit(&mut pit);
         Self::new(pit)
+    }
+
+    /// Create a count down timer from a PIT channel.
+    ///
+    /// Prefer [`from_pit`](Self::from_pit), which is easier to type
+    /// and matches the name of the type we're converting.
+    #[deprecated(since = "0.5.1", note = "Use from_pit")]
+    pub fn from_pit_channel(pit: pit::Pit<N>) -> Self {
+        Self::from_pit(pit)
     }
 }
 
