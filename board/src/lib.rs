@@ -337,4 +337,27 @@ pub mod logging {
             }
         }
     }
+
+    /// Initialize the LPUART logger.
+    ///
+    /// Useful when you're debugging USB devices, and you want to get
+    /// log messages out of the device some other way.
+    ///
+    /// This always enables interrupts. If you don't want interrupts to active,
+    /// then don't unmask them.
+    pub fn lpuart<P, const LPUART: u8>(
+        frontend: Frontend,
+        lpuart: Lpuart<P, LPUART>,
+        dma_channel: Channel,
+    ) -> imxrt_log::Poller {
+        match frontend {
+            Frontend::Log => {
+                imxrt_log::log::lpuart(lpuart, dma_channel, imxrt_log::Interrupts::Enabled).unwrap()
+            }
+            Frontend::Defmt => {
+                imxrt_log::defmt::lpuart(lpuart, dma_channel, imxrt_log::Interrupts::Enabled)
+                    .unwrap()
+            }
+        }
+    }
 }
