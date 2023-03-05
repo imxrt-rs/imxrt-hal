@@ -105,6 +105,11 @@ unsafe fn poll() {
         CONFIGURED = true;
     }
 
+    // If the host sends us data, pretend to read it.
+    // This prevents us from continuously NAKing the host,
+    // which the host might not appreciate.
+    class.read_packet(&mut []).ok();
+
     // There's no need to wait if we were are newly configured.
     if check_consumer {
         let consumer = CONSUMER.assume_init_mut();

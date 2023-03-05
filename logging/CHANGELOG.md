@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+Read the bulk OUT endpoint in the USB device logger. This resolves some poor
+behaviors observed with Linux hosts.
+
 ## [0.1.0] 2022-01-05
 
 First release. See the README and API documentation for the baseline features.
