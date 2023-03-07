@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.1] 2023-03-07
+
 Add support for i.MX RT 1020 processors. Enable support with the `"imxrt1020"`
 imxrt-hal feature, and separately select your imxrt-ral feature.
 
@@ -265,7 +267,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.0...main
+[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.1...main
+[0.5.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/imxrt-rs/imxrt-hal/releases/tag/0.5.0
 [0.4.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.4...0.4.5
 [0.4.4]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.3...0.4.4
