@@ -109,6 +109,7 @@ panic = "abort"
 opt-level = "z"
 lto = "fat"
 panic = "abort"
+overflow-checks = true
 
 [profile.dev.build-override]
 opt-level = 0
