@@ -100,7 +100,7 @@ jobs:
           --example=hal_clock_out
           --example=hal_pwm --example=rtic_pwm
           --example=hal_i2c_mpu9250 --example=hal_i2c_lcd1602
-          --example=rtic_usb_serial
+          --example=rtic_usb_serial --example=rtic_usb_test_class
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

@@ -28,7 +28,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "imxrt1010evk" => {
                 RuntimeBuilder::from_flexspi(Family::Imxrt1010, 16 * 1024 * 1024)
-                    .rodata(Memory::Dtcm)
+                    .flexram_banks(imxrt_rt::FlexRamBanks {
+                        ocram: 1,
+                        itcm: 1,
+                        dtcm: 2,
+                    })
+                    .bss(Memory::Dtcm)
+                    .data(Memory::Dtcm)
+                    .uninit(Memory::Dtcm)
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1010evk\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1010\"");
