@@ -21,6 +21,8 @@
 - `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
 - There is no more `PCS0` type state associated with the LPSPI bus.
 
+Introduce a hardware chip select into each LPSPI transaction.
+
 ## [0.5.9] 2024-11-24
 
 Correct LPSPI receive operations. Previously, `u8` and `u16` elements received
