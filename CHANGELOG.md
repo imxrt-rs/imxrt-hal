@@ -21,6 +21,8 @@
 - `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
 - There is no more `PCS0` type state associated with the LPSPI bus.
 
+Introduce a hardware chip select into each LPSPI transaction.
+
 **BREAKING** The following peripherals are not available on the 1180. Therefore,
 they are no longer considered common. However, their APIs are unchanged, and they
 are still exposed when building with a chip feature.
