@@ -137,6 +137,25 @@ pub enum LpspiError {
     Fifo(Direction),
 }
 
+/// Peripheral chip select.
+///
+/// Use this in [`Transaction`] to select the hardware-managed
+/// chip select. Note that the hardware only uses the hardware-managed
+/// chip select if the pin is muxed for its PCS alternate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u32)]
+pub enum Pcs {
+    /// Use PCS0 (default) for the next transaction.
+    #[default]
+    Pcs0,
+    /// Use PCS1 for the next transaction.
+    Pcs1,
+    /// Use PCS2 for the next transaction.
+    Pcs2,
+    /// Use PCS3 for the next transaction.
+    Pcs3,
+}
+
 /// An LPSPI transaction definition.
 ///
 /// The transaction defines how many bits the driver sends or recieves.
@@ -146,6 +165,7 @@ pub enum LpspiError {
 /// - bit order
 /// - transmit and receive masking
 /// - continuous and continuing transfers (default: both disabled)
+/// - the hardware-managed peripheral chip select, [`Pcs`]
 ///
 /// The LPSPI enqueues the transaction data into the transmit
 /// FIFO. When it pops the values from the FIFO, the values take
@@ -245,7 +265,10 @@ pub struct Transaction {
     /// `Transaction`, one that had [`continuous`](Self::continuous) set.
     /// The default value is `false`.
     pub continuing: bool,
-
+    /// Selects the hardware-managed peripheral chip select for the transaction.
+    ///
+    /// See [`Pcs`] for more information.
+    pub pcs: Pcs,
     frame_size: u16,
 }
 
@@ -304,6 +327,7 @@ impl Transaction {
                 frame_size: frame_size - 1,
                 continuing: false,
                 continuous: false,
+                pcs: Default::default(),
             })
         } else {
             Err(LpspiError::FrameSize)
@@ -745,7 +769,8 @@ impl<P, const N: u8> Lpspi<P, N> {
             TXMSK: transaction.transmit_data_mask as u32,
             FRAMESZ: transaction.frame_size as u32,
             CONT: transaction.continuous as u32,
-            CONTC: transaction.continuing as u32
+            CONTC: transaction.continuing as u32,
+            PCS: transaction.pcs as u32
         );
     }
 
