@@ -16,7 +16,10 @@
 - `timer::*PitChan`
 - `lpspi::Disabled::{set_mode, set_watermark}`
 
-**BREAKING** `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
+**BREAKING** Change the LPSPI driver:
+
+- `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
+- There is no more `PCS0` type state associated with the LPSPI bus.
 
 **BREAKING** The following peripherals are not available on the 1180. Therefore,
 they are no longer considered common. However, their APIs are unchanged, and they

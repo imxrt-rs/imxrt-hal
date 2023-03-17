@@ -48,7 +48,6 @@
 //!     sdo: pads.gpio_b0.p02,
 //!     sdi: pads.gpio_b0.p01,
 //!     sck: pads.gpio_b0.p03,
-//!     pcs0: pads.gpio_b0.p00,
 //! };
 //!
 //! let mut spi4 = unsafe { LPSPI4::instance() };
@@ -403,13 +402,12 @@ pub struct Lpspi<P, const N: u8> {
 ///     GPIO_B0_02,
 ///     GPIO_B0_01,
 ///     GPIO_B0_03,
-///     GPIO_B0_00,
 /// >;
 ///
 /// // Helper type for your SPI peripheral
 /// type Lpspi<const N: u8> = hal::lpspi::Lpspi<LpspiPins, N>;
 /// ```
-pub struct Pins<SDO, SDI, SCK, PCS0> {
+pub struct Pins<SDO, SDI, SCK> {
     /// Serial data out
     ///
     /// Data travels from the SPI host controller to the SPI device.
@@ -420,29 +418,23 @@ pub struct Pins<SDO, SDI, SCK, PCS0> {
     pub sdi: SDI,
     /// Serial clock
     pub sck: SCK,
-    /// Chip select 0
-    ///
-    /// (PCSx) convention matches the hardware.
-    pub pcs0: PCS0,
 }
 
-impl<SDO, SDI, SCK, PCS0, const N: u8> Lpspi<Pins<SDO, SDI, SCK, PCS0>, N>
+impl<SDO, SDI, SCK, const N: u8> Lpspi<Pins<SDO, SDI, SCK>, N>
 where
     SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
     SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
     SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    PCS0: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
 {
     /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
     /// When this call returns, the LPSPI pins are configured for their function.
     /// The peripheral is enabled after reset. The LPSPI clock speed is unspecified.
     /// The mode is [`MODE_0`]. The sample point is [`SamplePoint::DelayedEdge`].
-    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK, PCS0>) -> Self {
+    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK>) -> Self {
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
-        lpspi::prepare(&mut pins.pcs0);
         Self::init(lpspi, pins)
     }
 }
