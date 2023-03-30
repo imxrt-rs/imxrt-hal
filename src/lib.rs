@@ -2,7 +2,7 @@
 //!
 //! `imxrt-hal` contains a collection of hardware drivers for various i.MX RT
 //! MCUs. A default build of `imxrt-hal` provides drivers that are portable
-//! across all i.MX RT chips. When your specific chip is know, `imxrt-hal`
+//! across all i.MX RT chips. When your specific chip is known, `imxrt-hal`
 //! provides additional, chip-specific APIs. Most drivers implement their
 //! corresponding `embedded-hal` traits, or they can be adapted to use
 //! `embedded-hal` traits in user code.
