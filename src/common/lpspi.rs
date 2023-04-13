@@ -644,9 +644,18 @@ impl<P, const N: u8> Lpspi<P, N> {
         let mut tx_idx = 0usize;
         let mut rx_idx = 0usize;
 
-        while tx_idx < buffer.len() && rx_idx < buffer.len() {
+        // Continue looping while there is either tx OR rx remaining
+        while tx_idx < buffer.len() || rx_idx < buffer.len() {
             if tx_idx < buffer.len() {
                 let word = buffer[tx_idx];
+
+                // Turn off TCR CONT on last tx as a workaround so that the final
+                // falling edge comes through:
+                // https://community.nxp.com/t5/i-MX-RT/RT1050-LPSPI-last-bit-not-completing-in-continuous-mode/m-p/898460
+                if tx_idx + 1 == buffer.len() {
+                    transaction.continuous = false;
+                }
+
                 self.wait_for_transmit_fifo_space()?;
                 self.enqueue_transaction(&transaction);
 
@@ -664,12 +673,6 @@ impl<P, const N: u8> Lpspi<P, N> {
                 }
             }
         }
-
-        transaction.continuing = false;
-        transaction.continuous = false;
-
-        self.wait_for_transmit_fifo_space()?;
-        self.enqueue_transaction(&transaction);
 
         Ok(())
     }

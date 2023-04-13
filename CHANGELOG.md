@@ -4,6 +4,10 @@
 
 Add LPSPI API to configure the sample point.
 
+Fix a bug in the LPSPI driver that prevented transfers from reading data back
+into the caller's buffer. The LPSPI transfer now waits for all data before
+returning to the caller.
+
 ## [0.5.1] 2023-03-07
 
 Add support for i.MX RT 1020 processors. Enable support with the `"imxrt1020"`
