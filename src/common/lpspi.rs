@@ -1,3 +1,4 @@
+@@ -0,0 +1,1059 @@
 //! Low-power serial peripheral interface.
 //!
 //! [`Lpspi`] implements select embedded HAL SPI traits for coordinating SPI I/O.
@@ -101,6 +102,16 @@ pub enum BitOrder {
     /// Data is transferred least significant bit first.
     Lsb,
 }
+
+/// Receive sample point behavior.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SamplePoint {
+    /// Input data is sampled on SCK edge.
+    Edge,
+    /// Input data is sampled on delayed SCK edge.
+    DelayedEdge,
+}
+
 
 /// Possible errors when interfacing the LPSPI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -491,6 +502,24 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Read the interrupt enable bits.
     pub fn interrupts(&self) -> Interrupts {
         Interrupts::from_bits_truncate(ral::read_reg!(ral::lpspi, self.lpspi, IER))
+    }
+
+    /// Set the sampling point of the LPSPI in master mode.
+    /// 
+    /// When set to `SamplePoint::DelayedEdge`, the LPSPI master will sample the input data 
+    /// on a delayed LPSPI_SCK edge, which improves the setup time when sampling data.
+    /// 
+    /// On [`init`](`Lpspi::init`), the `SamplePoint::DelayedEdge` congfiguration is set.
+    /// 
+    /// When using a non-hardware controlled chip select pin, the `SamplePoint::DelayedEdge` can lead to 
+    /// rx fifo overruns, so the `SamplePoint::Edge` configuration may be preferable.
+    /// 
+    pub fn set_sample_point(&mut self, sample_point: SamplePoint) {
+        match sample_point {
+            SamplePoint::Edge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_0),
+            SamplePoint::DelayedEdge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1),
+        }
+        
     }
 
     /// Set the interrupt enable bits.
