@@ -30,7 +30,7 @@
 //! use imxrt_ral as ral;
 //! # use eh02 as embedded_hal;
 //! use embedded_hal::blocking::spi::Transfer;
-//! use hal::lpspi::{Lpspi, Pins};
+//! use hal::lpspi::{Lpspi, Pins, SamplePoint};
 //! use ral::lpspi::LPSPI4;
 //!
 //! let mut pads = // Handle to all processor pads...
@@ -53,6 +53,7 @@
 //! # const LPSPI_CLK_HZ: u32 = 1;
 //! spi.disabled(|spi| {
 //!     spi.set_clock_hz(LPSPI_CLK_HZ, 1_000_000);
+//!     spi.set_sample_point(SamplePoint::Edge);
 //! });
 //!
 //! let mut buffer: [u8; 3] = [1, 2, 3];
@@ -100,6 +101,15 @@ pub enum BitOrder {
     Msb,
     /// Data is transferred least significant bit first.
     Lsb,
+}
+
+/// Receive sample point behavior.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SamplePoint {
+    /// Input data is sampled on SCK edge.
+    Edge,
+    /// Input data is sampled on delayed SCK edge.
+    DelayedEdge,
 }
 
 /// Possible errors when interfacing the LPSPI.
@@ -368,7 +378,7 @@ where
     ///
     /// When this call returns, the LPSPI pins are configured for their function.
     /// The peripheral is enabled after reset. The LPSPI clock speed is unspecified.
-    /// The mode is [`MODE_0`].
+    /// The mode is [`MODE_0`]. The sample point is [`SamplePoint::DelayedEdge`].
     pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK, PCS0>) -> Self {
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
@@ -949,6 +959,20 @@ impl<'a, const N: u8> Disabled<'a, N> {
         }
 
         watermark
+    }
+
+    /// Set the sampling point of the LPSPI peripheral.
+    ///
+    /// When set to `SamplePoint::DelayedEdge`, the LPSPI will sample the input data
+    /// on a delayed LPSPI_SCK edge, which improves the setup time when sampling data.
+    #[inline]
+    pub fn set_sample_point(&mut self, sample_point: SamplePoint) {
+        match sample_point {
+            SamplePoint::Edge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_0),
+            SamplePoint::DelayedEdge => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1)
+            }
+        }
     }
 }
 

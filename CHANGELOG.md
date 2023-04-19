@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+Add LPSPI API to configure the sample point.
+
 ## [0.5.1] 2023-03-07
 
 Add support for i.MX RT 1020 processors. Enable support with the `"imxrt1020"`
