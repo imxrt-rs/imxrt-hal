@@ -111,7 +111,6 @@ pub enum SamplePoint {
     DelayedEdge,
 }
 
-
 /// Possible errors when interfacing the LPSPI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LpspiError {
@@ -504,21 +503,22 @@ impl<P, const N: u8> Lpspi<P, N> {
     }
 
     /// Set the sampling point of the LPSPI in master mode.
-    /// 
-    /// When set to `SamplePoint::DelayedEdge`, the LPSPI master will sample the input data 
+    ///
+    /// When set to `SamplePoint::DelayedEdge`, the LPSPI master will sample the input data
     /// on a delayed LPSPI_SCK edge, which improves the setup time when sampling data.
-    /// 
+    ///
     /// On [`init`](`Lpspi::init`), the `SamplePoint::DelayedEdge` congfiguration is set.
-    /// 
-    /// When using a non-hardware controlled chip select pin, the `SamplePoint::DelayedEdge` can lead to 
+    ///
+    /// When using a non-hardware controlled chip select pin, the `SamplePoint::DelayedEdge` can lead to
     /// rx fifo overruns, so the `SamplePoint::Edge` configuration may be preferable.
-    /// 
+    ///
     pub fn set_sample_point(&mut self, sample_point: SamplePoint) {
         match sample_point {
             SamplePoint::Edge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_0),
-            SamplePoint::DelayedEdge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1),
+            SamplePoint::DelayedEdge => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1)
+            }
         }
-        
     }
 
     /// Set the interrupt enable bits.
