@@ -507,7 +507,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// When set to `SamplePoint::DelayedEdge`, the LPSPI master will sample the input data
     /// on a delayed LPSPI_SCK edge, which improves the setup time when sampling data.
     ///
-    /// On [`init`](`Lpspi::init`), the `SamplePoint::DelayedEdge` congfiguration is set.
+    /// This driver sets `SamplePoint::DelayedEdge` by default.
     ///
     /// When using a non-hardware controlled chip select pin, the `SamplePoint::DelayedEdge` can lead to
     /// rx fifo overruns, so the `SamplePoint::Edge` configuration may be preferable.
