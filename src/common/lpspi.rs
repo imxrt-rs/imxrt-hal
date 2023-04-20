@@ -502,25 +502,6 @@ impl<P, const N: u8> Lpspi<P, N> {
         Interrupts::from_bits_truncate(ral::read_reg!(ral::lpspi, self.lpspi, IER))
     }
 
-    /// Set the sampling point of the LPSPI in master mode.
-    ///
-    /// When set to `SamplePoint::DelayedEdge`, the LPSPI master will sample the input data
-    /// on a delayed LPSPI_SCK edge, which improves the setup time when sampling data.
-    ///
-    /// This driver sets `SamplePoint::DelayedEdge` by default.
-    ///
-    /// When using a non-hardware controlled chip select pin, the `SamplePoint::DelayedEdge` can lead to
-    /// rx fifo overruns, so the `SamplePoint::Edge` configuration may be preferable.
-    ///
-    pub fn set_sample_point(&mut self, sample_point: SamplePoint) {
-        match sample_point {
-            SamplePoint::Edge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_0),
-            SamplePoint::DelayedEdge => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1)
-            }
-        }
-    }
-
     /// Set the interrupt enable bits.
     ///
     /// This writes the bits described by `interrupts` as is to the register.
@@ -977,6 +958,25 @@ impl<'a, const N: u8> Disabled<'a, N> {
         }
 
         watermark
+    }
+
+    /// Set the sampling point of the LPSPI in master mode.
+    ///
+    /// When set to `SamplePoint::DelayedEdge`, the LPSPI master will sample the input data
+    /// on a delayed LPSPI_SCK edge, which improves the setup time when sampling data.
+    ///
+    /// This driver sets `SamplePoint::DelayedEdge` by default.
+    ///
+    /// When using a non-hardware controlled chip select pin, the `SamplePoint::DelayedEdge` can lead to
+    /// rx fifo overruns, so the `SamplePoint::Edge` configuration may be preferable.
+    ///
+    pub fn set_sample_point(&mut self, sample_point: SamplePoint) {
+        match sample_point {
+            SamplePoint::Edge => ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_0),
+            SamplePoint::DelayedEdge => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1)
+            }
+        }
     }
 }
 
