@@ -1,4 +1,3 @@
-@@ -0,0 +1,1059 @@
 //! Low-power serial peripheral interface.
 //!
 //! [`Lpspi`] implements select embedded HAL SPI traits for coordinating SPI I/O.
