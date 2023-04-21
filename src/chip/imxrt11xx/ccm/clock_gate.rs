@@ -65,9 +65,9 @@ impl Locator {
 ///
 /// Verbose so that we can easily see the type casting.
 #[inline(always)]
-fn lpcg_direct_register<'a>(ccm: &'a CCM, locator: Locator) -> &'a ral::RWRegister<u32> {
-    let ccm: &'a ral::ccm::RegisterBlock = ccm;
-    let ccm: *const ral::ccm::RegisterBlock = ccm;
+fn lpcg_direct_register(ccm: &CCM, locator: Locator) -> &ral::RWRegister<u32> {
+    use core::ops::Deref;
+    let ccm: *const ral::ccm::RegisterBlock = ccm.deref();
     let ccm: *const u8 = ccm.cast();
     // Safety: formula for offset follows reference manual, so it's producing a pointer
     // to a valid LPCG_DIRECT register. We control all locator values. Produced pointer
