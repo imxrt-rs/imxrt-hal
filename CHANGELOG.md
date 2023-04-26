@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.2] 2023-04-26
+
 Add LPSPI API to configure the sample point.
 
 Fix a bug in the LPSPI driver that prevented transfers from reading data back
@@ -273,7 +275,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.1...main
+[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.2...main
+[0.5.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.1...0.5.2
 [0.5.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/imxrt-rs/imxrt-hal/releases/tag/0.5.0
 [0.4.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.4.4...0.4.5
