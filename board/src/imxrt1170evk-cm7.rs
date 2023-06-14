@@ -9,7 +9,7 @@ mod imxrt11xx {
 use imxrt11xx::clock_tree;
 
 #[cfg(target_arch = "arm")]
-pub use imxrt1170evk_fcb as _;
+use imxrt1170evk_fcb as _;
 #[cfg(target_arch = "arm")]
 use panic_rtt_target as _;
 
