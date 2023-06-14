@@ -188,3 +188,14 @@ where
 pub const fn snvs() -> Locator {
     Locator::new(38)
 }
+
+/// Returns the FlexIO clock gate locator.
+#[inline]
+pub const fn flexio<const N: u8>() -> Locator
+where
+    ral::pwm::Instance<N>: ral::Valid,
+{
+    // FlexIO1 -> LPCG53
+    // FlexIO2 -> LPCG54
+    Locator::new(N as usize + 52)
+}

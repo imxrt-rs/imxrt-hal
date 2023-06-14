@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+Add FlexIO clock gates for all supported 1000 and 1100 targets.
+
 ## [0.5.2] 2023-04-26
 
 Add LPSPI API to configure the sample point.

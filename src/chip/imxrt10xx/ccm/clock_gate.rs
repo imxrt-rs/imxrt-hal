@@ -298,6 +298,23 @@ where
 #[allow(clippy::assertions_on_constants)]
 const _: () = assert!(ral::SOLE_INSTANCE == 0u8);
 
+/// Returns the FlexIO clock gate locator.
+#[inline(always)]
+pub const fn flexio<const N: u8>() -> Locator
+where
+    ral::flexio::Instance<N>: ral::Valid,
+{
+    [
+        locator(CCGR5, CG1),
+        locator(CCGR3, CG0),
+        locator(CCGR7, CG6),
+    ][if N == ral::SOLE_INSTANCE {
+        N as usize
+    } else {
+        N as usize - 1
+    }]
+}
+
 /// Returns the FlexPWM clock gate locator.
 #[inline(always)]
 pub const fn flexpwm<const N: u8>() -> Locator
