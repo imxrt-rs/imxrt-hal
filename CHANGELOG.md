@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.3] 2023-07-03
+
 Add FlexIO clock gates for all supported 1000 and 1100 targets.
 
 ## [0.5.2] 2023-04-26
@@ -277,7 +279,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.2...main
+[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.3...main
+[0.5.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.2...0.5.3
 [0.5.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.1...0.5.2
 [0.5.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/imxrt-rs/imxrt-hal/releases/tag/0.5.0
