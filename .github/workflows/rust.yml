@@ -25,6 +25,7 @@ jobs:
       matrix:
         chips:
         - imxrt-ral/imxrt1011
+        - imxrt-ral/imxrt1015
         - imxrt-ral/imxrt1021
         - imxrt-ral/imxrt1051
         - imxrt-ral/imxrt1052
