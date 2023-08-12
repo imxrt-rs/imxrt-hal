@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Increase the USB bulk max packet size (MPS) from 64 to 512. This is required
+for USB high-speed enumeration on some hosts. This adds 896 extra bytes to
+your firmware image.
+
 ## [0.1.1] 2023-03-14
 
 Read the bulk OUT endpoint in the USB device logger. This resolves some poor

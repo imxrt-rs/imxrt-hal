@@ -105,9 +105,8 @@
 //! can help with this.
 //!
 //! By default, the initialization routine configures a high-speed USB device with
-//! a 64 byte bulk endpoint max packet size. You can change these settings with
-//! build-time environment variables, discussed later. The smaller max packet size
-//! reduces the size of the intermediate buffer required for the USB backend.
+//! a 512 byte bulk endpoint max packet size. You can change these settings with
+//! build-time environment variables, discussed later.
 //!
 //! _Interrupts_. If you enable interrupts (see [`Interrupts`]), the USB device
 //! controller asserts its interrupt when each transfer completes. It also enables
@@ -222,7 +221,7 @@
 //!
 //! | Environment variable           | Description                                               | Default value | Accepted values           |
 //! | ------------------------------ | --------------------------------------------------------- | ------------- | ------------------------- |
-//! | `IMXRT_LOG_USB_BULK_MPS`       | Bulk endpoint max packet size, in bytes.                  |      64       | One of 8, 16, 32, 64, 512 |
+//! | `IMXRT_LOG_USB_BULK_MPS`       | Bulk endpoint max packet size, in bytes.                  |     512       | One of 8, 16, 32, 64, 512 |
 //! | `IMXRT_LOG_USB_SPEED`          | Specify a high (USB2) or full (USB 1.1) speed USB device. |    HIGH       | Either `HIGH` or `FULL`   |
 //! | `IMXRT_LOG_BUFFER_SIZE`        | Specify the log message buffer size, in bytes.            |    1024       | An integer power of two   |
 //!
@@ -230,7 +229,8 @@
 //!
 //! - `IMXRT_LOG_USB_*` are always permitted. If `usbd` is disabled, then `IMXRT_LOG_USB_*`
 //!    configurations do nothing.
-//! - If `IMXRT_LOG_USB_SPEED=FULL`, then `IMXRT_LOG_USB_BULK_MPS` cannot be 512.
+//! - If `IMXRT_LOG_USB_SPEED=FULL`, then `IMXRT_LOG_USB_BULK_MPS` cannot be 512. On the other hand,
+//!   if `IMXRT_LOG_USB_SPEED=HIGH`, then `IMXRT_LOG_USB_BULK_MPS` must be 512.
 //! - Both `IMXRT_LOG_USB_BULK_MPS` and `IMXRT_LOG_BUFFER_SIZE` affect internally-managed buffer
 //!   sizes. If space is tight, reduces these numbers to reclaim memory.
 //!
@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn default_configs() {
-        assert_eq!(crate::config::USB_BULK_MPS, 64);
+        assert_eq!(crate::config::USB_BULK_MPS, 512);
         assert_eq!(crate::config::USB_SPEED, imxrt_usbd::Speed::High);
         assert_eq!(crate::config::BUFFER_SIZE, 1024);
     }

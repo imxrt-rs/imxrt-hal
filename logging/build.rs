@@ -30,7 +30,7 @@ fn handle_usb_speed(file: &mut dyn Write) -> Result<bool, Error> {
 }
 fn handle_usb_bulk_speed_mps(file: &mut dyn Write, is_high_speed: bool) -> Result<(), Error> {
     const ALLOWED_MPS: &[usize] = &[8, 16, 32, 64, 512];
-    let mps = env::var("IMXRT_LOG_USB_BULK_MPS").unwrap_or_else(|_| "64".into());
+    let mps = env::var("IMXRT_LOG_USB_BULK_MPS").unwrap_or_else(|_| "512".into());
     let mps: usize = mps.parse().map_err(|err| -> Error {
         format!("{err:?} when trying to parse IMXRT_LOG_USB_BULK_MPS={mps}").into()
     })?;
@@ -39,6 +39,8 @@ fn handle_usb_bulk_speed_mps(file: &mut dyn Write, is_high_speed: bool) -> Resul
     }
     if !is_high_speed && mps == 512 {
         return Err("Bulk MPS of 512 does not work with full-speed USB devices. Either pick a different MPS, or configure a high-speed USB device".into());
+    } else if is_high_speed && mps != 512 {
+        return Err("High-speed USB devices must use a 512 byte MPS.".into());
     }
     writeln!(file, "\t#[cfg(feature = \"usbd\")]")?;
     writeln!(file, "\tpub const USB_BULK_MPS: usize = {mps};")?;
