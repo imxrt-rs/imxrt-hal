@@ -144,6 +144,13 @@ pub(crate) mod ccm {
             Spdif0Clk = 0b11101,
         }
     }
+
+    ccm_flexio!(
+        flexio1_clk, "FLEXIO1",
+        divider: (CS1CDR, FLEXIO1_CLK_PODF),
+        predivider: (CS1CDR, FLEXIO1_CLK_PRED),
+        selection: (CSCMR2, FLEXIO1_CLK_SEL),
+    );
 }
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 32;
