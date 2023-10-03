@@ -212,3 +212,33 @@ where
     // USDHC2 -> LPCG118
     Locator::new(N as usize + 116)
 }
+
+/// Returns the ENET.
+#[inline]
+pub const fn enet() -> Locator {
+    Locator::new(112)
+}
+
+/// Returns the ENET1G clock gate locator.
+#[inline]
+pub const fn enet_1g() -> Locator {
+    Locator::new(113)
+}
+
+/// Returns the ENET QOS clock gate locator.
+#[inline]
+pub const fn enet_qos() -> Locator {
+    Locator::new(114)
+}
+
+/// Returns the IOMUXC clock gate locator.
+#[inline]
+pub const fn iomuxc() -> Locator {
+    Locator::new(49)
+}
+
+/// Returns the IOMUXC_LPSR clock gate locator.
+#[inline]
+pub const fn iomuxc_lpsr() -> Locator {
+    Locator::new(50)
+}
