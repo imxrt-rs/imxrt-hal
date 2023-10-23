@@ -49,6 +49,7 @@ workspace = true
 default = ["defmt", "log", "lpuart", "usbd"]
 lpuart = ["imxrt-hal"]
 usbd = ["dep:imxrt-usbd", "dep:usb-device", "dep:usbd-serial"]
+defmt = ["dep:defmt"]
 
 [dev-dependencies.cortex-m]
 version = "0.7"
@@ -62,4 +63,4 @@ workspace = true
 
 [package.metadata.docs.rs]
 default-target = "thumbv7em-none-eabihf"
-features = ["imxrt-ral/imxrt1062", "imxrt-hal/imxrt1060"]
+features = ["defmt", "imxrt-ral/imxrt1062", "imxrt-hal/imxrt1060"]

@@ -26,6 +26,7 @@ workspace = true
 [dependencies.imxrt-log]
 workspace = true
 optional = true
+default-features = false
 
 [dependencies.imxrt-usbd]
 workspace = true
@@ -52,6 +53,17 @@ version = "0.2"
 version = "0.3"
 optional = true
 
+# knurling-rs style defmt-rtt with panic-probe
+[target.thumbv7em-none-eabihf.dependencies.defmt-rtt]
+version = "0.4"
+optional = true
+
+[target.thumbv7em-none-eabihf.dependencies.panic-probe]
+version = "0.3"
+features = ["print-defmt"]
+optional = true
+
+# alternative rtt target with panic printing
 [target.thumbv7em-none-eabihf.dependencies.rtt-target]
 version = "0.3"
 optional = true
@@ -80,8 +92,8 @@ imxrt1010evk = [
     "imxrt-ral/imxrt1011",
     "imxrt-hal/imxrt1010",
     "imxrt1010evk-fcb",
-    "rtt-target",
-    "panic-rtt-target",
+    "defmt-rtt",
+    "panic-probe",
     "imxrt-log",
 ]
 imxrt1060evk = [
@@ -89,8 +101,8 @@ imxrt1060evk = [
     "imxrt-ral/imxrt1062",
     "imxrt-hal/imxrt1060",
     "imxrt1060evk-fcb",
-    "rtt-target",
-    "panic-rtt-target",
+    "defmt-rtt",
+    "panic-probe",
     "imxrt-log",
 ]
 teensy4 = [
@@ -100,6 +112,7 @@ teensy4 = [
     "teensy4-fcb",
     "teensy4-panic",
     "imxrt-log",
+    "imxrt-log/defmt",
 ]
 imxrt1170evk-cm7 = [
     "imxrt-iomuxc/imxrt1170",
@@ -109,6 +122,7 @@ imxrt1170evk-cm7 = [
     "rtt-target",
     "panic-rtt-target",
     "imxrt-log",
+    "imxrt-log/defmt",
 ]
 
 # Some boards (Teensy 4) require a resource

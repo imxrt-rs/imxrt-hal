@@ -13,12 +13,19 @@
 //! that you populate and de-populate certain resistors. Compile-time
 //! configurations are faster than working with 0402 resistors.
 
+use defmt_rtt as _;
+
 use crate::{hal, iomuxc::imxrt1010 as iomuxc, ral};
 
 #[cfg(target_arch = "arm")]
 use imxrt1010evk_fcb as _;
-#[cfg(target_arch = "arm")]
-use panic_rtt_target as _;
+
+use panic_probe as _;
+
+#[defmt::panic_handler]
+fn panic() -> ! {
+    cortex_m::asm::udf();
+}
 
 mod imxrt10xx {
     pub mod clock;
@@ -148,9 +155,6 @@ pub struct Specifics {
 
 impl Specifics {
     pub(crate) fn new(_: &mut crate::Common) -> Self {
-        #[cfg(target_arch = "arm")]
-        rtt_target::rtt_init_print!();
-
         let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);

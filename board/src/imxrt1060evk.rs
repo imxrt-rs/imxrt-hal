@@ -8,12 +8,19 @@
 //! exactly the same. I'm not sure if this is generally
 //! true.)
 
+use defmt_rtt as _;
+
 use crate::{hal, iomuxc::imxrt1060 as iomuxc, ral};
+
+use panic_probe as _;
+
+#[defmt::panic_handler]
+fn panic() -> ! {
+    cortex_m::asm::udf();
+}
 
 #[cfg(target_arch = "arm")]
 use imxrt1060evk_fcb as _;
-#[cfg(target_arch = "arm")]
-use panic_rtt_target as _;
 
 mod imxrt10xx {
     pub(crate) mod clock;
@@ -131,9 +138,6 @@ pub struct Specifics {
 
 impl Specifics {
     pub(crate) fn new(_: &mut crate::Common) -> Self {
-        #[cfg(target_arch = "arm")]
-        rtt_target::rtt_init_print!();
-
         // Manually configuring IOMUXC_SNVS pads, since there's no
         // equivalent API in imxrt-iomuxc.
         let iomuxc_snvs = unsafe { ral::iomuxc_snvs::IOMUXC_SNVS::instance() };

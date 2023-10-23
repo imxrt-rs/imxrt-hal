@@ -89,7 +89,7 @@ members = [
 imxrt-dma = "0.1"
 imxrt-iomuxc = "0.2.1"
 imxrt-hal = { version = "0.5", path = "." }
-imxrt-log = { path = "logging" }
+imxrt-log = { path = "logging", default-features = false, features = ["log", "lpuart", "usbd"] }
 imxrt-ral = "0.5"
 imxrt-rt = "0.1"
 imxrt-usbd = "0.2"
@@ -165,6 +165,9 @@ required-features = ["board/imxrt-log"]
 [[example]]
 name = "rtic_logging"
 required-features = ["board/imxrt-log"]
+
+[[example]]
+name = "rtic_defmt_rtt"
 
 [[example]]
 name = "hal_i2c_lcd1602"
