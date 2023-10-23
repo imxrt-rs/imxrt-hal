@@ -117,11 +117,11 @@ pub mod pll4 {
         post_divider: PostDivider,
     ) {
         assert!(
-            div_select >= 27 && div_select <= 54,
+            (27..=54).contains(&div_select),
             "Audio PLL divider selection must be in range from 27 to 54 inclusive"
         );
         assert!(
-            (pll_num as u32) <= pll_denom,
+            pll_num <= pll_denom,
             "PLL requires numerator be less than the denominator"
         );
         let out_freq: u32 = output_freq(div_select, pll_num, pll_denom);

@@ -45,6 +45,22 @@ pub type ConsolePins = hal::lpuart::Pins<
     iomuxc::gpio_ad_b1::GPIO_AD_B1_03, // RX, P15
 >;
 
+pub type Sai1MclkPin = iomuxc::gpio_ad_b1::GPIO_AD_B1_09;
+
+pub type Sai1TxPins = hal::sai::Pins<
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_15,
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_14,
+    iomuxc::gpio_b1::GPIO_B1_01,
+>;
+
+pub type Sai1RxPins = hal::sai::Pins<
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_10,
+    iomuxc::gpio_ad_b1::GPIO_AD_B1_11,
+    iomuxc::gpio_b1::GPIO_B1_00,
+>;
+
+pub type Sai1 = hal::sai::Sai<1, Sai1MclkPin, Sai1TxPins, Sai1RxPins>;
+
 pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_b0::GPIO_B0_02, // SDO, P11
     iomuxc::gpio_b0::GPIO_B0_01, // SDI, P12
@@ -113,6 +129,7 @@ pub struct Specifics {
     pub console: Console,
     pub spi: Spi,
     pub i2c: I2c,
+    pub sai1: Sai1,
     pub pwm: Pwm,
     pub trng: hal::trng::Trng,
     pub tempmon: hal::tempmon::TempMon,
@@ -150,6 +167,22 @@ impl Specifics {
             console.set_baud(&super::CONSOLE_BAUD);
             console.set_parity(None);
         });
+
+        let sai1 = {
+            let sai1 = unsafe { ral::sai::SAI1::instance() };
+            let rxpins = Sai1RxPins {
+                sync: iomuxc.gpio_ad_b1.p10,
+                bclk: iomuxc.gpio_ad_b1.p11,
+                data: iomuxc.gpio_b1.p00,
+            };
+
+            let txpins = Sai1TxPins {
+                sync: iomuxc.gpio_ad_b1.p15,
+                bclk: iomuxc.gpio_ad_b1.p14,
+                data: iomuxc.gpio_b1.p01,
+            };
+            Sai1::new(sai1, iomuxc.gpio_ad_b1.p09, txpins, rxpins)
+        };
 
         #[cfg(feature = "spi")]
         let spi = {
@@ -212,6 +245,7 @@ impl Specifics {
             console,
             spi,
             i2c,
+            sai1,
             pwm,
             trng,
             tempmon,
@@ -305,6 +339,7 @@ pub mod interrupt {
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7_DMA23;
     pub const BOARD_DMA_B: Interrupt = Interrupt::DMA11_DMA27;
     pub const BOARD_PIT: Interrupt = Interrupt::PIT;
+    pub const BOARD_SAI1: Interrupt = Interrupt::SAI1;
     pub const BOARD_GPT1: Interrupt = Interrupt::GPT1;
     pub const BOARD_GPT2: Interrupt = Interrupt::GPT2;
     pub const BOARD_USB1: Interrupt = Interrupt::USB_OTG1;
@@ -318,6 +353,7 @@ pub mod interrupt {
         (BOARD_DMA_A, syms::BOARD_DMA_A),
         (BOARD_DMA_B, syms::BOARD_DMA_B),
         (BOARD_PIT, syms::BOARD_PIT),
+        (BOARD_SAI1, syms::BOARD_SAI1),
         (BOARD_GPT1, syms::BOARD_GPT1),
         (BOARD_GPT2, syms::BOARD_GPT2),
         (BOARD_USB1, syms::BOARD_USB1),
