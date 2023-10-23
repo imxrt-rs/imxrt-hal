@@ -9,9 +9,16 @@ mod imxrt11xx {
 use imxrt11xx::clock_tree;
 
 #[cfg(target_arch = "arm")]
-use imxrt1170evk_fcb as _;
+use defmt_rtt as _;
 #[cfg(target_arch = "arm")]
-use panic_rtt_target as _;
+use imxrt1170evk_fcb as _;
+
+use panic_probe as _;
+
+#[defmt::panic_handler]
+fn defmt_panic() -> ! {
+    cortex_m::asm::udf();
+}
 
 /// You'll find log messages using the serial console, through the DAP.
 pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Lpuart;
@@ -159,9 +166,6 @@ pub struct Specifics {
 
 impl Specifics {
     pub(crate) fn new(common: &mut crate::Common) -> Self {
-        #[cfg(target_arch = "arm")]
-        rtt_target::rtt_init_print!();
-
         // Manually configuring IOMUXC_SNVS pads, since there's no
         // equivalent API in imxrt-iomuxc.
         let iomuxc_snvs = unsafe { ral::iomuxc_snvs::IOMUXC_SNVS::instance() };

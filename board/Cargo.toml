@@ -119,10 +119,9 @@ imxrt1170evk-cm7 = [
     "imxrt-ral/imxrt1176_cm7",
     "imxrt-hal/imxrt1170",
     "imxrt1170evk-fcb",
-    "rtt-target",
-    "panic-rtt-target",
+    "defmt-rtt",
+    "panic-probe",
     "imxrt-log",
-    "imxrt-log/defmt",
 ]
 
 # Some boards (Teensy 4) require a resource
