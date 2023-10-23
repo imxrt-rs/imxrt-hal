@@ -8,6 +8,7 @@ pub mod ccm;
 pub mod dcdc;
 #[path = "dma.rs"]
 pub mod dma;
+pub mod sai;
 pub mod tempmon;
 pub mod trng;
 
@@ -25,7 +26,7 @@ cfg_if::cfg_if! {
 }
 
 pub(crate) mod reexports {
-    pub use super::{adc, dcdc, tempmon, trng};
+    pub use super::{adc, dcdc, sai, tempmon, trng};
 }
 
 pub(crate) mod iomuxc {

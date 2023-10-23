@@ -231,6 +231,7 @@ mod board_interrupts {
         pub fn BOARD_DMA_A();
         pub fn BOARD_DMA_B();
         pub fn BOARD_PIT();
+        pub fn BOARD_SAI1();
         pub fn BOARD_GPT1();
         pub fn BOARD_GPT2();
         pub fn BOARD_USB1();

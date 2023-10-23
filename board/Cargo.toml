@@ -88,6 +88,7 @@ optional = true
 
 [features]
 imxrt1010evk = [
+    "sai",
     "imxrt-iomuxc/imxrt1010",
     "imxrt-ral/imxrt1011",
     "imxrt-hal/imxrt1010",
@@ -106,6 +107,7 @@ imxrt1060evk = [
     "imxrt-log",
 ]
 teensy4 = [
+    "sai",
     "imxrt-iomuxc/imxrt1060",
     "imxrt-ral/imxrt1062",
     "imxrt-hal/imxrt1060",
@@ -132,5 +134,10 @@ logging-defmt = ["imxrt-log/defmt"]
 #
 # See board-specific documentation for its effects.
 spi = []
+
+# Not all boards have a SAI peripheral set up.
+# Only enable this feature if your board supports
+# it.
+sai = []
 
 lcd1602 = ["dep:lcd_1602_i2c"]
