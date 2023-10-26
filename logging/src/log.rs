@@ -7,7 +7,7 @@
 //! and serialization into the buffer. When it's time to copy the data into the circular buffer, the
 //! implementation takes a short critical section.
 //!
-//! See [`LoggingConfig`](crate::log::LoggingConfig) to learn more about the runtime filters.
+//! See [`LoggingConfig`] to learn more about the runtime filters.
 //! See the `log` package documentation to learn about static filters.
 
 mod filters;
