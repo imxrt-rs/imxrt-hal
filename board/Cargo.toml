@@ -112,7 +112,7 @@ teensy4 = [
     "teensy4-fcb",
     "teensy4-panic",
     "imxrt-log",
-    "imxrt-log/defmt",
+    "logging-defmt",
 ]
 imxrt1170evk-cm7 = [
     "imxrt-iomuxc/imxrt1170",
@@ -123,6 +123,7 @@ imxrt1170evk-cm7 = [
     "panic-probe",
     "imxrt-log",
 ]
+logging-defmt = ["imxrt-log/defmt"]
 
 # Some boards (Teensy 4) require a resource
 # configuration to enable the (easily accessible)

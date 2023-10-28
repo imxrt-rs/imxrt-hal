@@ -298,7 +298,7 @@ pub mod logging {
     pub enum Frontend {
         /// Use the `log` crate.
         Log,
-        #[cfg(feature = "imxrt-log/defmt")]
+        #[cfg(feature = "logging-defmt")]
         /// Use `defmt`.
         Defmt,
     }
@@ -330,11 +330,11 @@ pub mod logging {
                 imxrt_log::log::usbd(usbd, imxrt_log::Interrupts::Enabled).unwrap()
             }
             // Defmt frontends...
-            #[cfg(feature = "imxrt-log/defmt")]
+            #[cfg(feature = "logging-defmt")]
             (Frontend::Defmt, Backend::Lpuart) => {
                 imxrt_log::defmt::lpuart(lpuart, dma, imxrt_log::Interrupts::Enabled).unwrap()
             }
-            #[cfg(feature = "imxrt-log/defmt")]
+            #[cfg(feature = "logging-defmt")]
             (Frontend::Defmt, Backend::Usbd) => {
                 imxrt_log::defmt::usbd(usbd, imxrt_log::Interrupts::Enabled).unwrap()
             }
@@ -357,7 +357,7 @@ pub mod logging {
             Frontend::Log => {
                 imxrt_log::log::lpuart(lpuart, dma_channel, imxrt_log::Interrupts::Enabled).unwrap()
             }
-            #[cfg(feature = "imxrt-log/defmt")]
+            #[cfg(feature = "logging-defmt")]
             Frontend::Defmt => {
                 imxrt_log::defmt::lpuart(lpuart, dma_channel, imxrt_log::Interrupts::Enabled)
                     .unwrap()
