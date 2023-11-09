@@ -13,7 +13,7 @@
 pub(crate) use super::ahb::{ahb_frequency, configure_ahb_ipg};
 use crate::{
     hal::ccm::{
-        analog, clock_gate, lpi2c_clk, lpspi_clk, perclk_clk, uart_clk, XTAL_OSCILLATOR_HZ,
+        analog, clock_gate, lpi2c_clk, lpspi_clk, perclk_clk, sai_clk, uart_clk, XTAL_OSCILLATOR_HZ,
     },
     ral::ccm::CCM,
     RunMode,
@@ -117,6 +117,27 @@ pub const fn lpi2c_frequency(run_mode: RunMode) -> u32 {
 
 const _: () = assert!(lpi2c_frequency(RunMode::Overdrive) == 8_000_000); // Max is 66MHz.
 
+/// Specify the SAIn clock divider for a given run mode.
+const fn sai_divider(_n: u8, run_mode: RunMode) -> u32 {
+    match run_mode {
+        RunMode::Overdrive => 6,
+    }
+}
+
+/// Specify the SAIn clock pre-divider for a given run mode.
+const fn sai_pre_divider(_n: u8, run_mode: RunMode) -> u32 {
+    match run_mode {
+        RunMode::Overdrive => 5,
+    }
+}
+
+/// Specify the source clock for SAIn to be the Audio PLL
+const fn sai_selection(_n: u8, run_mode: RunMode) -> sai_clk::Selection {
+    match run_mode {
+        RunMode::Overdrive => sai_clk::Selection::Pll4,
+    }
+}
+
 /// Configure the PERCLK root clock.
 ///
 /// When this call returns, the PERCLK clock frequency match the values
@@ -160,6 +181,22 @@ pub fn configure_uart(run_mode: RunMode, ccm: &mut CCM) {
         .for_each(|locator| locator.set(ccm, clock_gate::OFF));
     uart_clk::set_selection(ccm, uart_selection(run_mode));
     uart_clk::set_divider(ccm, uart_divider(run_mode));
+}
+
+/// Configure the SAI root clock.
+///
+/// When this call returns, the SAI clock frequency match the values
+/// returned by the [`sai_frequency()`] function.
+///
+/// This function will disable the clock gates for various peripherals. It
+/// may leave these clock gates disabled.
+pub fn configure_sai(run_mode: RunMode, ccm: &mut CCM) {
+    clock_gate::SAI_CLOCK_GATES
+        .iter()
+        .for_each(|locator| locator.set(ccm, clock_gate::OFF));
+    sai_clk::set_selection::<1>(ccm, sai_selection(1, run_mode));
+    sai_clk::set_pre_divider::<1>(ccm, sai_pre_divider(1, run_mode));
+    sai_clk::set_divider::<1>(ccm, sai_divider(1, run_mode));
 }
 
 /// Configure the LPI2C root clock.
