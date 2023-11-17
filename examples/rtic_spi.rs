@@ -23,7 +23,7 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (_, board::Specifics { mut spi, .. }) = board::new();
         spi.disabled(|spi| {
             // Trigger when the TX FIFO is empty.
@@ -34,12 +34,12 @@ mod app {
         // Starts the I/O as soon as we're done initializing, since
         // the TX FIFO is empty.
         spi.set_interrupts(Interrupts::TRANSMIT_DATA);
-        (Shared {}, Local { spi }, init::Monotonics())
+        (Shared {}, Local { spi })
     }
 
     #[task(binds = BOARD_SPI, local = [spi])]
     fn spi_interrupt(cx: spi_interrupt::Context) {
-        let spi_interrupt::LocalResources { spi } = cx.local;
+        let spi_interrupt::LocalResources { spi, .. } = cx.local;
 
         let status = spi.status();
         spi.clear_status(Status::TRANSMIT_DATA | Status::RECEIVE_DATA);

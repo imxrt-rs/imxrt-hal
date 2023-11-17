@@ -49,7 +49,6 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_b0::GPIO_B0_02, // SDO, P11
     iomuxc::gpio_b0::GPIO_B0_01, // SDI, P12
     iomuxc::gpio_b0::GPIO_B0_03, // SCK, P13
-    iomuxc::gpio_b0::GPIO_B0_00, // PCS0, P10
 >;
 
 #[cfg(not(feature = "spi"))]

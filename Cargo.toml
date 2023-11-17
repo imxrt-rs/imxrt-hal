@@ -1,14 +1,17 @@
 [package]
 name = "imxrt-hal"
-authors = ["Tom Burdick <tom.burdick@electromatic.us>", "Ian McIntyre <ianpmcintyre@gmail.com>"]
+authors = [
+    "Tom Burdick <tom.burdick@electromatic.us>",
+    "Ian McIntyre <ianpmcintyre@gmail.com>",
+]
 description = """
 Hardware abstraction layer for NXP i.MX RT microcontrollers.
 """
 readme = "README.md"
-repository = { workspace  = true }
-keywords = { workspace  = true }
-categories = { workspace  = true }
-license = { workspace  = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+license = { workspace = true }
 edition = { workspace = true }
 version = "0.5.3"
 
@@ -33,10 +36,22 @@ version = "1"
 package = "embedded-hal"
 version = "0.2"
 
+[dependencies.eh1]
+package = "embedded-hal"
+version = "1.0.0-rc.1"
+
+[dependencies.eh1-async]
+package = "embedded-hal-async"
+version = "1.0.0-rc.1"
+optional = true
+
 [dependencies.rand_core]
-version = "0.5"
+version = "0.6"
 default-features = false
 optional = true
+
+[dependencies.rtic-sync]
+version = "1.0.2"
 
 #######################
 # imxrt-rs dependencies
@@ -80,16 +95,17 @@ imxrt1170 = ["imxrt-iomuxc/imxrt1170"]
 eh02-unproven = []
 
 [workspace]
-members = [
-    "board",
-    "logging",
-]
+members = ["board", "logging"]
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
 imxrt-iomuxc = "0.2.1"
 imxrt-hal = { version = "0.5", path = "." }
-imxrt-log = { path = "logging", default-features = false, features = ["log", "lpuart", "usbd"] }
+imxrt-log = { path = "logging", default-features = false, features = [
+    "log",
+    "lpuart",
+    "usbd",
+] }
 imxrt-ral = "0.5"
 imxrt-rt = "0.1"
 imxrt-usbd = "0.2"
@@ -126,8 +142,8 @@ codegen-units = 256
 [dev-dependencies]
 cortex-m = "0.7"
 imxrt-rt = { workspace = true }
-menu = "0.3.2"
-cortex-m-rtic = "1.0"
+menu = "0.4.0"
+rtic = { version = "2.0.1", features = ["thumbv7-backend"] }
 log = "0.4"
 defmt = "0.3"
 pin-utils = "0.1"
