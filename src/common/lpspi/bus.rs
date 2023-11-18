@@ -1,5 +1,4 @@
 use eh1::{delay::DelayUs, spi::MODE_0};
-use imxrt_dma::channel::Channel;
 
 use super::{
     Arbiter, LpspiBus, LpspiData, LpspiDataInner, LpspiDevice, LpspiDma, LpspiDriver, LpspiError,
@@ -17,6 +16,8 @@ impl<const N: u8> LpspiBus<N> {
     /// TODO
     pub fn new<SDO, SDI, SCK>(
         lpspi: ral::lpspi::Instance<N>,
+        // TODO: Open question: How to make those pins optional? (For example, WS2812 driver only uses SDO pin)
+        //       Or should we simply do a `new_without_pins` again?
         mut pins: Pins<SDO, SDI, SCK>,
         data_storage: &'static mut Option<LpspiData<N>>,
         clk_frequency: u32,
