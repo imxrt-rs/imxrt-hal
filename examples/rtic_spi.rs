@@ -4,64 +4,81 @@
 //! schedule transfers, and to receive data. You can observe the
 //! I/O with a scope / logic analyzer. The SPI CLK runs at 1MHz,
 //! and the frame size is 64 bits.
+//!
+//! TODO: update description
 
 #![no_std]
 #![no_main]
+// Required for RTIC 2 (for now)
+#![feature(type_alias_impl_trait)]
 
-#[rtic::app(device = board, peripherals = false)]
+#[rtic::app(device = board, peripherals = false, dispatchers = [BOARD_SWTASK0])]
 mod app {
 
-    use hal::lpspi::{Direction, Interrupts, Status, Transaction};
     use imxrt_hal as hal;
+
+    use hal::lpspi::LpspiInterruptHandler;
+
+    use rtic_monotonics::systick::*;
 
     #[local]
     struct Local {
-        spi: board::Spi,
+        spi_device: board::SpiDevice,
+        spi_interrupt_handler: LpspiInterruptHandler,
     }
 
     #[shared]
     struct Shared {}
 
-    #[init]
-    fn init(_: init::Context) -> (Shared, Local) {
-        let (_, board::Specifics { mut spi, .. }) = board::new();
-        spi.disabled(|spi| {
-            // Trigger when the TX FIFO is empty.
-            spi.set_watermark(Direction::Tx, 0);
-            // Wait to receive at least 2 u32s.
-            spi.set_watermark(Direction::Rx, 1);
-        });
-        // Starts the I/O as soon as we're done initializing, since
-        // the TX FIFO is empty.
-        spi.set_interrupts(Interrupts::TRANSMIT_DATA);
-        (Shared {}, Local { spi })
+    #[init(local = [
+        spi_systick: Option<Systick> = None,
+    ])]
+    fn init(cx: init::Context) -> (Shared, Local) {
+        let (
+            _,
+            board::Specifics {
+                spi: (mut spi_bus, spi_cs_pin),
+                ..
+            },
+        ) = board::new();
+
+        // Init monotonic
+        let systick_token = rtic_monotonics::create_systick_token!();
+        Systick::start(
+            cx.core.SYST,
+            600_000_000, /* TODO: fix */
+            systick_token,
+        );
+
+        // Configure SPI
+        let spi_systick = cx.local.spi_systick.insert(Systick);
+        spi_bus.set_delay_source(spi_systick).unwrap();
+        let spi_interrupt_handler = spi_bus.enable_interrupts().unwrap();
+
+        // Create SPI device
+        let spi_device = spi_bus.device(spi_cs_pin);
+
+        (
+            Shared {},
+            Local {
+                spi_device,
+                spi_interrupt_handler,
+            },
+        )
     }
 
-    #[task(binds = BOARD_SPI, local = [spi])]
-    fn spi_interrupt(cx: spi_interrupt::Context) {
-        let spi_interrupt::LocalResources { spi, .. } = cx.local;
+    #[task(priority = 1, local = [spi_device])]
+    async fn app(cx: app::Context) {
+        let app::LocalResources { spi_device, .. } = cx.local;
 
-        let status = spi.status();
-        spi.clear_status(Status::TRANSMIT_DATA | Status::RECEIVE_DATA);
-
-        if status.intersects(Status::TRANSMIT_DATA) {
-            // This write clears TRANSMIT_DATA.
-            spi.set_interrupts(Interrupts::RECEIVE_DATA);
-
-            // Sending two u32s. Frame size is represented by bits.
-            let transaction = Transaction::new(2 * 8 * core::mem::size_of::<u32>() as u16)
-                .expect("Transaction frame size is within bounds");
-            spi.enqueue_transaction(&transaction);
-
-            spi.enqueue_data(0xDEADBEEF);
-            spi.enqueue_data(!0xDEADBEEF);
-        } else if status.intersects(Status::RECEIVE_DATA) {
-            // This write clears RECEIVE_DATA.
-            spi.set_interrupts(Interrupts::TRANSMIT_DATA);
-
-            assert!(spi.fifo_status().rxcount == 2);
-
-            while let Some(_) = spi.read_data() {}
+        loop {
+            Systick::delay(1000.millis()).await;
+            //spi_device.transfer(TODO);
         }
+    }
+
+    #[task(binds = BOARD_SPI, local = [spi_interrupt_handler])]
+    fn spi_interrupt(cx: spi_interrupt::Context) {
+        cx.local.spi_interrupt_handler.on_interrupt();
     }
 }

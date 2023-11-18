@@ -19,6 +19,7 @@ impl<const N: u8> LpspiBus<N> {
         lpspi: ral::lpspi::Instance<N>,
         mut pins: Pins<SDO, SDI, SCK>,
         data_storage: &'static mut Option<LpspiData<N>>,
+        clk_frequency: u32,
     ) -> Self
     where
         SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
@@ -35,6 +36,7 @@ impl<const N: u8> LpspiBus<N> {
             bus: Arbiter::new(LpspiDataInner {
                 driver,
                 lpspi,
+                clk_frequency,
                 dma: LpspiDma::Disable,
                 timer: None,
             }),
@@ -42,7 +44,9 @@ impl<const N: u8> LpspiBus<N> {
 
         Self {
             data: data_storage.insert(data),
+            // Sane defaults
             mode: MODE_0,
+            baud_rate: 1_000_000,
         }
     }
 
@@ -65,7 +69,15 @@ impl<const N: u8> LpspiBus<N> {
     }
 
     /// TODO
-    pub fn device<CS>(cs: CS) -> LpspiDevice<N, CS> {
-        todo!()
+    pub fn set_baud_rate(&mut self, baud_rate: u32) {
+        self.baud_rate = baud_rate;
+    }
+
+    /// TODO
+    pub fn device<CS>(&self, cs: crate::gpio::Output<CS>) -> LpspiDevice<N, CS> {
+        LpspiDevice {
+            data: self.data,
+            cs,
+        }
     }
 }

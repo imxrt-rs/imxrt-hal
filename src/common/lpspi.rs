@@ -1,14 +1,17 @@
+//! TODO
+
 use eh1::delay::DelayUs;
 pub use eh1::spi::Mode;
 
 use imxrt_dma::channel::Channel;
 use rtic_sync::arbiter::Arbiter;
 
-use crate::ral;
+use crate::{gpio, ral};
 
 mod bus;
 mod device;
 
+/// TODO
 pub enum LpspiDma {
     /// Everything is CPU driven
     Disable,
@@ -36,6 +39,7 @@ pub enum LpspiError {
     // NoData,
 }
 
+/// TODO
 pub struct Pins<SDO, SDI, SCK> {
     /// Serial data out
     ///
@@ -55,6 +59,7 @@ struct LpspiDriver<const N: u8> {}
 struct LpspiDataInner<const N: u8> {
     driver: LpspiDriver<N>,
     dma: LpspiDma,
+    clk_frequency: u32,
     timer: Option<&'static mut dyn DelayUs>,
     lpspi: ral::lpspi::Instance<N>,
 }
@@ -65,14 +70,24 @@ pub struct LpspiData<const N: u8> {
     // TODO: interrupt register struct
 }
 
-pub struct LpspiInterruptHandler {}
-
+/// TODO
 pub struct LpspiBus<const N: u8> {
     data: &'static LpspiData<N>,
     mode: Mode,
+    baud_rate: u32,
 }
 
+/// TODO
 pub struct LpspiDevice<const N: u8, CS> {
     data: &'static LpspiData<N>,
-    cs: CS,
+    cs: gpio::Output<CS>,
+}
+
+/// TODO
+pub struct LpspiInterruptHandler {}
+impl LpspiInterruptHandler {
+    /// TODO
+    pub fn on_interrupt(&mut self) {
+        todo!()
+    }
 }

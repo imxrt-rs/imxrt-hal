@@ -54,15 +54,18 @@ pub type SpiPins = hal::lpspi::Pins<
 #[cfg(not(feature = "spi"))]
 /// Activate the `"spi"` feature to configure the SPI peripheral.
 mod lpspi_types {
-    pub type SpiBuilder = ();
+    pub type SpiBus = ();
     pub type SpiCsPin = ();
+    pub type SpiDevice = ();
 }
 
 #[cfg(feature = "spi")]
 /// SPI peripheral.
 mod lpspi_types {
-    pub type SpiBus = super::hal::lpspi::LpspiBus<4>;
-    pub type SpiCsPin = super::iomuxc::gpio_b0::GPIO_B0_00;
+    use super::*;
+    pub type SpiBus = hal::lpspi::LpspiBus<4>;
+    pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_00>;
+    pub type SpiDevice = hal::lpspi::LpspiDevice<4, iomuxc::gpio_b0::GPIO_B0_00>;
 }
 
 pub use lpspi_types::*;
@@ -161,14 +164,16 @@ impl Specifics {
                 sdi: iomuxc.gpio_b0.p01,
                 sck: iomuxc.gpio_b0.p03,
             };
-            let cs_pin = iomuxc.gpio_b0.p00;
+            let cs_pin = gpio2.output(iomuxc.gpio_b0.p00);
 
             static mut SPI_DATA: Option<super::hal::lpspi::LpspiData<4>> = None;
-            let mut spi = SpiBus::new(lpspi4, pins, unsafe { &mut SPI_DATA });
-
-            spi.disabled(|spi| {
-                spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
-            });
+            let mut spi = SpiBus::new(
+                lpspi4,
+                pins,
+                unsafe { &mut SPI_DATA },
+                super::LPSPI_CLK_FREQUENCY,
+            );
+            spi.set_baud_rate(super::SPI_BAUD_RATE_FREQUENCY);
 
             (spi, cs_pin)
         };
