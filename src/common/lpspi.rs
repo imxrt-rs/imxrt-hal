@@ -10,6 +10,7 @@ use crate::{gpio, ral};
 
 mod bus;
 mod device;
+mod error;
 
 /// TODO
 pub enum LpspiDma {

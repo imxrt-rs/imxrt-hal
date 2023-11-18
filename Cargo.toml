@@ -85,6 +85,7 @@ imxrt1020 = ["imxrt-iomuxc/imxrt1020"]
 imxrt1060 = ["imxrt-iomuxc/imxrt1060"]
 imxrt1064 = ["imxrt-iomuxc/imxrt1060"]
 imxrt1170 = ["imxrt-iomuxc/imxrt1170"]
+async = ["dep:eh1-async"]
 
 ################
 # Extra features
