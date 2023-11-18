@@ -53,11 +53,19 @@ pub type SpiPins = hal::lpspi::Pins<
 
 #[cfg(not(feature = "spi"))]
 /// Activate the `"spi"` feature to configure the SPI peripheral.
-pub type Spi = ();
+mod lpspi_types {
+    pub type SpiBuilder = ();
+    pub type SpiCsPin = ();
+}
 
 #[cfg(feature = "spi")]
 /// SPI peripheral.
-pub type Spi = hal::lpspi::Lpspi<SpiPins, 4>;
+mod lpspi_types {
+    pub type SpiBus = super::hal::lpspi::LpspiBus<4>;
+    pub type SpiCsPin = super::iomuxc::gpio_b0::GPIO_B0_00;
+}
+
+pub use lpspi_types::*;
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio_ad_b1::GPIO_AD_B1_07, // SCL, P16
@@ -109,7 +117,7 @@ pub struct Specifics {
     pub button: Button,
     pub ports: GpioPorts,
     pub console: Console,
-    pub spi: Spi,
+    pub spi: (SpiBus, SpiCsPin),
     pub i2c: I2c,
     pub pwm: Pwm,
     pub trng: hal::trng::Trng,
@@ -152,13 +160,17 @@ impl Specifics {
                 sdo: iomuxc.gpio_b0.p02,
                 sdi: iomuxc.gpio_b0.p01,
                 sck: iomuxc.gpio_b0.p03,
-                pcs0: iomuxc.gpio_b0.p00,
             };
-            let mut spi = Spi::new(lpspi4, pins);
+            let cs_pin = iomuxc.gpio_b0.p00;
+
+            static mut SPI_DATA: Option<super::hal::lpspi::LpspiData<4>> = None;
+            let mut spi = SpiBus::new(lpspi4, pins, unsafe { &mut SPI_DATA });
+
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            spi
+
+            (spi, cs_pin)
         };
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]
@@ -217,7 +229,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<2>(),
     clock_gate::lpuart::<{ Console::N }>(),
     #[cfg(feature = "spi")]
-    clock_gate::lpspi::<{ Spi::N }>(),
+    clock_gate::lpspi::<{ SpiBus::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
 ];
