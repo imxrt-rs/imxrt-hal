@@ -15,16 +15,48 @@ mod status_watcher;
 
 use status_watcher::StatusWatcher;
 
-/// TODO
-pub enum LpspiDma {
-    /// Everything is CPU driven
-    Disable,
-    /// Read and Write are DMA based,
-    /// but Transfers are only partially
-    /// DMA based
-    Partial(Channel),
-    /// Everything is DMA based
-    Full(Channel, Channel),
+trait LpspiDma {
+    fn get_one(&mut self) -> Option<&mut Channel>;
+    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)>;
+}
+
+/// Everything is CPU driven
+struct NoDma;
+
+/// Read and Write are DMA based,
+/// but Transfers are only partially
+/// DMA based
+///
+struct PartialDma(Channel);
+
+/// Everything is DMA based.
+///
+/// This is a requirement for the async interface.
+struct FullDma(Channel, Channel);
+
+impl LpspiDma for NoDma {
+    fn get_one(&mut self) -> Option<&mut Channel> {
+        None
+    }
+    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)> {
+        None
+    }
+}
+impl LpspiDma for PartialDma {
+    fn get_one(&mut self) -> Option<&mut Channel> {
+        Some(&mut self.0)
+    }
+    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)> {
+        None
+    }
+}
+impl LpspiDma for FullDma {
+    fn get_one(&mut self) -> Option<&mut Channel> {
+        Some(&mut self.0)
+    }
+    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)> {
+        Some((&mut self.0, &mut self.1))
+    }
 }
 
 /// Possible errors when interfacing the LPSPI.
@@ -68,8 +100,8 @@ pub struct LpspiData<const N: u8> {
 }
 
 /// TODO
-pub struct Lpspi<'a, const N: u8> {
-    dma: LpspiDma,
+pub struct Lpspi<'a, const N: u8, DMA> {
+    dma: DMA,
     source_clock_hz: u32,
     data: &'a LpspiData<N>,
     rx_fifo_size: u32,
@@ -77,8 +109,8 @@ pub struct Lpspi<'a, const N: u8> {
 }
 
 /// An LPSPI peripheral which is temporarily disabled.
-pub struct Disabled<'a, 'b, const N: u8> {
-    bus: &'a mut Lpspi<'b, N>,
+pub struct Disabled<'a, 'b, const N: u8, DMA> {
+    bus: &'a mut Lpspi<'b, N, DMA>,
     men: bool,
 }
 
