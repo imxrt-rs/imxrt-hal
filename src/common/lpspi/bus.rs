@@ -1,9 +1,8 @@
-use cortex_m::interrupt::Mutex;
 use eh1::spi::MODE_0;
 
 use super::{
-    Channel, Disabled, FullDma, Lpspi, LpspiData, LpspiDataInner, LpspiInterruptHandler, NoDma,
-    PartialDma, Pins, StatusWatcher,
+    Channel, Disabled, FullDma, Lpspi, LpspiData, LpspiInterruptHandler, NoDma, PartialDma, Pins,
+    StatusWatcher,
 };
 use crate::{
     iomuxc::{consts, lpspi},
@@ -15,9 +14,9 @@ impl<'a, const N: u8> Lpspi<'a, N, NoDma> {
     ///
     /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    fn new<SDO, SDI, SCK>(
+    pub fn new<SDO, SDI, SCK>(
         lpspi: ral::lpspi::Instance<N>,
-        mut pins: Pins<SDO, SDI, SCK>,
+        pins: Pins<SDO, SDI, SCK>,
         data_storage: &'a mut Option<LpspiData<N>>,
         source_clock_hz: u32,
     ) -> Self
@@ -35,9 +34,9 @@ impl<'a, const N: u8> Lpspi<'a, N, PartialDma> {
     ///
     /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    fn new<SDO, SDI, SCK>(
+    pub fn new<SDO, SDI, SCK>(
         lpspi: ral::lpspi::Instance<N>,
-        mut pins: Pins<SDO, SDI, SCK>,
+        pins: Pins<SDO, SDI, SCK>,
         data_storage: &'a mut Option<LpspiData<N>>,
         source_clock_hz: u32,
         dma: Channel,
@@ -56,9 +55,9 @@ impl<'a, const N: u8> Lpspi<'a, N, FullDma> {
     ///
     /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    fn new<SDO, SDI, SCK>(
+    pub fn new<SDO, SDI, SCK>(
         lpspi: ral::lpspi::Instance<N>,
-        mut pins: Pins<SDO, SDI, SCK>,
+        pins: Pins<SDO, SDI, SCK>,
         data_storage: &'a mut Option<LpspiData<N>>,
         source_clock_hz: u32,
         dma1: Channel,
@@ -108,7 +107,6 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
 
         let data = LpspiData {
             lpspi: StatusWatcher::new(lpspi),
-            shared: Mutex::new(LpspiDataInner {}),
         };
 
         let mut this = Self {

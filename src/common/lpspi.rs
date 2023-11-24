@@ -5,7 +5,6 @@ pub use eh1::spi::Mode;
 use imxrt_dma::channel::Channel;
 
 use crate::ral;
-use cortex_m::interrupt::Mutex;
 
 mod bus;
 mod disabled;
@@ -89,13 +88,8 @@ pub struct Pins<SDO, SDI, SCK> {
     pub sck: SCK,
 }
 
-struct LpspiDataInner<const N: u8> {
-    // TODO: interrupt stuff
-}
-
 /// Static shared data allocated by the user
 pub struct LpspiData<const N: u8> {
-    shared: Mutex<LpspiDataInner<N>>,
     lpspi: StatusWatcher<N>,
 }
 

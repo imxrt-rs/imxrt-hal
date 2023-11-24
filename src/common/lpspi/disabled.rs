@@ -47,3 +47,9 @@ impl<'a, 'b, const N: u8, DMA> Disabled<'a, 'b, N, DMA> {
         );
     }
 }
+
+impl<const N: u8, DMA> Drop for Disabled<'_, '_, N, DMA> {
+    fn drop(&mut self) {
+        ral::modify_reg!(ral::lpspi, self.bus.data.lpspi.instance(), CR, MEN: self.men as u32);
+    }
+}
