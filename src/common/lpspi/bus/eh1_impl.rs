@@ -1,4 +1,4 @@
-use super::{dma::FullDma, Lpspi, LpspiError};
+use super::{FullDma, Lpspi, LpspiError};
 
 impl<const N: u8, DMA> eh1::spi::ErrorType for Lpspi<'_, N, DMA> {
     type Error = LpspiError;
@@ -22,7 +22,7 @@ impl<const N: u8, DMA> eh1::spi::SpiBus<u8> for Lpspi<'_, N, DMA> {
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        self.block_until_finished()
     }
 }
 
@@ -44,7 +44,7 @@ impl<const N: u8, DMA> eh1::spi::SpiBus<u16> for Lpspi<'_, N, DMA> {
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        self.block_until_finished()
     }
 }
 
@@ -66,7 +66,7 @@ impl<const N: u8, DMA> eh1::spi::SpiBus<u32> for Lpspi<'_, N, DMA> {
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        self.block_until_finished()
     }
 }
 

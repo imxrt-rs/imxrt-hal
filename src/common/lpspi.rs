@@ -9,26 +9,23 @@ use crate::ral;
 mod bus;
 mod disabled;
 mod dma;
-mod eh1_impl;
 mod error;
 mod status_watcher;
+mod word_types;
 
 use status_watcher::StatusWatcher;
 
 /// Possible errors when interfacing the LPSPI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LpspiError {
-    // /// The transaction frame size is incorrect.
-    // ///
-    // /// The frame size, in bits, must be between 8 bits and
-    // /// 4095 bits.
-    // FrameSize,
-    // /// FIFO error in the given direction.
-    // Fifo(Direction),
+    /// An error occurred in the receive fifo.
+    ReceiveFifo,
+    /// An error occurred in the transmit fifo.
+    TransmitFifo,
     /// Bus is busy at the start of a transfer.
     Busy,
-    // /// Caller provided no data.
-    // NoData,
+    /// Caller provided no data.
+    NoData,
 }
 
 /// TODO
