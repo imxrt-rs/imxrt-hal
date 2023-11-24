@@ -1,8 +1,8 @@
 use cortex_m::interrupt::Mutex;
-use eh1::spi::{Mode, MODE_0};
+use eh1::spi::MODE_0;
 
 use super::{
-    Disabled, Lpspi, LpspiData, LpspiDataInner, LpspiDma, LpspiError, LpspiInterruptHandler, Pins,
+    Disabled, Lpspi, LpspiData, LpspiDataInner, LpspiDma, LpspiInterruptHandler, Pins,
     StatusWatcher,
 };
 use crate::{
@@ -71,11 +71,12 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
 
-        // TODO think about this
-        ral::write_reg!(ral::lpspi, this.lpspi(), FCR,
-            RXWATER: this.rx_fifo_size / 2 - 1, // always divisible by two
-            TXWATER: this.tx_fifo_size / 2 - 1
-        );
+        // Configure watermarks.
+        // This is more for good measure, we don't really use the watermarks.
+        // ral::write_reg!(ral::lpspi, this.lpspi(), FCR,
+        //     RXWATER: 0,
+        //     TXWATER: u32::MAX
+        // );
 
         // Enable
         ral::write_reg!(ral::lpspi, this.lpspi(), CR, MEN: MEN_1);
@@ -109,18 +110,10 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     ///
     /// Note that it is the caller's responsibility to connect the interrupt source
     /// to the returned interrupt handler object.
-    pub fn enable_interrupts(&mut self) -> Result<LpspiInterruptHandler, LpspiError> {
-        todo!()
-    }
-
-    /// TODO
-    pub fn set_spi_clock_hz(&mut self, _clk_hz: u32) {
-        todo!()
-    }
-
-    /// Set the SPI mode for the peripheral
-    pub fn set_mode(&mut self, mode: Mode) {
-        todo!()
+    pub fn enable_interrupts(&mut self) -> LpspiInterruptHandler<'a, N> {
+        LpspiInterruptHandler {
+            status_watcher: &self.data.lpspi,
+        }
     }
 
     // ////////////////// PRIVATE DRIVER STUFF ///////////////////////

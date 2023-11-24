@@ -64,7 +64,7 @@ struct LpspiDataInner<const N: u8> {
 /// Static shared data allocated by the user
 pub struct LpspiData<const N: u8> {
     shared: Mutex<LpspiDataInner<N>>,
-    lpspi: status_watcher::StatusWatcher<N>,
+    lpspi: StatusWatcher<N>,
 }
 
 /// TODO
@@ -83,10 +83,12 @@ pub struct Disabled<'a, 'b, const N: u8> {
 }
 
 /// TODO
-pub struct LpspiInterruptHandler {}
-impl LpspiInterruptHandler {
+pub struct LpspiInterruptHandler<'a, const N: u8> {
+    status_watcher: &'a StatusWatcher<N>,
+}
+impl<const N: u8> LpspiInterruptHandler<'_, N> {
     /// TODO
     pub fn on_interrupt(&mut self) {
-        todo!()
+        self.status_watcher.on_interrupt();
     }
 }

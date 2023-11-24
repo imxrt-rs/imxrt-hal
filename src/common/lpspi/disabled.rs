@@ -28,9 +28,9 @@ impl<'a, 'b, const N: u8> Disabled<'a, 'b, N> {
 
     /// Set the LPSPI clock speed (Hz).
     pub fn set_clock_hz(&mut self, spi_clock_hz: u32) {
-        // Round up, so we always get a real spi clock that is
-        // equal or less than the requested speed.
-        let mut div = 1 + (self.bus.source_clock_hz - 1) / spi_clock_hz;
+        // Round up, so we always get a resulting SPI clock that is
+        // equal or less than the requested frequency.
+        let div = 1 + (self.bus.source_clock_hz - 1) / spi_clock_hz;
 
         // 0 <= div <= 255, and the true coefficient is really div + 2
         let div = div.saturating_sub(2).clamp(0, 255);
