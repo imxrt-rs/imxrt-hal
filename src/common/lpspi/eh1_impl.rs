@@ -1,4 +1,4 @@
-use super::{FullDma, Lpspi, LpspiError};
+use super::{dma::FullDma, Lpspi, LpspiError};
 
 impl<const N: u8, DMA> eh1::spi::ErrorType for Lpspi<'_, N, DMA> {
     type Error = LpspiError;

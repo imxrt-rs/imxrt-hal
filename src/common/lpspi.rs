@@ -8,55 +8,12 @@ use crate::ral;
 
 mod bus;
 mod disabled;
+mod dma;
 mod eh1_impl;
 mod error;
 mod status_watcher;
 
 use status_watcher::StatusWatcher;
-
-trait LpspiDma {
-    fn get_one(&mut self) -> Option<&mut Channel>;
-    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)>;
-}
-
-/// Everything is CPU driven
-struct NoDma;
-
-/// Read and Write are DMA based,
-/// but Transfers are only partially
-/// DMA based
-///
-struct PartialDma(Channel);
-
-/// Everything is DMA based.
-///
-/// This is a requirement for the async interface.
-struct FullDma(Channel, Channel);
-
-impl LpspiDma for NoDma {
-    fn get_one(&mut self) -> Option<&mut Channel> {
-        None
-    }
-    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)> {
-        None
-    }
-}
-impl LpspiDma for PartialDma {
-    fn get_one(&mut self) -> Option<&mut Channel> {
-        Some(&mut self.0)
-    }
-    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)> {
-        None
-    }
-}
-impl LpspiDma for FullDma {
-    fn get_one(&mut self) -> Option<&mut Channel> {
-        Some(&mut self.0)
-    }
-    fn get_two(&mut self) -> Option<(&mut Channel, &mut Channel)> {
-        Some((&mut self.0, &mut self.1))
-    }
-}
 
 /// Possible errors when interfacing the LPSPI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

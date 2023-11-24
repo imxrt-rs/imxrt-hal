@@ -1,8 +1,8 @@
 use eh1::spi::MODE_0;
 
 use super::{
-    Channel, Disabled, FullDma, Lpspi, LpspiData, LpspiInterruptHandler, NoDma, PartialDma, Pins,
-    StatusWatcher,
+    dma::{FullDma, NoDma, PartialDma},
+    Channel, Disabled, Lpspi, LpspiData, LpspiInterruptHandler, Pins, StatusWatcher,
 };
 use crate::{
     iomuxc::{consts, lpspi},
