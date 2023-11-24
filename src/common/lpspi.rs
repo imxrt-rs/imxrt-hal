@@ -1,16 +1,19 @@
 //! TODO
 
-use eh1::delay::DelayUs;
 pub use eh1::spi::Mode;
 
 use imxrt_dma::channel::Channel;
-use rtic_sync::arbiter::Arbiter;
 
-use crate::{gpio, ral};
+use crate::ral;
+use cortex_m::interrupt::Mutex;
 
 mod bus;
-mod device;
+mod disabled;
+mod eh1_impl;
 mod error;
+mod status_watcher;
+
+use status_watcher::StatusWatcher;
 
 /// TODO
 pub enum LpspiDma {
@@ -54,34 +57,29 @@ pub struct Pins<SDO, SDI, SCK> {
     pub sck: SCK,
 }
 
-/// The internal driver implementation
-struct LpspiDriver<const N: u8> {}
-
 struct LpspiDataInner<const N: u8> {
-    driver: LpspiDriver<N>,
-    dma: LpspiDma,
-    clk_frequency: u32,
-    timer: Option<&'static mut dyn DelayUs>,
-    lpspi: ral::lpspi::Instance<N>,
+    // TODO: interrupt stuff
 }
 
 /// Static shared data allocated by the user
 pub struct LpspiData<const N: u8> {
-    bus: Arbiter<LpspiDataInner<N>>,
-    // TODO: interrupt register struct
+    shared: Mutex<LpspiDataInner<N>>,
+    lpspi: status_watcher::StatusWatcher<N>,
 }
 
 /// TODO
-pub struct LpspiBus<const N: u8> {
-    data: &'static LpspiData<N>,
-    mode: Mode,
-    baud_rate: u32,
+pub struct Lpspi<'a, const N: u8> {
+    dma: LpspiDma,
+    source_clock_hz: u32,
+    data: &'a LpspiData<N>,
+    rx_fifo_size: u32,
+    tx_fifo_size: u32,
 }
 
-/// TODO
-pub struct LpspiDevice<const N: u8, CS> {
-    data: &'static LpspiData<N>,
-    cs: gpio::Output<CS>,
+/// An LPSPI peripheral which is temporarily disabled.
+pub struct Disabled<'a, 'b, const N: u8> {
+    bus: &'a mut Lpspi<'b, N>,
+    men: bool,
 }
 
 /// TODO

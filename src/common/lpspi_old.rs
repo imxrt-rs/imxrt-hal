@@ -609,6 +609,8 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// You're responsible for making sure there's space in the transmit
     /// FIFO for this transaction command.
     pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
+        // TODO: This is technically unsafe. TCR is not meant to be read.
+        // Solution is simple: Write it completely, every time.
         ral::modify_reg!(ral::lpspi, self.lpspi, TCR,
             LSBF: transaction.bit_order as u32,
             BYSW: transaction.byte_swap as u32,

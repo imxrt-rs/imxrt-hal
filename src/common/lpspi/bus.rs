@@ -1,223 +1,133 @@
-use eh1::{delay::DelayUs, spi::MODE_0};
+use cortex_m::interrupt::Mutex;
+use eh1::spi::{Mode, MODE_0};
 
 use super::{
-    Arbiter, LpspiBus, LpspiData, LpspiDataInner, LpspiDevice, LpspiDma, LpspiDriver, LpspiError,
-    LpspiInterruptHandler, Pins,
+    Disabled, Lpspi, LpspiData, LpspiDataInner, LpspiDma, LpspiError, LpspiInterruptHandler, Pins,
+    StatusWatcher,
 };
 use crate::{
     iomuxc::{consts, lpspi},
     ral,
 };
 
-impl<const N: u8> LpspiBus<N> {
+impl<'a, const N: u8> Lpspi<'a, N> {
     /// The peripheral instance.
     pub const N: u8 = N;
 
-    /// TODO
+    /// Create a new LPSPI peripheral.
+    ///
+    /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
+    /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
     pub fn new<SDO, SDI, SCK>(
         lpspi: ral::lpspi::Instance<N>,
         // TODO: Open question: How to make those pins optional? (For example, WS2812 driver only uses SDO pin)
         //       Or should we simply do a `new_without_pins` again?
         mut pins: Pins<SDO, SDI, SCK>,
-        data_storage: &'static mut Option<LpspiData<N>>,
-        clk_frequency: u32,
+        data_storage: &'a mut Option<LpspiData<N>>,
+        source_clock_hz: u32,
     ) -> Self
     where
         SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
         SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
         SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
     {
-        let driver = LpspiDriver {};
+        let (rx_fifo_size_exp, tx_fifo_size_exp) =
+            ral::read_reg!(ral::lpspi, lpspi, PARAM, RXFIFO, TXFIFO);
+        let rx_fifo_size = 1 << rx_fifo_size_exp;
+        let tx_fifo_size = 1 << tx_fifo_size_exp;
+
+        let data = LpspiData {
+            lpspi: StatusWatcher::new(lpspi),
+            shared: Mutex::new(LpspiDataInner {}),
+        };
+
+        let mut this = Self {
+            source_clock_hz,
+            dma: LpspiDma::Disable,
+            data: data_storage.insert(data),
+            rx_fifo_size,
+            tx_fifo_size,
+        };
+
+        ral::write_reg!(ral::lpspi, this.lpspi(), CR, RST: RST_1);
+        ral::write_reg!(ral::lpspi, this.lpspi(), CR, RST: RST_0);
+        ral::write_reg!(
+            ral::lpspi,
+            this.data.lpspi.instance(),
+            CFGR1,
+            MASTER: MASTER_1,
+            SAMPLE: SAMPLE_1
+        );
+        this.disabled(|bus| {
+            // Sane defaults
+            bus.set_clock_hz(1_000_000);
+            bus.set_mode(MODE_0)
+        });
 
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
 
-        let data = LpspiData {
-            bus: Arbiter::new(LpspiDataInner {
-                driver,
-                lpspi,
-                clk_frequency,
-                dma: LpspiDma::Disable,
-                timer: None,
-            }),
-        };
+        // TODO think about this
+        ral::write_reg!(ral::lpspi, this.lpspi(), FCR,
+            RXWATER: this.rx_fifo_size / 2 - 1, // always divisible by two
+            TXWATER: this.tx_fifo_size / 2 - 1
+        );
+        ral::write_reg!(ral::lpspi, this.lpspi(), CR, MEN: MEN_1);
 
-        Self {
-            data: data_storage.insert(data),
-            // Sane defaults
-            mode: MODE_0,
-            baud_rate: 1_000_000,
-        }
+        this
     }
 
-    /// TODO
-    pub fn set_dma(&mut self, dma: LpspiDma) -> Result<LpspiDma, LpspiError> {
-        let mut bus = self.data.bus.try_access().ok_or(LpspiError::Busy)?;
-        Ok(core::mem::replace(&mut bus.dma, dma))
+    /// Temporarily disable the LPSPI peripheral.
+    ///
+    /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
+    /// LPSPI settings that require a fully disabled peripheral. This will clear the transmit
+    /// and receive FIFOs.
+    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
+        self.clear_fifos();
+        let mut disabled = Disabled::new(self);
+        func(&mut disabled)
     }
 
-    /// TODO
-    pub fn set_delay_source(&mut self, delay: &'static mut dyn DelayUs) -> Result<(), LpspiError> {
-        let mut bus = self.data.bus.try_access().ok_or(LpspiError::Busy)?;
-        bus.timer = Some(delay);
-        Ok(())
+    /// Provides the SPI bus with one or two DMA channels.
+    ///
+    /// This drastically increases the efficiency of u32 based reads/writes.
+    ///
+    /// For simultaneous read/write, two DMA channels are required.
+    pub fn set_dma(&mut self, dma: LpspiDma) -> LpspiDma {
+        core::mem::replace(&mut self.dma, dma)
     }
 
-    /// TODO
+    /// Switches the SPI bus to interrupt based operation.
+    ///
+    /// This increases efficiency drastically, as it avoids busy waiting.
+    ///
+    /// Note that it is the caller's responsibility to connect the interrupt source
+    /// to the returned interrupt handler object.
     pub fn enable_interrupts(&mut self) -> Result<LpspiInterruptHandler, LpspiError> {
         todo!()
     }
 
     /// TODO
-    pub fn set_baud_rate(&mut self, baud_rate: u32) {
-        self.baud_rate = baud_rate;
-    }
-
-    /// TODO
-    pub fn device<CS>(&self, cs: crate::gpio::Output<CS>) -> LpspiDevice<N, CS> {
-        LpspiDevice {
-            data: self.data,
-            cs,
-        }
-    }
-}
-
-impl<const N: u8> eh1::spi::ErrorType for LpspiBus<N> {
-    type Error = LpspiError;
-}
-
-impl<const N: u8> eh1::spi::SpiBus<u8> for LpspiBus<N> {
-    fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+    pub fn set_spi_clock_hz(&mut self, _clk_hz: u32) {
         todo!()
     }
 
-    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+    /// Set the SPI mode for the peripheral
+    pub fn set_mode(&mut self, mode: Mode) {
         todo!()
     }
 
-    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
-        todo!()
+    // ////////////////// PRIVATE DRIVER STUFF ///////////////////////
+
+    /// Get LPSPI Register Instance
+    #[inline]
+    fn lpspi(&self) -> &ral::lpspi::Instance<N> {
+        self.data.lpspi.instance()
     }
 
-    fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
-
-impl<const N: u8> eh1::spi::SpiBus<u16> for LpspiBus<N> {
-    fn read(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer(&mut self, read: &mut [u16], write: &[u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer_in_place(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
-
-impl<const N: u8> eh1::spi::SpiBus<u32> for LpspiBus<N> {
-    fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
-
-#[cfg(feature = "async")]
-impl<const N: u8> eh1_async::spi::SpiBus<u8> for LpspiBus<N> {
-    async fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
-
-#[cfg(feature = "async")]
-impl<const N: u8> eh1_async::spi::SpiBus<u16> for LpspiBus<N> {
-    async fn read(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn transfer(&mut self, read: &mut [u16], write: &[u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn transfer_in_place(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
-    }
-}
-
-#[cfg(feature = "async")]
-impl<const N: u8> eh1_async::spi::SpiBus<u32> for LpspiBus<N> {
-    async fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    async fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
+    /// Clear both FIFOs.
+    fn clear_fifos(&mut self) {
+        ral::modify_reg!(ral::lpspi, self.lpspi(), CR, RTF: RTF_1, RRF: RRF_1);
     }
 }
