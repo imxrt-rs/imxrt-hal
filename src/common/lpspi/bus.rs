@@ -49,6 +49,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             tx_fifo_size,
         };
 
+        // Reset, enable master mode
         ral::write_reg!(ral::lpspi, this.lpspi(), CR, RST: RST_1);
         ral::write_reg!(ral::lpspi, this.lpspi(), CR, RST: RST_0);
         ral::write_reg!(
@@ -58,12 +59,14 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             MASTER: MASTER_1,
             SAMPLE: SAMPLE_1
         );
+
+        // Set sane default parameters
         this.disabled(|bus| {
-            // Sane defaults
             bus.set_clock_hz(1_000_000);
             bus.set_mode(MODE_0)
         });
 
+        // Configure pins
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
@@ -73,6 +76,8 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             RXWATER: this.rx_fifo_size / 2 - 1, // always divisible by two
             TXWATER: this.tx_fifo_size / 2 - 1
         );
+
+        // Enable
         ral::write_reg!(ral::lpspi, this.lpspi(), CR, MEN: MEN_1);
 
         this
