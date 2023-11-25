@@ -1,67 +1,29 @@
+use crate::lpspi::word_types::LpspiDataBuffer;
+
 use super::{FullDma, Lpspi, LpspiError};
 
 impl<const N: u8, DMA> eh1::spi::ErrorType for Lpspi<'_, N, DMA> {
     type Error = LpspiError;
 }
 
-impl<const N: u8, DMA> eh1::spi::SpiBus<u8> for Lpspi<'_, N, DMA> {
-    fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+impl<const N: u8, DMA, T> eh1::spi::SpiBus<T> for Lpspi<'_, N, DMA>
+where
+    T: 'static + Copy,
+    [T]: LpspiDataBuffer,
+{
+    fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+    fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+    fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        self.block_until_finished()
-    }
-}
-
-impl<const N: u8, DMA> eh1::spi::SpiBus<u16> for Lpspi<'_, N, DMA> {
-    fn read(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer(&mut self, read: &mut [u16], write: &[u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer_in_place(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        self.block_until_finished()
-    }
-}
-
-impl<const N: u8, DMA> eh1::spi::SpiBus<u32> for Lpspi<'_, N, DMA> {
-    fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
-        todo!()
-    }
-
-    fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
+    fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
         todo!()
     }
 
