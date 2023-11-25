@@ -52,7 +52,6 @@ pub struct Lpspi<'a, const N: u8, DMA> {
     dma: DMA,
     source_clock_hz: u32,
     data: &'a LpspiData<N>,
-    rx_fifo_size: u32,
     tx_fifo_size: u32,
 }
 

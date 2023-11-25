@@ -107,9 +107,7 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
         SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
     {
-        let (rx_fifo_size_exp, tx_fifo_size_exp) =
-            ral::read_reg!(ral::lpspi, lpspi, PARAM, RXFIFO, TXFIFO);
-        let rx_fifo_size = 1 << rx_fifo_size_exp;
+        let tx_fifo_size_exp = ral::read_reg!(ral::lpspi, lpspi, PARAM, TXFIFO);
         let tx_fifo_size = 1 << tx_fifo_size_exp;
 
         let data = LpspiData {
@@ -120,7 +118,6 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
             source_clock_hz,
             dma,
             data: data_storage.insert(data),
-            rx_fifo_size,
             tx_fifo_size,
         };
 
