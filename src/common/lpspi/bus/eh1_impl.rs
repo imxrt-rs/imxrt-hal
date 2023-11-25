@@ -1,4 +1,4 @@
-use crate::lpspi::word_types::LpspiDataBuffer;
+use crate::lpspi::data_buffer::LpspiDataBuffer;
 
 use super::{FullDma, Lpspi, LpspiError};
 

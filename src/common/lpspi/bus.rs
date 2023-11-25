@@ -136,7 +136,8 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         this.disabled(|bus| {
             bus.set_clock_hz(1_000_000);
             bus.set_mode(MODE_0)
-        });
+        })
+        .unwrap();
 
         // Configure pins
         lpspi::prepare(&mut pins.sdo);

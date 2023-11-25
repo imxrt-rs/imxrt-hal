@@ -7,11 +7,11 @@ use imxrt_dma::channel::Channel;
 use crate::ral;
 
 mod bus;
+mod data_buffer;
 mod disabled;
 mod dma;
 mod error;
 mod status_watcher;
-mod word_types;
 
 use status_watcher::StatusWatcher;
 

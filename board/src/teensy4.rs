@@ -179,7 +179,7 @@ impl Specifics {
         };
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]
-        let spi = ();
+        let spi = ((), ());
 
         let lpi2c3 = unsafe { ral::lpi2c::LPI2C3::instance() };
         let i2c = I2c::new(
