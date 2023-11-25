@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.4] 2023-11-26
+
+Add CCM APIs for configuring FlexIO clocks on 1000 targets.
+
 ## [0.5.3] 2023-07-03
 
 Add FlexIO clock gates for all supported 1000 and 1100 targets.
@@ -280,7 +284,8 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.3...main
-[0.5.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.2...0.5.3
+[0.5.4]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.3...0.5.4
+[0.5.3]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.2...0.5.3
 [0.5.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.1...0.5.2
 [0.5.1]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/imxrt-rs/imxrt-hal/releases/tag/0.5.0
