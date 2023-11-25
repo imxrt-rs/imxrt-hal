@@ -1,7 +1,7 @@
 use eh1::spi::MODE_0;
 
 use super::{
-    data_buffer::{LpspiDataBuffer, LpspiIndexChunks},
+    data_buffer::{LpspiDataBuffer, LpspiIndexChunks, TransferBuffer},
     dma::{FullDma, NoDma, PartialDma},
     Channel, Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
 };
@@ -243,28 +243,27 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
     }
 
-    /// Writes to the bus
-    fn blocking_transfer<T>(
-        &mut self,
-        tx_buffer: &[T],
-        rx_buffer: &mut [T],
-    ) -> Result<(), LpspiError>
+    /// Read + write into separate buffers
+    fn blocking_transfer<T>(&mut self, mut buffers: TransferBuffer<T>) -> Result<(), LpspiError>
     where
         [T]: LpspiDataBuffer,
     {
         self.blocking_pre_transfer()?;
 
-        let size = tx_buffer.bytecount().max(rx_buffer.bytecount());
+        let size = buffers
+            .tx_buffer()
+            .bytecount()
+            .max(buffers.rx_buffer().bytecount());
         if size < 1 {
             return Err(LpspiError::NoData);
         }
 
         let mut rx_offset = 0;
-        let mut do_receive = |this: &mut Self| -> Result<(), LpspiError> {
+        let mut do_receive = |this: &mut Self, buffer: &mut [T]| -> Result<(), LpspiError> {
             while this.fifo_read_data_available() {
                 this.check_errors()?;
                 let rx_data = ral::read_reg!(ral::lpspi, this.lpspi(), RDR);
-                rx_buffer.write(rx_offset, rx_data);
+                buffer.write(rx_offset, rx_data);
                 rx_offset += 1;
             }
             Ok(())
@@ -280,17 +279,22 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
 
             for tx_offset in chunk.offsets() {
                 while !self.fifo_write_space_available() {
-                    do_receive(self)?;
+                    do_receive(self, buffers.rx_buffer())?;
                     self.check_errors()?;
                 }
-                ral::write_reg!(ral::lpspi, self.lpspi(), TDR, tx_buffer.read(tx_offset));
+                ral::write_reg!(
+                    ral::lpspi,
+                    self.lpspi(),
+                    TDR,
+                    buffers.tx_buffer().read(tx_offset)
+                );
             }
         }
 
         while !self.data.lpspi.poll_transfer_complete() {
-            do_receive(self)?;
+            do_receive(self, buffers.rx_buffer())?;
         }
-        do_receive(self)?;
+        do_receive(self, buffers.rx_buffer())?;
 
         self.check_errors()
     }

@@ -1,4 +1,4 @@
-use crate::lpspi::data_buffer::LpspiDataBuffer;
+use crate::lpspi::data_buffer::{LpspiDataBuffer, TransferBuffer};
 
 use super::{FullDma, Lpspi, LpspiError};
 
@@ -12,19 +12,19 @@ where
     [T]: LpspiDataBuffer,
 {
     fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(&[], words)
+        self.blocking_transfer(TransferBuffer::Dual(words, &[]))
     }
 
     fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(words, &mut [])
+        self.blocking_transfer(TransferBuffer::Dual(&mut [], words))
     }
 
     fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(write, read)
+        self.blocking_transfer(TransferBuffer::Dual(read, write))
     }
 
     fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(TransferBuffer::Single(words))
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {

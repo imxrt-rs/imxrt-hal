@@ -1,5 +1,25 @@
 use core::ops::Range;
 
+pub enum TransferBuffer<'a, T> {
+    Single(&'a mut [T]),
+    Dual(&'a mut [T], &'a [T]),
+}
+
+impl<T> TransferBuffer<'_, T> {
+    pub fn tx_buffer(&self) -> &[T] {
+        match self {
+            TransferBuffer::Single(x) => x,
+            TransferBuffer::Dual(_, x) => x,
+        }
+    }
+    pub fn rx_buffer(&mut self) -> &mut [T] {
+        match self {
+            TransferBuffer::Single(x) => x,
+            TransferBuffer::Dual(x, _) => x,
+        }
+    }
+}
+
 /// A data type that can be used for LPSPI transfers
 pub trait LpspiDataBuffer {
     /// Length in bytes
