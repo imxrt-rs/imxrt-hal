@@ -12,15 +12,15 @@ where
     [T]: LpspiDataBuffer,
 {
     fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(&[], words)
     }
 
     fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(words, &mut [])
     }
 
     fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(write, read)
     }
 
     fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
@@ -28,7 +28,8 @@ where
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
-        self.block_until_finished()
+        // Nothing to do, all other calls only return after the device is finished
+        Ok(())
     }
 }
 
@@ -52,6 +53,7 @@ impl<const N: u8> eh1_async::spi::SpiBus<u32> for Lpspi<'_, N, FullDma> {
     }
 
     async fn flush(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        // Nothing to do, all other calls only return after the device is finished
+        Ok(())
     }
 }

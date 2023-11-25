@@ -1,6 +1,7 @@
-use eh1::spi::{SpiBus, MODE_0};
+use eh1::spi::MODE_0;
 
 use super::{
+    data_buffer::{LpspiDataBuffer, LpspiIndexChunks},
     dma::{FullDma, NoDma, PartialDma},
     Channel, Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
 };
@@ -10,6 +11,8 @@ use crate::{
 };
 
 mod eh1_impl;
+
+const MAX_FRAME_SIZE_BIT: u32 = 1 << 12;
 
 impl<'a, const N: u8> Lpspi<'a, N, NoDma> {
     /// Create a new LPSPI peripheral without DMA support.
@@ -136,8 +139,7 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         this.disabled(|bus| {
             bus.set_clock_hz(1_000_000);
             bus.set_mode(MODE_0)
-        })
-        .unwrap();
+        });
 
         // Configure pins
         lpspi::prepare(&mut pins.sdo);
@@ -161,13 +163,13 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
-    pub fn disabled<R>(
-        &mut self,
-        func: impl FnOnce(&mut Disabled<N, DMA>) -> R,
-    ) -> Result<R, LpspiError> {
-        SpiBus::<u8>::flush(self)?;
+    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N, DMA>) -> R) -> R {
+        // Disable DMA and clear fifos
+        ral::modify_reg!(ral::lpspi, self.lpspi(), DER, RDDE: RDDE_0, TDDE: TDDE_0);
+        self.clear_fifos();
+
         let mut disabled = Disabled::new(self);
-        Ok(func(&mut disabled))
+        func(&mut disabled)
     }
 
     /// Switches the SPI bus to interrupt based operation.
@@ -200,14 +202,6 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         ral::read_reg!(ral::lpspi, self.lpspi(), SR, MBF == MBF_1)
     }
 
-    /// Waits for the current operation to finish, while performing error checks.
-    fn block_until_finished(&mut self) -> Result<(), LpspiError> {
-        while self.busy() {
-            self.check_errors()?;
-        }
-        self.check_errors()
-    }
-
     /// Returns errors, if any there are any.
     fn check_errors(&mut self) -> Result<(), LpspiError> {
         let (rx_error, tx_error) = ral::read_reg!(ral::lpspi, self.lpspi(), SR, REF, TEF);
@@ -224,5 +218,80 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         } else {
             Ok(())
         }
+    }
+
+    /// Prepares the device for a blocking transfer
+    fn blocking_pre_transfer(&mut self) -> Result<(), LpspiError> {
+        if self.busy() {
+            return Err(LpspiError::Busy);
+        }
+
+        // Disable DMA
+        ral::modify_reg!(ral::lpspi, self.lpspi(), DER, RDDE: RDDE_0, TDDE: TDDE_0);
+        self.clear_fifos();
+
+        self.data.lpspi.clear_transfer_complete();
+
+        Ok(())
+    }
+
+    fn fifo_read_data_available(&mut self) -> bool {
+        ral::read_reg!(ral::lpspi, self.lpspi(), RSR, RXEMPTY == RXEMPTY_0)
+    }
+
+    fn fifo_write_space_available(&mut self) -> bool {
+        ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
+    }
+
+    /// Writes to the bus
+    fn blocking_transfer<T>(
+        &mut self,
+        tx_buffer: &[T],
+        rx_buffer: &mut [T],
+    ) -> Result<(), LpspiError>
+    where
+        [T]: LpspiDataBuffer,
+    {
+        self.blocking_pre_transfer()?;
+
+        let size = tx_buffer.bytecount().max(rx_buffer.bytecount());
+        if size < 1 {
+            return Err(LpspiError::NoData);
+        }
+
+        let mut rx_offset = 0;
+        let mut do_receive = |this: &mut Self| -> Result<(), LpspiError> {
+            while this.fifo_read_data_available() {
+                this.check_errors()?;
+                let rx_data = ral::read_reg!(ral::lpspi, this.lpspi(), RDR);
+                rx_buffer.write(rx_offset, rx_data);
+                rx_offset += 1;
+            }
+            Ok(())
+        };
+
+        for chunk in LpspiIndexChunks::new(size, MAX_FRAME_SIZE_BIT / 8) {
+            self.check_errors()?;
+            ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
+                RXMSK: RXMSK_0,
+                TXMSK: TXMSK_1,
+                FRAMESZ: chunk.bytecount() * 8
+            );
+
+            for tx_offset in chunk.offsets() {
+                while !self.fifo_write_space_available() {
+                    do_receive(self)?;
+                    self.check_errors()?;
+                }
+                ral::write_reg!(ral::lpspi, self.lpspi(), TDR, tx_buffer.read(tx_offset));
+            }
+        }
+
+        while !self.data.lpspi.poll_transfer_complete() {
+            do_receive(self)?;
+        }
+        do_receive(self)?;
+
+        self.check_errors()
     }
 }

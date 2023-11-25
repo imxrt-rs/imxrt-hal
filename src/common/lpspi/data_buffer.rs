@@ -22,16 +22,6 @@ pub trait LpspiDataBuffer {
     /// * `val` - The data to write
     ///
     fn write(&mut self, pos: usize, val: u32);
-
-    fn index_chunks(&self, chunk_size: u32) -> LpspiIndexChunks {
-        let chunk_size = (chunk_size / 4) * 4; // Round down to next divisible by 4
-
-        LpspiIndexChunks {
-            bytecount: self.bytecount(),
-            offset: 0,
-            chunk_size,
-        }
-    }
 }
 
 impl LpspiDataBuffer for [u8] {
@@ -109,6 +99,17 @@ pub struct LpspiIndexChunks {
     bytecount: usize,
     offset: usize,
     chunk_size: u32,
+}
+
+impl LpspiIndexChunks {
+    pub fn new(bytecount: usize, chunk_size: u32) -> Self {
+        let chunk_size = (chunk_size / 4) * 4; // Round down to next divisible by 4
+        Self {
+            bytecount,
+            offset: 0,
+            chunk_size,
+        }
+    }
 }
 
 impl Iterator for LpspiIndexChunks {
@@ -241,7 +242,7 @@ mod tests {
 
     macro_rules! check_chunks {
         ($t:ty, $count:expr, $chunksize:expr, $expected:expr) => {{
-            let chunk_iter = [<$t>::MIN; $count].index_chunks($chunksize);
+            let chunk_iter = LpspiIndexChunks::new([<$t>::MIN; $count].bytecount(), $chunksize);
 
             let actual_owned = chunk_iter
                 .map(|c| (c.bytecount(), c.offsets().collect::<Vec<usize>>()))
@@ -334,7 +335,7 @@ mod tests {
 
         let mut data_out = [0u8; 100];
 
-        let chunks = data.index_chunks(9);
+        let chunks = LpspiIndexChunks::new(data.bytecount(), 9);
 
         let data_collected = chunks
             .flat_map(|chunk| {
@@ -374,7 +375,7 @@ mod tests {
 
         let mut data_out = [0u16; 100];
 
-        let chunks = data.index_chunks(9);
+        let chunks = LpspiIndexChunks::new(data.bytecount(), 9);
 
         let data_collected = chunks
             .flat_map(|chunk| {
@@ -420,7 +421,7 @@ mod tests {
 
         let mut data_out = [0u32; 100];
 
-        let chunks = data.index_chunks(9);
+        let chunks = LpspiIndexChunks::new(data.bytecount(), 9);
 
         let data_collected = chunks
             .flat_map(|chunk| {
