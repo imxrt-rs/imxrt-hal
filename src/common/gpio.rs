@@ -317,6 +317,21 @@ impl<P> eh02::digital::v2::OutputPin for Output<P> {
     }
 }
 
+impl<P> eh1::digital::ErrorType for Output<P> {
+    type Error = core::convert::Infallible;
+}
+
+impl<P> eh1::digital::OutputPin for Output<P> {
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        self.set();
+        Ok(())
+    }
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        self.clear();
+        Ok(())
+    }
+}
+
 #[cfg(feature = "eh02-unproven")]
 impl<P> eh02::digital::v2::StatefulOutputPin for Output<P> {
     fn is_set_high(&self) -> Result<bool, Self::Error> {

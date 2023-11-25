@@ -37,19 +37,19 @@ where
 #[cfg(feature = "async")]
 impl<const N: u8> eh1_async::spi::SpiBus<u32> for Lpspi<'_, N, FullDma> {
     async fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(TransferBuffer::Dual(words, &[]))
     }
 
     async fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(TransferBuffer::Dual(&mut [], words))
     }
 
     async fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(TransferBuffer::Dual(read, write))
     }
 
     async fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        todo!()
+        self.blocking_transfer(TransferBuffer::Single(words))
     }
 
     async fn flush(&mut self) -> Result<(), Self::Error> {

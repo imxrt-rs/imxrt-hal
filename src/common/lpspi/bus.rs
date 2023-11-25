@@ -2,8 +2,8 @@ use eh1::spi::MODE_0;
 
 use super::{
     data_buffer::{LpspiDataBuffer, LpspiIndexChunks, TransferBuffer},
-    dma::{FullDma, NoDma, PartialDma},
-    Channel, Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
+    dma::{FullDma, LpspiDma, NoDma},
+    Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
 };
 use crate::{
     iomuxc::{consts, lpspi},
@@ -34,60 +34,19 @@ impl<'a, const N: u8> Lpspi<'a, N, NoDma> {
     }
 }
 
-impl<'a, const N: u8> Lpspi<'a, N, PartialDma> {
-    /// Create a new LPSPI peripheral with partial DMA support.
-    ///
-    /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
-    /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    pub fn new<SDO, SDI, SCK>(
-        lpspi: ral::lpspi::Instance<N>,
-        pins: Pins<SDO, SDI, SCK>,
-        data_storage: &'a mut Option<LpspiData<N>>,
-        source_clock_hz: u32,
-        dma: Channel,
-    ) -> Self
-    where
-        SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
-        SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
-        SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    {
-        Self::create(lpspi, pins, data_storage, source_clock_hz, PartialDma(dma))
-    }
-}
-
-impl<'a, const N: u8> Lpspi<'a, N, FullDma> {
-    /// Create a new LPSPI peripheral with full DMA support.
-    ///
-    /// This is required for `async` operation.
-    ///
-    /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
-    /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    pub fn new<SDO, SDI, SCK>(
-        lpspi: ral::lpspi::Instance<N>,
-        pins: Pins<SDO, SDI, SCK>,
-        data_storage: &'a mut Option<LpspiData<N>>,
-        source_clock_hz: u32,
-        dma1: Channel,
-        dma2: Channel,
-    ) -> Self
-    where
-        SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
-        SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
-        SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    {
-        Self::create(
-            lpspi,
-            pins,
-            data_storage,
-            source_clock_hz,
-            FullDma(dma1, dma2),
-        )
-    }
-}
-
 impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
     /// The peripheral instance.
     pub const N: u8 = N;
+
+    /// Attaches DMA channels to the device.
+    pub fn with_dma<D: LpspiDma>(self, dma: D) -> Lpspi<'a, N, D> {
+        Lpspi {
+            dma,
+            source_clock_hz: self.source_clock_hz,
+            data: self.data,
+            tx_fifo_size: self.tx_fifo_size,
+        }
+    }
 
     /// Create a new LPSPI peripheral.
     ///

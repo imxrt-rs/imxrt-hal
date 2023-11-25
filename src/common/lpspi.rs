@@ -13,6 +13,7 @@ mod dma;
 mod error;
 mod status_watcher;
 
+pub use dma::{FullDma, NoDma, PartialDma};
 use status_watcher::StatusWatcher;
 
 /// Possible errors when interfacing the LPSPI.

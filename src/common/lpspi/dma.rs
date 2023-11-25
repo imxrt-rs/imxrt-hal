@@ -12,12 +12,12 @@ pub struct NoDma;
 /// but Transfers are only partially
 /// DMA based
 ///
-pub struct PartialDma(pub(crate) Channel);
+pub struct PartialDma(pub Channel);
 
 /// Everything is DMA based.
 ///
 /// This is a requirement for the async interface.
-pub struct FullDma(pub(crate) Channel, pub(crate) Channel);
+pub struct FullDma(pub Channel, pub Channel);
 
 impl LpspiDma for NoDma {
     fn get_one(&mut self) -> Option<&mut Channel> {

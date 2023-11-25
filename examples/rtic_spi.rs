@@ -15,18 +15,20 @@
 #[rtic::app(device = board, peripherals = false, dispatchers = [BOARD_SWTASK0])]
 mod app {
 
+    use embedded_hal_bus::spi::ExclusiveDevice;
+    use hal::lpspi::FullDma;
     use imxrt_hal as hal;
 
-    use hal::lpspi::{LpspiDma, LpspiInterruptHandler};
-
     use eh1::spi::Operation;
-    use eh1_async::spi::SpiDevice;
+    use eh1::spi::SpiDevice;
     use rtic_monotonics::systick::*;
+
+    use board::{SpiBusDma, SpiCsPin, SpiInterruptHandler};
 
     #[local]
     struct Local {
-        spi_device: board::SpiDevice,
-        spi_interrupt_handler: LpspiInterruptHandler,
+        spi_device: ExclusiveDevice<SpiBusDma, SpiCsPin, Systick>,
+        spi_interrupt_handler: SpiInterruptHandler,
     }
 
     #[shared]
@@ -39,7 +41,7 @@ mod app {
         let (
             board::Common { mut dma, .. },
             board::Specifics {
-                spi: (mut spi_bus, spi_cs_pin),
+                spi: (spi_bus, spi_cs_pin),
                 ..
             },
         ) = board::new();
@@ -60,13 +62,11 @@ mod app {
         chan_b.set_disable_on_completion(true);
 
         // Configure SPI
-        let spi_systick = cx.local.spi_systick.insert(Systick);
-        spi_bus.set_delay_source(spi_systick).unwrap();
-        spi_bus.set_dma(LpspiDma::Full(chan_a, chan_b)).unwrap();
-        let spi_interrupt_handler = spi_bus.enable_interrupts().unwrap();
+        let mut spi_bus = spi_bus.with_dma(FullDma(chan_a, chan_b));
+        let spi_interrupt_handler = spi_bus.enable_interrupts();
 
         // Create SPI device
-        let spi_device = spi_bus.device(spi_cs_pin);
+        let spi_device = ExclusiveDevice::new(spi_bus, spi_cs_pin, Systick);
 
         (
             Shared {},
@@ -94,12 +94,11 @@ mod app {
                     Operation::Write(&[0xFFFF]),
                     Operation::DelayUs(50),
                 ])
-                .await
                 .unwrap();
 
             // To demonstrate larger, DMA based transfers
             let mut buf = [0xf5u32; 512];
-            spi_device.transfer_in_place(&mut buf).await.unwrap();
+            spi_device.transfer_in_place(&mut buf).unwrap();
         }
     }
 

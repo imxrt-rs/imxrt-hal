@@ -55,17 +55,21 @@ pub type SpiPins = hal::lpspi::Pins<
 /// Activate the `"spi"` feature to configure the SPI peripheral.
 mod lpspi_types {
     pub type SpiBus = ();
+    pub type SpiBusDma = ();
     pub type SpiCsPin = ();
-    pub type SpiDevice = ();
+    pub type SpiInterruptHandler = ();
 }
 
 #[cfg(feature = "spi")]
 /// SPI peripheral.
 mod lpspi_types {
+    use hal::lpspi::{FullDma, NoDma};
+
     use super::*;
-    pub type SpiBus = hal::lpspi::LpspiBus<4>;
+    pub type SpiBus = hal::lpspi::Lpspi<'static, 4, NoDma>;
+    pub type SpiBusDma = hal::lpspi::Lpspi<'static, 4, FullDma>;
     pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_00>;
-    pub type SpiDevice = hal::lpspi::LpspiDevice<4, iomuxc::gpio_b0::GPIO_B0_00>;
+    pub type SpiInterruptHandler = hal::lpspi::LpspiInterruptHandler<'static, 4>;
 }
 
 pub use lpspi_types::*;
@@ -173,7 +177,9 @@ impl Specifics {
                 unsafe { &mut SPI_DATA },
                 super::LPSPI_CLK_FREQUENCY,
             );
-            spi.set_baud_rate(super::SPI_BAUD_RATE_FREQUENCY);
+            spi.disabled(|bus| {
+                bus.set_clock_hz(super::SPI_BAUD_RATE_FREQUENCY);
+            });
 
             (spi, cs_pin)
         };
