@@ -160,10 +160,13 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
-    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N, DMA>) -> R) -> R {
-        SpiBus::<u8>::flush(self);
+    pub fn disabled<R>(
+        &mut self,
+        func: impl FnOnce(&mut Disabled<N, DMA>) -> R,
+    ) -> Result<R, LpspiError> {
+        SpiBus::<u8>::flush(self)?;
         let mut disabled = Disabled::new(self);
-        func(&mut disabled)
+        Ok(func(&mut disabled))
     }
 
     /// Switches the SPI bus to interrupt based operation.
