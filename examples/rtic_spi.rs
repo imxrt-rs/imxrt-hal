@@ -68,6 +68,8 @@ mod app {
         // Create SPI device
         let spi_device = ExclusiveDevice::new(spi_bus, spi_cs_pin, Systick);
 
+        demo::spawn().unwrap();
+
         (
             Shared {},
             Local {
@@ -78,8 +80,8 @@ mod app {
     }
 
     #[task(priority = 1, local = [spi_device])]
-    async fn app(cx: app::Context) {
-        let app::LocalResources { spi_device, .. } = cx.local;
+    async fn demo(cx: demo::Context) {
+        let demo::LocalResources { spi_device, .. } = cx.local;
 
         loop {
             Systick::delay(1000.millis()).await;

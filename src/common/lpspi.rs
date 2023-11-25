@@ -1,18 +1,29 @@
 //! TODO
 
 pub use eh1::spi::Mode;
+use imxrt_dma::channel::Channel;
 
 use crate::ral;
 
 mod bus;
 mod data_buffer;
 mod disabled;
-mod dma;
 mod error;
 mod status_watcher;
 
-pub use dma::{FullDma, NoDma, PartialDma};
 use status_watcher::StatusWatcher;
+
+/// TODO
+pub enum LpspiDma {
+    /// Everything is CPU driven
+    Disabled,
+    /// Read and Write are DMA based,
+    /// but Transfers are only partially
+    /// DMA based
+    Partial(Channel),
+    /// Everything is DMA based
+    Full(Channel, Channel),
+}
 
 /// Possible errors when interfacing the LPSPI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,16 +56,16 @@ pub struct LpspiData<const N: u8> {
 }
 
 /// TODO
-pub struct Lpspi<'a, const N: u8, DMA> {
-    dma: DMA,
+pub struct Lpspi<'a, const N: u8> {
+    dma: LpspiDma,
     source_clock_hz: u32,
     data: &'a LpspiData<N>,
     tx_fifo_size: u32,
 }
 
 /// An LPSPI peripheral which is temporarily disabled.
-pub struct Disabled<'a, 'b, const N: u8, DMA> {
-    bus: &'a mut Lpspi<'b, N, DMA>,
+pub struct Disabled<'a, 'b, const N: u8> {
+    bus: &'a mut Lpspi<'b, N>,
     men: bool,
 }
 

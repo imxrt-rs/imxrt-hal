@@ -2,13 +2,13 @@ use cassette::Cassette;
 
 use crate::lpspi::data_buffer::{LpspiDataBuffer, TransferBuffer};
 
-use super::{FullDma, Lpspi, LpspiError};
+use super::{Lpspi, LpspiError};
 
-impl<const N: u8, DMA> eh1::spi::ErrorType for Lpspi<'_, N, DMA> {
+impl<const N: u8> eh1::spi::ErrorType for Lpspi<'_, N> {
     type Error = LpspiError;
 }
 
-impl<const N: u8, DMA, T> eh1::spi::SpiBus<T> for Lpspi<'_, N, DMA>
+impl<const N: u8, T> eh1::spi::SpiBus<T> for Lpspi<'_, N>
 where
     T: 'static + Copy,
     [T]: LpspiDataBuffer,
@@ -46,20 +46,24 @@ where
 
 // Async only makes sense for DMA; DMA only supports u32.
 #[cfg(feature = "async")]
-impl<const N: u8> eh1_async::spi::SpiBus<u32> for Lpspi<'_, N, FullDma> {
-    async fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
+impl<const N: u8, T> eh1_async::spi::SpiBus<T> for Lpspi<'_, N>
+where
+    T: 'static + Copy,
+    [T]: LpspiDataBuffer,
+{
+    async fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
         self.transfer(TransferBuffer::Dual(words, &[])).await
     }
 
-    async fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
+    async fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
         self.transfer(TransferBuffer::Dual(&mut [], words)).await
     }
 
-    async fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
+    async fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
         self.transfer(TransferBuffer::Dual(read, write)).await
     }
 
-    async fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
+    async fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
         self.transfer(TransferBuffer::Single(words)).await
     }
 

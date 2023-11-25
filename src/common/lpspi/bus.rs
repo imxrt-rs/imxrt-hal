@@ -2,11 +2,11 @@ use eh1::spi::MODE_0;
 
 use super::{
     data_buffer::{LpspiDataBuffer, TransferBuffer},
-    dma::{FullDma, LpspiDma, NoDma},
     Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
 };
 use crate::{
     iomuxc::{consts, lpspi},
+    lpspi::LpspiDma,
     ral,
 };
 
@@ -14,52 +14,21 @@ mod eh1_impl;
 
 const MAX_FRAME_SIZE_BITS: u32 = 1 << 12;
 
-impl<'a, const N: u8> Lpspi<'a, N, NoDma> {
-    /// Create a new LPSPI peripheral without DMA support.
-    ///
-    /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
-    /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    pub fn new<SDO, SDI, SCK>(
-        lpspi: ral::lpspi::Instance<N>,
-        pins: Pins<SDO, SDI, SCK>,
-        data_storage: &'a mut Option<LpspiData<N>>,
-        source_clock_hz: u32,
-    ) -> Self
-    where
-        SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
-        SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
-        SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    {
-        Self::create(lpspi, pins, data_storage, source_clock_hz, NoDma)
-    }
-}
-
-impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
+impl<'a, const N: u8> Lpspi<'a, N> {
     /// The peripheral instance.
     pub const N: u8 = N;
-
-    /// Attaches DMA channels to the device.
-    pub fn with_dma<D: LpspiDma>(self, dma: D) -> Lpspi<'a, N, D> {
-        Lpspi {
-            dma,
-            source_clock_hz: self.source_clock_hz,
-            data: self.data,
-            tx_fifo_size: self.tx_fifo_size,
-        }
-    }
 
     /// Create a new LPSPI peripheral.
     ///
     /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
-    fn create<SDO, SDI, SCK>(
+    pub fn new<SDO, SDI, SCK>(
         lpspi: ral::lpspi::Instance<N>,
         // TODO: Open question: How to make those pins optional? (For example, WS2812 driver only uses SDO pin)
         //       Or should we simply do a `new_without_pins` again?
         mut pins: Pins<SDO, SDI, SCK>,
         data_storage: &'a mut Option<LpspiData<N>>,
         source_clock_hz: u32,
-        dma: DMA,
     ) -> Self
     where
         SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
@@ -75,7 +44,7 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
 
         let mut this = Self {
             source_clock_hz,
-            dma,
+            dma: LpspiDma::Disabled,
             data: data_storage.insert(data),
             tx_fifo_size,
         };
@@ -119,7 +88,7 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
-    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N, DMA>) -> R) -> R {
+    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
         // Disable DMA and clear fifos
         ral::modify_reg!(ral::lpspi, self.lpspi(), DER, RDDE: RDDE_0, TDDE: TDDE_0);
         self.clear_fifos();
@@ -139,6 +108,15 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         LpspiInterruptHandler {
             status_watcher: &self.data.lpspi,
         }
+    }
+
+    /// Provides the SPI bus with one or two DMA channels.
+    ///
+    /// This drastically increases the efficiency of reads/writes.
+    ///
+    /// For simultaneous read/write, two DMA channels are required.
+    pub fn set_dma(&mut self, dma: LpspiDma) -> LpspiDma {
+        core::mem::replace(&mut self.dma, dma)
     }
 
     // ////////////////// PRIVATE DRIVER STUFF ///////////////////////

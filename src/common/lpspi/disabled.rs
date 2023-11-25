@@ -2,8 +2,8 @@ use eh1::spi::{Phase, Polarity};
 
 use super::{ral, Disabled, Lpspi, Mode};
 
-impl<'a, 'b, const N: u8, DMA> Disabled<'a, 'b, N, DMA> {
-    pub(crate) fn new(bus: &'a mut Lpspi<'b, N, DMA>) -> Self {
+impl<'a, 'b, const N: u8> Disabled<'a, 'b, N> {
+    pub(crate) fn new(bus: &'a mut Lpspi<'b, N>) -> Self {
         let men = ral::read_reg!(ral::lpspi, bus.data.lpspi.instance(), CR, MEN == MEN_1);
         ral::modify_reg!(ral::lpspi, bus.data.lpspi.instance(), CR, MEN: MEN_0);
         Self { bus, men }
@@ -48,7 +48,7 @@ impl<'a, 'b, const N: u8, DMA> Disabled<'a, 'b, N, DMA> {
     }
 }
 
-impl<const N: u8, DMA> Drop for Disabled<'_, '_, N, DMA> {
+impl<const N: u8> Drop for Disabled<'_, '_, N> {
     fn drop(&mut self) {
         ral::modify_reg!(ral::lpspi, self.bus.data.lpspi.instance(), CR, MEN: self.men as u32);
     }
