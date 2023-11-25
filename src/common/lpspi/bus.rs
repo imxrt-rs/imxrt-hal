@@ -1,7 +1,7 @@
 use eh1::spi::MODE_0;
 
 use super::{
-    data_buffer::{LpspiDataBuffer, LpspiIndexChunks, TransferBuffer},
+    data_buffer::{LpspiDataBuffer, TransferBuffer},
     dma::{FullDma, LpspiDma, NoDma},
     Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
 };
@@ -12,7 +12,7 @@ use crate::{
 
 mod eh1_impl;
 
-const MAX_FRAME_SIZE_BIT: u32 = 1 << 12;
+const MAX_FRAME_SIZE_BITS: u32 = 1 << 12;
 
 impl<'a, const N: u8> Lpspi<'a, N, NoDma> {
     /// Create a new LPSPI peripheral without DMA support.
@@ -135,6 +135,7 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
     /// Note that it is the caller's responsibility to connect the interrupt source
     /// to the returned interrupt handler object.
     pub fn enable_interrupts(&mut self) -> LpspiInterruptHandler<'a, N> {
+        self.data.lpspi.enable_interrupts();
         LpspiInterruptHandler {
             status_watcher: &self.data.lpspi,
         }
@@ -177,18 +178,21 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
     }
 
     /// Prepares the device for a blocking transfer
-    fn blocking_pre_transfer(&mut self) -> Result<(), LpspiError> {
+    fn prepare_transfer(&mut self, dma_read: bool, dma_write: bool) -> Result<(), LpspiError> {
         if self.busy() {
             return Err(LpspiError::Busy);
         }
 
-        // Disable DMA
-        ral::modify_reg!(ral::lpspi, self.lpspi(), DER, RDDE: RDDE_0, TDDE: TDDE_0);
+        // Configure DMA
+        ral::modify_reg!(ral::lpspi, self.lpspi(), DER,
+            RDDE: if dma_read {RDDE_1} else {RDDE_0},
+            TDDE: if dma_write {TDDE_1} else {TDDE_0}
+        );
         self.clear_fifos();
 
         self.data.lpspi.clear_transfer_complete();
 
-        Ok(())
+        self.check_errors()
     }
 
     fn fifo_read_data_available(&mut self) -> bool {
@@ -199,59 +203,110 @@ impl<'a, const N: u8, DMA> Lpspi<'a, N, DMA> {
         ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
     }
 
+    async fn wait_for_transfer_complete(&mut self) {
+        self.data.lpspi.wait_transfer_complete().await;
+    }
+
+    async fn transfer_single_word(
+        &mut self,
+        mut buffer: TransferBuffer<'_, u8>,
+    ) -> Result<(), LpspiError> {
+        self.prepare_transfer(false, false)?;
+
+        assert!(buffer.max_len() < 4);
+
+        ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
+            RXMSK: RXMSK_0,
+            TXMSK: TXMSK_1,
+            FRAMESZ: buffer.max_len() as u32 * 8
+        );
+
+        let tx_buffer = buffer.tx_buffer();
+        let tx_data = u32::from_le_bytes([
+            tx_buffer.get(0).copied().unwrap_or_default(),
+            tx_buffer.get(1).copied().unwrap_or_default(),
+            tx_buffer.get(2).copied().unwrap_or_default(),
+            tx_buffer.get(3).copied().unwrap_or_default(),
+        ]);
+        ral::write_reg!(ral::lpspi, self.lpspi(), TDR, tx_data);
+
+        self.check_errors()?;
+        self.wait_for_transfer_complete().await;
+
+        if !self.fifo_read_data_available() {
+            return Err(LpspiError::ReceiveFifo);
+        }
+
+        let rx_data = ral::read_reg!(ral::lpspi, self.lpspi(), RDR);
+        let [r0, r1, r2, r3] = rx_data.to_le_bytes();
+        let rx_buffer = buffer.rx_buffer();
+        rx_buffer.get_mut(0).map(|x| *x = r0);
+        rx_buffer.get_mut(1).map(|x| *x = r1);
+        rx_buffer.get_mut(2).map(|x| *x = r2);
+        rx_buffer.get_mut(3).map(|x| *x = r3);
+
+        self.check_errors()
+    }
+
     /// Read + write into separate buffers
-    fn blocking_transfer<T>(&mut self, mut buffers: TransferBuffer<T>) -> Result<(), LpspiError>
+    async fn transfer<T>(&mut self, mut buffers: TransferBuffer<'_, T>) -> Result<(), LpspiError>
     where
         [T]: LpspiDataBuffer,
     {
-        self.blocking_pre_transfer()?;
+        let (data_pre, data_main, data_post) = buffers.dma_align();
 
-        let size = buffers
-            .tx_buffer()
-            .bytecount()
-            .max(buffers.rx_buffer().bytecount());
-        if size < 1 {
-            return Err(LpspiError::NoData);
+        if data_pre.max_len() > 0 {
+            self.transfer_single_word(data_pre).await?;
         }
 
-        let mut rx_offset = 0;
-        let mut do_receive = |this: &mut Self, buffer: &mut [T]| -> Result<(), LpspiError> {
-            while this.fifo_read_data_available() {
-                this.check_errors()?;
-                let rx_data = ral::read_reg!(ral::lpspi, this.lpspi(), RDR);
-                buffer.write(rx_offset, rx_data);
-                rx_offset += 1;
-            }
-            Ok(())
-        };
-
-        for chunk in LpspiIndexChunks::new(size, MAX_FRAME_SIZE_BIT / 8) {
-            self.check_errors()?;
-            ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
-                RXMSK: RXMSK_0,
-                TXMSK: TXMSK_1,
-                FRAMESZ: chunk.bytecount() * 8
-            );
-
-            for tx_offset in chunk.offsets() {
-                while !self.fifo_write_space_available() {
-                    do_receive(self, buffers.rx_buffer())?;
-                    self.check_errors()?;
-                }
-                ral::write_reg!(
-                    ral::lpspi,
-                    self.lpspi(),
-                    TDR,
-                    buffers.tx_buffer().read(tx_offset)
-                );
-            }
+        if data_main.max_len() > 0 {
+            // TODO: main data
         }
 
-        while !self.data.lpspi.poll_transfer_complete() {
-            do_receive(self, buffers.rx_buffer())?;
+        if data_post.max_len() > 0 {
+            self.transfer_single_word(data_post).await?;
         }
-        do_receive(self, buffers.rx_buffer())?;
 
-        self.check_errors()
+        Ok(())
+
+        // let mut rx_offset = 0;
+        // let mut do_receive = |this: &mut Self, buffer: &mut [T]| -> Result<(), LpspiError> {
+        //     while this.fifo_read_data_available() {
+        //         this.check_errors()?;
+        //         let rx_data = ral::read_reg!(ral::lpspi, this.lpspi(), RDR);
+        //         buffer.write(rx_offset, rx_data);
+        //         rx_offset += 1;
+        //     }
+        //     Ok(())
+        // };
+
+        // for chunk in LpspiIndexChunks::new(size, MAX_FRAME_SIZE_BIT / 8) {
+        //     self.check_errors()?;
+        //     ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
+        //         RXMSK: RXMSK_0,
+        //         TXMSK: TXMSK_1,
+        //         FRAMESZ: chunk.bytecount() * 8
+        //     );
+
+        //     for tx_offset in chunk.offsets() {
+        //         while !self.fifo_write_space_available() {
+        //             do_receive(self, buffers.rx_buffer())?;
+        //             self.check_errors()?;
+        //         }
+        //         ral::write_reg!(
+        //             ral::lpspi,
+        //             self.lpspi(),
+        //             TDR,
+        //             buffers.tx_buffer().read(tx_offset)
+        //         );
+        //     }
+        // }
+
+        // while !self.data.lpspi.poll_transfer_complete() {
+        //     do_receive(self, buffers.rx_buffer())?;
+        // }
+        // do_receive(self, buffers.rx_buffer())?;
+
+        // self.check_errors()
     }
 }

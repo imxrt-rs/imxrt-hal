@@ -56,6 +56,9 @@ version = "1.0.2"
 [dependencies.cortex-m]
 version = "0.7"
 
+[dependencies.cassette]
+version = "0.2.3"
+
 #######################
 # imxrt-rs dependencies
 #######################

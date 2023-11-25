@@ -2,8 +2,6 @@
 
 pub use eh1::spi::Mode;
 
-use imxrt_dma::channel::Channel;
-
 use crate::ral;
 
 mod bus;
@@ -25,8 +23,6 @@ pub enum LpspiError {
     TransmitFifo,
     /// Bus is busy at the start of a transfer.
     Busy,
-    /// Caller provided no data.
-    NoData,
 }
 
 /// TODO

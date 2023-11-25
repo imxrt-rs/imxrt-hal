@@ -1,3 +1,5 @@
+use cassette::Cassette;
+
 use crate::lpspi::data_buffer::{LpspiDataBuffer, TransferBuffer};
 
 use super::{FullDma, Lpspi, LpspiError};
@@ -12,19 +14,28 @@ where
     [T]: LpspiDataBuffer,
 {
     fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Dual(words, &[]))
+        Cassette::new(core::pin::pin!(
+            self.transfer(TransferBuffer::Dual(words, &[])),
+        ))
+        .block_on()
     }
 
     fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Dual(&mut [], words))
+        Cassette::new(core::pin::pin!(
+            self.transfer(TransferBuffer::Dual(&mut [], words))
+        ))
+        .block_on()
     }
 
     fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Dual(read, write))
+        Cassette::new(core::pin::pin!(
+            self.transfer(TransferBuffer::Dual(read, write))
+        ))
+        .block_on()
     }
 
     fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Single(words))
+        Cassette::new(core::pin::pin!(self.transfer(TransferBuffer::Single(words)))).block_on()
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
@@ -37,19 +48,19 @@ where
 #[cfg(feature = "async")]
 impl<const N: u8> eh1_async::spi::SpiBus<u32> for Lpspi<'_, N, FullDma> {
     async fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Dual(words, &[]))
+        self.transfer(TransferBuffer::Dual(words, &[])).await
     }
 
     async fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Dual(&mut [], words))
+        self.transfer(TransferBuffer::Dual(&mut [], words)).await
     }
 
     async fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Dual(read, write))
+        self.transfer(TransferBuffer::Dual(read, write)).await
     }
 
     async fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
-        self.blocking_transfer(TransferBuffer::Single(words))
+        self.transfer(TransferBuffer::Single(words)).await
     }
 
     async fn flush(&mut self) -> Result<(), Self::Error> {

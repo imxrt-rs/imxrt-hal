@@ -8,7 +8,6 @@ impl Error for LpspiError {
             LpspiError::Busy => ErrorKind::Other,
             LpspiError::ReceiveFifo => ErrorKind::Overrun,
             LpspiError::TransmitFifo => ErrorKind::Other,
-            LpspiError::NoData => ErrorKind::Other,
         }
     }
 }

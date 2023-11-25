@@ -12,6 +12,7 @@ use super::ral;
 struct StatusWatcherInner<const N: u8> {
     transfer_complete_happened: bool,
     transfer_complete_waker: Option<Waker>,
+    interrupts_enabled: bool,
 }
 
 pub(crate) struct StatusWatcher<const N: u8> {
@@ -40,9 +41,18 @@ impl<const N: u8> StatusWatcher<N> {
             inner: Mutex::new(RefCell::new(StatusWatcherInner {
                 transfer_complete_happened: false,
                 transfer_complete_waker: None,
+                interrupts_enabled: false,
             })),
             lpspi,
         }
+    }
+
+    pub fn enable_interrupts(&self) {
+        interrupt::free(|cs| {
+            let inner = self.inner.borrow(cs);
+            let mut inner = inner.borrow_mut();
+            inner.interrupts_enabled = true;
+        });
     }
 
     #[inline]
@@ -70,9 +80,9 @@ impl<const N: u8> StatusWatcher<N> {
         });
     }
 
-    pub fn poll_transfer_complete(&self) -> bool {
-        self.with_check_and_reset(|inner| inner.transfer_complete_happened)
-    }
+    // pub fn poll_transfer_complete(&self) -> bool {
+    //     self.with_check_and_reset(|inner| inner.transfer_complete_happened)
+    // }
 
     pub fn wait_transfer_complete(&self) -> WaitTransferComplete<N> {
         WaitTransferComplete(self)
@@ -114,6 +124,13 @@ impl<const N: u8> Future for WaitTransferComplete<'_, N> {
                             // a more appropriate primitive that can store multiple wakers.
                             old_waker.wake()
                         }
+                    }
+                }
+
+                // If interrupts are disabled, notify right away to provoke busy-waiting
+                if !inner.interrupts_enabled {
+                    if let Some(waker) = inner.transfer_complete_waker.take() {
+                        waker.wake();
                     }
                 }
 
