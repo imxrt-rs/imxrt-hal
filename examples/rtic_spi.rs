@@ -16,18 +16,18 @@
 mod app {
 
     use embedded_hal_bus::spi::ExclusiveDevice;
-    use hal::lpspi::FullDma;
     use imxrt_hal as hal;
 
     use eh1::spi::Operation;
     use eh1::spi::SpiDevice;
+    use hal::lpspi::LpspiDma;
     use rtic_monotonics::systick::*;
 
-    use board::{SpiBusDma, SpiCsPin, SpiInterruptHandler};
+    use board::{SpiBus, SpiCsPin, SpiInterruptHandler};
 
     #[local]
     struct Local {
-        spi_device: ExclusiveDevice<SpiBusDma, SpiCsPin, Systick>,
+        spi_device: ExclusiveDevice<SpiBus, SpiCsPin, Systick>,
         spi_interrupt_handler: SpiInterruptHandler,
     }
 
@@ -41,7 +41,7 @@ mod app {
         let (
             board::Common { mut dma, .. },
             board::Specifics {
-                spi: (spi_bus, spi_cs_pin),
+                spi: (mut spi_bus, spi_cs_pin),
                 ..
             },
         ) = board::new();
@@ -62,7 +62,7 @@ mod app {
         chan_b.set_disable_on_completion(true);
 
         // Configure SPI
-        let mut spi_bus = spi_bus.with_dma(FullDma(chan_a, chan_b));
+        spi_bus.set_dma(LpspiDma::Full(chan_a, chan_b));
         let spi_interrupt_handler = spi_bus.enable_interrupts();
 
         // Create SPI device

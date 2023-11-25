@@ -192,11 +192,12 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         self.prepare_transfer(false, false)?;
 
         assert!(buffer.max_len() < 4);
+        assert!(buffer.max_len() >= 1);
 
         ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
             RXMSK: RXMSK_0,
             TXMSK: TXMSK_1,
-            FRAMESZ: buffer.max_len() as u32 * 8
+            FRAMESZ: buffer.max_len() as u32 * 8 - 1
         );
 
         let tx_buffer = buffer.tx_buffer();
@@ -263,7 +264,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         //     ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
         //         RXMSK: RXMSK_0,
         //         TXMSK: TXMSK_1,
-        //         FRAMESZ: chunk.bytecount() * 8
+        //         FRAMESZ: chunk.bytecount() * 8 - 1
         //     );
 
         //     for tx_offset in chunk.offsets() {

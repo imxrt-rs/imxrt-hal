@@ -55,7 +55,6 @@ pub type SpiPins = hal::lpspi::Pins<
 /// Activate the `"spi"` feature to configure the SPI peripheral.
 mod lpspi_types {
     pub type SpiBus = ();
-    pub type SpiBusDma = ();
     pub type SpiCsPin = ();
     pub type SpiInterruptHandler = ();
 }
@@ -63,11 +62,9 @@ mod lpspi_types {
 #[cfg(feature = "spi")]
 /// SPI peripheral.
 mod lpspi_types {
-    use hal::lpspi::{FullDma, NoDma};
 
     use super::*;
-    pub type SpiBus = hal::lpspi::Lpspi<'static, 4, NoDma>;
-    pub type SpiBusDma = hal::lpspi::Lpspi<'static, 4, FullDma>;
+    pub type SpiBus = hal::lpspi::Lpspi<'static, 4>;
     pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_00>;
     pub type SpiInterruptHandler = hal::lpspi::LpspiInterruptHandler<'static, 4>;
 }
