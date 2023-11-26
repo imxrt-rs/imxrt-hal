@@ -263,3 +263,36 @@ where
     // LPSPI6 -> CLOCK_ROOT48
     configure_clock_root(N as usize + 42, &lpspi_selection::<N>(run_mode), ccm);
 }
+
+pub const ENET1_FREQUENCY: u32 = 50_000_000;
+
+/// Configure clocks for all-things ETH.
+///
+/// When this call returns, the ENET clock frequencies matches the value returned
+/// by [`enet_frequency`].
+pub fn configure_enet(run_mode: RunMode, ccm: &mut CCM) {
+    const ENET1_ROOT_CLOCK_SOURCE: ClockSource = ClockSource::RcOsc400MHz;
+    let enet1_divider: u32 = ENET1_ROOT_CLOCK_SOURCE.frequency(run_mode) / ENET1_FREQUENCY;
+    configure_clock_root(
+        51,
+        &Selection {
+            mux: 0b010,
+            source: ENET1_ROOT_CLOCK_SOURCE,
+            divider: enet1_divider,
+        },
+        ccm,
+    );
+
+    // All other ENET clocks are at 24MHz.
+    for offset in 52..=57 {
+        configure_clock_root(
+            offset,
+            &Selection {
+                mux: 0b001,
+                source: ClockSource::XtalOsc24MHz,
+                divider: 1,
+            },
+            ccm,
+        );
+    }
+}
