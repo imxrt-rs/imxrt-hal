@@ -11,6 +11,13 @@ impl<'a, 'b, const N: u8> Disabled<'a, 'b, N> {
     }
 
     /// Set the LPSPI clock speed (Hz).
+    ///
+    /// The maximum possible clock speed is `source_clock_hz / 6`.
+    /// If `spi_clk_hz` is larger than this, it will
+    /// be clamped to that value.
+    ///
+    /// If `spi_clk_hz` cannot divide `source_clock_hz` evenly,
+    /// then `spi_clk_hz` will be rounded down.
     pub fn set_clock_hz(&mut self, spi_clock_hz: u32) {
         // Round up, so we always get a resulting SPI clock that is
         // equal or less than the requested frequency.
@@ -20,7 +27,8 @@ impl<'a, 'b, const N: u8> Disabled<'a, 'b, N> {
         .unwrap();
 
         // Make sure SCKDIV is between 0 and 255
-        // For some reason SCK starts to misbehave if half_div is less than 3
+        // For some reason SCK starts to misbehave in between frames
+        // if half_div is less than 3.
         let half_div = half_div.clamp(3, 128);
         // Because half_div is in range [3,128], sckdiv is in range [4, 254].
         let sckdiv = 2 * (half_div - 1);
