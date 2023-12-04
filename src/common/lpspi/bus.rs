@@ -35,8 +35,10 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
         SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
     {
-        let tx_fifo_size_exp = ral::read_reg!(ral::lpspi, lpspi, PARAM, TXFIFO);
+        let (tx_fifo_size_exp, rx_fifo_size_exp) =
+            ral::read_reg!(ral::lpspi, lpspi, PARAM, TXFIFO, RXFIFO);
         let tx_fifo_size = 1 << tx_fifo_size_exp;
+        let rx_fifo_size = 1 << rx_fifo_size_exp;
 
         let data = LpspiData {
             lpspi: StatusWatcher::new(lpspi),
@@ -47,11 +49,16 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             dma: LpspiDma::Disabled,
             data: data_storage.insert(data),
             tx_fifo_size,
+            rx_fifo_size,
+            mode: MODE_0,
         };
 
-        // Reset, enable master mode
-        ral::write_reg!(ral::lpspi, this.lpspi(), CR, RST: RST_1);
-        ral::write_reg!(ral::lpspi, this.lpspi(), CR, RST: RST_0);
+        // Reset and disable
+        ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0, RST: RST_1);
+        while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
+        ral::modify_reg!(ral::lpspi, lpspi, CR, RST: RST_0, RTF: RTF_1, RRF: RRF_1);
+
+        // Configure master mode
         ral::write_reg!(
             ral::lpspi,
             this.data.lpspi.instance(),
@@ -63,7 +70,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         // Set sane default parameters
         this.disabled(|bus| {
             bus.set_clock_hz(1_000_000);
-            bus.set_mode(MODE_0)
         });
 
         // Configure pins
@@ -194,10 +200,15 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         assert!(buffer.max_len() < 4);
         assert!(buffer.max_len() >= 1);
 
+        let framesz = buffer.max_len() as u32 * 8 - 1;
+
         ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
             RXMSK: RXMSK_0,
             TXMSK: TXMSK_1,
-            FRAMESZ: buffer.max_len() as u32 * 8 - 1
+            PRESCALE: 0b110,
+            BYSW: BYSW_1,
+            FRAMESZ: 8
+            //FRAMESZ: 2
         );
 
         let tx_buffer = buffer.tx_buffer();
@@ -233,7 +244,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         [T]: LpspiDataBuffer,
     {
         let (data_pre, data_main, data_post) = buffers.dma_align();
-
         if data_pre.max_len() > 0 {
             self.transfer_single_word(data_pre).await?;
         }

@@ -61,6 +61,8 @@ pub struct Lpspi<'a, const N: u8> {
     source_clock_hz: u32,
     data: &'a LpspiData<N>,
     tx_fifo_size: u32,
+    rx_fifo_size: u32,
+    mode: Mode,
 }
 
 /// An LPSPI peripheral which is temporarily disabled.

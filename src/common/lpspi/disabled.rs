@@ -6,50 +6,40 @@ impl<'a, 'b, const N: u8> Disabled<'a, 'b, N> {
     pub(crate) fn new(bus: &'a mut Lpspi<'b, N>) -> Self {
         let men = ral::read_reg!(ral::lpspi, bus.data.lpspi.instance(), CR, MEN == MEN_1);
         ral::modify_reg!(ral::lpspi, bus.data.lpspi.instance(), CR, MEN: MEN_0);
+        while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
         Self { bus, men }
-    }
-
-    /// Set the SPI mode for the peripheral
-    pub fn set_mode(&mut self, mode: Mode) {
-        // This could probably be changed when we're not disabled.
-        // However, there's rules about when you can read TCR.
-        // Specifically, reading TCR while it's being loaded from
-        // the transmit FIFO could result in an incorrect reading.
-        // Only permitting this when we're disabled might help
-        // us avoid something troublesome.
-        ral::modify_reg!(
-            ral::lpspi,
-            self.bus.data.lpspi.instance(),
-            TCR,
-            CPOL: ((mode.polarity == Polarity::IdleHigh) as u32),
-            CPHA: ((mode.phase == Phase::CaptureOnSecondTransition) as u32)
-        );
     }
 
     /// Set the LPSPI clock speed (Hz).
     pub fn set_clock_hz(&mut self, spi_clock_hz: u32) {
         // Round up, so we always get a resulting SPI clock that is
         // equal or less than the requested frequency.
-        let div = 1 + (self.bus.source_clock_hz - 1) / spi_clock_hz;
+        let half_div = u32::try_from(
+            1 + u64::from(self.bus.source_clock_hz - 1) / (u64::from(spi_clock_hz) * 2),
+        )
+        .unwrap();
 
-        // 0 <= div <= 255, and the true coefficient is really div + 2
-        let div = div.saturating_sub(2).clamp(0, 255);
-        ral::write_reg!(
-            ral::lpspi,
-            self.bus.data.lpspi.instance(),
-            CCR,
-            SCKDIV: div,
-            // These all don't matter, because we do not use a CS pin.
-            // embedded-hal controls the CS pins through `OutputPin`.
-            DBT: 0,
-            SCKPCS: 0,
-            PCSSCK: 0
+        // Make sure SCKDIV is between 0 and 255
+        // For some reason SCK starts to misbehave if half_div is less than 3
+        let half_div = half_div.clamp(3, 128);
+        // Because half_div is in range [3,128], sckdiv is in range [4, 254].
+        let sckdiv = 2 * (half_div - 1);
+
+        ral::write_reg!(ral::lpspi, self.bus.data.lpspi.instance(), CCR,
+            // Delay between two clock transitions of two consecutive transfers
+            // is exactly sckdiv/2, which causes the transfer to be seamless.
+            DBT: half_div - 1,
+            // Add one sckdiv/2 setup and hold time before and after the transfer,
+            // to make sure the signal is stable at sample time
+            PCSSCK: half_div - 1,
+            SCKPCS: half_div - 1,
+            SCKDIV: sckdiv
         );
     }
 }
 
 impl<const N: u8> Drop for Disabled<'_, '_, N> {
     fn drop(&mut self) {
-        ral::modify_reg!(ral::lpspi, self.bus.data.lpspi.instance(), CR, MEN: self.men as u32);
+        ral::modify_reg!(ral::lpspi, self.bus.data.lpspi.instance(), CR, MEN: if self.men {MEN_1} else {MEN_0});
     }
 }
