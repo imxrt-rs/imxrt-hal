@@ -20,8 +20,18 @@ pub(crate) enum SingleDirectionActions {
     Write(WriteActions),
 }
 
+impl SingleDirectionActions {
+    pub(crate) fn transfer_direction(&self) -> TransferDirection {
+        match self {
+            SingleDirectionActions::Read(_) => TransferDirection::Read,
+            SingleDirectionActions::Write(_) => TransferDirection::Write,
+        }
+    }
+}
+
 /// The order in which the bytes need
 /// to be transferred on the bus
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub(crate) enum ByteOrder {
     /// Bytes need to be transferred in the order
     /// that they are in
@@ -32,16 +42,29 @@ pub(crate) enum ByteOrder {
     HalfWordReversed,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub(crate) enum TransferDirection {
     Read,
     Write,
 }
 
 pub(crate) struct ActionSequence<'a> {
-    phase1: Option<DualDirectionActions>,
-    phase2: Option<SingleDirectionActions>,
-    byteorder: ByteOrder,
+    pub(crate) phase1: Option<DualDirectionActions>,
+    pub(crate) phase2: Option<SingleDirectionActions>,
+    pub(crate) byteorder: ByteOrder,
     _lifetimes: PhantomData<&'a [u8]>,
+}
+
+impl ActionSequence<'_> {
+    pub(crate) fn contains_read_actions(&self) -> bool {
+        if self.phase1.is_some() {
+            true
+        } else if let Some(phase2) = &self.phase2 {
+            phase2.transfer_direction() == TransferDirection::Read
+        } else {
+            false
+        }
+    }
 }
 
 pub trait BufferType: Copy + 'static {

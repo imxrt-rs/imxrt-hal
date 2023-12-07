@@ -138,11 +138,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         ral::modify_reg!(ral::lpspi, self.lpspi(), CR, RTF: RTF_1, RRF: RRF_1);
     }
 
-    /// Returns whether or not the busy flag is set.
-    fn busy(&self) -> bool {
-        ral::read_reg!(ral::lpspi, self.lpspi(), SR, MBF == MBF_1)
-    }
-
     /// Returns errors, if any there are any.
     fn check_errors(&mut self) -> Result<(), LpspiError> {
         let (rx_error, tx_error) = ral::read_reg!(ral::lpspi, self.lpspi(), SR, REF, TEF);
@@ -177,73 +172,75 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
     }
 
-    async fn wait_for_transfer_complete(&mut self) {
-        self.data.lpspi.wait_transfer_complete().await;
+    async unsafe fn write_single_word(
+        &mut self,
+        write_data: Option<*const u8>,
+        read: bool,
+        len: usize,
+    ) {
+        if len == 0 {
+            return;
+        }
+        assert!(len <= 4);
+
+        // ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
+        //     RXMSK: RXMSK_0,
+        //     TXMSK: TXMSK_0,
+        //     PRESCALE: PRESCALE_7,
+        //     FRAMESZ: len as u32 * 8 - 1
+        // );
+
+        // let tx_buffer = buffer.tx_buffer();
+        // let tx_data = u32::from_le_bytes([
+        //     tx_buffer.get(0).copied().unwrap_or_default(),
+        //     tx_buffer.get(1).copied().unwrap_or_default(),
+        //     tx_buffer.get(2).copied().unwrap_or_default(),
+        //     tx_buffer.get(3).copied().unwrap_or_default(),
+        // ]);
+        // ral::write_reg!(ral::lpspi, self.lpspi(), TDR, tx_data);
+
+        // self.wait_for_transfer_complete().await;
+
+        // if !self.fifo_read_data_available() {
+        //     return Err(LpspiError::ReceiveFifo);
+        // }
+
+        // let rx_data = ral::read_reg!(ral::lpspi, self.lpspi(), RDR);
+        // let [r0, r1, r2, r3] = rx_data.to_le_bytes();
+        // let rx_buffer = buffer.rx_buffer();
+        // rx_buffer.get_mut(0).map(|x| *x = r0);
+        // rx_buffer.get_mut(1).map(|x| *x = r1);
+        // rx_buffer.get_mut(2).map(|x| *x = r2);
+        // rx_buffer.get_mut(3).map(|x| *x = r3);
     }
 
-    // async fn transfer_single_word(
-    //     &mut self,
-    //     mut buffer: ,
-    // ) -> Result<(), LpspiError> {
-    //     assert!(buffer.max_len() < 4);
-    //     assert!(buffer.max_len() >= 1);
-
-    //     ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
-    //         RXMSK: RXMSK_0,
-    //         TXMSK: TXMSK_0,
-    //         PRESCALE: PRESCALE_7,
-    //         FRAMESZ: buffer.max_len() as u32 * 8 - 1
-    //     );
-
-    //     let tx_buffer = buffer.tx_buffer();
-    //     let tx_data = u32::from_le_bytes([
-    //         tx_buffer.get(0).copied().unwrap_or_default(),
-    //         tx_buffer.get(1).copied().unwrap_or_default(),
-    //         tx_buffer.get(2).copied().unwrap_or_default(),
-    //         tx_buffer.get(3).copied().unwrap_or_default(),
-    //     ]);
-    //     ral::write_reg!(ral::lpspi, self.lpspi(), TDR, tx_data);
-
-    //     self.check_errors()?;
-    //     self.wait_for_transfer_complete().await;
-
-    //     if !self.fifo_read_data_available() {
-    //         return Err(LpspiError::ReceiveFifo);
-    //     }
-
-    //     let rx_data = ral::read_reg!(ral::lpspi, self.lpspi(), RDR);
-    //     let [r0, r1, r2, r3] = rx_data.to_le_bytes();
-    //     let rx_buffer = buffer.rx_buffer();
-    //     rx_buffer.get_mut(0).map(|x| *x = r0);
-    //     rx_buffer.get_mut(1).map(|x| *x = r1);
-    //     rx_buffer.get_mut(2).map(|x| *x = r2);
-    //     rx_buffer.get_mut(3).map(|x| *x = r3);
-
-    //     self.check_errors()
-    // }
-
-    /// Read + write into separate buffers
-    async fn transfer(&mut self, mut buffers: ActionSequence<'_>) -> Result<(), LpspiError> {
-        if self.busy() {
-            return Err(LpspiError::Busy);
-        }
+    /// Perform a sequence of transfer actions
+    async fn transfer(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
+        self.flush().await?;
 
         self.clear_fifos();
-        self.check_errors()?;
 
-        let read_task = async {};
+        // TODO: status_watcher based error checking task
+        let read_task = async { assert!(!sequence.contains_read_actions()) };
 
         let write_task = async {};
 
         Ok(())
     }
 
+    /// Returns whether or not the busy flag is set.
+    fn busy(&self) -> bool {
+        ral::read_reg!(ral::lpspi, self.lpspi(), SR, MBF == MBF_1)
+    }
+
+    /// Waits for the device to become idle.
     async fn flush(&mut self) -> Result<(), LpspiError> {
+        // TODO: status_watcher based error checking task
         self.data.lpspi.clear_transfer_complete();
-        while ral::read_reg!(ral::lpspi, self.lpspi(), SR, MBF == MBF_1) {
+        while self.busy() {
             self.data.lpspi.wait_transfer_complete().await;
             self.data.lpspi.clear_transfer_complete();
         }
-        self.check_errors()
+        Ok(())
     }
 }
