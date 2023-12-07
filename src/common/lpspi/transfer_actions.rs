@@ -44,7 +44,7 @@ pub(crate) struct ActionSequence<'a> {
     _lifetimes: PhantomData<&'a [u8]>,
 }
 
-pub(crate) trait BufferType: Copy + 'static {
+pub trait BufferType: Copy + 'static {
     fn byte_order() -> ByteOrder;
 }
 
