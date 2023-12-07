@@ -22,9 +22,7 @@ pub(crate) struct StatusWatcher<const N: u8> {
 
 impl<const N: u8> StatusWatcherInner<N> {
     pub fn check_and_reset(&mut self, lpspi: &ral::lpspi::Instance<N>) {
-        let transfer_complete_set = ral::read_reg!(ral::lpspi, lpspi, SR, TCF == TCF_1);
-
-        if transfer_complete_set {
+        if ral::read_reg!(ral::lpspi, lpspi, SR, TCF == TCF_1) {
             ral::write_reg!(ral::lpspi, lpspi, SR, TCF: TCF_1);
 
             self.transfer_complete_happened = true;

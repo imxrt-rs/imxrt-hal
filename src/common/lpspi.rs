@@ -6,10 +6,10 @@ use imxrt_dma::channel::Channel;
 use crate::ral;
 
 mod bus;
-mod data_buffer;
 mod disabled;
 mod error;
 mod status_watcher;
+mod transfer_actions;
 
 use status_watcher::StatusWatcher;
 
@@ -81,3 +81,9 @@ impl<const N: u8> LpspiInterruptHandler<'_, N> {
         self.status_watcher.on_interrupt();
     }
 }
+
+/// A data word for LPSPI
+pub trait LpspiWord: transfer_actions::BufferType {}
+impl LpspiWord for u8 {}
+impl LpspiWord for u16 {}
+impl LpspiWord for u32 {}
