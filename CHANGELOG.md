@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+**BREAKING** Update `imxrt-usbd` to 0.3. Users are required to update to
+`usb-device` 0.3 and its compatible dependencies.
+
 ## [0.5.6] 2024-07-05
 
 - Add LPSPI low-level clock configuration APIs.

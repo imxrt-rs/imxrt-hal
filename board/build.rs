@@ -60,6 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         dtcm: 1,
                     })
                     .uninit(Memory::Dtcm)
+                    .stack_size(16 * 1024)
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1010evk\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1010\"");

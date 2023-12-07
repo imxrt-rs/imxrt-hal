@@ -105,9 +105,11 @@ mod app {
         let bus = ctx.local.bus.insert(UsbBusAllocator::new(bus));
         let class = SerialPort::new(bus);
         let device = UsbDeviceBuilder::new(bus, VID_PID)
-            .product(PRODUCT)
+            .strings(&[usb_device::device::StringDescriptors::default().product(PRODUCT)])
+            .unwrap()
             .device_class(usbd_serial::USB_CLASS_CDC)
             .max_packet_size_0(64)
+            .unwrap()
             .build();
 
         (

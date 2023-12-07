@@ -108,9 +108,11 @@ mod app {
         // device, bInterval is computed differently.
         let class = HIDClass::new(bus, KeyboardReport::desc(), 4);
         let device = UsbDeviceBuilder::new(bus, VID_PID)
-            .product(PRODUCT)
+            .strings(&[usb_device::device::StringDescriptors::default().product(PRODUCT)])
+            .unwrap()
             .device_class(usbd_serial::USB_CLASS_CDC)
             .max_packet_size_0(64)
+            .unwrap()
             .build();
 
         (

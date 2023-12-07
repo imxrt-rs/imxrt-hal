@@ -97,7 +97,11 @@ mod app {
 
         let bus = ctx.local.bus.insert(UsbBusAllocator::new(bus));
         let class = TestClass::new(bus);
-        let device = class.make_device_builder(bus).max_packet_size_0(64).build();
+        let device = class
+            .make_device_builder(bus)
+            .max_packet_size_0(64)
+            .unwrap()
+            .build();
 
         (
             Shared {},

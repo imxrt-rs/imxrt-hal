@@ -23,11 +23,11 @@ version = "0.4"
 
 [dependencies.usb-device]
 optional = true
-version = "0.2"
+version = "0.3"
 
 [dependencies.usbd-serial]
 optional = true
-version = "0.1"
+version = "0.2"
 
 [dependencies.imxrt-hal]
 optional = true

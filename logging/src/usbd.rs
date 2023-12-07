@@ -195,9 +195,11 @@ pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
 
     {
         let device = usb_device::device::UsbDeviceBuilder::new(bus, VID_PID)
-            .product(PRODUCT)
+            .strings(&[usb_device::device::StringDescriptors::default().product(PRODUCT)])
+            .unwrap()
             .device_class(usbd_serial::USB_CLASS_CDC)
             .max_packet_size_0(EP0_CONTROL_PACKET_SIZE as u8)
+            .unwrap()
             .build();
 
         // Not sure which endpoints the CDC ACM class will pick,

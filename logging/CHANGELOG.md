@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+**BREAKING** Integrate breaking dependencies for the USB back-end:
+
+- `imxrt-usbd` 0.3
+- `usb-device` 0.3
+- `usbd-serial` 0.2
+
 ## [0.1.2] 2024-06-06
 
 Increase the USB bulk max packet size (MPS) from 64 to 512. This is required
