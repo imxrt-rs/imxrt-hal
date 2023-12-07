@@ -1,6 +1,4 @@
-use eh1::spi::{Phase, Polarity};
-
-use super::{ral, Disabled, Lpspi, Mode};
+use super::{ral, Disabled, Lpspi};
 
 impl<'a, 'b, const N: u8> Disabled<'a, 'b, N> {
     pub(crate) fn new(bus: &'a mut Lpspi<'b, N>) -> Self {
