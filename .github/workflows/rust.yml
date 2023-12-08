@@ -8,6 +8,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
+      with:
         components: rustfmt
     - name: Check formatting
       run: cargo +stable fmt --all -- --check
@@ -32,6 +33,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
+      with:
         components: clippy
     - uses: actions-rs/clippy-check@v1
       name: Lint imxrt-hal
@@ -57,6 +59,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
+      with:
         components: clippy
     - uses: actions-rs/clippy-check@v1
       name: Lint imxrt-log
@@ -94,6 +97,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@nightly
+      with:
         components: clippy
         targets: thumbv7em-none-eabihf
     - name: Lint board and examples
