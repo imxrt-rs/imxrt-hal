@@ -6,17 +6,11 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
         components: rustfmt
-    - uses: actions-rs/cargo@v1
-      name: Check formatting
-      with:
-        command: fmt
-        args: --all -- --check
+    - name: Check formatting
+      run: cargo +stable fmt --all -- --check
 
   # Checks the common HAL for all chips supported by imxrt-ral.
   lint-hal:
@@ -36,11 +30,8 @@ jobs:
         - imxrt-ral/imxrt1176_cm7
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
         components: clippy
     - uses: actions-rs/clippy-check@v1
       name: Lint imxrt-hal
@@ -64,18 +55,15 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
         components: clippy
     - uses: actions-rs/clippy-check@v1
       name: Lint imxrt-log
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --features=${{ matrix.chips }} --package=imxrt-log --package=imxrt-hal -- -D warnings
-  
+
   # Lint and build examples for boards.
   examples:
     needs: lint-hal
@@ -104,23 +92,17 @@ jobs:
           --example=rtic_usb_serial --example=rtic_usb_test_class --example=rtic_usb_keypress --example=rtic_usb_mouse
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
         components: clippy
-        target: thumbv7em-none-eabihf
+        targets: thumbv7em-none-eabihf
     - name: Lint board and examples
       uses: actions-rs/clippy-check@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: ${{ matrix.config }} --target=thumbv7em-none-eabihf
     - name: Build examples
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
+      run: cargo build ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
 
   # Run unit, integration tests.
   #
@@ -140,16 +122,10 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
     - name: Run unit, integration tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
+      run: cargo test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
 
   # Ensures that documentation builds, and that links are valid
   docs:
@@ -158,14 +134,9 @@ jobs:
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
     - name: Run documentation tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --features=board/teensy4 --workspace --doc
+      run: cargo test --features=board/teensy4 --workspace --doc
     - name: Check documentation, doclinks throughout workspace
       run: cargo doc --workspace --no-deps --features=board/teensy4
