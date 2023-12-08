@@ -56,6 +56,11 @@ version = "0.7"
 [dependencies.cassette]
 version = "0.2.3"
 
+[dependencies.futures]
+version = "0.3.11"
+default-features = false
+features = ["async-await"]
+
 #######################
 # imxrt-rs dependencies
 #######################
@@ -158,6 +163,9 @@ usb-device = { version = "0.2", features = ["test-class-high-speed"] }
 usbd-serial = "0.1"
 usbd-hid = "0.6"
 embedded-hal-bus = { version = "0.1.0-rc.1", features = ["async"] }
+teensy4-bsp = "0.4.5"
+imxrt-uart-panic = "0.1.2"
+teensy4-panic = "0.2.3"
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dev-dependencies]
 board = { path = "board" }
