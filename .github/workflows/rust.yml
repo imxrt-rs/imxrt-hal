@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
+    - uses: dtolnay/rust-toolchain@nightly
         components: clippy
         targets: thumbv7em-none-eabihf
     - name: Lint board and examples
@@ -102,7 +102,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: ${{ matrix.config }} --target=thumbv7em-none-eabihf
     - name: Build examples
-      run: cargo build ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
+      run: cargo +nightly build ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
 
   # Run unit, integration tests.
   #
@@ -125,7 +125,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
     - name: Run unit, integration tests
-      run: cargo test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
+      run: cargo +stable test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
 
   # Ensures that documentation builds, and that links are valid
   docs:
@@ -137,6 +137,6 @@ jobs:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
     - name: Run documentation tests
-      run: cargo test --features=board/teensy4 --workspace --doc
+      run: cargo +stable test --features=board/teensy4 --workspace --doc
     - name: Check documentation, doclinks throughout workspace
-      run: cargo doc --workspace --no-deps --features=board/teensy4
+      run: cargo +stable doc --workspace --no-deps --features=board/teensy4
