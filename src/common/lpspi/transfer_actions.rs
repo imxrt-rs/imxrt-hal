@@ -233,13 +233,34 @@ mod tests {
                 write_buf: 1000usize as *const u8,
                 len: $len,
             })
-            let expected =
+            .map(|val| {
+                (
+                    val.buf as usize - 1000,
+                    val.len.get(),
+                    val.is_first,
+                    val.is_last,
+                )
+            })
             .collect::<Vec<_>>();
+            let expected: &[(usize, usize, bool, bool)] = &$expected;
+
+            assert_eq!(actual, expected);
         }};
     }
 
     #[test]
     fn actions_write_iter() {
-        actions_write_iter_test([0, 5, 0], [(0, 5, true, true)]);
+        actions_write_iter_test!([0, 5, 0], [(0, 5, true, true)]);
+        actions_write_iter_test!(
+            [2, 3, 4],
+            [
+                (0, 2, true, false),
+                (2, 3, false, false),
+                (5, 4, false, true),
+            ]
+        );
+        actions_write_iter_test!([2, 0, 4], [(0, 2, true, false), (2, 4, false, true)]);
+        actions_write_iter_test!([2, 0, 0], [(0, 2, true, true)]);
+        actions_write_iter_test!([0, 0, 4], [(0, 4, true, true)]);
     }
 }
