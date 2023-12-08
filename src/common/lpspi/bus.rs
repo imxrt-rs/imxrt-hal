@@ -1,4 +1,5 @@
 use eh1::spi::MODE_0;
+use futures::FutureExt;
 
 use super::{
     transfer_actions::ActionSequence, Disabled, Lpspi, LpspiData, LpspiError,
@@ -140,20 +141,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
     /// Returns errors, if any there are any.
     fn check_errors(&mut self) -> Result<(), LpspiError> {
-        let (rx_error, tx_error) = ral::read_reg!(ral::lpspi, self.lpspi(), SR, REF, TEF);
-
-        if tx_error != 0 || rx_error != 0 {
-            ral::write_reg!(ral::lpspi, self.lpspi(), SR, REF: rx_error, TEF: tx_error);
-            self.clear_fifos();
-
-            if tx_error != 0 {
-                Err(LpspiError::TransmitFifo)
-            } else {
-                Err(LpspiError::ReceiveFifo)
-            }
-        } else {
-            Ok(())
-        }
+        self.data.lpspi.check_for_errors()
     }
 
     fn configure_dma(&mut self, dma_read: bool, dma_write: bool) {
@@ -212,20 +200,35 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         // rx_buffer.get_mut(1).map(|x| *x = r1);
         // rx_buffer.get_mut(2).map(|x| *x = r2);
         // rx_buffer.get_mut(3).map(|x| *x = r3);
+
+        //self.check_errors()
     }
 
     /// Perform a sequence of transfer actions
-    async fn transfer(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
-        self.flush().await?;
+    async fn transfer_unchecked(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
+        self.flush_unchecked().await?;
 
         self.clear_fifos();
 
-        // TODO: status_watcher based error checking task
-        let read_task = async { assert!(!sequence.contains_read_actions()) };
-
-        let write_task = async {};
+        let _read_task = async { assert!(!sequence.contains_read_actions()) };
+        let _write_task = async {};
 
         Ok(())
+    }
+
+    /// Perform a sequence of transfer actions while continuously checking for errors.
+    async fn transfer(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
+        let mut cleanup_on_error = CleanupOnError::new(self);
+        let this = cleanup_on_error.driver();
+
+        let data = this.data;
+
+        let result: Result<(), LpspiError> = futures::select_biased! {
+            res = data.lpspi.watch_for_errors().fuse() => res,
+            res = this.transfer_unchecked(sequence).fuse() => res,
+        };
+
+        cleanup_on_error.finish(result)
     }
 
     /// Returns whether or not the busy flag is set.
@@ -234,13 +237,61 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     }
 
     /// Waits for the device to become idle.
-    async fn flush(&mut self) -> Result<(), LpspiError> {
-        // TODO: status_watcher based error checking task
+    async fn flush_unchecked(&mut self) -> Result<(), LpspiError> {
         self.data.lpspi.clear_transfer_complete();
         while self.busy() {
+            self.check_errors()?;
             self.data.lpspi.wait_transfer_complete().await;
             self.data.lpspi.clear_transfer_complete();
         }
-        Ok(())
+        self.check_errors()
+    }
+
+    /// Waits for the device to become idle while continuously checking for errors.
+    async fn flush(&mut self) -> Result<(), LpspiError> {
+        let mut cleanup_on_error = CleanupOnError::new(self);
+        let this = cleanup_on_error.driver();
+
+        let data = this.data;
+
+        let result = futures::select_biased! {
+            res = data.lpspi.watch_for_errors().fuse() => res,
+            res = this.flush_unchecked().fuse() => res,
+        };
+
+        cleanup_on_error.finish(result)
+    }
+}
+
+struct CleanupOnError<'a, 'b, const N: u8> {
+    defused: bool,
+    driver: &'a mut Lpspi<'b, N>,
+}
+
+impl<'a, 'b, const N: u8> CleanupOnError<'a, 'b, N> {
+    pub fn new(driver: &'a mut Lpspi<'b, N>) -> Self {
+        Self {
+            defused: false,
+            driver,
+        }
+    }
+    pub fn finish(mut self, result: Result<(), LpspiError>) -> Result<(), LpspiError> {
+        let result = result.and_then(|()| self.driver.check_errors());
+        if result.is_ok() {
+            self.defused = true;
+        }
+        result
+    }
+    pub fn driver(&mut self) -> &mut Lpspi<'b, N> {
+        &mut self.driver
+    }
+}
+
+impl<'a, 'b, const N: u8> Drop for CleanupOnError<'a, 'b, N> {
+    fn drop(&mut self) {
+        if !self.defused {
+            self.driver.clear_fifos();
+            self.driver.data.lpspi.clear_errors();
+        }
     }
 }
