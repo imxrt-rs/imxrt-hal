@@ -403,3 +403,104 @@ pub mod lpspi_clk {
         ral::modify_reg!(ral::ccm, ccm, CBCMR, LPSPI_CLK_SEL: selection as u32);
     }
 }
+
+macro_rules! ccm_flexio {
+    (
+        $name:ident, $desc:literal,
+        divider: ($divider_reg:ident, $divider_field:ident),
+        predivider: ($predivider_reg:ident, $predivider_field:ident),
+        selection: ($sel_reg:ident, $sel_field:ident)$(,)?
+    ) => {
+        #[doc = concat!($desc, " clock root.")]
+        pub mod $name {
+            use crate::ral::{self, ccm::CCM};
+
+            #[doc = concat!("Returns the ", $desc, " clock divider.")]
+            #[inline(always)]
+            pub fn divider(ccm: &CCM) -> u32 {
+                ral::read_reg!(ral::ccm, ccm, $divider_reg, $divider_field) + 1
+            }
+
+            #[doc = concat!("The smallest ", $desc, " clock divider.")]
+            pub const MIN_DIVIDER: u32 = 1;
+            #[doc = concat!("The largest ", $desc, " clock divider.")]
+            pub const MAX_DIVIDER: u32 = 8;
+
+            #[doc = concat!("Set the ", $desc, " clock divider.")]
+            ///
+            /// The implementation clamps `divider` between [`MIN_DIVIDER`] and [`MAX_DIVIDER`].
+            #[inline(always)]
+            pub fn set_divider(ccm: &mut CCM, divider: u32) {
+                // 1010 MCUs support an extra bit in this field, so this
+                // could be a max of 16 for those chips.
+                let podf = divider.clamp(MIN_DIVIDER, MAX_DIVIDER) - 1;
+                ral::modify_reg!(ral::ccm, ccm, $divider_reg, $divider_field: podf);
+            }
+
+            #[doc = concat!("Returns the ", $desc, " clock predivider.")]
+            #[inline(always)]
+            pub fn predivider(ccm: &CCM) -> u32 {
+                ral::read_reg!(ral::ccm, ccm, $predivider_reg, $predivider_field) + 1
+            }
+
+            #[doc = concat!("The smallest ", $desc, " clock predivider.")]
+            pub const MIN_PREDIVIDER: u32 = 1;
+            #[doc = concat!("The largest ", $desc, " clock predivider.")]
+            pub const MAX_PREDIVIDER: u32 = 8;
+
+            #[doc = concat!("Set the ", $desc, " clock predivider.")]
+            ///
+            /// The implementation clamps `predivider` between [`MIN_PREDIVIDER`] and [`MAX_PREDIVIDER`].
+            #[inline(always)]
+            pub fn set_predivider(ccm: &mut CCM, predivider: u32) {
+                let podf = predivider.clamp(MIN_PREDIVIDER, MAX_PREDIVIDER) - 1;
+                ral::modify_reg!(ral::ccm, ccm, $predivider_reg, $predivider_field: podf);
+            }
+
+            #[doc = concat!($desc, " clock selections.")]
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            #[repr(u32)]
+            pub enum Selection {
+                /// Derive from PLL4.
+                Pll4 = 0,
+                /// Derive from PLL3_PFD2.
+                Pll3Pfd2 = 1,
+
+                #[cfg(any(feature = "imxrt1060", feature = "imxrt1064"))]
+                /// Derive from PLL5.
+                Pll5 = 2,
+                #[cfg(feature = "imxrt1010")]
+                /// Derive from PLL2.
+                Pll2 = 2,
+
+                //
+                // '2' reserved on 1020.
+                //
+
+                /// Derive from pll3_sw_clk.
+                Pll3SwClk = 3,
+            }
+
+            #[doc = concat!("Returns the ", $desc, " clock selections.")]
+            #[inline(always)]
+            pub fn selection(ccm: &CCM) -> Selection {
+                match ral::read_reg!(ral::ccm, ccm, $sel_reg, $sel_field) {
+                    0 => Selection::Pll4,
+                    1 => Selection::Pll3Pfd2,
+                    #[cfg(any(feature = "imxrt1060", feature = "imxrt1064"))]
+                    2 => Selection::Pll5,
+                    #[cfg(feature = "imxrt1010")]
+                    2 => Selection::Pll2,
+                    3 => Selection::Pll3SwClk,
+                    _ => unreachable!(),
+                }
+            }
+
+            #[doc = concat!("Set the ", $desc, " clock selections.")]
+            #[inline(always)]
+            pub fn set_selection(ccm: &mut CCM, selection: Selection) {
+                ral::modify_reg!(ral::ccm, ccm, $sel_reg, $sel_field: selection as u32);
+            }
+        }
+    };
+}

@@ -105,6 +105,20 @@ pub(crate) mod ccm {
 
         pub enum Clko2Selection {}
     }
+
+    ccm_flexio!(
+        flexio1_clk, "FLEXIO1",
+        divider: (CDCDR, FLEXIO1_CLK_PODF),
+        predivider: (CDCDR, FLEXIO1_CLK_PRED),
+        selection: (CDCDR, FLEXIO1_CLK_SEL),
+    );
+
+    ccm_flexio!(
+        flexio2_clk, "FLEXIO2",
+        divider: (CS1CDR, FLEXIO2_CLK_PODF),
+        predivider: (CS1CDR, FLEXIO2_CLK_PRED),
+        selection: (CSCMR2, FLEXIO2_CLK_SEL),
+    );
 }
 
 pub(crate) const DMA_CHANNEL_COUNT: usize = 32;

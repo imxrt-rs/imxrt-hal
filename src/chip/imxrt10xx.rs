@@ -3,6 +3,7 @@
 //! Shared modules may rely on configurations from the `config` module.
 
 pub mod adc;
+#[macro_use]
 pub mod ccm;
 pub mod dcdc;
 #[path = "dma.rs"]
