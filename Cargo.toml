@@ -22,7 +22,7 @@ version = "1.0"
 version = "1.2"
 
 [dependencies.fugit]
-version = "0.3"
+version = "0.3.7"
 
 # For EH02 CountDown.
 [dependencies.void]
@@ -152,7 +152,7 @@ codegen-units = 256
 imxrt-rt = { workspace = true }
 menu = "0.4.0"
 rtic = { version = "2.0.1", features = ["thumbv7-backend"] }
-rtic-monotonics = { version = "1.2.0", features = [
+rtic-monotonics = { version = "1.4.1", features = [
     "cortex-m-systick",
     "embedded-hal-async",
 ] }
