@@ -38,11 +38,11 @@ version = "0.2"
 
 [dependencies.eh1]
 package = "embedded-hal"
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 
 [dependencies.eh1-async]
 package = "embedded-hal-async"
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 optional = true
 
 [dependencies.rand_core]
