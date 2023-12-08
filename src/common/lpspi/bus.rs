@@ -1,4 +1,6 @@
-use eh1::spi::MODE_0;
+use core::num::NonZeroUsize;
+
+use eh1::spi::{Phase, Polarity, MODE_0};
 use futures::FutureExt;
 
 use super::{
@@ -160,23 +162,69 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
     }
 
+    fn start_frame(
+        &mut self,
+        reverse_bytes: bool,
+        is_first_frame: bool,
+        is_last_frame: bool,
+        enable_read: bool,
+        enable_write: bool,
+        frame_size_bytes: NonZeroUsize,
+    ) {
+        let num_bits = frame_size_bytes.get() as u32 * 8;
+        assert!(num_bits <= MAX_FRAME_SIZE_BITS);
+
+        // TODO enqueue this somewhere so that we don't overflow if the buffer is full.
+        // Or wait for the buffer to become available. Either works.
+        // Maybe dynamically enable/disable the watermark interrupts so we can async wait for the watermark
+        ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
+            CPOL: if self.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
+            CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
+            PRESCALE: PRESCALE_0,
+            PCS: PCS_0,
+            LSBF: LSBF_0,
+            BYSW: if reverse_bytes {BYSW_0} else {BYSW_1},
+            CONT: if is_last_frame {CONT_0} else {CONT_1},
+            CONTC: if is_first_frame {CONTC_0} else {CONTC_1},
+            RXMSK: if enable_read {RXMSK_0} else {RXMSK_1},
+            TXMSK: if enable_write {TXMSK_0} else {TXMSK_1},
+            WIDTH: WIDTH_0,
+            FRAMESZ: num_bits - 1
+        );
+    }
+
     async unsafe fn write_single_word(
         &mut self,
         write_data: Option<*const u8>,
+        reverse: bool,
         read: bool,
-        len: usize,
+        len: NonZeroUsize,
+        is_first_frame: bool,
+        is_last_frame: bool,
     ) {
-        if len == 0 {
-            return;
-        }
-        assert!(len <= 4);
+        assert!(len.get() <= 4);
 
-        // ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
-        //     RXMSK: RXMSK_0,
-        //     TXMSK: TXMSK_0,
-        //     PRESCALE: PRESCALE_7,
-        //     FRAMESZ: len as u32 * 8 - 1
-        // );
+        self.start_frame(
+            false,
+            is_first_frame,
+            is_last_frame,
+            read,
+            write_data.is_some(),
+            len,
+        );
+
+        if let Some(data) = write_data {
+            let mut tx_buffer = [0u8; 4];
+            if reverse {
+                for i in 0..len.get() {
+                    tx_buffer[i] = data.add(len.get() - i - 1).read();
+                }
+            } else {
+                for i in 0..len.get() {
+                    tx_buffer[i] = data.add(i).read();
+                }
+            }
+        }
 
         // let tx_buffer = buffer.tx_buffer();
         // let tx_data = u32::from_le_bytes([
@@ -211,7 +259,11 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         self.clear_fifos();
 
         let _read_task = async { assert!(!sequence.contains_read_actions()) };
-        let _write_task = async {};
+        let _write_task = async {
+            let mut first_frame = true;
+            if let Some(phase1) = sequence.phase1 {}
+            if let Some(phase2) = sequence.phase2 {}
+        };
 
         Ok(())
     }

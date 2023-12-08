@@ -1,10 +1,73 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, num::NonZeroUsize};
 
 pub(crate) struct DualDirectionActions {
     read_buf: *mut u8,
     write_buf: *const u8,
     len: [usize; 3],
 }
+
+impl DualDirectionActions {
+    pub(crate) unsafe fn get_write_actions(&self) -> WriteActionIter {
+        WriteActionIter::new(WriteActions {
+            write_buf: self.write_buf,
+            len: self.len,
+        })
+    }
+}
+
+pub(crate) struct WriteAction {
+    pub(crate) buf: *const u8,
+    pub(crate) len: NonZeroUsize,
+    pub(crate) is_first: bool,
+    pub(crate) is_last: bool,
+}
+
+pub(crate) struct WriteActionIter {
+    actions: WriteActions,
+    pos: usize,
+}
+impl WriteActionIter {
+    fn new(actions: WriteActions) -> Self {
+        Self { actions, pos: 0 }
+    }
+}
+impl Iterator for WriteActionIter {
+    type Item = WriteAction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let is_first = self.pos == 0;
+
+        let mut lengths = self.actions.len.get(self.pos..)?;
+        let len = loop {
+            if let Some(len) = NonZeroUsize::new(*lengths.first()?) {
+                break len;
+            }
+            self.pos += 1;
+            lengths = self.actions.len.get(self.pos..)?;
+        };
+
+        let buf = self.actions.write_buf;
+
+        self.pos += 1;
+        self.actions.write_buf = unsafe { self.actions.write_buf.add(len.get()) };
+
+        let is_last = self
+            .actions
+            .len
+            .get(self.pos..)
+            .into_iter()
+            .flatten()
+            .all(|&val| val == 0);
+
+        Some(WriteAction {
+            buf,
+            len,
+            is_first,
+            is_last,
+        })
+    }
+}
+
 pub(crate) struct ReadActions {
     read_buf: *mut u8,
     len: [usize; 3],
@@ -155,5 +218,28 @@ pub(crate) fn create_actions_read_write_in_place<'a, T: BufferType>(
         phase2: None,
         byteorder: T::byte_order(),
         _lifetimes: PhantomData,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate std;
+    use std::vec::Vec;
+
+    macro_rules! actions_write_iter_test {
+        ($len:expr, $expected:expr) => {{
+            let actual = WriteActionIter::new(WriteActions {
+                write_buf: 1000usize as *const u8,
+                len: $len,
+            })
+            let expected =
+            .collect::<Vec<_>>();
+        }};
+    }
+
+    #[test]
+    fn actions_write_iter() {
+        actions_write_iter_test([0, 5, 0], [(0, 5, true, true)]);
     }
 }
