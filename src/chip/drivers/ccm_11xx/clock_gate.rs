@@ -3,6 +3,8 @@
 //! This module exposes a similar API as the `clock_gate` API
 //! for the 10xx MCUs. Consult that module's documentation for
 //! more information.
+//!
+//! The API works for clock gates in unassigned mode.
 
 use crate::ral::{self, ccm::CCM};
 
