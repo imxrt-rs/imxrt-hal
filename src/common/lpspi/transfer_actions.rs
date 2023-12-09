@@ -302,7 +302,7 @@ mod tests {
             })
             .map(|val| {
                 (
-                    val.buf as usize - 1000,
+                    val.buf.unwrap() as usize - 1000,
                     val.len.get(),
                     val.is_first,
                     val.is_last,
@@ -318,7 +318,7 @@ mod tests {
         ($write:expr, $len:expr, $expected:expr) => {{
             let actual = SingleDirectionWriteActionIter::new(MaybeWriteActions {
                 write_buf: if $write {
-                    Somt(1000usize as *const u8)
+                    Some(1000usize as *const u8)
                 } else {
                     None
                 },
@@ -333,7 +333,7 @@ mod tests {
                 )
             })
             .collect::<Vec<_>>();
-            let expected: &[(usize, usize, bool, bool)] = &$expected;
+            let expected: &[(Option<usize>, usize, bool, bool)] = &$expected;
 
             assert_eq!(actual, expected);
         }};
@@ -357,8 +357,8 @@ mod tests {
 
     #[test]
     fn single_direction_write_actions_iter_write() {
-        actions_write_iter_test!(true, [0, 5, 0], [(Some(0), 5, true, true)]);
-        actions_write_iter_test!(
+        actions_single_direction_write_iter_test!(true, [0, 5, 0], [(Some(0), 5, true, true)]);
+        actions_single_direction_write_iter_test!(
             true,
             [2, 3, 4],
             [
@@ -367,19 +367,19 @@ mod tests {
                 (Some(5), 4, false, true),
             ]
         );
-        actions_write_iter_test!(
+        actions_single_direction_write_iter_test!(
             true,
             [2, 0, 4],
             [(Some(0), 2, true, false), (Some(2), 4, false, true)]
         );
-        actions_write_iter_test!(true, [2, 0, 0], [(Some(0), 2, true, true)]);
-        actions_write_iter_test!(true, [0, 0, 4], [(Some(0), 4, true, true)]);
+        actions_single_direction_write_iter_test!(true, [2, 0, 0], [(Some(0), 2, true, true)]);
+        actions_single_direction_write_iter_test!(true, [0, 0, 4], [(Some(0), 4, true, true)]);
     }
 
     #[test]
     fn single_direction_write_actions_iter_read() {
-        actions_write_iter_test!(false, [0, 5, 0], [(None, 5, true, true)]);
-        actions_write_iter_test!(
+        actions_single_direction_write_iter_test!(false, [0, 5, 0], [(None, 5, true, true)]);
+        actions_single_direction_write_iter_test!(
             false,
             [2, 3, 4],
             [
@@ -388,12 +388,12 @@ mod tests {
                 (None, 4, false, true),
             ]
         );
-        actions_write_iter_test!(
+        actions_single_direction_write_iter_test!(
             false,
             [2, 0, 4],
             [(None, 2, true, false), (None, 4, false, true)]
         );
-        actions_write_iter_test!(false, [2, 0, 0], [(None, 2, true, true)]);
-        actions_write_iter_test!(false, [0, 0, 4], [(None, 4, true, true)]);
+        actions_single_direction_write_iter_test!(false, [2, 0, 0], [(None, 2, true, true)]);
+        actions_single_direction_write_iter_test!(false, [0, 0, 4], [(None, 4, true, true)]);
     }
 }
