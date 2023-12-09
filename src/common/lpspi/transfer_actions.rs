@@ -1,5 +1,6 @@
 use core::{marker::PhantomData, num::NonZeroUsize};
 
+#[derive(Debug)]
 pub(crate) struct DualDirectionActions {
     read_buf: *mut u8,
     write_buf: *const u8,
@@ -117,21 +118,25 @@ impl Iterator for SingleDirectionWriteActionIter {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct ReadActions {
     read_buf: *mut u8,
     len: [usize; 3],
 }
 
+#[derive(Debug)]
 pub(crate) struct WriteActions {
     write_buf: *const u8,
     len: [usize; 3],
 }
 
+#[derive(Debug)]
 pub(crate) struct MaybeWriteActions {
     write_buf: Option<*const u8>,
     len: [usize; 3],
 }
 
+#[derive(Debug)]
 pub(crate) enum SingleDirectionActions {
     Read(ReadActions),
     Write(WriteActions),
@@ -161,7 +166,7 @@ impl SingleDirectionActions {
 
 /// The order in which the bytes need
 /// to be transferred on the bus
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ByteOrder {
     /// Bytes need to be transferred in the order
     /// that they are in
@@ -172,12 +177,13 @@ pub enum ByteOrder {
     HalfWordReversed,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum TransferDirection {
     Read,
     Write,
 }
 
+#[derive(Debug)]
 pub(crate) struct ActionSequence<'a> {
     pub(crate) phase1: Option<DualDirectionActions>,
     pub(crate) phase2: Option<SingleDirectionActions>,

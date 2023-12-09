@@ -230,6 +230,8 @@ impl<'a, const N: u8> Lpspi<'a, N> {
                     tx_buffer[i] = data.add(i).read();
                 }
             }
+
+            ral::write_reg!(ral::lpspi, self.lpspi(), TDR, u32::from_be_bytes(tx_buffer));
         }
     }
 
@@ -256,8 +258,8 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         self.clear_fifos();
 
-        let _read_task = async { assert!(!sequence.contains_read_actions()) };
-        let _write_task = async {
+        let read_task = async { assert!(!sequence.contains_read_actions()) };
+        let write_task = async {
             unsafe {
                 let has_phase_1 = sequence.phase1.is_some();
                 let has_phase_2 = sequence.phase2.is_some();
@@ -315,7 +317,9 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             }
         };
 
-        Ok(())
+        futures::join!(read_task, write_task);
+
+        self.check_errors()
     }
 
     /// Perform a sequence of transfer actions while continuously checking for errors.
