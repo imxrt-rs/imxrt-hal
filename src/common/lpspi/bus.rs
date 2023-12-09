@@ -221,17 +221,21 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         if let Some(data) = write_data {
             let mut tx_buffer = [0u8; 4];
+            let active_buffer = &mut tx_buffer[(4 - len.get())..];
             if reverse_bytes {
-                for i in 0..len.get() {
-                    tx_buffer[i] = data.add(len.get() - i - 1).read();
-                }
+                active_buffer
+                    .iter_mut()
+                    .rev()
+                    .enumerate()
+                    .for_each(|(pos, val)| *val = data.add(pos).read());
             } else {
-                for i in 0..len.get() {
-                    tx_buffer[i] = data.add(i).read();
-                }
+                active_buffer
+                    .iter_mut()
+                    .enumerate()
+                    .for_each(|(pos, val)| *val = data.add(pos).read());
             }
 
-            ral::write_reg!(ral::lpspi, self.lpspi(), TDR, u32::from_be_bytes(tx_buffer));
+            ral::write_reg!(ral::lpspi, self.lpspi(), TDR, u32::from_le_bytes(tx_buffer));
         }
     }
 
