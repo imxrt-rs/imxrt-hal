@@ -4,8 +4,8 @@ use eh1::spi::{Phase, Polarity, MODE_0};
 use futures::FutureExt;
 
 use super::{
-    transfer_actions::ActionSequence, Disabled, Lpspi, LpspiData, LpspiError,
-    LpspiInterruptHandler, Pins, StatusWatcher,
+    transfer_actions::{ActionSequence, ByteOrder},
+    Disabled, Lpspi, LpspiData, LpspiError, LpspiInterruptHandler, Pins, StatusWatcher,
 };
 use crate::{
     iomuxc::{consts, lpspi},
@@ -174,9 +174,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         let num_bits = frame_size_bytes.get() as u32 * 8;
         assert!(num_bits <= MAX_FRAME_SIZE_BITS);
 
-        // TODO enqueue this somewhere so that we don't overflow if the buffer is full.
-        // Or wait for the buffer to become available. Either works.
-        // Maybe dynamically enable/disable the watermark interrupts so we can async wait for the watermark
         ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
             CPOL: if self.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
             CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
@@ -196,14 +193,23 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     async unsafe fn write_single_word(
         &mut self,
         write_data: Option<*const u8>,
-        reverse: bool,
+        byteorder: ByteOrder,
         read: bool,
         len: NonZeroUsize,
         is_first_frame: bool,
         is_last_frame: bool,
     ) {
-        assert!(len.get() <= 4);
+        assert!(len.get() < 4);
 
+        let reverse_bytes = match byteorder {
+            ByteOrder::Normal => false,
+            ByteOrder::WordReversed => true,
+            ByteOrder::HalfWordReversed => true,
+        };
+
+        // TODO enqueue this somewhere so that we don't overflow if the buffer is full.
+        // Or wait for the buffer to become available. Either works.
+        // Maybe dynamically enable/disable the watermark interrupts so we can async wait for the watermark
         self.start_frame(
             false,
             is_first_frame,
@@ -215,7 +221,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         if let Some(data) = write_data {
             let mut tx_buffer = [0u8; 4];
-            if reverse {
+            if reverse_bytes {
                 for i in 0..len.get() {
                     tx_buffer[i] = data.add(len.get() - i - 1).read();
                 }
@@ -225,31 +231,23 @@ impl<'a, const N: u8> Lpspi<'a, N> {
                 }
             }
         }
+    }
 
-        // let tx_buffer = buffer.tx_buffer();
-        // let tx_data = u32::from_le_bytes([
-        //     tx_buffer.get(0).copied().unwrap_or_default(),
-        //     tx_buffer.get(1).copied().unwrap_or_default(),
-        //     tx_buffer.get(2).copied().unwrap_or_default(),
-        //     tx_buffer.get(3).copied().unwrap_or_default(),
-        // ]);
-        // ral::write_reg!(ral::lpspi, self.lpspi(), TDR, tx_data);
+    async unsafe fn write_u32_stream(
+        &mut self,
+        write_data: Option<*const u8>,
+        byteorder: ByteOrder,
+        read: bool,
+        len: NonZeroUsize,
+        is_first_frame: bool,
+        is_last_frame: bool,
+        // TODO: dma
+    ) {
+        assert!(len.get() % 4 == 0);
+        let len = NonZeroUsize::new(len.get() / 4).unwrap();
+        let write_data: Option<*const u32> = write_data.map(|p| p.cast());
 
-        // self.wait_for_transfer_complete().await;
-
-        // if !self.fifo_read_data_available() {
-        //     return Err(LpspiError::ReceiveFifo);
-        // }
-
-        // let rx_data = ral::read_reg!(ral::lpspi, self.lpspi(), RDR);
-        // let [r0, r1, r2, r3] = rx_data.to_le_bytes();
-        // let rx_buffer = buffer.rx_buffer();
-        // rx_buffer.get_mut(0).map(|x| *x = r0);
-        // rx_buffer.get_mut(1).map(|x| *x = r1);
-        // rx_buffer.get_mut(2).map(|x| *x = r2);
-        // rx_buffer.get_mut(3).map(|x| *x = r3);
-
-        //self.check_errors()
+        todo!();
     }
 
     /// Perform a sequence of transfer actions
@@ -260,9 +258,61 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         let _read_task = async { assert!(!sequence.contains_read_actions()) };
         let _write_task = async {
-            let mut first_frame = true;
-            if let Some(phase1) = sequence.phase1 {}
-            if let Some(phase2) = sequence.phase2 {}
+            unsafe {
+                let has_phase_1 = sequence.phase1.is_some();
+                let has_phase_2 = sequence.phase2.is_some();
+
+                if let Some(phase1) = &sequence.phase1 {
+                    for action in phase1.get_write_actions() {
+                        if action.len.get() < 4 {
+                            self.write_single_word(
+                                action.buf,
+                                sequence.byteorder,
+                                action.read,
+                                action.len,
+                                action.is_first,
+                                action.is_last && !has_phase_2,
+                            )
+                            .await
+                        } else {
+                            self.write_u32_stream(
+                                action.buf,
+                                sequence.byteorder,
+                                action.read,
+                                action.len,
+                                action.is_first,
+                                action.is_last && !has_phase_2,
+                            )
+                            .await;
+                        }
+                    }
+                }
+                if let Some(phase2) = &sequence.phase2 {
+                    for action in phase2.get_write_actions() {
+                        if action.len.get() < 4 {
+                            self.write_single_word(
+                                action.buf,
+                                sequence.byteorder,
+                                action.read,
+                                action.len,
+                                action.is_first && !has_phase_1,
+                                action.is_last,
+                            )
+                            .await
+                        } else {
+                            self.write_u32_stream(
+                                action.buf,
+                                sequence.byteorder,
+                                action.read,
+                                action.len,
+                                action.is_first && !has_phase_1,
+                                action.is_last,
+                            )
+                            .await
+                        }
+                    }
+                }
+            }
         };
 
         Ok(())

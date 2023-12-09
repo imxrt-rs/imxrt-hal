@@ -16,7 +16,8 @@ impl DualDirectionActions {
 }
 
 pub(crate) struct WriteAction {
-    pub(crate) buf: *const u8,
+    pub(crate) buf: Option<*const u8>,
+    pub(crate) read: bool,
     pub(crate) len: NonZeroUsize,
     pub(crate) is_first: bool,
     pub(crate) is_last: bool,
@@ -60,7 +61,55 @@ impl Iterator for WriteActionIter {
             .all(|&val| val == 0);
 
         Some(WriteAction {
+            buf: Some(buf),
+            read: true,
+            len,
+            is_first,
+            is_last,
+        })
+    }
+}
+
+pub(crate) struct SingleDirectionWriteActionIter {
+    actions: MaybeWriteActions,
+    pos: usize,
+}
+impl SingleDirectionWriteActionIter {
+    fn new(actions: MaybeWriteActions) -> Self {
+        Self { actions, pos: 0 }
+    }
+}
+impl Iterator for SingleDirectionWriteActionIter {
+    type Item = WriteAction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let is_first = self.pos == 0;
+
+        let mut lengths = self.actions.len.get(self.pos..)?;
+        let len = loop {
+            if let Some(len) = NonZeroUsize::new(*lengths.first()?) {
+                break len;
+            }
+            self.pos += 1;
+            lengths = self.actions.len.get(self.pos..)?;
+        };
+
+        let buf = self.actions.write_buf;
+
+        self.pos += 1;
+        self.actions.write_buf = unsafe { self.actions.write_buf.map(|b| b.add(len.get())) };
+
+        let is_last = self
+            .actions
+            .len
+            .get(self.pos..)
+            .into_iter()
+            .flatten()
+            .all(|&val| val == 0);
+
+        Some(WriteAction {
             buf,
+            read: buf.is_none(),
             len,
             is_first,
             is_last,
@@ -78,6 +127,11 @@ pub(crate) struct WriteActions {
     len: [usize; 3],
 }
 
+pub(crate) struct MaybeWriteActions {
+    write_buf: Option<*const u8>,
+    len: [usize; 3],
+}
+
 pub(crate) enum SingleDirectionActions {
     Read(ReadActions),
     Write(WriteActions),
@@ -90,12 +144,25 @@ impl SingleDirectionActions {
             SingleDirectionActions::Write(_) => TransferDirection::Write,
         }
     }
+
+    pub(crate) unsafe fn get_write_actions(&self) -> SingleDirectionWriteActionIter {
+        SingleDirectionWriteActionIter::new(match self {
+            SingleDirectionActions::Read(actions) => MaybeWriteActions {
+                write_buf: None,
+                len: actions.len,
+            },
+            SingleDirectionActions::Write(actions) => MaybeWriteActions {
+                write_buf: Some(actions.write_buf),
+                len: actions.len,
+            },
+        })
+    }
 }
 
 /// The order in which the bytes need
 /// to be transferred on the bus
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub(crate) enum ByteOrder {
+pub enum ByteOrder {
     /// Bytes need to be transferred in the order
     /// that they are in
     Normal,
@@ -247,9 +314,33 @@ mod tests {
             assert_eq!(actual, expected);
         }};
     }
+    macro_rules! actions_single_direction_write_iter_test {
+        ($write:expr, $len:expr, $expected:expr) => {{
+            let actual = SingleDirectionWriteActionIter::new(MaybeWriteActions {
+                write_buf: if $write {
+                    Somt(1000usize as *const u8)
+                } else {
+                    None
+                },
+                len: $len,
+            })
+            .map(|val| {
+                (
+                    val.buf.map(|b| b as usize - 1000),
+                    val.len.get(),
+                    val.is_first,
+                    val.is_last,
+                )
+            })
+            .collect::<Vec<_>>();
+            let expected: &[(usize, usize, bool, bool)] = &$expected;
+
+            assert_eq!(actual, expected);
+        }};
+    }
 
     #[test]
-    fn actions_write_iter() {
+    fn write_actions_iter() {
         actions_write_iter_test!([0, 5, 0], [(0, 5, true, true)]);
         actions_write_iter_test!(
             [2, 3, 4],
@@ -262,5 +353,47 @@ mod tests {
         actions_write_iter_test!([2, 0, 4], [(0, 2, true, false), (2, 4, false, true)]);
         actions_write_iter_test!([2, 0, 0], [(0, 2, true, true)]);
         actions_write_iter_test!([0, 0, 4], [(0, 4, true, true)]);
+    }
+
+    #[test]
+    fn single_direction_write_actions_iter_write() {
+        actions_write_iter_test!(true, [0, 5, 0], [(Some(0), 5, true, true)]);
+        actions_write_iter_test!(
+            true,
+            [2, 3, 4],
+            [
+                (Some(0), 2, true, false),
+                (Some(2), 3, false, false),
+                (Some(5), 4, false, true),
+            ]
+        );
+        actions_write_iter_test!(
+            true,
+            [2, 0, 4],
+            [(Some(0), 2, true, false), (Some(2), 4, false, true)]
+        );
+        actions_write_iter_test!(true, [2, 0, 0], [(Some(0), 2, true, true)]);
+        actions_write_iter_test!(true, [0, 0, 4], [(Some(0), 4, true, true)]);
+    }
+
+    #[test]
+    fn single_direction_write_actions_iter_read() {
+        actions_write_iter_test!(false, [0, 5, 0], [(None, 5, true, true)]);
+        actions_write_iter_test!(
+            false,
+            [2, 3, 4],
+            [
+                (None, 2, true, false),
+                (None, 3, false, false),
+                (None, 4, false, true),
+            ]
+        );
+        actions_write_iter_test!(
+            false,
+            [2, 0, 4],
+            [(None, 2, true, false), (None, 4, false, true)]
+        );
+        actions_write_iter_test!(false, [2, 0, 0], [(None, 2, true, true)]);
+        actions_write_iter_test!(false, [0, 0, 4], [(None, 4, true, true)]);
     }
 }
