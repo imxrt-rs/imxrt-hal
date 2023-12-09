@@ -40,6 +40,9 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::flexpwm::<{ PWM_INSTANCE }>(),
     clock_gate::lpi2c::<{ I2C_INSTANCE }>(),
     clock_gate::snvs(),
+];
+
+const ENET_CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::enet(),
     clock_gate::enet_1g(),
     clock_gate::enet_qos(),
@@ -48,10 +51,49 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
 pub(crate) unsafe fn configure() {
     let mut ccm = ral::ccm::CCM::instance();
 
+    let gpc = unsafe { ral::gpc_cpu_mode_ctrl_::GPC_CPU_MODE_CTRL_0::instance() };
+    let gpc = &*gpc;
+    let pll = unsafe { ral::anadig_pll::ANADIG_PLL::instance() };
+    let mut pmu = unsafe { ral::anadig_pmu::ANADIG_PMU::instance() };
+
+    hal::pmu::enable_pll_reference_voltage(&mut pmu, true);
+    hal::pmu::set_phy_ldo_setpoints(&mut pmu, hal::pmu::Setpoint::all());
+    hal::pmu::set_phy_ldo_control(&mut pmu, hal::pmu::ControlMode::Gpc);
+    hal::pmu::set_pll_reference_control(&mut pmu, hal::pmu::ControlMode::Gpc);
+
+    for clock_source in {
+        use hal::ccm::ClockSource::*;
+        [Pll1, Pll1Clk, Pll1Div2, Pll1Div5]
+    } {
+        let oscpll = &ccm.OSCPLL[clock_source as usize];
+        ral::write_reg!(ral::ccm::oscpll, oscpll, OSCPLL_DIRECT, 0);
+        hal::ccm::set_setpoints(&mut ccm, clock_source, hal::ccm::Setpoint::SP1);
+        hal::ccm::set_gpc_control_mode(&mut ccm, clock_source, hal::ccm::ControlMode::Gpc).unwrap();
+    }
+
+    ral::modify_reg!(ral::anadig_pll, pll, SYS_PLL1_CTRL,
+        SYS_PLL1_CONTROL_MODE: 1,
+        SYS_PLL1_DIV2_CONTROL_MODE: 1,
+        SYS_PLL1_DIV5_CONTROL_MODE: 1,
+    );
+
     prepare_clock_tree(&mut ccm);
     CLOCK_GATES
         .iter()
         .for_each(|locator| locator.set(&mut ccm, clock_gate::ON));
+
+    ENET_CLOCK_GATES
+        .iter()
+        .for_each(|l| l.set(&mut ccm, clock_gate::OFF));
+    clock_tree::enet_root_on(&mut ccm, false);
+
+    clock_tree::configure_enet(RUN_MODE, &mut ccm);
+    hal::gpc::request_setpoint_transition(gpc, 1).unwrap();
+
+    clock_tree::enet_root_on(&mut ccm, true);
+    ENET_CLOCK_GATES
+        .iter()
+        .for_each(|l| l.set(&mut ccm, clock_gate::ON));
 }
 
 fn prepare_clock_tree(ccm: &mut ral::ccm::CCM) {
@@ -61,7 +103,6 @@ fn prepare_clock_tree(ccm: &mut ral::ccm::CCM) {
     clock_tree::configure_lpuart::<{ CONSOLE_INSTANCE }>(RUN_MODE, ccm);
     clock_tree::configure_lpspi::<SPI_INSTANCE>(RUN_MODE, ccm);
     clock_tree::configure_lpi2c::<{ I2C_INSTANCE }>(RUN_MODE, ccm);
-    clock_tree::configure_enet(RUN_MODE, ccm);
 }
 
 pub const PIT_FREQUENCY: u32 = clock_tree::bus_frequency(RUN_MODE);
@@ -454,7 +495,7 @@ fn init_enet_phy_ksz8081rnb<
     mdio.write(
         KSZ8081_PHY_ADDR,
         PHY_AUTONEG_ADVERTISE_REG,
-        (AutoNegotiation::BASETX_10_FULL_DUPLEX | AutoNegotiation::IEEE802_3_SELECTOR).bits(),
+        (AutoNegotiation::BASETX_100_FULL_DUPLEX | AutoNegotiation::IEEE802_3_SELECTOR).bits(),
     )
     .unwrap();
     mdio.write(
