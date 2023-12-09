@@ -154,7 +154,7 @@ mod app {
         dev.set_duplex(hal::enet::Duplex::Full);
         dev.enable_mib(true);
         dev.enable_rmii_mode(true);
-        dev.enable_10t_mode(true);
+        dev.enable_10t_mode(false);
         dev.enable_mac(true);
 
         let mut time: i64 = 0;

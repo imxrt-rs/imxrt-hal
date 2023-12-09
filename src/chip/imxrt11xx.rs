@@ -5,6 +5,8 @@
 pub mod ccm;
 #[path = "dma.rs"]
 pub mod dma;
+pub mod gpc;
+pub mod pmu;
 pub mod usbphy;
 
 cfg_if::cfg_if! {
@@ -15,7 +17,7 @@ cfg_if::cfg_if! {
 }
 
 pub(crate) mod reexports {
-    pub use super::usbphy;
+    pub use super::{gpc, pmu, usbphy};
 }
 
 pub(crate) mod iomuxc {
