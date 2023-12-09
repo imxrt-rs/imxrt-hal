@@ -114,7 +114,7 @@ imxrt1180 = ["imxrt-iomuxc/imxrt1180"]
 eh02-unproven = []
 
 [workspace]
-members = ["board", "logging"]
+members = ["board", "logging", "tools"]
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
