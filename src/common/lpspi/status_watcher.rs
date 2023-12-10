@@ -243,9 +243,9 @@ where
                     if let Some(waker) = (self.waker)(inner).take() {
                         waker.wake();
                     }
+                } else {
+                    (self.interrupt_enable)(inner);
                 }
-
-                (self.interrupt_enable)(inner);
 
                 Poll::Pending
             }
