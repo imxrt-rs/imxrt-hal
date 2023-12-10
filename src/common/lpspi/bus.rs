@@ -161,6 +161,14 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
     }
 
+    async fn wait_for_read_watermark(&mut self) {
+        self.data.lpspi.wait_for_rx_watermark().await.unwrap();
+    }
+
+    async fn wait_for_write_watermark(&mut self) {
+        self.data.lpspi.wait_for_tx_watermark().await.unwrap();
+    }
+
     fn start_frame(
         &mut self,
         reverse_bytes: bool,
@@ -206,9 +214,9 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             ByteOrder::HalfWordReversed => true,
         };
 
-        // TODO enqueue this somewhere so that we don't overflow if the buffer is full.
-        // Or wait for the buffer to become available. Either works.
-        // Maybe dynamically enable/disable the watermark interrupts so we can async wait for the watermark
+        // This should make sure that at least two words are free to be written
+        self.wait_for_write_watermark().await;
+
         self.start_frame(
             false,
             is_first_frame,
