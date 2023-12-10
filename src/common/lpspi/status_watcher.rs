@@ -14,6 +14,10 @@ struct StatusWatcherInner<const N: u8> {
     transfer_complete_waker: Option<Waker>,
     error_caught: Option<LpspiError>,
     error_caught_waker: Option<Waker>,
+    tx_fifo_watermark_busy: bool,
+    rx_fifo_watermark_busy: bool,
+    tx_fifo_watermark_waker: Option<Waker>,
+    rx_fifo_watermark_waker: Option<Waker>,
     interrupts_enabled: bool,
 }
 
@@ -61,6 +65,10 @@ impl<const N: u8> StatusWatcher<N> {
                 transfer_complete_waker: None,
                 error_caught: None,
                 error_caught_waker: None,
+                tx_fifo_watermark_busy: false,
+                rx_fifo_watermark_busy: false,
+                tx_fifo_watermark_waker: None,
+                rx_fifo_watermark_waker: None,
                 interrupts_enabled: false,
             })),
             lpspi,
@@ -112,6 +120,8 @@ impl<const N: u8> StatusWatcher<N> {
             self,
             |inner| inner.transfer_complete_happened.then_some(()),
             |inner| &mut inner.transfer_complete_waker,
+            |_| (),
+            |_| (),
         )
         .await
     }
@@ -121,6 +131,8 @@ impl<const N: u8> StatusWatcher<N> {
             self,
             |inner| inner.error_caught.take(),
             |inner| &mut inner.error_caught_waker,
+            |_| (),
+            |_| (),
         )
         .await;
 
@@ -139,36 +151,59 @@ impl<const N: u8> StatusWatcher<N> {
             inner.error_caught = None;
         });
     }
+
+    pub async fn wait_for_tx_watermark(&self) {
+        todo!()
+    }
+    pub async fn wait_for_rx_watermark(&self) {
+        todo!()
+    }
 }
 
-struct StatusWatcherFuture<'a, const N: u8, T, C, W>
+struct StatusWatcherFuture<'a, const N: u8, T, C, W, I0, I1>
 where
     C: Fn(&mut StatusWatcherInner<N>) -> Option<T>,
     W: Fn(&mut StatusWatcherInner<N>) -> &mut Option<Waker>,
+    I0: Fn(&mut StatusWatcherInner<N>),
+    I1: Fn(&mut StatusWatcherInner<N>),
 {
     watcher: &'a StatusWatcher<N>,
     condition: C,
     waker: W,
+    interrupt_enable: I0,
+    interrupt_disable: I1,
 }
 
-impl<'a, const N: u8, T, C, W> StatusWatcherFuture<'a, N, T, C, W>
+impl<'a, const N: u8, T, C, W, I0, I1> StatusWatcherFuture<'a, N, T, C, W, I0, I1>
 where
     C: Fn(&mut StatusWatcherInner<N>) -> Option<T>,
     W: Fn(&mut StatusWatcherInner<N>) -> &mut Option<Waker>,
+    I0: Fn(&mut StatusWatcherInner<N>),
+    I1: Fn(&mut StatusWatcherInner<N>),
 {
-    fn new(watcher: &'a StatusWatcher<N>, condition: C, waker: W) -> Self {
+    fn new(
+        watcher: &'a StatusWatcher<N>,
+        condition: C,
+        waker: W,
+        interrupt_enable: I0,
+        interrupt_disable: I1,
+    ) -> Self {
         Self {
             watcher,
             condition,
             waker,
+            interrupt_enable,
+            interrupt_disable,
         }
     }
 }
 
-impl<'a, const N: u8, T, C, W> Future for StatusWatcherFuture<'a, N, T, C, W>
+impl<'a, const N: u8, T, C, W, I0, I1> Future for StatusWatcherFuture<'a, N, T, C, W, I0, I1>
 where
     C: Fn(&mut StatusWatcherInner<N>) -> Option<T>,
     W: Fn(&mut StatusWatcherInner<N>) -> &mut Option<Waker>,
+    I0: Fn(&mut StatusWatcherInner<N>),
+    I1: Fn(&mut StatusWatcherInner<N>),
 {
     type Output = T;
 
@@ -210,8 +245,23 @@ where
                     }
                 }
 
+                (self.interrupt_enable)(inner);
+
                 Poll::Pending
             }
         })
+    }
+}
+
+impl<'a, const N: u8, T, C, W, I0, I1> Drop for StatusWatcherFuture<'a, N, T, C, W, I0, I1>
+where
+    C: Fn(&mut StatusWatcherInner<N>) -> Option<T>,
+    W: Fn(&mut StatusWatcherInner<N>) -> &mut Option<Waker>,
+    I0: Fn(&mut StatusWatcherInner<N>),
+    I1: Fn(&mut StatusWatcherInner<N>),
+{
+    fn drop(&mut self) {
+        self.watcher
+            .with_check_and_reset(|inner| (self.interrupt_disable)(inner));
     }
 }

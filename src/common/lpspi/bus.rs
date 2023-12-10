@@ -81,11 +81,10 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         lpspi::prepare(&mut pins.sck);
 
         // Configure watermarks.
-        // This is more for good measure, we don't really use the watermarks.
-        // ral::write_reg!(ral::lpspi, this.lpspi(), FCR,
-        //     RXWATER: 0,
-        //     TXWATER: u32::MAX
-        // );
+        ral::write_reg!(ral::lpspi, this.lpspi(), FCR,
+            RXWATER: this.rx_fifo_size/2 - 1, // Notify when we have at least rx_fifo_size/2 data available
+            TXWATER: this.tx_fifo_size/2      // Nofify when we have at least tx_fifo_size/2 space available
+        );
 
         // Enable
         ral::write_reg!(ral::lpspi, this.lpspi(), CR, MEN: MEN_1);
