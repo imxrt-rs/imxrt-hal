@@ -106,7 +106,7 @@ members = ["board", "logging"]
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
-imxrt-iomuxc = "0.2.1"
+imxrt-iomuxc = "0.2.4"
 imxrt-hal = { version = "0.5", path = "." }
 imxrt-log = { path = "logging", default-features = false, features = [
     "log",
