@@ -58,6 +58,8 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             mode: MODE_0,
         };
 
+        log::info!("Fifo sizes: {tx_fifo_size}(TX) {rx_fifo_size}(RX)");
+
         // Reset and disable
         ral::modify_reg!(ral::lpspi, this.lpspi(), CR, MEN: MEN_0, RST: RST_1);
         while ral::read_reg!(ral::lpspi, this.lpspi(), CR, MEN == MEN_1) {}
@@ -275,7 +277,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         let write_data: Option<*const u32> = write_data.map(|p| p.cast());
 
         for chunk in ChunkIter::new(len, MAX_FRAME_SIZE_U32 as usize) {
-            log::info!("Start chunk ... {:?}", chunk);
             self.start_frame(
                 // TODO: optimize u32 by reversing this when necessary
                 false,
