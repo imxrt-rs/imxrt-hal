@@ -1,4 +1,4 @@
-use core::{marker::PhantomData, num::NonZeroUsize};
+use core::{iter::FusedIterator, marker::PhantomData, num::NonZeroUsize};
 
 #[derive(Debug)]
 pub(crate) struct DualDirectionActions {
@@ -177,6 +177,22 @@ pub enum ByteOrder {
     HalfWordReversed,
 }
 
+impl ByteOrder {
+    pub(crate) fn reorder(self, val: u32) -> u32 {
+        match self {
+            ByteOrder::Normal => val,
+            ByteOrder::WordReversed => {
+                let [a, b, c, d] = val.to_le_bytes();
+                u32::from_le_bytes([d, c, b, a])
+            }
+            ByteOrder::HalfWordReversed => {
+                let [a, b, c, d] = val.to_le_bytes();
+                u32::from_le_bytes([b, a, d, c])
+            }
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum TransferDirection {
     Read,
@@ -294,11 +310,60 @@ pub(crate) fn create_actions_read_write_in_place<'a, T: BufferType>(
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct ChunkIterChunk {
+    pub(crate) first: bool,
+    pub(crate) last: bool,
+    pub(crate) position: usize,
+    pub(crate) size: NonZeroUsize,
+}
+
+pub(crate) struct ChunkIter {
+    size: NonZeroUsize,
+    position: usize,
+    max_chunk_size: usize,
+}
+impl ChunkIter {
+    pub(crate) fn new(size: NonZeroUsize, max_chunk_size: usize) -> Self {
+        Self {
+            size,
+            position: 0,
+            max_chunk_size,
+        }
+    }
+}
+
+impl Iterator for ChunkIter {
+    type Item = ChunkIterChunk;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let first = self.position == 0;
+
+        let position = self.position;
+        let leftover = self.size.get().checked_sub(self.position)?;
+        let next_chunk_size = leftover.min(self.max_chunk_size);
+
+        self.position += next_chunk_size;
+        let last = self.position >= self.size.get();
+
+        Some(ChunkIterChunk {
+            first,
+            last,
+            position,
+            size: NonZeroUsize::new(next_chunk_size)?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     extern crate std;
     use std::vec::Vec;
+
+    // TODO: tests for
+    // - ChunkIter
+    // - Byteorder conversion functions
 
     macro_rules! actions_write_iter_test {
         ($len:expr, $expected:expr) => {{

@@ -54,6 +54,21 @@ impl<const N: u8> StatusWatcherInner<N> {
                 waker.wake();
             }
         }
+
+        if ral::read_reg!(ral::lpspi, lpspi, SR, TDF == TDF_1) {
+            ral::modify_reg!(ral::lpspi, lpspi, IER, TDIE: TDIE_0);
+
+            if let Some(waker) = self.tx_fifo_watermark_waker.take() {
+                waker.wake();
+            }
+        }
+        if ral::read_reg!(ral::lpspi, lpspi, SR, RDF == RDF_1) {
+            ral::modify_reg!(ral::lpspi, lpspi, IER, RDIE: RDIE_0);
+
+            if let Some(waker) = self.rx_fifo_watermark_waker.take() {
+                waker.wake();
+            }
+        }
     }
 }
 

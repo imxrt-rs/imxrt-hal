@@ -9,13 +9,15 @@ use super::{
 };
 use crate::{
     iomuxc::{consts, lpspi},
-    lpspi::LpspiDma,
+    lpspi::{transfer_actions::ChunkIter, LpspiDma},
     ral,
 };
 
 mod eh1_impl;
 
 const MAX_FRAME_SIZE_BITS: u32 = 1 << 12;
+const MAX_FRAME_SIZE_BYTES: u32 = MAX_FRAME_SIZE_BITS / 8;
+const MAX_FRAME_SIZE_U32: u32 = MAX_FRAME_SIZE_BYTES / 4;
 
 impl<'a, const N: u8> Lpspi<'a, N> {
     /// The peripheral instance.
@@ -169,7 +171,18 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         self.data.lpspi.wait_for_tx_watermark().await.unwrap();
     }
 
-    fn start_frame(
+    async fn wait_for_write_space_available(&mut self) {
+        if !self.fifo_write_space_available() {
+            self.wait_for_write_watermark().await;
+        }
+    }
+
+    async fn tx_fifo_enqueue_data(&mut self, val: u32) {
+        self.wait_for_write_space_available().await;
+        ral::write_reg!(ral::lpspi, self.lpspi(), TDR, val);
+    }
+
+    async fn start_frame(
         &mut self,
         reverse_bytes: bool,
         is_first_frame: bool,
@@ -181,6 +194,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         let num_bits = frame_size_bytes.get() as u32 * 8;
         assert!(num_bits <= MAX_FRAME_SIZE_BITS);
 
+        self.wait_for_write_space_available().await;
         ral::write_reg!(ral::lpspi, self.lpspi(), TCR,
             CPOL: if self.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
             CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
@@ -215,8 +229,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         };
 
         // This should make sure that at least two words are free to be written
-        self.wait_for_write_watermark().await;
-
         self.start_frame(
             false,
             is_first_frame,
@@ -224,7 +236,8 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             read,
             write_data.is_some(),
             len,
-        );
+        )
+        .await;
 
         if let Some(data) = write_data {
             let mut tx_buffer = [0u8; 4];
@@ -242,7 +255,8 @@ impl<'a, const N: u8> Lpspi<'a, N> {
                     .for_each(|(pos, val)| *val = data.add(pos).read());
             }
 
-            ral::write_reg!(ral::lpspi, self.lpspi(), TDR, u32::from_le_bytes(tx_buffer));
+            self.tx_fifo_enqueue_data(u32::from_le_bytes(tx_buffer))
+                .await;
         }
     }
 
@@ -260,7 +274,31 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         let len = NonZeroUsize::new(len.get() / 4).unwrap();
         let write_data: Option<*const u32> = write_data.map(|p| p.cast());
 
-        todo!();
+        for chunk in ChunkIter::new(len, MAX_FRAME_SIZE_U32 as usize) {
+            log::info!("Start chunk ... {:?}", chunk);
+            self.start_frame(
+                // TODO: optimize u32 by reversing this when necessary
+                false,
+                is_first_frame && chunk.first,
+                is_last_frame && chunk.last,
+                read,
+                write_data.is_some(),
+                chunk.size.saturating_mul(NonZeroUsize::new_unchecked(4)),
+            )
+            .await;
+
+            // Todo: optimize this section into DMA if possible
+            if let Some(write_data) = write_data {
+                let write_data = write_data.add(chunk.position);
+
+                for i in 0..chunk.size.get() {
+                    // TODO: optimize to aligned read if possible
+                    let val = write_data.add(i).read_unaligned();
+                    let val = byteorder.reorder(val);
+                    self.tx_fifo_enqueue_data(val).await;
+                }
+            }
+        }
     }
 
     /// Perform a sequence of transfer actions
