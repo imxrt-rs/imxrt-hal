@@ -3,6 +3,8 @@
 //! This module exposes a similar API as the `clock_gate` API
 //! for the 10xx MCUs. Consult that module's documentation for
 //! more information.
+//!
+//! The API works for clock gates in unassigned mode.
 
 use crate::ral::{self, ccm::CCM};
 
@@ -198,4 +200,34 @@ where
     // FlexIO1 -> LPCG53
     // FlexIO2 -> LPCG54
     Locator::new(N as usize + 52)
+}
+
+/// Returns the ENET.
+#[inline]
+pub const fn enet() -> Locator {
+    Locator::new(112)
+}
+
+/// Returns the ENET1G clock gate locator.
+#[inline]
+pub const fn enet_1g() -> Locator {
+    Locator::new(113)
+}
+
+/// Returns the ENET QOS clock gate locator.
+#[inline]
+pub const fn enet_qos() -> Locator {
+    Locator::new(114)
+}
+
+/// Returns the IOMUXC clock gate locator.
+#[inline]
+pub const fn iomuxc() -> Locator {
+    Locator::new(49)
+}
+
+/// Returns the IOMUXC_LPSR clock gate locator.
+#[inline]
+pub const fn iomuxc_lpsr() -> Locator {
+    Locator::new(50)
 }

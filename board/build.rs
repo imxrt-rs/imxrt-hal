@@ -57,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     16 * 1024 * 1024,
                 )
                 .rodata(imxrt_rt::Memory::Dtcm)
-                .stack_size(32 * 1024)
+                .stack_size(48 * 1024)
                 .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1170evk-cm7\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
