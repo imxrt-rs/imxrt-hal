@@ -200,7 +200,9 @@ impl<const N: u8> StatusWatcher<N> {
             }
         })?;
 
-        ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: watermark);
+        interrupt::free(|_| {
+            ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: watermark);
+        });
 
         Ok(StatusWatcherFuture::new(
             self,

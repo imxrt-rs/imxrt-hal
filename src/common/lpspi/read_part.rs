@@ -24,17 +24,18 @@ impl<const N: u8> LpspiReadPart<'_, N> {
             .unwrap();
     }
 
-    async fn wait_for_read_data_available(&mut self, at_most: usize) {
+    async fn wait_for_read_data_available(&mut self, at_most: NonZeroUsize) {
         if !self.fifo_read_data_available() {
-            let mut watermark = self.rx_fifo_size / 2;
+            let mut watermark = self.rx_fifo_size / 2 - 1;
 
             // If there are only a couple of bytes left in the current
             // transmission, then waiting for rx_fifo_size/2 bytes
             // might not wake us, causing a deadlock.
             // Therefore dynamically reduce the watermark if required.
-            if let Ok(at_most) = u32::try_from(at_most) {
+            if let Ok(at_most) = u32::try_from(at_most.get() - 1) {
                 watermark = watermark.min(at_most);
             }
+
             self.wait_for_read_watermark(watermark).await;
         }
     }
@@ -56,7 +57,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         }
     }
 
-    async fn rx_fifo_read_data(&mut self, num_leftover: usize) -> u32 {
+    async fn rx_fifo_read_data(&mut self, num_leftover: NonZeroUsize) -> u32 {
         self.wait_for_read_data_available(num_leftover).await;
         ral::read_reg!(ral::lpspi, self.data.lpspi.instance(), RDR)
     }
@@ -76,7 +77,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         };
 
         log::info!("Receiving ...");
-        let value = self.rx_fifo_read_data(1).await;
+        let value = self.rx_fifo_read_data(NonZeroUsize::new(1).unwrap()).await;
         log::info!("Read: 0x{:02x}", value);
         let rx_buffer = value.to_le_bytes();
 
