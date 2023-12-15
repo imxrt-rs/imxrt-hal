@@ -1,4 +1,4 @@
-use core::{iter::FusedIterator, marker::PhantomData, num::NonZeroUsize};
+use core::{marker::PhantomData, num::NonZeroUsize};
 
 #[derive(Debug)]
 pub(crate) struct DualDirectionActions {
@@ -14,6 +14,13 @@ impl DualDirectionActions {
             len: self.len,
         })
     }
+
+    pub(crate) unsafe fn get_read_actions(&self) -> ReadActionIter {
+        ReadActionIter::new(ReadActions {
+            read_buf: self.read_buf,
+            len: self.len,
+        })
+    }
 }
 
 pub(crate) struct WriteAction {
@@ -22,6 +29,11 @@ pub(crate) struct WriteAction {
     pub(crate) len: NonZeroUsize,
     pub(crate) is_first: bool,
     pub(crate) is_last: bool,
+}
+
+pub(crate) struct ReadAction {
+    pub(crate) buf: *const u8,
+    pub(crate) len: NonZeroUsize,
 }
 
 pub(crate) struct WriteActionIter {
@@ -68,6 +80,38 @@ impl Iterator for WriteActionIter {
             is_first,
             is_last,
         })
+    }
+}
+
+pub(crate) struct ReadActionIter {
+    actions: ReadActions,
+    pos: usize,
+}
+impl ReadActionIter {
+    fn new(actions: ReadActions) -> Self {
+        Self { actions, pos: 0 }
+    }
+}
+
+impl Iterator for ReadActionIter {
+    type Item = ReadAction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let len = loop {
+            let mut lengths = self.actions.len.get(self.pos..)?;
+            if let Some(len) = NonZeroUsize::new(*lengths.first()?) {
+                break len;
+            }
+            self.pos += 1;
+            lengths = self.actions.len.get(self.pos..)?;
+        };
+
+        let buf = self.actions.read_buf;
+
+        self.pos += 1;
+        self.actions.read_buf = unsafe { self.actions.read_buf.add(len.get()) };
+
+        Some(ReadAction { buf, len })
     }
 }
 
@@ -145,22 +189,32 @@ pub(crate) enum SingleDirectionActions {
 impl SingleDirectionActions {
     pub(crate) fn transfer_direction(&self) -> TransferDirection {
         match self {
-            SingleDirectionActions::Read(_) => TransferDirection::Read,
-            SingleDirectionActions::Write(_) => TransferDirection::Write,
+            Self::Read(_) => TransferDirection::Read,
+            Self::Write(_) => TransferDirection::Write,
         }
     }
 
     pub(crate) unsafe fn get_write_actions(&self) -> SingleDirectionWriteActionIter {
         SingleDirectionWriteActionIter::new(match self {
-            SingleDirectionActions::Read(actions) => MaybeWriteActions {
+            Self::Read(actions) => MaybeWriteActions {
                 write_buf: None,
                 len: actions.len,
             },
-            SingleDirectionActions::Write(actions) => MaybeWriteActions {
+            Self::Write(actions) => MaybeWriteActions {
                 write_buf: Some(actions.write_buf),
                 len: actions.len,
             },
         })
+    }
+
+    pub(crate) unsafe fn get_read_actions(&self) -> Option<ReadActionIter> {
+        match self {
+            Self::Read(actions) => Some(ReadActionIter::new(ReadActions {
+                read_buf: actions.read_buf,
+                len: actions.len,
+            })),
+            Self::Write(_) => None,
+        }
     }
 }
 
@@ -378,6 +432,26 @@ mod tests {
     // - ChunkIter
     // - Byteorder conversion functions
 
+    macro_rules! actions_read_iter_test {
+        ($len:expr, $expected:expr) => {{
+            let actual = ReadActionIter::new(ReadActions {
+                read_buf: 1000usize as *mut u8,
+                len: $len,
+            })
+            .map(|val| {
+                (
+                    val.buf.unwrap() as usize - 1000,
+                    val.len.get(),
+                    val.is_first,
+                    val.is_last,
+                )
+            })
+            .collect::<Vec<_>>();
+            let expected: &[(usize, usize, bool, bool)] = &$expected;
+
+            assert_eq!(actual, expected);
+        }};
+    }
     macro_rules! actions_write_iter_test {
         ($len:expr, $expected:expr) => {{
             let actual = WriteActionIter::new(WriteActions {
@@ -421,6 +495,15 @@ mod tests {
 
             assert_eq!(actual, expected);
         }};
+    }
+
+    #[test]
+    fn read_actions_iter() {
+        actions_read_iter_test!([0, 5, 0], [(0, 5)]);
+        actions_read_iter_test!([2, 3, 4], [(0, 2), (2, 3), (5, 4),]);
+        actions_read_iter_test!([2, 0, 4], [(0, 2), (2, 4)]);
+        actions_read_iter_test!([2, 0, 0], [(0, 2)]);
+        actions_read_iter_test!([0, 0, 4], [(0, 4)]);
     }
 
     #[test]

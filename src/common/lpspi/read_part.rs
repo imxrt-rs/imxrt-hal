@@ -1,4 +1,8 @@
-use super::{ral, LpspiReadPart};
+use super::{
+    ral,
+    transfer_actions::{ByteOrder, ReadAction},
+    LpspiReadPart,
+};
 
 impl<const N: u8> LpspiReadPart<'_, N> {
     fn fifo_read_data_available(&self) -> bool {
@@ -30,6 +34,24 @@ impl<const N: u8> LpspiReadPart<'_, N> {
                 watermark = watermark.min(at_most);
             }
             self.wait_for_read_watermark(watermark).await;
+        }
+    }
+
+    pub async unsafe fn perform_read_actions(
+        &mut self,
+        actions: impl Iterator<Item = ReadAction>,
+        byteorder: ByteOrder,
+    ) {
+        for action in actions {
+            if action.len.get() < 4 {
+                todo!();
+                // self.read_single_word(action.buf, byteorder, action.len)
+                //     .await
+            } else {
+                todo!();
+                // self.read_u32_stream(action.buf, byteorder, action.len)
+                //     .await;
+            }
         }
     }
 }

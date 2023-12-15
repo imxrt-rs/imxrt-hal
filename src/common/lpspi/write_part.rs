@@ -4,7 +4,7 @@ use eh1::spi::{Phase, Polarity};
 
 use super::{
     ral,
-    transfer_actions::{ByteOrder, ChunkIter},
+    transfer_actions::{ByteOrder, ChunkIter, WriteAction},
     LpspiWritePart, MAX_FRAME_SIZE_BITS, MAX_FRAME_SIZE_U32,
 };
 
@@ -60,6 +60,38 @@ impl<const N: u8> LpspiWritePart<'_, N> {
             WIDTH: WIDTH_0,
             FRAMESZ: num_bits - 1
         );
+    }
+
+    pub async unsafe fn perform_write_actions(
+        &mut self,
+        actions: impl Iterator<Item = WriteAction>,
+        has_previous: bool,
+        has_next: bool,
+        byteorder: ByteOrder,
+    ) {
+        for action in actions {
+            if action.len.get() < 4 {
+                self.write_single_word(
+                    action.buf,
+                    byteorder,
+                    action.read,
+                    action.len,
+                    action.is_first && !has_previous,
+                    action.is_last && !has_next,
+                )
+                .await
+            } else {
+                self.write_u32_stream(
+                    action.buf,
+                    byteorder,
+                    action.read,
+                    action.len,
+                    action.is_first && !has_previous,
+                    action.is_last && !has_next,
+                )
+                .await;
+            }
+        }
     }
 
     pub async unsafe fn write_single_word(

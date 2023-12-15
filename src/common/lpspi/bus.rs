@@ -161,11 +161,23 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         self.clear_fifos();
 
+        let byteorder = sequence.byteorder;
+
         let read_part = &mut self.read_part;
         let write_part = &mut self.write_part;
 
         let read_task = async {
-            assert!(!sequence.contains_read_actions());
+            unsafe {
+                if let Some(phase1) = &sequence.phase1 {
+                    let actions = phase1.get_read_actions();
+                    read_part.perform_read_actions(actions, byteorder).await;
+                }
+                if let Some(phase2) = &sequence.phase2 {
+                    if let Some(actions) = phase2.get_read_actions() {
+                        read_part.perform_read_actions(actions, byteorder).await;
+                    }
+                }
+            }
         };
         let write_task = async {
             unsafe {
@@ -173,58 +185,16 @@ impl<'a, const N: u8> Lpspi<'a, N> {
                 let has_phase_2 = sequence.phase2.is_some();
 
                 if let Some(phase1) = &sequence.phase1 {
-                    for action in phase1.get_write_actions() {
-                        if action.len.get() < 4 {
-                            write_part
-                                .write_single_word(
-                                    action.buf,
-                                    sequence.byteorder,
-                                    action.read,
-                                    action.len,
-                                    action.is_first,
-                                    action.is_last && !has_phase_2,
-                                )
-                                .await
-                        } else {
-                            write_part
-                                .write_u32_stream(
-                                    action.buf,
-                                    sequence.byteorder,
-                                    action.read,
-                                    action.len,
-                                    action.is_first,
-                                    action.is_last && !has_phase_2,
-                                )
-                                .await;
-                        }
-                    }
+                    let actions = phase1.get_write_actions();
+                    write_part
+                        .perform_write_actions(actions, false, has_phase_2, byteorder)
+                        .await;
                 }
                 if let Some(phase2) = &sequence.phase2 {
-                    for action in phase2.get_write_actions() {
-                        if action.len.get() < 4 {
-                            write_part
-                                .write_single_word(
-                                    action.buf,
-                                    sequence.byteorder,
-                                    action.read,
-                                    action.len,
-                                    action.is_first && !has_phase_1,
-                                    action.is_last,
-                                )
-                                .await
-                        } else {
-                            write_part
-                                .write_u32_stream(
-                                    action.buf,
-                                    sequence.byteorder,
-                                    action.read,
-                                    action.len,
-                                    action.is_first && !has_phase_1,
-                                    action.is_last,
-                                )
-                                .await
-                        }
-                    }
+                    let actions = phase2.get_write_actions();
+                    write_part
+                        .perform_write_actions(actions, has_phase_1, false, byteorder)
+                        .await;
                 }
             }
         };
@@ -309,6 +279,7 @@ impl<'a, 'b, const N: u8> CleanupOnError<'a, 'b, N> {
 impl<'a, 'b, const N: u8> Drop for CleanupOnError<'a, 'b, N> {
     fn drop(&mut self) {
         if !self.defused {
+            log::warn!("An LPSPI error happened! Cleaning up ...");
             self.driver.clear_fifos();
             self.driver.data.lpspi.clear_errors();
         }
