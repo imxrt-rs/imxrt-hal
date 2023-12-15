@@ -15,30 +15,30 @@ where
     T: crate::lpspi::LpspiWord,
 {
     fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        Cassette::new(core::pin::pin!(
-            self.transfer(create_actions_read_write(words, &[])),
-        ))
+        Cassette::new(core::pin::pin!(unsafe {
+            self.transfer(create_actions_read_write(words, &[]))
+        },))
         .block_on()
     }
 
     fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
-        Cassette::new(core::pin::pin!(
+        Cassette::new(core::pin::pin!(unsafe {
             self.transfer(create_actions_read_write(&mut [], words))
-        ))
+        }))
         .block_on()
     }
 
     fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
-        Cassette::new(core::pin::pin!(
+        Cassette::new(core::pin::pin!(unsafe {
             self.transfer(create_actions_read_write(read, write))
-        ))
+        }))
         .block_on()
     }
 
     fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        Cassette::new(core::pin::pin!(
+        Cassette::new(core::pin::pin!(unsafe {
             self.transfer(create_actions_read_write_in_place(words))
-        ))
+        }))
         .block_on()
     }
 
@@ -54,21 +54,25 @@ where
     T: crate::lpspi::LpspiWord,
 {
     async fn read(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        self.transfer(create_actions_read_write(words, &[])).await
+        unsafe { self.transfer(create_actions_read_write(words, &[])).await }
     }
 
     async fn write(&mut self, words: &[T]) -> Result<(), Self::Error> {
-        self.transfer(create_actions_read_write(&mut [], words))
-            .await
+        unsafe {
+            self.transfer(create_actions_read_write(&mut [], words))
+                .await
+        }
     }
 
     async fn transfer(&mut self, read: &mut [T], write: &[T]) -> Result<(), Self::Error> {
-        self.transfer(create_actions_read_write(read, write)).await
+        unsafe { self.transfer(create_actions_read_write(read, write)).await }
     }
 
     async fn transfer_in_place(&mut self, words: &mut [T]) -> Result<(), Self::Error> {
-        self.transfer(create_actions_read_write_in_place(words))
-            .await
+        unsafe {
+            self.transfer(create_actions_read_write_in_place(words))
+                .await
+        }
     }
 
     async fn flush(&mut self) -> Result<(), Self::Error> {

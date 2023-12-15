@@ -156,7 +156,10 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     }
 
     /// Perform a sequence of transfer actions
-    async fn transfer_unchecked(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
+    async unsafe fn transfer_unchecked(
+        &mut self,
+        sequence: ActionSequence<'_>,
+    ) -> Result<(), LpspiError> {
         self.flush_unchecked().await?;
 
         self.clear_fifos();
@@ -167,35 +170,31 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         let write_part = &mut self.write_part;
 
         let read_task = async {
-            unsafe {
-                if let Some(phase1) = &sequence.phase1 {
-                    let actions = phase1.get_read_actions();
+            if let Some(phase1) = &sequence.phase1 {
+                let actions = phase1.get_read_actions();
+                read_part.perform_read_actions(actions, byteorder).await;
+            }
+            if let Some(phase2) = &sequence.phase2 {
+                if let Some(actions) = phase2.get_read_actions() {
                     read_part.perform_read_actions(actions, byteorder).await;
-                }
-                if let Some(phase2) = &sequence.phase2 {
-                    if let Some(actions) = phase2.get_read_actions() {
-                        read_part.perform_read_actions(actions, byteorder).await;
-                    }
                 }
             }
         };
         let write_task = async {
-            unsafe {
-                let has_phase_1 = sequence.phase1.is_some();
-                let has_phase_2 = sequence.phase2.is_some();
+            let has_phase_1 = sequence.phase1.is_some();
+            let has_phase_2 = sequence.phase2.is_some();
 
-                if let Some(phase1) = &sequence.phase1 {
-                    let actions = phase1.get_write_actions();
-                    write_part
-                        .perform_write_actions(actions, false, has_phase_2, byteorder)
-                        .await;
-                }
-                if let Some(phase2) = &sequence.phase2 {
-                    let actions = phase2.get_write_actions();
-                    write_part
-                        .perform_write_actions(actions, has_phase_1, false, byteorder)
-                        .await;
-                }
+            if let Some(phase1) = &sequence.phase1 {
+                let actions = phase1.get_write_actions();
+                write_part
+                    .perform_write_actions(actions, false, has_phase_2, byteorder)
+                    .await;
+            }
+            if let Some(phase2) = &sequence.phase2 {
+                let actions = phase2.get_write_actions();
+                write_part
+                    .perform_write_actions(actions, has_phase_1, false, byteorder)
+                    .await;
             }
         };
 
@@ -205,7 +204,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     }
 
     /// Perform a sequence of transfer actions while continuously checking for errors.
-    async fn transfer(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
+    async unsafe fn transfer(&mut self, sequence: ActionSequence<'_>) -> Result<(), LpspiError> {
         let mut cleanup_on_error = CleanupOnError::new(self);
         let this = cleanup_on_error.driver();
 
