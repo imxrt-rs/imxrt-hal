@@ -247,7 +247,6 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         let data = this.data;
 
-        // TODO: check if error handling actually works
         let result: Result<(), LpspiError> = futures::select_biased! {
             res = data.lpspi.watch_for_errors().fuse() => res,
             res = this.transfer_unchecked(sequence).fuse() => res,
