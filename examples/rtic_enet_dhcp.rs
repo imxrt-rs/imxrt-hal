@@ -1,12 +1,17 @@
-//! Demonstrates a TCP loopback server with DHCP address assignment.
+//! Demonstrates DHCP address assignment, then either TCP or UDP socket communication.
 //!
 //! The device acquires an IP address using DHCP. This can take a few seconds, so
 //! be patient. Plug it into your DHCP-capable router, and wait for it to assign
 //! an IP address. Check the device log for information on the assigned IP, or
 //! check your router. The LED turns on once DHCP assignment completes.
 //!
-//! Once the device has an IP, send it TCP segments with messages to port 5000.
-//! The device should send back the same message.
+//! The transport behaviors depend on the `SocketDemo` configuration you select.
+//! Change it depending on your desired demo:
+//!
+//! - `SocketDemo::TcpLoopback` listens on port 5000 for incoming connections.
+//!   Once you connect, the socket loops back any data sent to it.
+//! - `SocketDemo::UdpBroadcast` occasionally broadcasts UDP packets. The packets
+//!   contain a counter that increments for every message sent from your board.
 
 #![no_std]
 #![no_main]
@@ -22,6 +27,18 @@ mod app {
     /// the USBD backend uses its own timer for this purpose.
     const LPUART_POLL_INTERVAL_MS: u32 = board::PIT_FREQUENCY / 1_000 * 4;
 
+    /// Variations of this demo.
+    ///
+    /// See the top-level docs for more information.
+    #[allow(dead_code)]
+    enum SocketDemo {
+        TcpLoopback,
+        UdpBroadcast,
+    }
+
+    /// Change the demo here.
+    const SOCKET_DEMO: SocketDemo = SocketDemo::TcpLoopback;
+
     use board::smoltcp;
     use hal::enet;
     use imxrt_hal as hal;
@@ -30,11 +47,11 @@ mod app {
     use smoltcp::iface::Interface;
     use smoltcp::iface::SocketSet;
     use smoltcp::socket::dhcpv4;
-    use smoltcp::socket::tcp;
+    use smoltcp::socket::{tcp, udp};
     use smoltcp::time::Instant;
     use smoltcp::wire::EthernetAddress;
     use smoltcp::wire::IpCidr;
-    use smoltcp::wire::IpListenEndpoint;
+    use smoltcp::wire::{IpAddress, IpEndpoint, IpListenEndpoint, Ipv4Address};
 
     #[local]
     struct Local {
@@ -118,8 +135,9 @@ mod app {
         delay, enet, led,
         txdt: enet::TransmitBuffers<2, 1520> = enet::TransmitBuffers::new(),
         rxdt: enet::ReceiveBuffers<2, 1520> = enet::ReceiveBuffers::new(),
-        tcp_buf: [u8; 1024] = [0; 1024],
+        socket_buffer: [u8; 1024] = [0; 1024],
         msg: [u8; 512] = [0; 512],
+        udp_tx_meta: [udp::PacketMetadata; 1] = [udp::PacketMetadata::EMPTY],
     ])]
     fn idle(cx: idle::Context) -> ! {
         // Ethernet setup happens here, after init, in order to use interrupt-driven logging.
@@ -129,8 +147,9 @@ mod app {
             led,
             txdt,
             rxdt,
-            tcp_buf,
+            socket_buffer,
             msg,
+            udp_tx_meta,
         } = cx.local;
         let enet = enet.take().unwrap();
 
@@ -165,26 +184,10 @@ mod app {
             Instant::from_millis(time),
         );
 
-        let tcp_split = tcp_buf.len() / 2;
-        let tcp_splits = tcp_buf.split_at_mut(tcp_split);
-        let mut tcp_socket = tcp::Socket::new(
-            tcp::SocketBuffer::new(tcp_splits.0),
-            tcp::SocketBuffer::new(tcp_splits.1),
-        );
-        tcp_socket.set_nagle_enabled(false);
-        if let Err(err) = tcp_socket.listen(IpListenEndpoint {
-            addr: None,
-            port: 5000,
-        }) {
-            log::error!("Failed to listen on TCP socket: {err}");
-            panic!();
-        }
-
         let dhcp_socket = dhcpv4::Socket::new();
 
         let mut sockets: [_; 2] = Default::default();
         let mut sockets = SocketSet::new(sockets.as_mut_slice());
-        let tcp_handle = sockets.add(tcp_socket);
         let dhcp_handle = sockets.add(dhcp_socket);
 
         log::info!("Waiting for DHCP assignment...");
@@ -204,35 +207,103 @@ mod app {
             }
         }
 
-        log::info!("Entering TCP loopback mode using port 5000");
         let msg = msg.as_mut_slice();
-        loop {
-            time += 10;
-            delay.block_ms(10);
-            if iface.poll(Instant::from_millis(time), &mut dev, &mut sockets) {
-                let tcp_socket: &mut tcp::Socket = sockets.get_mut(tcp_handle);
-                let available = match tcp_socket.recv_slice(msg) {
-                    Err(err) => {
-                        log::error!("TCP receive error {err:?}");
-                        continue;
+        match SOCKET_DEMO {
+            SocketDemo::TcpLoopback => {
+                let buffer_split = socket_buffer.len() / 2;
+                let buffer_splits = socket_buffer.split_at_mut(buffer_split);
+
+                log::info!("Starting TCP loopback mode using port 5000");
+                let mut tcp_socket = tcp::Socket::new(
+                    tcp::SocketBuffer::new(buffer_splits.0),
+                    tcp::SocketBuffer::new(buffer_splits.1),
+                );
+                tcp_socket.set_nagle_enabled(false);
+                if let Err(err) = tcp_socket.listen(IpListenEndpoint {
+                    addr: None,
+                    port: 5000,
+                }) {
+                    log::error!("Failed to listen on TCP socket: {err}");
+                    panic!();
+                }
+                let socket_handle = sockets.add(tcp_socket);
+                loop {
+                    time += 10;
+                    delay.block_ms(10);
+                    if iface.poll(Instant::from_millis(time), &mut dev, &mut sockets) {
+                        let tcp_socket: &mut tcp::Socket = sockets.get_mut(socket_handle);
+                        let available = match tcp_socket.recv_slice(msg) {
+                            Err(tcp::RecvError::InvalidState) => {
+                                log::error!("TCP Receive error: invalid state");
+                                continue;
+                            }
+                            Err(tcp::RecvError::Finished) => {
+                                log::warn!("Receive error finished; re-listening on port 5000");
+                                tcp_socket.abort();
+                                if let Err(err) = tcp_socket.listen(IpListenEndpoint {
+                                    addr: None,
+                                    port: 5000,
+                                }) {
+                                    log::error!("Failed to listen on TCP socket: {err}");
+                                }
+                                continue;
+                            }
+                            Ok(0) => continue,
+                            Ok(n) => n,
+                        };
+
+                        log::info!("Received {available} bytes from a client");
+                        if let Some(remote) = tcp_socket.remote_endpoint() {
+                            log::info!("Remote client: {remote:?}");
+                        } else {
+                            log::warn!("Not sure of the remote's IP address!");
+                        }
+
+                        if let Err(err) = tcp_socket.send_slice(&msg[..available]) {
+                            log::error!("TCP send error {err:?}");
+                            continue;
+                        }
                     }
-                    Ok(n) => n,
+                }
+            }
+            SocketDemo::UdpBroadcast => {
+                log::info!("Starting UDP broadcast mode");
+                let not_receiving = udp::PacketBuffer::new(&mut [][..], &mut [][..]);
+                let mut udp_socket = udp::Socket::new(
+                    not_receiving,
+                    udp::PacketBuffer::new(
+                        udp_tx_meta.as_mut_slice(),
+                        socket_buffer.as_mut_slice(),
+                    ),
+                );
+                if let Err(err) = udp_socket.bind(IpListenEndpoint {
+                    addr: None,
+                    port: 5000,
+                }) {
+                    log::error!("Failed to bind UDP socket: {err}");
+                    panic!();
                 };
-
-                if 0 == available {
-                    continue;
-                }
-
-                log::info!("Received {available} bytes from a client");
-                if let Some(remote) = tcp_socket.remote_endpoint() {
-                    log::info!("Remote client: {remote:?}");
-                } else {
-                    log::warn!("Not sure of the remote's IP address!");
-                }
-
-                if let Err(err) = tcp_socket.send_slice(&msg[..available]) {
-                    log::error!("TCP send error {err:?}");
-                    continue;
+                let socket_handle = sockets.add(udp_socket);
+                let mut counter: u8 = 0;
+                loop {
+                    time += 10;
+                    delay.block_ms(10);
+                    iface.poll(Instant::from_millis(time), &mut dev, &mut sockets);
+                    if time % 1000 == 0 {
+                        let udp_socket: &mut udp::Socket = sockets.get_mut(socket_handle);
+                        counter = counter.wrapping_add(1);
+                        msg.fill(counter);
+                        match udp_socket.send_slice(
+                            msg,
+                            IpEndpoint {
+                                addr: IpAddress::Ipv4(Ipv4Address::BROADCAST),
+                                port: 5000,
+                            },
+                        ) {
+                            Ok(()) => log::info!("Sent buffer full of counter {counter}"),
+                            Err(err) => log::warn!("Failed to send counter {counter}: {err:?}"),
+                        }
+                    }
                 }
             }
         }
