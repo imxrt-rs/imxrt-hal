@@ -21,6 +21,11 @@ impl<const N: u8> LpspiReadPart<'_, N> {
     async fn wait_for_read_data_available(&mut self, at_most: usize) {
         if !self.fifo_read_data_available() {
             let mut watermark = self.rx_fifo_size / 2;
+
+            // If there are only a couple of bytes left in the current
+            // transmission, then waiting for rx_fifo_size/2 bytes
+            // might not wake us, causing a deadlock.
+            // Therefore dynamically reduce the watermark if required.
             if let Ok(at_most) = u32::try_from(at_most) {
                 watermark = watermark.min(at_most);
             }
