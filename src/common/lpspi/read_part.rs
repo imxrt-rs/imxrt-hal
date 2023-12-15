@@ -68,6 +68,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         len: NonZeroUsize,
     ) {
         assert!(len.get() < 4);
+        // TODO: test byte order
 
         let reverse_bytes = match byteorder {
             ByteOrder::Normal => false,
@@ -100,6 +101,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         len: NonZeroUsize,
         // TODO: dma
     ) {
+        // TODO: test byte order
         assert!(len.get() % 4 == 0);
         let len = NonZeroUsize::new(len.get() / 4).unwrap();
         let read_data: *mut u32 = read_data.cast();
