@@ -274,18 +274,6 @@ pub(crate) struct ActionSequence<'a> {
     _lifetimes: PhantomData<&'a [u8]>,
 }
 
-impl ActionSequence<'_> {
-    pub(crate) fn contains_read_actions(&self) -> bool {
-        if self.phase1.is_some() {
-            true
-        } else if let Some(phase2) = &self.phase2 {
-            phase2.transfer_direction() == TransferDirection::Read
-        } else {
-            false
-        }
-    }
-}
-
 pub trait BufferType: Copy + 'static {
     fn byte_order() -> ByteOrder;
 }
@@ -438,16 +426,9 @@ mod tests {
                 read_buf: 1000usize as *mut u8,
                 len: $len,
             })
-            .map(|val| {
-                (
-                    val.buf.unwrap() as usize - 1000,
-                    val.len.get(),
-                    val.is_first,
-                    val.is_last,
-                )
-            })
+            .map(|val| (val.buf as usize - 1000, val.len.get()))
             .collect::<Vec<_>>();
-            let expected: &[(usize, usize, bool, bool)] = &$expected;
+            let expected: &[(usize, usize)] = &$expected;
 
             assert_eq!(actual, expected);
         }};
