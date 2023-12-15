@@ -142,6 +142,43 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         ral::modify_reg!(ral::lpspi, self.lpspi(), CR, RTF: RTF_1, RRF: RRF_1);
     }
 
+    /// Stops the current transfer without changing its current configuration.
+    fn reset(&mut self) {
+        // Restore old registers
+        cortex_m::interrupt::free(|_| {
+            // Backup
+            let ier = ral::read_reg!(ral::lpspi, self.lpspi(), IER);
+            let der = ral::read_reg!(ral::lpspi, self.lpspi(), DER);
+            let cfgr0 = ral::read_reg!(ral::lpspi, self.lpspi(), CFGR0);
+            let cfgr1 = ral::read_reg!(ral::lpspi, self.lpspi(), CFGR1);
+            let dmr0 = ral::read_reg!(ral::lpspi, self.lpspi(), DMR0);
+            let dmr1 = ral::read_reg!(ral::lpspi, self.lpspi(), DMR1);
+            let ccr = ral::read_reg!(ral::lpspi, self.lpspi(), CCR);
+            let fcr = ral::read_reg!(ral::lpspi, self.lpspi(), FCR);
+
+            // Reset and disable
+            ral::modify_reg!(ral::lpspi, self.lpspi(), CR, MEN: MEN_0, RST: RST_1);
+            while ral::read_reg!(ral::lpspi, self.lpspi(), CR, MEN == MEN_1) {}
+            ral::modify_reg!(ral::lpspi, self.lpspi(), CR, RST: RST_0, RTF: RTF_1, RRF: RRF_1);
+
+            // Reset fifos
+            ral::modify_reg!(ral::lpspi, self.lpspi(), CR, RTF: RTF_1, RRF: RRF_1);
+
+            // Resore settings
+            ral::write_reg!(ral::lpspi, self.lpspi(), IER, ier);
+            ral::write_reg!(ral::lpspi, self.lpspi(), DER, der);
+            ral::write_reg!(ral::lpspi, self.lpspi(), CFGR0, cfgr0);
+            ral::write_reg!(ral::lpspi, self.lpspi(), CFGR1, cfgr1);
+            ral::write_reg!(ral::lpspi, self.lpspi(), DMR0, dmr0);
+            ral::write_reg!(ral::lpspi, self.lpspi(), DMR1, dmr1);
+            ral::write_reg!(ral::lpspi, self.lpspi(), CCR, ccr);
+            ral::write_reg!(ral::lpspi, self.lpspi(), FCR, fcr);
+
+            // Enable
+            ral::write_reg!(ral::lpspi, self.lpspi(), CR, MEN: MEN_1);
+        });
+    }
+
     /// Returns errors, if any there are any.
     fn check_errors(&self) -> Result<(), LpspiError> {
         self.data.lpspi.check_for_errors()
@@ -279,7 +316,7 @@ impl<'a, 'b, const N: u8> Drop for CleanupOnError<'a, 'b, N> {
     fn drop(&mut self) {
         if !self.defused {
             log::warn!("An LPSPI error happened! Cleaning up ...");
-            self.driver.clear_fifos();
+            self.driver.reset();
             self.driver.data.lpspi.clear_errors();
         }
     }
