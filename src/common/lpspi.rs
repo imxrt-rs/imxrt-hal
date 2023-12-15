@@ -8,10 +8,16 @@ use crate::ral;
 mod bus;
 mod disabled;
 mod error;
+mod read_part;
 mod status_watcher;
 mod transfer_actions;
+mod write_part;
 
 use status_watcher::StatusWatcher;
+
+const MAX_FRAME_SIZE_BITS: u32 = 1 << 12;
+const MAX_FRAME_SIZE_BYTES: u32 = MAX_FRAME_SIZE_BITS / 8;
+const MAX_FRAME_SIZE_U32: u32 = MAX_FRAME_SIZE_BYTES / 4;
 
 /// TODO
 pub enum LpspiDma {
@@ -55,14 +61,24 @@ pub struct LpspiData<const N: u8> {
     lpspi: StatusWatcher<N>,
 }
 
+struct LpspiReadPart<'a, const N: u8> {
+    data: &'a LpspiData<N>,
+    rx_fifo_size: u32,
+}
+
+struct LpspiWritePart<'a, const N: u8> {
+    data: &'a LpspiData<N>,
+    tx_fifo_size: u32,
+    mode: Mode,
+}
+
 /// TODO
 pub struct Lpspi<'a, const N: u8> {
     dma: LpspiDma,
     source_clock_hz: u32,
     data: &'a LpspiData<N>,
-    tx_fifo_size: u32,
-    rx_fifo_size: u32,
-    mode: Mode,
+    read_part: LpspiReadPart<'a, N>,
+    write_part: LpspiWritePart<'a, N>,
 }
 
 /// An LPSPI peripheral which is temporarily disabled.
