@@ -32,7 +32,7 @@ pub(crate) struct WriteAction {
 }
 
 pub(crate) struct ReadAction {
-    pub(crate) buf: *const u8,
+    pub(crate) buf: *mut u8,
     pub(crate) len: NonZeroUsize,
 }
 
@@ -51,13 +51,11 @@ impl Iterator for WriteActionIter {
     fn next(&mut self) -> Option<Self::Item> {
         let is_first = self.pos == 0;
 
-        let mut lengths = self.actions.len.get(self.pos..)?;
         let len = loop {
-            if let Some(len) = NonZeroUsize::new(*lengths.first()?) {
+            if let Some(len) = NonZeroUsize::new(*self.actions.len.get(self.pos)?) {
                 break len;
             }
             self.pos += 1;
-            lengths = self.actions.len.get(self.pos..)?;
         };
 
         let buf = self.actions.write_buf;
@@ -98,12 +96,10 @@ impl Iterator for ReadActionIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         let len = loop {
-            let mut lengths = self.actions.len.get(self.pos..)?;
-            if let Some(len) = NonZeroUsize::new(*lengths.first()?) {
+            if let Some(len) = NonZeroUsize::new(*self.actions.len.get(self.pos)?) {
                 break len;
             }
             self.pos += 1;
-            lengths = self.actions.len.get(self.pos..)?;
         };
 
         let buf = self.actions.read_buf;
@@ -130,13 +126,11 @@ impl Iterator for SingleDirectionWriteActionIter {
     fn next(&mut self) -> Option<Self::Item> {
         let is_first = self.pos == 0;
 
-        let mut lengths = self.actions.len.get(self.pos..)?;
         let len = loop {
-            if let Some(len) = NonZeroUsize::new(*lengths.first()?) {
+            if let Some(len) = NonZeroUsize::new(*self.actions.len.get(self.pos)?) {
                 break len;
             }
             self.pos += 1;
-            lengths = self.actions.len.get(self.pos..)?;
         };
 
         let buf = self.actions.write_buf;
