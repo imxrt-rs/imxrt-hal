@@ -181,14 +181,27 @@ impl ByteOrder {
     pub(crate) fn reorder(self, val: u32) -> u32 {
         match self {
             ByteOrder::Normal => val,
-            ByteOrder::WordReversed => {
-                let [a, b, c, d] = val.to_le_bytes();
-                u32::from_le_bytes([d, c, b, a])
-            }
+            ByteOrder::WordReversed => val,
             ByteOrder::HalfWordReversed => {
                 let [a, b, c, d] = val.to_le_bytes();
                 u32::from_le_bytes([b, a, d, c])
             }
+        }
+    }
+
+    pub(crate) fn requires_reorder(self) -> bool {
+        match self {
+            ByteOrder::Normal => false,
+            ByteOrder::WordReversed => false,
+            ByteOrder::HalfWordReversed => true,
+        }
+    }
+
+    pub(crate) fn requires_flip(self) -> bool {
+        match self {
+            ByteOrder::Normal => false,
+            ByteOrder::WordReversed => true,
+            ByteOrder::HalfWordReversed => false,
         }
     }
 }

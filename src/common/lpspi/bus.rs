@@ -278,8 +278,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         for chunk in ChunkIter::new(len, MAX_FRAME_SIZE_U32 as usize) {
             self.start_frame(
-                // TODO: optimize u32 by reversing this when necessary
-                false,
+                byteorder.requires_flip(),
                 is_first_frame && chunk.first,
                 is_last_frame && chunk.last,
                 read,
@@ -288,15 +287,42 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             )
             .await;
 
-            // Todo: optimize this section into DMA if possible
             if let Some(write_data) = write_data {
                 let write_data = write_data.add(chunk.position);
 
-                for i in 0..chunk.size.get() {
-                    // TODO: optimize to aligned read if possible
-                    let val = write_data.add(i).read_unaligned();
-                    let val = byteorder.reorder(val);
-                    self.tx_fifo_enqueue_data(val).await;
+                let is_aligned = write_data.align_offset(core::mem::align_of::<u32>()) == 0;
+                let requires_reorder = byteorder.requires_reorder();
+
+                match (is_aligned, requires_reorder) {
+                    (true, true) => {
+                        for i in 0..chunk.size.get() {
+                            let val = write_data.add(i).read();
+                            let val = byteorder.reorder(val);
+                            self.tx_fifo_enqueue_data(val).await;
+                        }
+                    }
+                    (true, false) => {
+                        // This is the case that supports DMA.
+                        // TODO: add DMA.
+                        for i in 0..chunk.size.get() {
+                            let val = write_data.add(i).read();
+                            self.tx_fifo_enqueue_data(val).await;
+                        }
+                        log::info!("Would support DMA.");
+                    }
+                    (false, true) => {
+                        for i in 0..chunk.size.get() {
+                            let val = write_data.add(i).read_unaligned();
+                            let val = byteorder.reorder(val);
+                            self.tx_fifo_enqueue_data(val).await;
+                        }
+                    }
+                    (false, false) => {
+                        for i in 0..chunk.size.get() {
+                            let val = write_data.add(i).read_unaligned();
+                            self.tx_fifo_enqueue_data(val).await;
+                        }
+                    }
                 }
             }
         }
