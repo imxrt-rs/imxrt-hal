@@ -190,7 +190,7 @@ impl<const N: u8> StatusWatcher<N> {
         .await)
     }
 
-    pub async fn wait_for_rx_watermark(&self) -> Result<(), LpspiError> {
+    pub async fn wait_for_rx_watermark(&self, watermark: u32) -> Result<(), LpspiError> {
         self.with_check_and_reset(|inner| -> Result<(), LpspiError> {
             if inner.rx_fifo_watermark_busy {
                 Err(LpspiError::Busy)
@@ -199,6 +199,8 @@ impl<const N: u8> StatusWatcher<N> {
                 Ok(())
             }
         })?;
+
+        ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: watermark);
 
         Ok(StatusWatcherFuture::new(
             self,

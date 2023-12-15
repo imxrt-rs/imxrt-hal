@@ -145,11 +145,11 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     }
 
     /// Returns errors, if any there are any.
-    fn check_errors(&mut self) -> Result<(), LpspiError> {
+    fn check_errors(&self) -> Result<(), LpspiError> {
         self.data.lpspi.check_for_errors()
     }
 
-    fn configure_dma(&mut self, dma_read: bool, dma_write: bool) {
+    fn configure_dma(&self, dma_read: bool, dma_write: bool) {
         // Configure DMA
         ral::modify_reg!(ral::lpspi, self.lpspi(), DER,
             RDDE: if dma_read {RDDE_1} else {RDDE_0},
@@ -157,35 +157,49 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         );
     }
 
-    fn fifo_read_data_available(&mut self) -> bool {
+    fn fifo_read_data_available(&self) -> bool {
         ral::read_reg!(ral::lpspi, self.lpspi(), RSR, RXEMPTY == RXEMPTY_0)
     }
 
-    fn fifo_write_space_available(&mut self) -> bool {
+    fn fifo_write_space_available(&self) -> bool {
         ral::read_reg!(ral::lpspi, self.lpspi(), FSR, TXCOUNT < self.tx_fifo_size)
     }
 
-    async fn wait_for_read_watermark(&mut self) {
-        self.data.lpspi.wait_for_rx_watermark().await.unwrap();
+    async fn wait_for_read_watermark(&self, watermark: u32) {
+        self.data
+            .lpspi
+            .wait_for_rx_watermark(watermark)
+            .await
+            .unwrap();
     }
 
-    async fn wait_for_write_watermark(&mut self) {
+    async fn wait_for_write_watermark(&self) {
         self.data.lpspi.wait_for_tx_watermark().await.unwrap();
     }
 
-    async fn wait_for_write_space_available(&mut self) {
+    async fn wait_for_write_space_available(&self) {
         if !self.fifo_write_space_available() {
             self.wait_for_write_watermark().await;
         }
     }
 
-    async fn tx_fifo_enqueue_data(&mut self, val: u32) {
+    async fn wait_for_read_data_available(&mut self, at_most: usize) {
+        if !self.fifo_read_data_available() {
+            let mut watermark = self.rx_fifo_size / 2;
+            if let Ok(at_most) = u32::try_from(at_most) {
+                watermark = watermark.min(at_most);
+            }
+            self.wait_for_read_watermark(watermark).await;
+        }
+    }
+
+    async fn tx_fifo_enqueue_data(&self, val: u32) {
         self.wait_for_write_space_available().await;
         ral::write_reg!(ral::lpspi, self.lpspi(), TDR, val);
     }
 
     async fn start_frame(
-        &mut self,
+        &self,
         reverse_bytes: bool,
         is_first_frame: bool,
         is_last_frame: bool,
@@ -214,7 +228,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     }
 
     async unsafe fn write_single_word(
-        &mut self,
+        &self,
         write_data: Option<*const u8>,
         byteorder: ByteOrder,
         read: bool,
@@ -263,7 +277,7 @@ impl<'a, const N: u8> Lpspi<'a, N> {
     }
 
     async unsafe fn write_u32_stream(
-        &mut self,
+        &self,
         write_data: Option<*const u8>,
         byteorder: ByteOrder,
         read: bool,
@@ -334,7 +348,10 @@ impl<'a, const N: u8> Lpspi<'a, N> {
 
         self.clear_fifos();
 
-        let read_task = async { assert!(!sequence.contains_read_actions()) };
+        let read_task = async {
+            assert!(!sequence.contains_read_actions());
+            self.check_errors()
+        };
         let write_task = async {
             unsafe {
                 let has_phase_1 = sequence.phase1.is_some();
