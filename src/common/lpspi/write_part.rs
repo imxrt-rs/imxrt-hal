@@ -9,7 +9,7 @@ use super::{
 };
 
 impl<const N: u8> LpspiWritePart<'_, N> {
-    fn fifo_write_space_available(&self) -> bool {
+    fn fifo_write_space_available(&mut self) -> bool {
         ral::read_reg!(
             ral::lpspi,
             self.data.lpspi.instance(),
@@ -18,17 +18,17 @@ impl<const N: u8> LpspiWritePart<'_, N> {
         )
     }
 
-    async fn wait_for_write_watermark(&self) {
+    async fn wait_for_write_watermark(&mut self) {
         self.data.lpspi.wait_for_tx_watermark().await.unwrap();
     }
 
-    async fn wait_for_write_space_available(&self) {
+    async fn wait_for_write_space_available(&mut self) {
         if !self.fifo_write_space_available() {
             self.wait_for_write_watermark().await;
         }
     }
 
-    async fn tx_fifo_enqueue_data(&self, val: u32) {
+    async fn tx_fifo_enqueue_data(&mut self, val: u32) {
         self.wait_for_write_space_available().await;
         ral::write_reg!(ral::lpspi, self.data.lpspi.instance(), TDR, val);
     }
