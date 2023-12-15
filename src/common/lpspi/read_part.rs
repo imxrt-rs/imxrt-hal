@@ -2,8 +2,8 @@ use core::num::NonZeroUsize;
 
 use super::{
     ral,
-    transfer_actions::{ByteOrder, ReadAction},
-    LpspiReadPart,
+    transfer_actions::{ByteOrder, ChunkIter, ReadAction},
+    LpspiReadPart, MAX_FRAME_SIZE_U32,
 };
 
 impl<const N: u8> LpspiReadPart<'_, N> {
@@ -50,9 +50,8 @@ impl<const N: u8> LpspiReadPart<'_, N> {
                 self.read_single_word(action.buf, byteorder, action.len)
                     .await
             } else {
-                todo!();
-                // self.read_u32_stream(action.buf, byteorder, action.len)
-                //     .await;
+                self.read_u32_stream(action.buf, byteorder, action.len)
+                    .await;
             }
         }
     }
@@ -76,9 +75,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
             ByteOrder::HalfWordReversed => true,
         };
 
-        log::info!("Receiving ...");
         let value = self.rx_fifo_read_data(NonZeroUsize::new(1).unwrap()).await;
-        log::info!("Read: 0x{:02x}", value);
         let rx_buffer = value.to_le_bytes();
 
         let active_buffer = &rx_buffer[(4 - len.get())..];
@@ -93,6 +90,61 @@ impl<const N: u8> LpspiReadPart<'_, N> {
                 .iter()
                 .enumerate()
                 .for_each(|(pos, val)| data.add(pos).write(*val));
+        }
+    }
+
+    pub async unsafe fn read_u32_stream(
+        &mut self,
+        read_data: *mut u8,
+        byteorder: ByteOrder,
+        len: NonZeroUsize,
+        // TODO: dma
+    ) {
+        assert!(len.get() % 4 == 0);
+        let len = NonZeroUsize::new(len.get() / 4).unwrap();
+        let read_data: *mut u32 = read_data.cast();
+
+        for chunk in ChunkIter::new(len, MAX_FRAME_SIZE_U32 as usize) {
+            let read_data = read_data.add(chunk.position);
+
+            let is_aligned = read_data.align_offset(core::mem::align_of::<u32>()) == 0;
+            let requires_reorder = byteorder.requires_reorder();
+
+            match (is_aligned, requires_reorder) {
+                (true, true) => {
+                    for i in 0..chunk.size.get() {
+                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
+                        let val = self.rx_fifo_read_data(num_leftover).await;
+                        let val = byteorder.reorder(val);
+                        read_data.add(i).write(val);
+                    }
+                }
+                (true, false) => {
+                    // This is the case that supports DMA.
+                    // TODO: add DMA.
+                    for i in 0..chunk.size.get() {
+                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
+                        let val = self.rx_fifo_read_data(num_leftover).await;
+                        read_data.add(i).write(val);
+                    }
+                    log::info!("Would support DMA.");
+                }
+                (false, true) => {
+                    for i in 0..chunk.size.get() {
+                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
+                        let val = self.rx_fifo_read_data(num_leftover).await;
+                        let val = byteorder.reorder(val);
+                        read_data.add(i).write_unaligned(val);
+                    }
+                }
+                (false, false) => {
+                    for i in 0..chunk.size.get() {
+                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
+                        let val = self.rx_fifo_read_data(num_leftover).await;
+                        read_data.add(i).write_unaligned(val);
+                    }
+                }
+            }
         }
     }
 }
