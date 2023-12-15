@@ -61,7 +61,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         ral::read_reg!(ral::lpspi, self.data.lpspi.instance(), RDR)
     }
 
-    pub async unsafe fn read_single_word(
+    async unsafe fn read_single_word(
         &mut self,
         data: *mut u8,
         byteorder: ByteOrder,
@@ -93,7 +93,7 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         }
     }
 
-    pub async unsafe fn read_u32_stream(
+    async unsafe fn read_u32_stream(
         &mut self,
         read_data: *mut u8,
         byteorder: ByteOrder,

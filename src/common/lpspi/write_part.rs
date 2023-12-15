@@ -94,7 +94,7 @@ impl<const N: u8> LpspiWritePart<'_, N> {
         }
     }
 
-    pub async unsafe fn write_single_word(
+    async unsafe fn write_single_word(
         &mut self,
         write_data: Option<*const u8>,
         byteorder: ByteOrder,
@@ -143,7 +143,7 @@ impl<const N: u8> LpspiWritePart<'_, N> {
         }
     }
 
-    pub async unsafe fn write_u32_stream(
+    async unsafe fn write_u32_stream(
         &mut self,
         write_data: Option<*const u8>,
         byteorder: ByteOrder,
