@@ -41,7 +41,7 @@ impl<const N: u8> LpspiWritePart<'_, N> {
         len: NonZeroUsize,
     ) {
         log::info!("DMA!");
-
+        // TODO: implement
         for i in 0..len.get() {
             let val = data.add(i).read();
             self.tx_fifo_enqueue_data(val).await;
