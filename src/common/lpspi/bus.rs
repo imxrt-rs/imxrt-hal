@@ -7,6 +7,7 @@ use super::{
 };
 use crate::{
     iomuxc::{consts, lpspi},
+    lpspi::transfer_actions::TransferDirection,
     ral,
 };
 
@@ -206,6 +207,15 @@ impl<'a, const N: u8> Lpspi<'a, N> {
         let read_part = &mut self.read_part;
         let write_part = &mut self.write_part;
 
+        let (mut write_dma, mut read_dma) = match &mut self.dma {
+            LpspiDma::Disabled => (None, None),
+            LpspiDma::Partial(dma) => match sequence.recommended_dma_direction() {
+                TransferDirection::Read => (None, Some(dma)),
+                TransferDirection::Write => (Some(dma), None),
+            },
+            LpspiDma::Full(dma1, dma2) => (Some(dma1), Some(dma2)),
+        };
+
         let read_task = async {
             if let Some(phase1) = &sequence.phase1 {
                 let actions = phase1.get_read_actions();
@@ -224,13 +234,25 @@ impl<'a, const N: u8> Lpspi<'a, N> {
             if let Some(phase1) = &sequence.phase1 {
                 let actions = phase1.get_write_actions();
                 write_part
-                    .perform_write_actions(actions, false, has_phase_2, byteorder)
+                    .perform_write_actions(
+                        actions,
+                        false,
+                        has_phase_2,
+                        byteorder,
+                        write_dma.as_deref_mut(),
+                    )
                     .await;
             }
             if let Some(phase2) = &sequence.phase2 {
                 let actions = phase2.get_write_actions();
                 write_part
-                    .perform_write_actions(actions, has_phase_1, false, byteorder)
+                    .perform_write_actions(
+                        actions,
+                        has_phase_1,
+                        false,
+                        byteorder,
+                        write_dma.as_deref_mut(),
+                    )
                     .await;
             }
         };

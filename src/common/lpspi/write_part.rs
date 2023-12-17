@@ -1,6 +1,7 @@
 use core::num::NonZeroUsize;
 
 use eh1::spi::{Phase, Polarity};
+use imxrt_dma::channel::Channel;
 
 use super::{
     ral,
@@ -31,6 +32,20 @@ impl<const N: u8> LpspiWritePart<'_, N> {
     async fn tx_fifo_enqueue_data(&mut self, val: u32) {
         self.wait_for_write_space_available().await;
         ral::write_reg!(ral::lpspi, self.data.lpspi.instance(), TDR, val);
+    }
+
+    async unsafe fn tx_fifo_enqueue_data_dma(
+        &mut self,
+        channel: &mut Channel,
+        data: *const u32,
+        len: NonZeroUsize,
+    ) {
+        log::info!("DMA!");
+
+        for i in 0..len.get() {
+            let val = data.add(i).read();
+            self.tx_fifo_enqueue_data(val).await;
+        }
     }
 
     async fn start_frame(
@@ -68,6 +83,7 @@ impl<const N: u8> LpspiWritePart<'_, N> {
         has_previous: bool,
         has_next: bool,
         byteorder: ByteOrder,
+        mut dma: Option<&mut Channel>,
     ) {
         for action in actions {
             if action.len.get() < 4 {
@@ -88,6 +104,7 @@ impl<const N: u8> LpspiWritePart<'_, N> {
                     action.len,
                     action.is_first && !has_previous,
                     action.is_last && !has_next,
+                    dma.as_deref_mut(),
                 )
                 .await;
             }
@@ -151,7 +168,7 @@ impl<const N: u8> LpspiWritePart<'_, N> {
         len: NonZeroUsize,
         is_first_frame: bool,
         is_last_frame: bool,
-        // TODO: dma
+        mut dma: Option<&mut Channel>,
     ) {
         assert!(len.get() % 4 == 0);
         let len = NonZeroUsize::new(len.get() / 4).unwrap();
@@ -184,12 +201,15 @@ impl<const N: u8> LpspiWritePart<'_, N> {
                     }
                     (true, false) => {
                         // This is the case that supports DMA.
-                        // TODO: add DMA.
-                        for i in 0..chunk.size.get() {
-                            let val = write_data.add(i).read();
-                            self.tx_fifo_enqueue_data(val).await;
+                        if let Some(dma) = dma.as_deref_mut() {
+                            self.tx_fifo_enqueue_data_dma(dma, write_data, chunk.size)
+                                .await;
+                        } else {
+                            for i in 0..chunk.size.get() {
+                                let val = write_data.add(i).read();
+                                self.tx_fifo_enqueue_data(val).await;
+                            }
                         }
-                        log::info!("Would support DMA.");
                     }
                     (false, true) => {
                         for i in 0..chunk.size.get() {

@@ -268,6 +268,20 @@ pub(crate) struct ActionSequence<'a> {
     _lifetimes: PhantomData<&'a [u8]>,
 }
 
+impl ActionSequence<'_> {
+    pub(crate) fn recommended_dma_direction(&self) -> TransferDirection {
+        if let Some(phase2) = &self.phase2 {
+            phase2.transfer_direction()
+        } else {
+            // If both both directions are equal in size, choose the
+            // read direction for DMA, it might be slightly more efficient.
+            // (Because the tx FIFO needs to be filled manually with the
+            // command words anyway)
+            TransferDirection::Read
+        }
+    }
+}
+
 pub trait BufferType: Copy + 'static {
     fn byte_order() -> ByteOrder;
 }
