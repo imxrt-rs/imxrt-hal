@@ -63,8 +63,8 @@ mod mappings {
     pub(super) const LPUART_DMA_RX_MAPPING: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
     pub(super) const LPUART_DMA_TX_MAPPING: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
 
-    pub(super) const LPSPI_DMA_RX_MAPPING: [u32; 4] = [13, 77, 15, 79];
-    pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 4] = [14, 78, 16, 80];
+    pub(crate) const LPSPI_DMA_RX_MAPPING: [u32; 4] = [13, 77, 15, 79];
+    pub(crate) const LPSPI_DMA_TX_MAPPING: [u32; 4] = [14, 78, 16, 80];
 
     pub(super) const ADC_DMA_RX_MAPPING: [u32; 2] = [24, 88];
 }
@@ -75,8 +75,8 @@ mod mappings {
     pub(super) const LPUART_DMA_TX_MAPPING: [u32; 12] =
         [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
 
-    pub(super) const LPSPI_DMA_RX_MAPPING: [u32; 6] = [36, 38, 40, 42, 44, 46];
-    pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 6] = [37, 39, 41, 43, 45, 47];
+    pub(crate) const LPSPI_DMA_RX_MAPPING: [u32; 6] = [36, 38, 40, 42, 44, 46];
+    pub(crate) const LPSPI_DMA_TX_MAPPING: [u32; 6] = [37, 39, 41, 43, 45, 47];
 }
 use mappings::*;
 
