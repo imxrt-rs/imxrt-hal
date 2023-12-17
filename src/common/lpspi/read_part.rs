@@ -106,45 +106,41 @@ impl<const N: u8> LpspiReadPart<'_, N> {
         let len = NonZeroUsize::new(len.get() / 4).unwrap();
         let read_data: *mut u32 = read_data.cast();
 
-        for chunk in ChunkIter::new(len, MAX_FRAME_SIZE_U32 as usize) {
-            let read_data = read_data.add(chunk.position);
+        let is_aligned = read_data.align_offset(core::mem::align_of::<u32>()) == 0;
+        let requires_reorder = byteorder.requires_reorder();
 
-            let is_aligned = read_data.align_offset(core::mem::align_of::<u32>()) == 0;
-            let requires_reorder = byteorder.requires_reorder();
-
-            match (is_aligned, requires_reorder) {
-                (true, true) => {
-                    for i in 0..chunk.size.get() {
-                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
-                        let val = self.rx_fifo_read_data(num_leftover).await;
-                        let val = byteorder.reorder(val);
-                        read_data.add(i).write(val);
-                    }
+        match (is_aligned, requires_reorder) {
+            (true, true) => {
+                for i in 0..len.get() {
+                    let num_leftover = NonZeroUsize::new(len.get() - i).unwrap();
+                    let val = self.rx_fifo_read_data(num_leftover).await;
+                    let val = byteorder.reorder(val);
+                    read_data.add(i).write(val);
                 }
-                (true, false) => {
-                    // This is the case that supports DMA.
-                    // TODO: add DMA.
-                    for i in 0..chunk.size.get() {
-                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
-                        let val = self.rx_fifo_read_data(num_leftover).await;
-                        read_data.add(i).write(val);
-                    }
-                    log::info!("Would support DMA.");
+            }
+            (true, false) => {
+                // This is the case that supports DMA.
+                // TODO: add DMA.
+                for i in 0..len.get() {
+                    let num_leftover = NonZeroUsize::new(len.get() - i).unwrap();
+                    let val = self.rx_fifo_read_data(num_leftover).await;
+                    read_data.add(i).write(val);
                 }
-                (false, true) => {
-                    for i in 0..chunk.size.get() {
-                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
-                        let val = self.rx_fifo_read_data(num_leftover).await;
-                        let val = byteorder.reorder(val);
-                        read_data.add(i).write_unaligned(val);
-                    }
+                log::info!("Would support DMA.");
+            }
+            (false, true) => {
+                for i in 0..len.get() {
+                    let num_leftover = NonZeroUsize::new(len.get() - i).unwrap();
+                    let val = self.rx_fifo_read_data(num_leftover).await;
+                    let val = byteorder.reorder(val);
+                    read_data.add(i).write_unaligned(val);
                 }
-                (false, false) => {
-                    for i in 0..chunk.size.get() {
-                        let num_leftover = NonZeroUsize::new(chunk.size.get() - i).unwrap();
-                        let val = self.rx_fifo_read_data(num_leftover).await;
-                        read_data.add(i).write_unaligned(val);
-                    }
+            }
+            (false, false) => {
+                for i in 0..len.get() {
+                    let num_leftover = NonZeroUsize::new(len.get() - i).unwrap();
+                    let val = self.rx_fifo_read_data(num_leftover).await;
+                    read_data.add(i).write_unaligned(val);
                 }
             }
         }
