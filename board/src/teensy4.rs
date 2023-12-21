@@ -49,16 +49,27 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_b0::GPIO_B0_02, // SDO, P11
     iomuxc::gpio_b0::GPIO_B0_01, // SDI, P12
     iomuxc::gpio_b0::GPIO_B0_03, // SCK, P13
-    iomuxc::gpio_b0::GPIO_B0_00, // PCS0, P10
 >;
 
 #[cfg(not(feature = "spi"))]
 /// Activate the `"spi"` feature to configure the SPI peripheral.
-pub type Spi = ();
+mod lpspi_types {
+    pub type SpiBus = ();
+    pub type SpiCsPin = ();
+    pub type SpiInterruptHandler = ();
+}
 
 #[cfg(feature = "spi")]
 /// SPI peripheral.
-pub type Spi = hal::lpspi::Lpspi<SpiPins, 4>;
+mod lpspi_types {
+
+    use super::*;
+    pub type SpiBus = hal::lpspi::Lpspi<'static, 4>;
+    pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_00>;
+    pub type SpiInterruptHandler = hal::lpspi::LpspiInterruptHandler<'static, 4>;
+}
+
+pub use lpspi_types::*;
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio_ad_b1::GPIO_AD_B1_07, // SCL, P16
@@ -110,7 +121,7 @@ pub struct Specifics {
     pub button: Button,
     pub ports: GpioPorts,
     pub console: Console,
-    pub spi: Spi,
+    pub spi: (SpiBus, SpiCsPin),
     pub i2c: I2c,
     pub pwm: Pwm,
     pub trng: hal::trng::Trng,
@@ -153,17 +164,25 @@ impl Specifics {
                 sdo: iomuxc.gpio_b0.p02,
                 sdi: iomuxc.gpio_b0.p01,
                 sck: iomuxc.gpio_b0.p03,
-                pcs0: iomuxc.gpio_b0.p00,
             };
-            let mut spi = Spi::new(lpspi4, pins);
-            spi.disabled(|spi| {
-                spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
+            let cs_pin = gpio2.output(iomuxc.gpio_b0.p00);
+
+            static mut SPI_DATA: Option<super::hal::lpspi::LpspiData<4>> = None;
+            let mut spi = SpiBus::new(
+                lpspi4,
+                pins,
+                unsafe { &mut SPI_DATA },
+                super::LPSPI_CLK_FREQUENCY,
+            );
+            spi.disabled(|bus| {
+                bus.set_clock_hz(super::SPI_BAUD_RATE_FREQUENCY);
             });
-            spi
+
+            (spi, cs_pin)
         };
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]
-        let spi = ();
+        let spi = ((), ());
 
         let lpi2c3 = unsafe { ral::lpi2c::LPI2C3::instance() };
         let i2c = I2c::new(
@@ -218,7 +237,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<2>(),
     clock_gate::lpuart::<{ Console::N }>(),
     #[cfg(feature = "spi")]
-    clock_gate::lpspi::<{ Spi::N }>(),
+    clock_gate::lpspi::<{ SpiBus::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
     clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
 ];
