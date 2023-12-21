@@ -124,6 +124,7 @@ pub struct Output<P> {
     pin: P,
     // Logical ownership:
     // - DR: read only
+    // - PSR: read only
     // - DR_SET, DR_CLEAR, DR_TOGGLE: write 1 to set value in DR
     gpio: &'static ral::gpio::RegisterBlock,
     offset: u32,
@@ -168,6 +169,13 @@ impl<P> Output<P> {
     /// Returns `true` if the GPIO is set.
     pub fn is_set(&self) -> bool {
         ral::read_reg!(ral::gpio, self.gpio, DR) & self.mask() != 0
+    }
+
+    /// Returns `true` if the value of the pad is high.
+    ///
+    /// Can differ from [`is_set()`](Self::is_set), especially in an open drain config.
+    pub fn is_pad_high(&self) -> bool {
+        ral::read_reg!(ral::gpio, self.gpio, PSR) & self.mask() != 0
     }
 
     /// Release the underlying pin object.
@@ -346,5 +354,61 @@ impl<P> eh02::digital::v2::InputPin for Input<P> {
     }
     fn is_low(&self) -> Result<bool, Self::Error> {
         Ok(!self.is_set())
+    }
+}
+
+impl<P> eh1::digital::ErrorType for Output<P> {
+    type Error = core::convert::Infallible;
+}
+
+impl<P> eh1::digital::OutputPin for Output<P> {
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        Output::set(self);
+        Ok(())
+    }
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        Output::clear(self);
+        Ok(())
+    }
+}
+
+impl<P> eh1::digital::StatefulOutputPin for Output<P> {
+    fn is_set_high(&mut self) -> Result<bool, Self::Error> {
+        Ok(Output::is_set(self))
+    }
+
+    fn is_set_low(&mut self) -> Result<bool, Self::Error> {
+        Ok(!Output::is_set(self))
+    }
+
+    fn toggle(&mut self) -> Result<(), Self::Error> {
+        Output::toggle(self);
+        Ok(())
+    }
+}
+
+// For open drain or simply reading back the actual state
+// of the pin.
+impl<P> eh1::digital::InputPin for Output<P> {
+    fn is_high(&mut self) -> Result<bool, Self::Error> {
+        Ok(Output::is_pad_high(self))
+    }
+
+    fn is_low(&mut self) -> Result<bool, Self::Error> {
+        Ok(!Output::is_pad_high(self))
+    }
+}
+
+impl<P> eh1::digital::ErrorType for Input<P> {
+    type Error = core::convert::Infallible;
+}
+
+impl<P> eh1::digital::InputPin for Input<P> {
+    fn is_high(&mut self) -> Result<bool, Self::Error> {
+        Ok(Input::is_set(self))
+    }
+
+    fn is_low(&mut self) -> Result<bool, Self::Error> {
+        Ok(!Input::is_set(self))
     }
 }
