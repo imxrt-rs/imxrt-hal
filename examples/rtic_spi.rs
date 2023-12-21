@@ -1,111 +1,113 @@
-//! Demonstrates an interrupt-driven SPI device.
-//!
-//! Connect SDI to SDO. The example uses the LPSPI interrupt to
-//! schedule transfers, and to receive data. You can observe the
-//! I/O with a scope / logic analyzer. The SPI CLK runs at 1MHz,
-//! and the frame size is 64 bits.
-//!
-//! TODO: update description
-
-#![no_std]
+#![deny(warnings)]
 #![no_main]
-// Required for RTIC 2 (for now)
+#![no_std]
 #![feature(type_alias_impl_trait)]
 
-#[rtic::app(device = board, peripherals = false, dispatchers = [BOARD_SWTASK0])]
+use teensy4_bsp::pins::common::{P0, P1};
+imxrt_uart_panic::register!(LPUART6, P1, P0, 115200, teensy4_panic::sos);
+
+use teensy4_bsp as bsp;
+
+use bsp::board;
+use bsp::hal;
+use bsp::logging;
+
+use eh1::serial::Write;
+
+use rtic_monotonics::imxrt::Gpt1 as Mono;
+use rtic_monotonics::imxrt::*;
+use rtic_monotonics::Monotonic;
+
+#[rtic::app(device = teensy4_bsp, dispatchers = [LPSPI1])]
 mod app {
+    use super::*;
 
-    use embedded_hal_bus::spi::ExclusiveDevice;
-    use imxrt_hal as hal;
-
-    use eh1::spi::Operation;
-    use eh1::spi::SpiDevice;
-    use hal::lpspi::LpspiDma;
-    use rtic_monotonics::systick::*;
-
-    use board::{SpiBus, SpiCsPin, SpiInterruptHandler};
-
-    #[local]
-    struct Local {
-        spi_device: ExclusiveDevice<SpiBus, SpiCsPin, Systick>,
-        spi_interrupt_handler: SpiInterruptHandler,
-    }
+    const LOG_POLL_INTERVAL: u32 = board::PERCLK_FREQUENCY / 100;
+    const LOG_DMA_CHANNEL: usize = 0;
 
     #[shared]
     struct Shared {}
 
-    #[init(local = [
-        spi_systick: Option<Systick> = None,
-    ])]
+    #[local]
+    struct Local {
+        led: board::Led,
+        poll_log: hal::pit::Pit<3>,
+        log_poller: logging::Poller,
+    }
+
+    #[init]
     fn init(cx: init::Context) -> (Shared, Local) {
-        let (
-            board::Common { mut dma, .. },
-            board::Specifics {
-                spi: (mut spi_bus, spi_cs_pin),
-                ..
-            },
-        ) = board::new();
+        let board::Resources {
+            mut dma,
+            pit: (_, _, _, mut poll_log),
+            pins,
+            lpuart6,
+            mut gpio2,
+            mut gpt1,
+            ..
+        } = board::t40(cx.device);
 
-        // Init monotonic
-        let systick_token = rtic_monotonics::create_systick_token!();
-        Systick::start(
-            cx.core.SYST,
-            600_000_000, /* TODO: fix */
-            systick_token,
-        );
+        // Logging
+        let log_dma = dma[LOG_DMA_CHANNEL].take().unwrap();
+        let mut log_uart = board::lpuart(lpuart6, pins.p1, pins.p0, 115200);
+        for &ch in "\r\n===== Teensy4 Rtic Blinky =====\r\n\r\n".as_bytes() {
+            nb::block!(log_uart.write(ch)).unwrap();
+        }
+        nb::block!(log_uart.flush()).unwrap();
+        let log_poller =
+            logging::log::lpuart(log_uart, log_dma, logging::Interrupts::Enabled).unwrap();
+        poll_log.set_interrupt_enable(true);
+        poll_log.set_load_timer_value(LOG_POLL_INTERVAL);
+        poll_log.enable();
 
-        // Init DMA
-        let mut chan_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
-        chan_a.set_disable_on_completion(true);
+        // Initialize Monotonic
+        gpt1.set_clock_source(hal::gpt::ClockSource::PeripheralClock);
+        let gpt1_mono_token = rtic_monotonics::create_imxrt_gpt1_token!();
+        Mono::start(board::PERCLK_FREQUENCY, gpt1.release(), gpt1_mono_token);
 
-        let mut chan_b = dma[board::BOARD_DMA_B_INDEX].take().unwrap();
-        chan_b.set_disable_on_completion(true);
+        // Setup LED
+        let led = board::led(&mut gpio2, pins.p13);
+        led.set();
 
-        // Configure SPI
-        spi_bus.set_dma(LpspiDma::Full(chan_a, chan_b));
-        let spi_interrupt_handler = spi_bus.enable_interrupts();
-
-        // Create SPI device
-        let spi_device = ExclusiveDevice::new(spi_bus, spi_cs_pin, Systick);
-
-        demo::spawn().unwrap();
+        // Schedule the blinking task
+        blink::spawn().ok();
 
         (
             Shared {},
             Local {
-                spi_device,
-                spi_interrupt_handler,
+                log_poller,
+                poll_log,
+                led,
             },
         )
     }
 
-    #[task(priority = 1, local = [spi_device])]
-    async fn demo(cx: demo::Context) {
-        let demo::LocalResources { spi_device, .. } = cx.local;
+    #[task(local = [led])]
+    async fn blink(cx: blink::Context) {
+        let blink::LocalResources { led, .. } = cx.local;
+
+        let mut next_update = Mono::now();
 
         loop {
-            Systick::delay(1000.millis()).await;
-
-            // To demonstrate normal operation
-            spi_device
-                .transaction(&mut [
-                    Operation::DelayUs(100),
-                    Operation::Write(&[12345u16]),
-                    Operation::DelayUs(10),
-                    Operation::Write(&[420, 69, 42]),
-                    Operation::Write(&[0xFFFF]),
-                    Operation::DelayUs(50),
-                ])
-                .unwrap();
-
-            // To demonstrate larger, DMA based transfers
-            let mut buf = [0xf5u32; 512];
-            spi_device.transfer_in_place(&mut buf).unwrap();
+            led.toggle();
+            log::info!("Time: {}", Mono::now());
+            next_update += 1000.millis();
+            Mono::delay_until(next_update).await;
         }
     }
 
-    #[task(priority = 2, binds = BOARD_SPI, local = [spi_interrupt_handler])]
-    fn spi_interrupt(cx: spi_interrupt::Context) {
-        cx.local.spi_interrupt_handler.on_interrupt();
+    #[task(binds = PIT, priority = 1, local = [poll_log, log_poller])]
+    fn logger(cx: logger::Context) {
+        let logger::LocalResources {
+            poll_log,
+            log_poller,
+            ..
+        } = cx.local;
+
+        if poll_log.is_elapsed() {
+            poll_log.clear_elapsed();
+
+            log_poller.poll();
+        }
     }
 }
