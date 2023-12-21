@@ -36,6 +36,10 @@ version = "1"
 package = "embedded-hal"
 version = "0.2"
 
+[dependencies.eh1]
+package = "embedded-hal"
+version = "1.0.0"
+
 [dependencies.rand_core]
 version = "0.5"
 default-features = false
