@@ -600,6 +600,9 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// This writes the bits described by `interrupts` as is to the register.
     /// To modify the existing interrupts flags, you should first call [`interrupts`](Lpspi::interrupts)
     /// to get the current state, then modify that state.
+    ///
+    /// Be aware that a critical section might be required to avoid a read-modify-write race condition
+    /// between [`interrupts`] and [`set_interrupts`].
     pub fn set_interrupts(&self, interrupts: Interrupts) {
         ral::write_reg!(ral::lpspi, self.lpspi, IER, interrupts.bits());
     }
@@ -636,6 +639,9 @@ impl<P, const N: u8> Lpspi<P, N> {
     }
 
     /// Clear any existing data in the SPI receive or transfer FIFOs.
+    ///
+    /// Note that this will **not** cancel a running transfer.
+    /// Use [`soft_reset`] for that usecase instead.
     #[inline]
     pub fn clear_fifo(&mut self, direction: Direction) {
         match direction {
@@ -645,17 +651,20 @@ impl<P, const N: u8> Lpspi<P, N> {
     }
 
     /// Clear both FIFOs.
+    ///
+    /// Note that this will **not** cancel a running transfer.
+    /// Use [`soft_reset`] for that usecase instead.
     pub fn clear_fifos(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
     }
 
     /// Returns the watermark level for the given direction.
     #[inline]
-    pub fn watermark(&self, direction: Direction) -> u8 {
+    pub fn watermark(&self, direction: Direction) -> u16 {
         (match direction {
             Direction::Rx => ral::read_reg!(ral::lpspi, self.lpspi, FCR, RXWATER),
             Direction::Tx => ral::read_reg!(ral::lpspi, self.lpspi, FCR, TXWATER),
-        }) as u8
+        }) as u16
     }
 
     /// Returns the FIFO status.
@@ -712,7 +721,7 @@ impl<P, const N: u8> Lpspi<P, N> {
                 return Err(LpspiError::Fifo(Direction::Tx));
             }
             let fifo_status = self.fifo_status();
-            if !fifo_status.is_full(Direction::Tx) {
+            if fifo_status.txcount < self.tx_fifo_size {
                 return Ok(());
             }
         }
@@ -726,7 +735,12 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// You're responsible for making sure there's space in the transmit
     /// FIFO for this transaction command.
     pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
-        ral::modify_reg!(ral::lpspi, self.lpspi, TCR,
+        ral::write_reg!(ral::lpspi, self.lpspi, TCR,
+            CPOL: if transaction.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
+            CPHA: if transaction.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
+            PRESCALE: PRESCALE_0,
+            PCS: PCS_0,
+            WIDTH: WIDTH_0,
             LSBF: transaction.bit_order as u32,
             BYSW: transaction.byte_swap as u32,
             RXMSK: transaction.receive_data_mask as u32,
@@ -976,20 +990,6 @@ pub struct FifoStatus {
     pub rxcount: u16,
     /// Number of words in the transmit FIFO.
     pub txcount: u16,
-}
-
-impl FifoStatus {
-    /// Indicates if the FIFO is full for the given direction.
-    #[inline]
-    pub const fn is_full(self, direction: Direction) -> bool {
-        /// See PARAM register docs.
-        const MAX_FIFO_SIZE: u16 = 16;
-        let count = match direction {
-            Direction::Tx => self.txcount,
-            Direction::Rx => self.rxcount,
-        };
-        count >= MAX_FIFO_SIZE
-    }
 }
 
 bitflags::bitflags! {
