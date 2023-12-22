@@ -267,7 +267,7 @@ impl Transaction {
 
     fn new_words<W>(data: &[W], mode: Mode) -> Result<Self, LpspiError> {
         if let Ok(frame_size) = u16::try_from(8 * core::mem::size_of_val(data)) {
-            Transaction::new(frame_size, word)
+            Transaction::new(frame_size, mode)
         } else {
             Err(LpspiError::FrameSize)
         }
@@ -362,8 +362,8 @@ pub struct Lpspi<P, const N: u8> {
     lpspi: ral::lpspi::Instance<N>,
     pins: P,
     bit_order: BitOrder,
-    tx_fifo_size: u32,
-    rx_fifo_size: u32,
+    tx_fifo_size: u16,
+    rx_fifo_size: u16,
     mode: Mode,
 }
 
@@ -465,7 +465,7 @@ impl<P, const N: u8> Lpspi<P, N> {
         // Configure watermarks
         ral::write_reg!(ral::lpspi, spi.lpspi, FCR,
             RXWATER: 0,               // Notify when we have any data available
-            TXWATER: tx_fifo_size / 2 // Nofify when we have at least tx_fifo_size/2 space available
+            TXWATER: u32::from(tx_fifo_size) / 2 // Nofify when we have at least tx_fifo_size/2 space available
         );
 
         ral::write_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_1);
@@ -568,10 +568,8 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Temporarily disable the LPSPI peripheral.
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
-    /// LPSPI settings that require a fully disabled peripheral. This will clear the transmit
-    /// and receive FIFOs.
+    /// LPSPI settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
-        self.clear_fifos();
         let mut disabled = Disabled::new(&mut self.lpspi);
         func(&mut disabled)
     }
@@ -604,6 +602,37 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// to get the current state, then modify that state.
     pub fn set_interrupts(&self, interrupts: Interrupts) {
         ral::write_reg!(ral::lpspi, self.lpspi, IER, interrupts.bits());
+    }
+
+    /// Set the watermark level for a given direction.
+    ///
+    /// Returns the watermark level committed to the hardware. This may be different
+    /// than the supplied `watermark`, since it's limited by the hardware.
+    ///
+    /// When `direction == Direction::Rx`, the receive data flag is set whenever the
+    /// number of words in the receive FIFO is greater than `watermark`.
+    ///
+    /// When `direction == Direction::Tx`, the transmit data flag is set whenever the
+    /// the number of words in the transmit FIFO is less than, or equal, to `watermark`.
+    #[inline]
+    pub fn set_watermark(&mut self, direction: Direction, watermark: u16) -> u16 {
+        let max_watermark = match direction {
+            Direction::Rx => self.rx_fifo_size - 1,
+            Direction::Tx => self.tx_fifo_size - 1,
+        };
+
+        let watermark = watermark.min(max_watermark);
+
+        match direction {
+            Direction::Rx => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: u32::from(watermark))
+            }
+            Direction::Tx => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: u32::from(watermark))
+            }
+        }
+
+        watermark
     }
 
     /// Clear any existing data in the SPI receive or transfer FIFOs.
@@ -998,25 +1027,14 @@ pub struct Disabled<'a, const N: u8> {
 impl<'a, const N: u8> Disabled<'a, N> {
     fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
-        ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
-        Self { lpspi, men }
-    }
 
-    /// Set the SPI mode for the peripheral
-    pub fn set_mode(&mut self, mode: Mode) {
-        // This could probably be changed when we're not disabled.
-        // However, there's rules about when you can read TCR.
-        // Specifically, reading TCR while it's being loaded from
-        // the transmit FIFO could result in an incorrect reading.
-        // Only permitting this when we're disabled might help
-        // us avoid something troublesome.
-        ral::modify_reg!(
-            ral::lpspi,
-            self.lpspi,
-            TCR,
-            CPOL: ((mode.polarity == Polarity::IdleHigh) as u32),
-            CPHA: ((mode.phase == Phase::CaptureOnSecondTransition) as u32)
-        );
+        // Request disable
+        ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
+        // Wait for the driver to finish its current transfer
+        // and enter disabled state
+        while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
+
+        Self { lpspi, men }
     }
 
     /// Set the LPSPI clock speed (Hz).
@@ -1025,37 +1043,6 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
     pub fn set_clock_hz(&mut self, source_clock_hz: u32, clock_hz: u32) {
         set_spi_clock(source_clock_hz, clock_hz, self.lpspi);
-    }
-
-    /// Set the watermark level for a given direction.
-    ///
-    /// Returns the watermark level committed to the hardware. This may be different
-    /// than the supplied `watermark`, since it's limited by the hardware.
-    ///
-    /// When `direction == Direction::Rx`, the receive data flag is set whenever the
-    /// number of words in the receive FIFO is greater than `watermark`.
-    ///
-    /// When `direction == Direction::Tx`, the transmit data flag is set whenever the
-    /// the number of words in the transmit FIFO is less than, or equal, to `watermark`.
-    #[inline]
-    pub fn set_watermark(&mut self, direction: Direction, watermark: u8) -> u8 {
-        let max_watermark = match direction {
-            Direction::Rx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, RXFIFO),
-            Direction::Tx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, TXFIFO),
-        };
-
-        let watermark = watermark.min(max_watermark - 1);
-
-        match direction {
-            Direction::Rx => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: watermark as u32)
-            }
-            Direction::Tx => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: watermark as u32)
-            }
-        }
-
-        watermark
     }
 
     /// Set the sampling point of the LPSPI peripheral.
