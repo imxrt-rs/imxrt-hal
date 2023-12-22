@@ -197,9 +197,19 @@ pub enum LpspiError {
 /// # Ok(()) }().unwrap();
 /// ```
 pub struct Transaction {
+    /// Polarity and phase.
+    ///
+    /// This only has an effect if we are on a frame border
+    /// and `continuous` is not active.
+    pub mode: Mode,
+    /// Divides the SPI clock by `2^prescaler`.
+    ///
+    /// This only has an effect if we are on a frame border
+    /// and `continuous` is not active.
+    pub prescaler: u8,
     /// Enable byte swap.
     ///
-    /// When enabled (`true`), swap bytes with the `u32` word. This allows
+    /// When enabled (`true`), swap bytes within the `u32` word. This allows
     /// you to change the endianness of the 32-bit word transfer. The
     /// default is `false`.
     pub byte_swap: bool,
@@ -251,12 +261,29 @@ impl Transaction {
     ///
     /// - the buffer is empty.
     /// - there's more than 128 elements in the buffer.
-    pub fn new_u32s(data: &[u32]) -> Result<Self, LpspiError> {
-        Transaction::new_words(data)
+    pub fn new_u32s(data: &[u32], mode: Mode) -> Result<Self, LpspiError> {
+        Transaction::new_words(data, mode)
     }
 
-    fn new_words<W>(data: &[W]) -> Result<Self, LpspiError> {
-        Transaction::new(8 * core::mem::size_of_val(data) as u16)
+    fn new_words<W>(data: &[W], mode: Mode) -> Result<Self, LpspiError> {
+        if let Ok(frame_size) = u16::try_from(8 * core::mem::size_of_val(data)) {
+            Transaction::new(frame_size, word)
+        } else {
+            Err(LpspiError::FrameSize)
+        }
+    }
+
+    fn frame_size_valid(frame_size: u16) -> bool {
+        const MIN_FRAME_SIZE: u16 = 8;
+        const MAX_FRAME_SIZE: u16 = 1 << 12;
+        const MIN_WORD_SIZE: u16 = 2;
+        const WORD_SIZE: u16 = 32;
+
+        let last_word_size = frame_size % WORD_SIZE;
+
+        (frame_size >= MIN_FRAME_SIZE)
+            && (frame_size <= MAX_FRAME_SIZE)
+            && (last_word_size >= MIN_WORD_SIZE)
     }
 
     /// Define a transaction by specifying the frame size, in bits.
@@ -270,11 +297,14 @@ impl Transaction {
     /// - `frame_size` fits within 12 bits; the implementation enforces this maximum value.
     /// - The minimum value for `frame_size` is 8; the implementation enforces this minimum
     ///   value.
-    pub fn new(frame_size: u16) -> Result<Self, LpspiError> {
+    /// - The last 32-bit word in the frame is at least 2 bits long.
+    pub fn new(frame_size: u16, mode: Mode) -> Result<Self, LpspiError> {
         const MIN_FRAME_SIZE: u16 = 8;
         const MAX_FRAME_SIZE: u16 = 1 << 12;
-        if (MIN_FRAME_SIZE..MAX_FRAME_SIZE).contains(&frame_size) {
+        if Self::frame_size_valid(frame_size) {
             Ok(Self {
+                mode,
+                prescaler: 0,
                 byte_swap: false,
                 bit_order: Default::default(),
                 receive_data_mask: false,
@@ -640,7 +670,7 @@ impl<P, const N: u8> Lpspi<P, N> {
 
         self.clear_fifos();
 
-        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16)?;
+        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16, todo!())?;
         transaction.bit_order = self.bit_order();
         transaction.continuous = true;
 
@@ -699,7 +729,7 @@ impl<P, const N: u8> Lpspi<P, N> {
 
         self.clear_fifos();
 
-        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16)?;
+        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16, todo!())?;
         transaction.bit_order = self.bit_order();
         transaction.continuous = true;
         transaction.receive_data_mask = true;
