@@ -425,8 +425,16 @@ impl<P, const N: u8> Lpspi<P, N> {
             pins,
             bit_order: BitOrder::default(),
         };
-        ral::write_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_1);
-        ral::write_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0);
+
+        // Reset and disable
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_0, RST: RST_1);
+        while spi.is_enabled() {}
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0);
+
+        // Reset Fifos
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
+
+        // Configure master mode
         ral::write_reg!(
             ral::lpspi,
             spi.lpspi,
@@ -435,8 +443,16 @@ impl<P, const N: u8> Lpspi<P, N> {
             SAMPLE: SAMPLE_1
         );
         Disabled::new(&mut spi.lpspi).set_mode(MODE_0);
-        ral::write_reg!(ral::lpspi, spi.lpspi, FCR, RXWATER: 0xF, TXWATER: 0xF);
+
+        let tx_fifo_size = spi.max_watermark(Direction::Tx);
+        // Configure watermarks
+        ral::write_reg!(ral::lpspi, spi.lpspi, FCR,
+            RXWATER: 0,               // Notify when we have any data available
+            TXWATER: u32::from(tx_fifo_size) / 2 // Nofify when we have at least tx_fifo_size/2 space available
+        );
+
         ral::write_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_1);
+
         spi
     }
 
@@ -490,10 +506,8 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Temporarily disable the LPSPI peripheral.
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
-    /// LPSPI settings that require a fully disabled peripheral. This will clear the transmit
-    /// and receive FIFOs.
+    /// LPSPI settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
-        self.clear_fifos();
         let mut disabled = Disabled::new(&mut self.lpspi);
         func(&mut disabled)
     }
@@ -819,6 +833,13 @@ impl<P, const N: u8> Lpspi<P, N> {
     pub fn tdr(&self) -> *const ral::WORegister<u32> {
         core::ptr::addr_of!(self.lpspi.TDR)
     }
+
+    fn max_watermark(&self, direction: Direction) -> u8 {
+        (match direction {
+            Direction::Rx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, RXFIFO),
+            Direction::Tx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, TXFIFO),
+        }) as u8
+    }
 }
 
 bitflags::bitflags! {
@@ -959,7 +980,12 @@ pub struct Disabled<'a, const N: u8> {
 impl<'a, const N: u8> Disabled<'a, N> {
     fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
+
+        // Request disable
         ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
+        // Wait for the driver to finish its current transfer
+        // and enter disabled state
+        while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
         Self { lpspi, men }
     }
 
