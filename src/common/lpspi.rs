@@ -199,7 +199,7 @@ pub enum LpspiError {
 pub struct Transaction {
     /// Enable byte swap.
     ///
-    /// When enabled (`true`), swap bytes with the `u32` word. This allows
+    /// When enabled (`true`), swap bytes within the `u32` word. This allows
     /// you to change the endianness of the 32-bit word transfer. The
     /// default is `false`.
     pub byte_swap: bool,
@@ -256,7 +256,21 @@ impl Transaction {
     }
 
     fn new_words<W>(data: &[W]) -> Result<Self, LpspiError> {
-        Transaction::new(8 * core::mem::size_of_val(data) as u16)
+        if let Ok(frame_size) = u16::try_from(8 * core::mem::size_of_val(data)) {
+            Transaction::new(frame_size)
+        } else {
+            Err(LpspiError::FrameSize)
+        }
+    }
+
+    fn frame_size_valid(frame_size: u16) -> bool {
+        const MIN_FRAME_SIZE: u16 = 8;
+        const MAX_FRAME_SIZE: u16 = 1 << 12;
+        const WORD_SIZE: u16 = 32;
+
+        let last_frame_size = frame_size % WORD_SIZE;
+
+        (MIN_FRAME_SIZE..=MAX_FRAME_SIZE).contains(&frame_size) && (1 != last_frame_size)
     }
 
     /// Define a transaction by specifying the frame size, in bits.
@@ -270,10 +284,9 @@ impl Transaction {
     /// - `frame_size` fits within 12 bits; the implementation enforces this maximum value.
     /// - The minimum value for `frame_size` is 8; the implementation enforces this minimum
     ///   value.
+    /// - The last 32-bit word in the frame is at least 2 bits long.
     pub fn new(frame_size: u16) -> Result<Self, LpspiError> {
-        const MIN_FRAME_SIZE: u16 = 8;
-        const MAX_FRAME_SIZE: u16 = 1 << 12;
-        if (MIN_FRAME_SIZE..MAX_FRAME_SIZE).contains(&frame_size) {
+        if Self::frame_size_valid(frame_size) {
             Ok(Self {
                 byte_swap: false,
                 bit_order: Default::default(),
@@ -1055,4 +1068,40 @@ impl Word for u16 {
 
 impl Word for u32 {
     const MAX: u32 = u32::MAX;
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn transaction_frame_sizes() {
+        assert!(super::Transaction::new_words(&[1u8]).is_ok());
+        assert!(super::Transaction::new_words(&[1u8, 2]).is_ok());
+        assert!(super::Transaction::new_words(&[1u8, 2, 3]).is_ok());
+        assert!(super::Transaction::new_words(&[1u8, 2, 3, 4]).is_ok());
+        assert!(super::Transaction::new_words(&[1u8, 2, 3, 4, 5]).is_ok());
+
+        assert!(super::Transaction::new_words(&[1u16]).is_ok());
+        assert!(super::Transaction::new_words(&[1u16, 2]).is_ok());
+        assert!(super::Transaction::new_words(&[1u16, 2, 3]).is_ok());
+        assert!(super::Transaction::new_words(&[1u16, 2, 3, 4]).is_ok());
+        assert!(super::Transaction::new_words(&[1u16, 2, 3, 4, 5]).is_ok());
+
+        assert!(super::Transaction::new_words(&[1u32]).is_ok());
+        assert!(super::Transaction::new_words(&[1u32, 2]).is_ok());
+        assert!(super::Transaction::new_words(&[1u32, 2, 3]).is_ok());
+        assert!(super::Transaction::new_words(&[1u32, 2, 3, 4]).is_ok());
+        assert!(super::Transaction::new_words(&[1u32, 2, 3, 4, 5]).is_ok());
+
+        assert!(super::Transaction::new(7).is_err());
+        assert!(super::Transaction::new(8).is_ok());
+        assert!(super::Transaction::new(9).is_ok());
+        assert!(super::Transaction::new(31).is_ok());
+        assert!(super::Transaction::new(32).is_ok());
+        assert!(super::Transaction::new(33).is_err());
+        assert!(super::Transaction::new(34).is_ok());
+        assert!(super::Transaction::new(95).is_ok());
+        assert!(super::Transaction::new(96).is_ok());
+        assert!(super::Transaction::new(97).is_err());
+        assert!(super::Transaction::new(98).is_ok());
+    }
 }

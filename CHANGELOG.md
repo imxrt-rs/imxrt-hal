@@ -6,6 +6,10 @@ Add embedded-hal 1 implementations for the following drivers:
 
 - GPIO
 
+Introduce LPSPI improvements:
+
+- Add additional checks for LPSPI frame sizes.
+
 ## [0.5.4] 2023-11-26
 
 Add CCM APIs for configuring FlexIO clocks on 1000 targets.
