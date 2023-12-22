@@ -845,6 +845,45 @@ impl<P, const N: u8> Lpspi<P, N> {
             Direction::Tx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, TXFIFO),
         }) as u8
     }
+
+    /// Reset all internal logic while preserving the driver's configurations.
+    ///
+    /// Unlike [`reset()`](Self::reset), this preserves all peripheral registers.
+    pub fn soft_reset(&mut self) {
+        // Backup previous registers
+        let ier = ral::read_reg!(ral::lpspi, self.lpspi, IER);
+        let der = ral::read_reg!(ral::lpspi, self.lpspi, DER);
+        let cfgr0 = ral::read_reg!(ral::lpspi, self.lpspi, CFGR0);
+        let cfgr1 = ral::read_reg!(ral::lpspi, self.lpspi, CFGR1);
+        let dmr0 = ral::read_reg!(ral::lpspi, self.lpspi, DMR0);
+        let dmr1 = ral::read_reg!(ral::lpspi, self.lpspi, DMR1);
+        let ccr = ral::read_reg!(ral::lpspi, self.lpspi, CCR);
+        let fcr = ral::read_reg!(ral::lpspi, self.lpspi, FCR);
+
+        // Backup enabled state
+        let enabled = self.is_enabled();
+
+        // Reset and disable
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: MEN_0, RST: RST_1);
+        while self.is_enabled() {}
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, RST: RST_0);
+
+        // Reset fifos
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
+
+        // Restore settings
+        ral::write_reg!(ral::lpspi, self.lpspi, IER, ier);
+        ral::write_reg!(ral::lpspi, self.lpspi, DER, der);
+        ral::write_reg!(ral::lpspi, self.lpspi, CFGR0, cfgr0);
+        ral::write_reg!(ral::lpspi, self.lpspi, CFGR1, cfgr1);
+        ral::write_reg!(ral::lpspi, self.lpspi, DMR0, dmr0);
+        ral::write_reg!(ral::lpspi, self.lpspi, DMR1, dmr1);
+        ral::write_reg!(ral::lpspi, self.lpspi, CCR, ccr);
+        ral::write_reg!(ral::lpspi, self.lpspi, FCR, fcr);
+
+        // Restore enabled state
+        self.set_enable(enabled);
+    }
 }
 
 bitflags::bitflags! {
