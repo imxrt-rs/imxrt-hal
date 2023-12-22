@@ -25,12 +25,12 @@ mod app {
     #[init]
     fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
         let (_, board::Specifics { mut spi, .. }) = board::new();
-        spi.disabled(|spi| {
-            // Trigger when the TX FIFO is empty.
-            spi.set_watermark(Direction::Tx, 0);
-            // Wait to receive at least 2 u32s.
-            spi.set_watermark(Direction::Rx, 1);
-        });
+
+        // Wait to receive at least 2 u32s.
+        spi.set_watermark(Direction::Rx, 1);
+        // Trigger when the TX FIFO is empty.
+        spi.set_watermark(Direction::Tx, 0);
+
         // Starts the I/O as soon as we're done initializing, since
         // the TX FIFO is empty.
         spi.set_interrupts(Interrupts::TRANSMIT_DATA);
@@ -49,7 +49,7 @@ mod app {
             spi.set_interrupts(Interrupts::RECEIVE_DATA);
 
             // Sending two u32s. Frame size is represented by bits.
-            let transaction = Transaction::new(2 * 8 * core::mem::size_of::<u32>() as u16, todo!())
+            let transaction = Transaction::new(2 * 8 * core::mem::size_of::<u32>() as u16)
                 .expect("Transaction frame size is within bounds");
             spi.enqueue_transaction(&transaction);
 

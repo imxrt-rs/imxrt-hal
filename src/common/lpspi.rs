@@ -197,16 +197,6 @@ pub enum LpspiError {
 /// # Ok(()) }().unwrap();
 /// ```
 pub struct Transaction {
-    /// Polarity and phase.
-    ///
-    /// This only has an effect if we are on a frame border
-    /// and `continuous` is not active.
-    pub mode: Mode,
-    /// Divides the SPI clock by `2^prescaler`.
-    ///
-    /// This only has an effect if we are on a frame border
-    /// and `continuous` is not active.
-    pub prescaler: u8,
     /// Enable byte swap.
     ///
     /// When enabled (`true`), swap bytes within the `u32` word. This allows
@@ -261,13 +251,13 @@ impl Transaction {
     ///
     /// - the buffer is empty.
     /// - there's more than 128 elements in the buffer.
-    pub fn new_u32s(data: &[u32], mode: Mode) -> Result<Self, LpspiError> {
-        Transaction::new_words(data, mode)
+    pub fn new_u32s(data: &[u32]) -> Result<Self, LpspiError> {
+        Transaction::new_words(data)
     }
 
-    fn new_words<W>(data: &[W], mode: Mode) -> Result<Self, LpspiError> {
+    fn new_words<W>(data: &[W]) -> Result<Self, LpspiError> {
         if let Ok(frame_size) = u16::try_from(8 * core::mem::size_of_val(data)) {
-            Transaction::new(frame_size, mode)
+            Transaction::new(frame_size)
         } else {
             Err(LpspiError::FrameSize)
         }
@@ -298,13 +288,9 @@ impl Transaction {
     /// - The minimum value for `frame_size` is 8; the implementation enforces this minimum
     ///   value.
     /// - The last 32-bit word in the frame is at least 2 bits long.
-    pub fn new(frame_size: u16, mode: Mode) -> Result<Self, LpspiError> {
-        const MIN_FRAME_SIZE: u16 = 8;
-        const MAX_FRAME_SIZE: u16 = 1 << 12;
+    pub fn new(frame_size: u16) -> Result<Self, LpspiError> {
         if Self::frame_size_valid(frame_size) {
             Ok(Self {
-                mode,
-                prescaler: 0,
                 byte_swap: false,
                 bit_order: Default::default(),
                 receive_data_mask: false,
@@ -439,7 +425,7 @@ impl<P, const N: u8> Lpspi<P, N> {
         let tx_fifo_size = 1 << tx_fifo_size_exp;
         let rx_fifo_size = 1 << rx_fifo_size_exp;
 
-        let mut spi = Lpspi {
+        let spi = Lpspi {
             lpspi,
             pins,
             bit_order: BitOrder::default(),
@@ -736,8 +722,8 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// FIFO for this transaction command.
     pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
         ral::write_reg!(ral::lpspi, self.lpspi, TCR,
-            CPOL: if transaction.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
-            CPHA: if transaction.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
+            CPOL: if self.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
+            CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
             PRESCALE: PRESCALE_0,
             PCS: PCS_0,
             WIDTH: WIDTH_0,
@@ -749,6 +735,24 @@ impl<P, const N: u8> Lpspi<P, N> {
             CONT: transaction.continuous as u32,
             CONTC: transaction.continuing as u32
         );
+    }
+
+    /// Wait for all ongoing transactions to be finished.
+    pub fn flush(&mut self) -> Result<(), LpspiError> {
+        loop {
+            let status = self.status();
+
+            if status.intersects(Status::RECEIVE_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Rx));
+            }
+            if status.intersects(Status::TRANSMIT_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Tx));
+            }
+
+            if !status.intersects(Status::BUSY) {
+                return Ok(());
+            }
+        }
     }
 
     /// Exchanges data with the SPI device.
@@ -774,7 +778,7 @@ impl<P, const N: u8> Lpspi<P, N> {
 
         self.clear_fifos();
 
-        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16, todo!())?;
+        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16)?;
         transaction.bit_order = self.bit_order();
         transaction.continuous = true;
 
@@ -833,7 +837,7 @@ impl<P, const N: u8> Lpspi<P, N> {
 
         self.clear_fifos();
 
-        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16, todo!())?;
+        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16)?;
         transaction.bit_order = self.bit_order();
         transaction.continuous = true;
         transaction.receive_data_mask = true;
