@@ -9,6 +9,7 @@ Add embedded-hal 1 implementations for the following drivers:
 Introduce LPSPI improvements:
 
 - Add additional checks for LPSPI frame sizes.
+- Rework LPSPI clock settings.
 
 ## [0.5.4] 2023-11-26
 
