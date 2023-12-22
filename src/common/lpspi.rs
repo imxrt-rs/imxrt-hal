@@ -624,6 +624,14 @@ impl<P, const N: u8> Lpspi<P, N> {
         watermark
     }
 
+    /// Set the SPI mode for the peripheral.
+    ///
+    /// This only affects the next transfer; ongoing transfers
+    /// will not be influenced.
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+    }
+
     /// Clear any existing data in the SPI receive or transfer FIFOs.
     ///
     /// Note that this will **not** cancel a running transfer.
