@@ -630,6 +630,37 @@ impl<P, const N: u8> Lpspi<P, N> {
         );
     }
 
+    /// Wait for all ongoing transactions to be finished.
+    pub fn flush(&mut self) -> Result<(), LpspiError> {
+        loop {
+            let status = self.status();
+
+            if status.intersects(Status::RECEIVE_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Rx));
+            }
+            if status.intersects(Status::TRANSMIT_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Tx));
+            }
+
+            // Contributor testing reveals that the busy flag may not set once
+            // the TX FIFO is filled. This means a sequence like
+            //
+            //     lpspi.write(&[...])?;
+            //     lpspi.flush()?;
+            //
+            // could pass through flush without observing busy. Therefore, we
+            // also check the FIFO contents. Even if the peripheral isn't
+            // busy, the FIFO should be non-empty.
+            //
+            // We can't just rely on the FIFO contents, since the FIFO could be
+            // empty while the transaction is completing. (There's data in the
+            // shift register, and PCS is still asserted.)
+            if !status.intersects(Status::BUSY) && self.fifo_status().is_empty(Direction::Tx) {
+                return Ok(());
+            }
+        }
+    }
+
     /// Exchanges data with the SPI device.
     ///
     /// This routine uses continuous transfers to perform the transaction, no matter the
@@ -882,6 +913,14 @@ impl FifoStatus {
             Direction::Rx => self.rxcount,
         };
         count >= MAX_FIFO_SIZE
+    }
+    /// Indicates if the FIFO is empty for the given direction.
+    #[inline]
+    const fn is_empty(self, direction: Direction) -> bool {
+        0 == match direction {
+            Direction::Tx => self.txcount,
+            Direction::Rx => self.rxcount,
+        }
     }
 }
 

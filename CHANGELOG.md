@@ -10,6 +10,7 @@ Introduce LPSPI improvements:
 
 - Add additional checks for LPSPI frame sizes.
 - Rework LPSPI clock settings.
+- Add `flush()` method.
 
 ## [0.5.4] 2023-11-26
 
