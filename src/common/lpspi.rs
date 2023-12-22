@@ -437,7 +437,10 @@ impl<P, const N: u8> Lpspi<P, N> {
         // Reset and disable
         ral::modify_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_0, RST: RST_1);
         while spi.is_enabled() {}
-        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0, RTF: RTF_1, RRF: RRF_1);
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0);
+
+        // Reset Fifos
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
 
         // Configure master mode
         ral::write_reg!(
@@ -506,7 +509,7 @@ impl<P, const N: u8> Lpspi<P, N> {
         // Reset and disable
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: MEN_0, RST: RST_1);
         while self.is_enabled() {}
-        ral::modify_reg!(ral::lpspi, self.lpspi, CR, RST: RST_0, RTF: RTF_1, RRF: RRF_1);
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, RST: RST_0);
 
         // Reset fifos
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
