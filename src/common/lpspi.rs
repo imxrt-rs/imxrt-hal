@@ -462,6 +462,11 @@ impl<P, const N: u8> Lpspi<P, N> {
     }
 
     /// Enable (`true`) or disable (`false`) the peripheral.
+    ///
+    /// Note that disabling does not take effect immediately; instead the
+    /// peripheral finishes the current transfer and then disables itself.
+    /// It is required to check [`is_enabled()`](Self::is_enabled) repeatedly until the
+    /// peripheral is actually disabled.
     pub fn set_enable(&mut self, enable: bool) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: enable as u32)
     }
