@@ -362,6 +362,9 @@ pub struct Lpspi<P, const N: u8> {
     lpspi: ral::lpspi::Instance<N>,
     pins: P,
     bit_order: BitOrder,
+    tx_fifo_size: u32,
+    rx_fifo_size: u32,
+    mode: Mode,
 }
 
 /// Pins for a LPSPI device.
@@ -377,13 +380,12 @@ pub struct Lpspi<P, const N: u8> {
 ///     GPIO_B0_02,
 ///     GPIO_B0_01,
 ///     GPIO_B0_03,
-///     GPIO_B0_00,
 /// >;
 ///
 /// // Helper type for your SPI peripheral
 /// type Lpspi<const N: u8> = hal::lpspi::Lpspi<LpspiPins, N>;
 /// ```
-pub struct Pins<SDO, SDI, SCK, PCS0> {
+pub struct Pins<SDO, SDI, SCK> {
     /// Serial data out
     ///
     /// Data travels from the SPI host controller to the SPI device.
@@ -394,29 +396,24 @@ pub struct Pins<SDO, SDI, SCK, PCS0> {
     pub sdi: SDI,
     /// Serial clock
     pub sck: SCK,
-    /// Chip select 0
-    ///
-    /// (PCSx) convention matches the hardware.
-    pub pcs0: PCS0,
 }
 
-impl<SDO, SDI, SCK, PCS0, const N: u8> Lpspi<Pins<SDO, SDI, SCK, PCS0>, N>
+impl<SDO, SDI, SCK, const N: u8> Lpspi<Pins<SDO, SDI, SCK>, N>
 where
     SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
     SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
     SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    PCS0: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
 {
     /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
     /// When this call returns, the LPSPI pins are configured for their function.
     /// The peripheral is enabled after reset. The LPSPI clock speed is unspecified.
     /// The mode is [`MODE_0`]. The sample point is [`SamplePoint::DelayedEdge`].
-    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK, PCS0>) -> Self {
+    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK>) -> Self {
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
-        lpspi::prepare(&mut pins.pcs0);
+
         Self::init(lpspi, pins)
     }
 }
@@ -437,13 +434,26 @@ impl<P, const N: u8> Lpspi<P, N> {
     pub const N: u8 = N;
 
     fn init(lpspi: ral::lpspi::Instance<N>, pins: P) -> Self {
+        let (tx_fifo_size_exp, rx_fifo_size_exp) =
+            ral::read_reg!(ral::lpspi, lpspi, PARAM, TXFIFO, RXFIFO);
+        let tx_fifo_size = 1 << tx_fifo_size_exp;
+        let rx_fifo_size = 1 << rx_fifo_size_exp;
+
         let mut spi = Lpspi {
             lpspi,
             pins,
             bit_order: BitOrder::default(),
+            tx_fifo_size,
+            rx_fifo_size,
+            mode: MODE_0,
         };
-        ral::write_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_1);
-        ral::write_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0);
+
+        // Reset and disable
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_0, RST: RST_1);
+        while ral::read_reg!(ral::lpspi, spi.lpspi, CR, MEN == MEN_1) {}
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0, RTF: RTF_1, RRF: RRF_1);
+
+        // Configure master mode
         ral::write_reg!(
             ral::lpspi,
             spi.lpspi,
@@ -451,9 +461,15 @@ impl<P, const N: u8> Lpspi<P, N> {
             MASTER: MASTER_1,
             SAMPLE: SAMPLE_1
         );
-        Disabled::new(&mut spi.lpspi).set_mode(MODE_0);
-        ral::write_reg!(ral::lpspi, spi.lpspi, FCR, RXWATER: 0xF, TXWATER: 0xF);
+
+        // Configure watermarks
+        ral::write_reg!(ral::lpspi, spi.lpspi, FCR,
+            RXWATER: 0,               // Notify when we have any data available
+            TXWATER: tx_fifo_size / 2 // Nofify when we have at least tx_fifo_size/2 space available
+        );
+
         ral::write_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_1);
+
         spi
     }
 
