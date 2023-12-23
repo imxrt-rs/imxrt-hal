@@ -468,7 +468,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     ///
     /// Note that disabling does not take effect immediately; instead the
     /// peripheral finishes the current transfer and then disables itself.
-    /// It is required to check [`is_enabled`] repeatedly until the
+    /// It is required to check [`is_enabled()`](Self::is_enabled) repeatedly until the
     /// peripheral is actually disabled.
     pub fn set_enable(&mut self, enable: bool) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: enable as u32)
@@ -588,7 +588,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// to get the current state, then modify that state.
     ///
     /// Be aware that a critical section might be required to avoid a read-modify-write race condition
-    /// between [`interrupts`] and [`set_interrupts`].
+    /// between [`interrupts`](Self::interrupts) and [`set_interrupts`](Self::set_interrupts).
     pub fn set_interrupts(&self, interrupts: Interrupts) {
         ral::write_reg!(ral::lpspi, self.lpspi, IER, interrupts.bits());
     }
@@ -635,7 +635,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Clear any existing data in the SPI receive or transfer FIFOs.
     ///
     /// Note that this will **not** cancel a running transfer.
-    /// Use [`soft_reset`] for that usecase instead.
+    /// Use [`soft_reset()`](Self::soft_reset) for that usecase instead.
     #[inline]
     pub fn clear_fifo(&mut self, direction: Direction) {
         match direction {
@@ -647,7 +647,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Clear both FIFOs.
     ///
     /// Note that this will **not** cancel a running transfer.
-    /// Use [`soft_reset`] for that usecase instead.
+    /// Use [`soft_reset()`](Self::soft_reset) for that usecase instead.
     pub fn clear_fifos(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
     }
