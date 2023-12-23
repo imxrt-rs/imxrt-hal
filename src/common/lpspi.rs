@@ -41,7 +41,6 @@
 //!     sdo: pads.gpio_b0.p02,
 //!     sdi: pads.gpio_b0.p01,
 //!     sck: pads.gpio_b0.p03,
-//!     pcs0: pads.gpio_b0.p00,
 //! };
 //!
 //! let mut spi4 = unsafe { LPSPI4::instance() };
