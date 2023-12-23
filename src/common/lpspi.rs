@@ -271,9 +271,7 @@ impl Transaction {
 
         let last_word_size = frame_size % WORD_SIZE;
 
-        (frame_size >= MIN_FRAME_SIZE)
-            && (frame_size <= MAX_FRAME_SIZE)
-            && (last_word_size >= MIN_WORD_SIZE)
+        (MIN_FRAME_SIZE..=MAX_FRAME_SIZE).contains(&frame_size) && (last_word_size >= MIN_WORD_SIZE)
     }
 
     /// Define a transaction by specifying the frame size, in bits.
