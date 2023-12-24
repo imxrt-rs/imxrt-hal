@@ -67,11 +67,13 @@ pub(crate) unsafe fn init(
     // We should be preventing multiple callers with the critical section,
     // so the "only happens once" is to ensure that we're not changing the
     // static while the logger is active.
-    LOGGER.write(Logger {
-        producer: Mutex::new(RefCell::new(producer)),
-        filters: super::Filters(config.filters),
-    });
-    ::log::set_logger(&*LOGGER.as_ptr())
+    let logger = unsafe {
+        LOGGER.write(Logger {
+            producer: Mutex::new(RefCell::new(producer)),
+            filters: super::Filters(config.filters),
+        })
+    };
+    ::log::set_logger(logger)
         .map(|_| ::log::set_max_level(config.max_level))
         .map_err(|_| crate::AlreadySetError::new(()))
 }

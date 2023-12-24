@@ -129,7 +129,9 @@ impl<const CHAN: u8> Pit<CHAN> {
         Const<CHAN>: Valid,
     {
         let register_block: &'_ crate::ral::pit::RegisterBlock = instance;
-        let register_block: &'static _ = core::mem::transmute(register_block);
+        // Safety: extending lifetime when we know that the register block has
+        // static lifetime.
+        let register_block: &'static _ = unsafe { core::mem::transmute(register_block) };
         Self {
             instance: register_block,
         }

@@ -81,7 +81,7 @@
 //! `"unproven"` feature enabled in embedded-hal 0.2.
 
 #![no_std]
-#![warn(missing_docs)]
+#![warn(missing_docs, unsafe_op_in_unsafe_fn)]
 
 use imxrt_ral as ral;
 

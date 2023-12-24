@@ -29,8 +29,9 @@ pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll };
 /// of these guarantees. The `Poller` indirectly "owns" the static mut memory,
 /// and the crate design ensures that there's only one `Poller` object in existence.
 unsafe fn poll() {
-    let consumer = CONSUMER.assume_init_mut();
-    let channel = CHANNEL.assume_init_mut();
+    // Safety: caller ensures that these are initializd, and that the function
+    // isn't reentrant.
+    let (consumer, channel) = unsafe { (CONSUMER.assume_init_mut(), CHANNEL.assume_init_mut()) };
 
     // Could be high if the user enabled DMA interrupts.
     while channel.is_interrupt() {
@@ -85,9 +86,14 @@ unsafe fn poll() {
         };
 
         if !new.is_empty() {
-            channel::set_source_linear_buffer(channel, new);
-            channel.set_transfer_iterations(new.len().min(u16::MAX as usize) as u16);
-            channel.enable();
+            // Safety: the buffer is static and will always be valid while the transfer
+            // is active.
+            unsafe { channel::set_source_linear_buffer(channel, new) };
+            // Safety: the iterations are based on the number of elements in the collection,
+            // so we're not indexing out of bounds.
+            unsafe { channel.set_transfer_iterations(new.len().min(u16::MAX as usize) as u16) };
+            // Safety: transfer is correctly set up here, and in the init method.
+            unsafe { channel.enable() };
         }
 
         if !completed.is_empty() {
@@ -111,20 +117,22 @@ pub(crate) unsafe fn init<P, const LPUART: u8>(
     channel.disable();
     channel.clear_complete();
     channel.clear_error();
-    channel.set_minor_loop_bytes(core::mem::size_of::<u8>() as u32);
 
-    CONSUMER.write(consumer);
-    let channel = CHANNEL.write(channel);
+    // Safety: mutable static access. Caller only calls this once, and poll() isn't
+    // accessible by this point. There's no race on the consumer.
+    unsafe { CONSUMER.write(consumer) };
+    // Safety: mutable static access. See above.
+    let channel = unsafe { CHANNEL.write(channel) };
 
     channel.set_disable_on_completion(true);
     channel.set_interrupt_on_completion(interrupts == crate::Interrupts::Enabled);
 
     channel.set_channel_configuration(channel::Configuration::enable(lpuart.destination_signal()));
-    // Safety: size is appropriate for the buffer type.
-    channel.set_minor_loop_bytes(core::mem::size_of::<u8>() as u32);
+    // Safety: element size is appropriate for the buffer type.
+    unsafe { channel.set_minor_loop_bytes(core::mem::size_of::<u8>() as u32) };
 
     // Safety: hardware address is valid.
-    channel::set_destination_hardware(channel, lpuart.destination_address());
+    unsafe { channel::set_destination_hardware(channel, lpuart.destination_address()) };
 
     lpuart.disable(|lpuart| {
         lpuart.disable_fifo(Direction::Tx);

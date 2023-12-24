@@ -46,8 +46,22 @@ pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll };
 /// and the crate design ensures that there's only one `Poller` object in existence.
 unsafe fn poll() {
     static mut CONFIGURED: bool = false;
-    let device = DEVICE.assume_init_mut();
-    let class = CLASS.assume_init_mut();
+    #[inline(always)]
+    fn is_configured() -> bool {
+        // Safety: poll() isn't reentrant. Only poll() can
+        // read this state.
+        unsafe { CONFIGURED }
+    }
+    #[inline(always)]
+    fn set_configured(configured: bool) {
+        // Safety: poll() isn't reentrant. Only poll() can
+        // modify this state.s
+        unsafe { CONFIGURED = configured };
+    }
+
+    // Safety: caller ensures that these are initializd, and that the function
+    // isn't reentrant.
+    let (device, class) = unsafe { (DEVICE.assume_init_mut(), CLASS.assume_init_mut()) };
 
     // Is there a CDC class event, like a completed transfer? If so, check
     // the consumer immediately, even if a timer hasn't expired.
@@ -79,18 +93,18 @@ unsafe fn poll() {
     let check_consumer = class_event || timer_event;
 
     if device.state() != UsbDeviceState::Configured {
-        if CONFIGURED {
+        if is_configured() {
             // Turn off the timer, but only if we were previously configured.
             device.bus().gpt_mut(GPT_INSTANCE, |gpt| gpt.stop());
         }
-        CONFIGURED = false;
+        set_configured(false);
         // We can't use the class if we're not configured,
         // so bail out here.
         return;
     }
 
     // We're now configured. Are we newly configured?
-    if !CONFIGURED {
+    if !is_configured() {
         // Must call this when we transition into configured.
         device.bus().configure();
         device.bus().gpt_mut(GPT_INSTANCE, |gpt| {
@@ -102,7 +116,7 @@ unsafe fn poll() {
                 gpt.run()
             }
         });
-        CONFIGURED = true;
+        set_configured(true);
     }
 
     // If the host sends us data, pretend to read it.
@@ -112,7 +126,9 @@ unsafe fn poll() {
 
     // There's no need to wait if we were are newly configured.
     if check_consumer {
-        let consumer = CONSUMER.assume_init_mut();
+        // Safety: consumer is initialized if poll() is running. Caller ensures
+        // that poll() is not reentrant.
+        let consumer = unsafe { CONSUMER.assume_init_mut() };
         if let Ok(grant) = consumer.read() {
             let buf = grant.buf();
             // Don't try to write more than we can fit in a single packet!
@@ -140,15 +156,22 @@ pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
     consumer: super::Consumer,
     config: &UsbdConfig,
 ) {
-    CONSUMER.write(consumer);
+    // Safety: mutable static write. This only occurs once, and poll()
+    // cannot run by the time we're writing this memory.
+    unsafe { CONSUMER.write(consumer) };
 
-    let bus = {
-        let bus = imxrt_usbd::BusAdapter::without_critical_sections(
-            peripherals,
-            &ENDPOINT_MEMORY,
-            &ENDPOINT_STATE,
-            crate::config::USB_SPEED,
-        );
+    let bus: &mut usb_device::class_prelude::UsbBusAllocator<imxrt_usbd::BusAdapter> = {
+        // Safety: we ensure that the bus, class, and all other related USB objects
+        // are accessed in poll(). poll() is not reentrant, so there's no racing
+        // occuring across executing contexts.
+        let bus = unsafe {
+            imxrt_usbd::BusAdapter::without_critical_sections(
+                peripherals,
+                &ENDPOINT_MEMORY,
+                &ENDPOINT_STATE,
+                crate::config::USB_SPEED,
+            )
+        };
         bus.set_interrupts(interrupts == crate::Interrupts::Enabled);
         bus.gpt_mut(GPT_INSTANCE, |gpt| {
             gpt.stop();
@@ -159,12 +182,15 @@ pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
             gpt.reset();
         });
         let bus = usb_device::bus::UsbBusAllocator::new(bus);
-        BUS.write(bus)
+        // Safety: mutable static write. This only occurs once, and poll()
+        // cannot run by the time we're writing this memory.
+        unsafe { BUS.write(bus) }
     };
 
     {
         let class = usbd_serial::CdcAcmClass::new(bus, MAX_PACKET_SIZE as u16);
-        CLASS.write(class);
+        // Safety: mutable static write. See the above discussion for BUS.
+        unsafe { CLASS.write(class) };
     }
 
     {
@@ -185,7 +211,8 @@ pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
             }
         }
 
-        DEVICE.write(device);
+        // Safety: mutable static write. See the above discussion for BUS.
+        unsafe { DEVICE.write(device) };
     }
 }
 
