@@ -17,6 +17,14 @@ Introduce LPSPI improvements:
 - Allow users to change the watermark while enabled. Deprecate the corresponding
   method on the `Disabled` helper.
 
+Change how the LPSPI driver manages the FIFOs. As a result of this change, the
+driver never returns the `Busy` or `NoData` errors through the embedded-hal
+interfaces. Instead of returning `Busy`, the driver blocks until there's space in
+the FIFO. If the caller provides an empty buffer, then the result is OK.
+
+The LPSPI embedded-hal (0.2) implementations will implicitly flush after blocking
+I/O. Users can rely on this behavior to synchronize external components.
+
 ## [0.5.4] 2023-11-26
 
 Add CCM APIs for configuring FlexIO clocks on 1000 targets.

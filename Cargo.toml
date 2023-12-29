@@ -32,6 +32,11 @@ default-features = false
 [dependencies.nb]
 version = "1"
 
+[dependencies.futures]
+version = "0.3.30"
+default-features = false
+features = ["async-await"]
+
 [dependencies.eh02]
 package = "embedded-hal"
 version = "0.2"
@@ -155,7 +160,7 @@ name = "async_dma_spi"
 required-features = ["board/spi"]
 
 [[example]]
-name = "hal_spi"
+name = "rtic_spi_blocking"
 required-features = ["board/spi"]
 
 [[example]]

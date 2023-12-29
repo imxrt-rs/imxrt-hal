@@ -78,6 +78,9 @@
 //! transactions. However, keep in mind that disabling the receiver during a continuous transaction
 //! may not work as expected.
 
+use core::marker::PhantomData;
+use core::task::Poll;
+
 use crate::iomuxc::{consts, lpspi};
 use crate::ral;
 
@@ -599,16 +602,6 @@ impl<P, const N: u8> Lpspi<P, N> {
         }
     }
 
-    /// Check for any receiver errors.
-    fn recv_ok(&self) -> Result<(), LpspiError> {
-        let status = self.status();
-        if status.intersects(Status::RECEIVE_ERROR) {
-            Err(LpspiError::Fifo(Direction::Rx))
-        } else {
-            Ok(())
-        }
-    }
-
     /// Place `word` into the transmit FIFO.
     ///
     /// This will result in the value being sent from the LPSPI.
@@ -618,17 +611,79 @@ impl<P, const N: u8> Lpspi<P, N> {
         ral::write_reg!(ral::lpspi, self.lpspi, TDR, word);
     }
 
-    pub(crate) fn wait_for_transmit_fifo_space(&mut self) -> Result<(), LpspiError> {
-        loop {
+    /// Wait for transmit FIFO space in a (concurrent) spin loop.
+    ///
+    /// This future does not care about the TX FIFO watermark. Instead, it
+    /// checks the FIFO's size with an additional read.
+    pub(crate) async fn spin_for_fifo_space(&self) -> Result<(), LpspiError> {
+        core::future::poll_fn(|_| {
             let status = self.status();
             if status.intersects(Status::TRANSMIT_ERROR) {
-                return Err(LpspiError::Fifo(Direction::Tx));
+                return Poll::Ready(Err(LpspiError::Fifo(Direction::Tx)));
             }
             let fifo_status = self.fifo_status();
             if !fifo_status.is_full(Direction::Tx) {
-                return Ok(());
+                Poll::Ready(Ok(()))
+            } else {
+                Poll::Pending
             }
+        })
+        .await
+    }
+
+    pub(crate) fn wait_for_transmit_fifo_space(&self) -> Result<(), LpspiError> {
+        crate::spin_on(self.spin_for_fifo_space())
+    }
+
+    /// Wait for receive data in a (concurrent) spin loop.
+    ///
+    /// This future does not care about the RX FIFO watermark. Instead, it
+    /// checks the FIFO's size with an additional read.
+    async fn spin_for_word(&self) -> Result<u32, LpspiError> {
+        core::future::poll_fn(|_| {
+            let status = self.status();
+            if status.intersects(Status::RECEIVE_ERROR) {
+                return Poll::Ready(Err(LpspiError::Fifo(Direction::Rx)));
+            }
+
+            let fifo_status = self.fifo_status();
+            if !fifo_status.is_empty(Direction::Rx) {
+                let data = self.read_data_unchecked();
+                Poll::Ready(Ok(data))
+            } else {
+                Poll::Pending
+            }
+        })
+        .await
+    }
+
+    /// Send `len` LPSPI words (u32s) out of the peripheral.
+    ///
+    /// Expected to run in a (concurrent) spin loop, possibly with
+    /// `spin_receive`.
+    async fn spin_transmit(
+        &self,
+        mut data: impl TransmitData,
+        len: usize,
+    ) -> Result<(), LpspiError> {
+        for _ in 0..len {
+            self.spin_for_fifo_space().await?;
+            let word = data.next_word(self.bit_order);
+            self.enqueue_data(word);
         }
+        Ok(())
+    }
+
+    /// Accept `len` LPSPI words (u32s) from the peripheral.
+    ///
+    /// Expected to run in a (concurrent) spin loop, possibly with
+    /// `spin_transmit`.
+    async fn spin_receive(&self, mut data: impl ReceiveData, len: usize) -> Result<(), LpspiError> {
+        for _ in 0..len {
+            let word = self.spin_for_word().await?;
+            data.next_word(word);
+        }
+        Ok(())
     }
 
     /// Set the SPI mode for the peripheral.
@@ -694,107 +749,55 @@ impl<P, const N: u8> Lpspi<P, N> {
         }
     }
 
-    /// Exchanges data with the SPI device.
-    ///
-    /// This routine uses continuous transfers to perform the transaction, no matter the
-    /// primitive type. There's an optimization for &[u32] that we're missing; in this case,
-    /// we don't necessarily need to use continuous transfers. The frame size could be set to
-    /// 8 * buffer.len() * sizeof(u32), and we copy user words into the transmit queue as-is.
-    /// But handling the packing of u8s and u16s into the u32 transmit queue in software is
-    /// extra work, work that's effectively achieved when we use continuous transfers.
-    /// We're guessing that the time to pop a transmit command from the queue is much faster
-    /// than the time taken to pop from the data queue, so the extra queue utilization shouldn't
-    /// matter.
-    fn exchange<W>(&mut self, buffer: &mut [W]) -> Result<(), LpspiError>
-    where
-        W: Word,
-    {
-        if self.status().intersects(Status::BUSY) {
-            return Err(LpspiError::Busy);
-        } else if buffer.is_empty() {
-            return Err(LpspiError::NoData);
+    fn exchange<W: Word>(&mut self, data: &mut [W]) -> Result<(), LpspiError> {
+        if data.is_empty() {
+            return Ok(());
         }
 
-        self.clear_fifos();
-
-        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16)?;
+        let mut transaction = Transaction::new_words(data)?;
         transaction.bit_order = self.bit_order();
-        transaction.continuous = true;
 
-        let mut tx_idx = 0usize;
-        let mut rx_idx = 0usize;
+        self.wait_for_transmit_fifo_space()?;
+        self.enqueue_transaction(&transaction);
 
-        // Continue looping while there is either tx OR rx remaining
-        while tx_idx < buffer.len() || rx_idx < buffer.len() {
-            if tx_idx < buffer.len() {
-                let word = buffer[tx_idx];
+        let word_count = word_count(data);
+        let (tx, rx) = transfer_in_place(data);
 
-                // Turn off TCR CONT on last tx as a workaround so that the final
-                // falling edge comes through:
-                // https://community.nxp.com/t5/i-MX-RT/RT1050-LPSPI-last-bit-not-completing-in-continuous-mode/m-p/898460
-                if tx_idx + 1 == buffer.len() {
-                    transaction.continuous = false;
-                }
+        crate::spin_on(futures::future::try_join(
+            self.spin_transmit(tx, word_count),
+            self.spin_receive(rx, word_count),
+        ))
+        .map_err(|err| {
+            self.recover_from_error();
+            err
+        })?;
 
-                self.wait_for_transmit_fifo_space()?;
-                self.enqueue_transaction(&transaction);
-
-                self.wait_for_transmit_fifo_space()?;
-                self.enqueue_data(word.into());
-                transaction.continuing = true;
-                tx_idx += 1;
-            }
-
-            if rx_idx < buffer.len() {
-                self.recv_ok()?;
-                if let Some(word) = self.read_data() {
-                    buffer[rx_idx] = word.try_into().unwrap_or(W::MAX);
-                    rx_idx += 1;
-                }
-            }
-        }
+        self.flush()?;
 
         Ok(())
     }
 
-    /// Write data to the transmit queue without subsequently reading
-    /// the receive queue.
-    ///
-    /// Use this method when you know that the receiver queue is disabled
-    /// (RXMASK high in TCR).
-    ///
-    /// Similar to `exchange`, this is using continuous transfers for all supported primitives.
-    fn write_no_read<W>(&mut self, buffer: &[W]) -> Result<(), LpspiError>
-    where
-        W: Word,
-    {
-        if self.status().intersects(Status::BUSY) {
-            return Err(LpspiError::Busy);
-        } else if buffer.is_empty() {
-            return Err(LpspiError::NoData);
+    fn write_no_read<W: Word>(&mut self, data: &[W]) -> Result<(), LpspiError> {
+        if data.is_empty() {
+            return Ok(());
         }
 
-        self.clear_fifos();
-
-        let mut transaction = Transaction::new(8 * core::mem::size_of::<W>() as u16)?;
-        transaction.bit_order = self.bit_order();
-        transaction.continuous = true;
+        let mut transaction = Transaction::new_words(data)?;
         transaction.receive_data_mask = true;
-
-        for word in buffer {
-            self.wait_for_transmit_fifo_space()?;
-            self.enqueue_transaction(&transaction);
-
-            self.wait_for_transmit_fifo_space()?;
-            self.enqueue_data((*word).into());
-            transaction.continuing = true;
-        }
-
-        transaction.continuing = false;
-        transaction.continuous = false;
+        transaction.bit_order = self.bit_order();
 
         self.wait_for_transmit_fifo_space()?;
         self.enqueue_transaction(&transaction);
+
+        let word_count = word_count(data);
+        let tx = TransmitBuffer::new(data);
+
+        crate::spin_on(self.spin_transmit(tx, word_count)).map_err(|err| {
+            self.recover_from_error();
+            err
+        })?;
+
+        self.flush()?;
 
         Ok(())
     }
@@ -912,6 +915,15 @@ impl<P, const N: u8> Lpspi<P, N> {
     #[inline]
     pub fn set_watermark(&mut self, direction: Direction, watermark: u8) -> u8 {
         set_watermark(&self.lpspi, direction, watermark)
+    }
+
+    /// Recover from a transaction error.
+    fn recover_from_error(&mut self) {
+        // Resets the peripheral and flushes whatever is in the FIFOs.
+        self.soft_reset();
+
+        // Reset the status flags, clearing the error condition for the next use.
+        self.clear_status(Status::TRANSMIT_ERROR | Status::RECEIVE_ERROR);
     }
 }
 
@@ -1199,22 +1211,462 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N> {
 /// Describes SPI words that can participate in transactions.
 trait Word: Copy + Into<u32> + TryFrom<u32> {
     const MAX: Self;
+    const ZERO: Self;
+
+    /// Repeatedly call `provider` to produce yourself,
+    /// then turn yourself into a LPSPI word.
+    fn pack_word(bit_order: BitOrder, provider: impl FnMut() -> Option<Self>) -> u32;
+
+    /// Given a word, deconstruct the word and call the
+    /// `sink` with those components.
+    fn unpack_word(word: u32, sink: impl FnMut(Self));
 }
 
 impl Word for u8 {
     const MAX: u8 = u8::MAX;
+    const ZERO: u8 = 0;
+    fn pack_word(bit_order: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
+        let mut word = 0;
+        match bit_order {
+            BitOrder::Msb => {
+                for _ in 0..4 {
+                    if let Some(byte) = provider() {
+                        word <<= 8;
+                        word |= u32::from(byte);
+                    }
+                }
+            }
+            BitOrder::Lsb => {
+                for offset in 0..4 {
+                    if let Some(byte) = provider() {
+                        word |= u32::from(byte) << (8 * offset);
+                    }
+                }
+            }
+        }
+
+        word
+    }
+    fn unpack_word(word: u32, mut sink: impl FnMut(Self)) {
+        for offset in [0, 8, 16, 24] {
+            sink((word >> offset) as u8);
+        }
+    }
 }
 
 impl Word for u16 {
     const MAX: u16 = u16::MAX;
+    const ZERO: u16 = 0;
+    fn pack_word(bit_order: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
+        let mut word = 0;
+        match bit_order {
+            BitOrder::Msb => {
+                for _ in 0..2 {
+                    if let Some(half) = provider() {
+                        word <<= 16;
+                        word |= u32::from(half);
+                    }
+                }
+            }
+            BitOrder::Lsb => {
+                for offset in 0..2 {
+                    if let Some(half) = provider() {
+                        word |= u32::from(half) << (16 * offset);
+                    }
+                }
+            }
+        }
+
+        word
+    }
+    fn unpack_word(word: u32, mut sink: impl FnMut(Self)) {
+        for offset in [0, 16] {
+            sink((word >> offset) as u16);
+        }
+    }
 }
 
 impl Word for u32 {
     const MAX: u32 = u32::MAX;
+    const ZERO: u32 = 0;
+    fn pack_word(_: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
+        provider().unwrap_or(0)
+    }
+    fn unpack_word(word: u32, mut sink: impl FnMut(Self)) {
+        sink(word)
+    }
 }
 
+/// Generalizes how we prepare LPSPI words for transmit.
+trait TransmitData {
+    /// Get the next word for the transmit FIFO.
+    ///
+    /// If you're out of words, return 0.
+    fn next_word(&mut self, bit_order: BitOrder) -> u32;
+}
+
+/// Generalizes how we save LPSPI data into memory.
+trait ReceiveData {
+    /// Invoked each time we read data from the queue.
+    fn next_word(&mut self, word: u32);
+}
+
+/// Transmit data from a buffer.
+struct TransmitBuffer<'a, W> {
+    /// The read position.
+    ptr: *const W,
+    /// One past the end of the buffer.
+    end: *const W,
+    _buffer: PhantomData<&'a [W]>,
+}
+
+impl<'a, W> TransmitBuffer<'a, W>
+where
+    W: Word,
+{
+    fn new(buffer: &'a [W]) -> Self {
+        // Safety: pointer offset math meets expectations.
+        unsafe { Self::from_raw(buffer.as_ptr(), buffer.len()) }
+    }
+
+    /// # Safety
+    ///
+    /// `ptr + len` must be in bounds, or one past the end of the
+    /// allocation.
+    unsafe fn from_raw(ptr: *const W, len: usize) -> Self {
+        Self {
+            ptr,
+            end: unsafe { ptr.add(len) },
+            _buffer: PhantomData,
+        }
+    }
+
+    /// Read the next element from the buffer.
+    fn next_read(&mut self) -> Option<W> {
+        // Safety: read the next word only if we're in bounds.
+        unsafe {
+            (self.ptr != self.end).then(|| {
+                let word = self.ptr.read();
+                self.ptr = self.ptr.add(1);
+                word
+            })
+        }
+    }
+}
+
+impl<W> TransmitData for TransmitBuffer<'_, W>
+where
+    W: Word,
+{
+    fn next_word(&mut self, bit_order: BitOrder) -> u32 {
+        W::pack_word(bit_order, || self.next_read())
+    }
+}
+
+/// Transmits dummy values.
+struct TransmitDummies;
+
+impl TransmitData for TransmitDummies {
+    fn next_word(&mut self, _: BitOrder) -> u32 {
+        u32::MAX
+    }
+}
+
+/// Receive data into a buffer.
+struct ReceiveBuffer<'a, W> {
+    /// The write position.
+    ptr: *mut W,
+    /// One past the end of the buffer.
+    end: *const W,
+    _buffer: PhantomData<&'a [W]>,
+}
+
+impl<'a, W> ReceiveBuffer<'a, W>
+where
+    W: Word,
+{
+    #[cfg(test)] // TODO(mciantyre) remove once needed in non-test code.
+    fn new(buffer: &'a mut [W]) -> Self {
+        // Safety: pointer offset math meets expectations.
+        unsafe { Self::from_raw(buffer.as_mut_ptr(), buffer.len()) }
+    }
+
+    /// # Safety
+    ///
+    /// `ptr + len` must be in bounds, or one past the end of the
+    /// allocation.
+    unsafe fn from_raw(ptr: *mut W, len: usize) -> Self {
+        Self {
+            ptr,
+            end: unsafe { ptr.cast_const().add(len) },
+            _buffer: PhantomData,
+        }
+    }
+
+    /// Put the next element into the buffer.
+    fn next_write(&mut self, elem: W) {
+        // Safety: write the next word only if we're in bounds.
+        // Words are primitive types; we don't need to execute
+        // a drop when we overwrite a value in memory.
+        unsafe {
+            if self.ptr.cast_const() != self.end {
+                self.ptr.write(elem);
+                self.ptr = self.ptr.add(1);
+            }
+        }
+    }
+}
+
+impl<W> ReceiveData for ReceiveBuffer<'_, W>
+where
+    W: Word,
+{
+    fn next_word(&mut self, word: u32) {
+        W::unpack_word(word, |elem| self.next_write(elem));
+    }
+}
+
+/// Receive dummy data.
+struct ReceiveDummies;
+
+impl ReceiveData for ReceiveDummies {
+    fn next_word(&mut self, _: u32) {}
+}
+
+/// Computes how may Ws fit inside a LPSPI word.
+const fn per_word<W: Word>() -> usize {
+    core::mem::size_of::<u32>() / core::mem::size_of::<W>()
+}
+
+/// Computes how many u32 words we need to transact this buffer.
+const fn word_count<W: Word>(words: &[W]) -> usize {
+    (words.len() + per_word::<W>() - 1) / per_word::<W>()
+}
+
+/// Creates the transmit and receive buffer objects for an
+/// in-place transfer.
+fn transfer_in_place<W: Word>(buffer: &mut [W]) -> (TransmitBuffer<'_, W>, ReceiveBuffer<'_, W>) {
+    // Safety: pointer math meets expectation. This produces
+    // a mutable and immutable pointer to the same mutable buffer.
+    // Module inspection shows that these pointers never become
+    // references. We maintain the lifetime across both objects,
+    // so the buffer isn't dropped.
+    unsafe {
+        let len = buffer.len();
+        let ptr = buffer.as_mut_ptr();
+        (
+            TransmitBuffer::from_raw(ptr, len),
+            ReceiveBuffer::from_raw(ptr, len),
+        )
+    }
+}
+
+/// Tests try to approximate the way we'll use TransmitBuffer and ReceiveBuffer
+/// in firmware. Consider running these with miri to evaluate unsafe usages.
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn transfer_in_place_interleaved_read_write_u32() {
+        const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
+        let mut buffer = BUFFER;
+        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+
+        for elem in BUFFER {
+            assert_eq!(elem, tx.next_read().unwrap());
+            rx.next_write(elem + 1);
+        }
+
+        assert_eq!(buffer, [43, 44, 45, 46, 47, 48, 49, 50, 51]);
+    }
+
+    #[test]
+    fn transfer_in_place_interleaved_write_read_u32() {
+        const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
+        let mut buffer = BUFFER;
+        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+
+        for elem in BUFFER {
+            rx.next_write(elem + 1);
+            assert_eq!(elem + 1, tx.next_read().unwrap());
+        }
+
+        assert_eq!(buffer, [43, 44, 45, 46, 47, 48, 49, 50, 51]);
+    }
+
+    #[test]
+    fn transfer_in_place_bulk_read_write_u32() {
+        const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
+        let mut buffer = BUFFER;
+        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+
+        for elem in BUFFER {
+            assert_eq!(elem, tx.next_read().unwrap());
+        }
+        for elem in BUFFER {
+            rx.next_write(elem + 1);
+        }
+
+        assert_eq!(buffer, [43, 44, 45, 46, 47, 48, 49, 50, 51]);
+    }
+
+    #[test]
+    fn transfer_in_place_bulk_write_read_u32() {
+        const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
+        let mut buffer = BUFFER;
+        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+
+        for elem in BUFFER {
+            rx.next_write(elem + 1);
+        }
+        for elem in BUFFER {
+            assert_eq!(elem + 1, tx.next_read().unwrap());
+        }
+
+        assert_eq!(buffer, [43, 44, 45, 46, 47, 48, 49, 50, 51]);
+    }
+
+    #[test]
+    fn transmit_buffer() {
+        use super::{BitOrder::*, TransmitBuffer, TransmitData};
+
+        //
+        // u32
+        //
+        // This is the easiest to understand w.r.t. the bit order, since this is the natural word
+        // size of the peripheral. No matter the bit order, we produce the same word for the TX
+        // FIFO. The hardware handles the MSB or LSB transform.
+
+        let mut tx = TransmitBuffer::new(&[0xDEADBEEFu32, 0xAD1CAC1D]);
+        assert_eq!(tx.next_word(Msb), 0xDEADBEEF);
+        assert_eq!(tx.next_word(Msb), 0xAD1CAC1D);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEADBEEFu32, 0xAD1CAC1D]);
+        assert_eq!(tx.next_word(Lsb), 0xDEADBEEF);
+        assert_eq!(tx.next_word(Lsb), 0xAD1CAC1D);
+        assert_eq!(tx.next_word(Lsb), 0);
+
+        //
+        // u8
+        //
+        // If the user prefers u8 words, then we should pack the bytes into a u32 such that the
+        // hardware's MSB/LSB transform maintains the (literal) byte order.
+
+        let mut tx = TransmitBuffer::new(&[0xDEu8, 0xAD, 0xBE, 0xEF, 0xA5, 0x00, 0x1D]);
+        assert_eq!(tx.next_word(Msb), 0xDEADBEEF);
+        assert_eq!(tx.next_word(Msb), 0x00A5001D);
+        assert_eq!(tx.next_word(Msb), 0);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEu8, 0xAD, 0xBE, 0xEF, 0xA5, 0x00, 0x1D]);
+        assert_eq!(tx.next_word(Lsb), 0xEFBEADDE);
+        assert_eq!(tx.next_word(Lsb), 0x001D00A5);
+        assert_eq!(tx.next_word(Lsb), 0);
+        assert_eq!(tx.next_word(Lsb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEu8, 0xAD, 0xBE, 0xEF]);
+        assert_eq!(tx.next_word(Msb), 0xDEADBEEF);
+        assert_eq!(tx.next_word(Msb), 0);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEu8, 0xAD, 0xBE, 0xEF]);
+        assert_eq!(tx.next_word(Lsb), 0xEFBEADDE);
+        assert_eq!(tx.next_word(Lsb), 0);
+        assert_eq!(tx.next_word(Lsb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEu8, 0xAD, 0xBE]);
+        assert_eq!(tx.next_word(Msb), 0x00DEADBE);
+        assert_eq!(tx.next_word(Msb), 0);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEu8, 0xAD, 0xBE]);
+        assert_eq!(tx.next_word(Lsb), 0x00BEADDE);
+        assert_eq!(tx.next_word(Lsb), 0);
+        assert_eq!(tx.next_word(Lsb), 0);
+
+        //
+        // u16
+        //
+        // Same goes here: we should combine u16s such that the hardware transfers elements
+        // in order while applying the MSB/LSB transform on each u16.
+
+        let mut tx = TransmitBuffer::new(&[0xDEADu16, 0xBEEF, 0xA5A5]);
+        assert_eq!(tx.next_word(Msb), 0xDEADBEEF);
+        assert_eq!(tx.next_word(Msb), 0x0000A5A5);
+        assert_eq!(tx.next_word(Msb), 0);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEADu16, 0xBEEF, 0xA5A5]);
+        assert_eq!(tx.next_word(Lsb), 0xBEEFDEAD);
+        assert_eq!(tx.next_word(Lsb), 0x0000A5A5);
+        assert_eq!(tx.next_word(Lsb), 0);
+        assert_eq!(tx.next_word(Lsb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEADu16, 0xBEEF]);
+        assert_eq!(tx.next_word(Msb), 0xDEADBEEF);
+        assert_eq!(tx.next_word(Msb), 0);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEADu16, 0xBEEF]);
+        assert_eq!(tx.next_word(Lsb), 0xBEEFDEAD);
+        assert_eq!(tx.next_word(Lsb), 0);
+        assert_eq!(tx.next_word(Lsb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEADu16]);
+        assert_eq!(tx.next_word(Msb), 0x0000DEAD);
+        assert_eq!(tx.next_word(Msb), 0);
+        assert_eq!(tx.next_word(Msb), 0);
+
+        let mut tx = TransmitBuffer::new(&[0xDEADu16]);
+        assert_eq!(tx.next_word(Lsb), 0x0000DEAD);
+        assert_eq!(tx.next_word(Lsb), 0);
+        assert_eq!(tx.next_word(Lsb), 0);
+    }
+
+    #[test]
+    fn receive_buffer() {
+        use super::{ReceiveBuffer, ReceiveData};
+
+        //
+        // u8
+        //
+
+        let mut buffer = [0u8; 9];
+        let mut rx = ReceiveBuffer::new(&mut buffer);
+        rx.next_word(0xDEADBEEF);
+        rx.next_word(0xAD1CAC1D);
+        rx.next_word(0x04030201);
+        rx.next_word(0x55555555);
+        assert_eq!(
+            buffer,
+            [0xEF, 0xBE, 0xAD, 0xDE, 0x1D, 0xAC, 0x1C, 0xAD, 0x01]
+        );
+
+        //
+        // u16
+        //
+
+        let mut buffer = [0u16; 5];
+        let mut rx = ReceiveBuffer::new(&mut buffer);
+        rx.next_word(0xDEADBEEF);
+        rx.next_word(0xAD1CAC1D);
+        rx.next_word(0x04030201);
+        rx.next_word(0x55555555);
+        assert_eq!(buffer, [0xBEEF, 0xDEAD, 0xAC1D, 0xAD1C, 0x0201]);
+
+        //
+        // u32
+        //
+
+        let mut buffer = [0u32; 3];
+        let mut rx = ReceiveBuffer::new(&mut buffer);
+        rx.next_word(0xDEADBEEF);
+        rx.next_word(0xAD1CAC1D);
+        rx.next_word(0x77777777);
+        rx.next_word(0x55555555);
+        assert_eq!(buffer, [0xDEADBEEF, 0xAD1CAC1D, 0x77777777]);
+    }
+
     #[test]
     fn transaction_frame_sizes() {
         assert!(super::Transaction::new_words(&[1u8]).is_ok());

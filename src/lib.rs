@@ -295,3 +295,18 @@ pub mod iomuxc {
 
 #[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
 pub use crate::chip::reexports::*;
+
+/// Simply spin on the future.
+fn spin_on<F: core::future::Future>(future: F) -> F::Output {
+    use core::task::{Context, Poll};
+
+    let waker = futures::task::noop_waker();
+    let mut context = Context::from_waker(&waker);
+    let mut future = core::pin::pin!(future);
+
+    loop {
+        if let Poll::Ready(result) = future.as_mut().poll(&mut context) {
+            return result;
+        }
+    }
+}
