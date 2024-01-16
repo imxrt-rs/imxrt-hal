@@ -47,7 +47,7 @@ fn main() {
         enabled_chip
     );
 
-    if let Some(chip) = enabled_chip.get(0) {
+    if let Some(chip) = enabled_chip.first() {
         let feat_10xx = features_10xx();
         let feat_11xx = features_11xx();
 
