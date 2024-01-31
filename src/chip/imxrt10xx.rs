@@ -18,6 +18,9 @@ cfg_if::cfg_if! {
     } else if #[cfg(chip = "imxrt1020")] {
         #[path = "imxrt10xx/imxrt1020.rs"]
         pub(crate) mod config;
+    } else if #[cfg(any(chip = "imxrt1050"))] {
+        #[path = "imxrt10xx/imxrt1050.rs"]
+        pub(crate) mod config;
     } else if #[cfg(any(chip = "imxrt1060", chip = "imxrt1064"))] {
         #[path = "imxrt10xx/imxrt1060.rs"]
         pub(crate) mod config;
