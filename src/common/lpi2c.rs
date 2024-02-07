@@ -747,6 +747,50 @@ impl<P, const N: u8> blocking::WriteRead for Lpi2c<P, N> {
     }
 }
 
+impl eh1::i2c::Error for ControllerStatus {
+    fn kind(&self) -> eh1::i2c::ErrorKind {
+        use eh1::i2c::{ErrorKind, NoAcknowledgeSource};
+
+        if self.contains(ControllerStatus::BUS_BUSY) {
+            return ErrorKind::Bus;
+        }
+
+        if self.contains(ControllerStatus::NACK_DETECTED) {
+            return ErrorKind::NoAcknowledge(NoAcknowledgeSource::Unknown);
+        }
+
+        if self.contains(ControllerStatus::ARBITRATION_LOST) {
+            return ErrorKind::ArbitrationLoss;
+        }
+
+        ErrorKind::Other
+    }
+}
+
+impl<P, const N: u8> eh1::i2c::ErrorType for Lpi2c<P, N> {
+    type Error = ControllerStatus;
+}
+
+impl<P, const N: u8> eh1::i2c::I2c for Lpi2c<P, N> {
+    fn transaction(
+        &mut self,
+        address: u8,
+        operations: &mut [eh1::i2c::Operation<'_>],
+    ) -> Result<(), Self::Error> {
+        let mut runner = transaction::Runner::new(self)?;
+        for operation in operations {
+            // Convert from eh1 Operation to eh02 Operation
+            let mut operation = match operation {
+                eh1::i2c::Operation::Read(buffer) => blocking::Operation::Read(buffer),
+                eh1::i2c::Operation::Write(buffer) => blocking::Operation::Write(buffer),
+            };
+            runner.next_operation(address, &mut operation)?;
+        }
+        runner.stop()?;
+        Ok(())
+    }
+}
+
 /// Details for the embedded-hal Transaction
 /// implementation.
 mod transaction {
