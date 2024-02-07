@@ -113,7 +113,7 @@ imxrt-log = { path = "logging", default-features = false, features = [
     "lpuart",
     "usbd",
 ] }
-imxrt-ral = "0.5"
+imxrt-ral = { version = "0.6", git = "https://github.com/imxrt-rs/imxrt-ral.git", rev = "a2383c53a1537c152e0aed4880402edb16cc6577" }
 imxrt-rt = "0.1"
 imxrt-usbd = "0.2"
 
