@@ -315,6 +315,7 @@ pub mod interrupt {
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7_DMA23;
     pub const BOARD_DMA_B: Interrupt = Interrupt::DMA11_DMA27;
     pub const BOARD_PIT: Interrupt = Interrupt::PIT;
+    pub const BOARD_SAI1: Interrupt = Interrupt::SAI1;
     pub const BOARD_GPT1: Interrupt = Interrupt::GPT1;
     pub const BOARD_GPT2: Interrupt = Interrupt::GPT2;
     pub const BOARD_USB1: Interrupt = Interrupt::USB_OTG1;
@@ -328,6 +329,7 @@ pub mod interrupt {
         (BOARD_DMA_A, syms::BOARD_DMA_A),
         (BOARD_DMA_B, syms::BOARD_DMA_B),
         (BOARD_PIT, syms::BOARD_PIT),
+        (BOARD_SAI1, syms::BOARD_SAI1),
         (BOARD_GPT1, syms::BOARD_GPT1),
         (BOARD_GPT2, syms::BOARD_GPT2),
         (BOARD_USB1, syms::BOARD_USB1),
