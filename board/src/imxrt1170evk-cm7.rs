@@ -92,14 +92,18 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_ad::GPIO_AD_30, // SDO, J10_8
     iomuxc::gpio_ad::GPIO_AD_31, // SDI, J10_10
     iomuxc::gpio_ad::GPIO_AD_28, // SCK, J10_12
-    iomuxc::gpio_ad::GPIO_AD_29, // PCS0, J10_6
 >;
 const SPI_INSTANCE: u8 = 1;
 
 #[cfg(feature = "spi")]
 pub type Spi = hal::lpspi::Lpspi<SpiPins, { SPI_INSTANCE }>;
+#[cfg(feature = "spi")]
+pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_ad::GPIO_AD_29>; // PCS0, J10_6
+
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
+#[cfg(not(feature = "spi"))]
+pub type SpiCsPin = ();
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio_lpsr::GPIO_LPSR_05, // SCL, J10_20
@@ -160,6 +164,7 @@ pub struct Specifics {
     pub tp1002: Tp1002,
     pub tp1003: Tp1003,
     pub spi: Spi,
+    pub spi_cs: SpiCsPin,
     pub pwm: Pwm,
     pub i2c: I2c,
 }
@@ -201,7 +206,7 @@ impl Specifics {
         hal::usbphy::restart_pll(&mut common.usbphy1);
 
         #[cfg(feature = "spi")]
-        let spi = {
+        let (spi, spi_cs) = {
             let lpspi1 = unsafe { ral::lpspi::LPSPI1::instance() };
             let pins = SpiPins {
                 sdo: iomuxc.gpio_ad.p30,
@@ -213,11 +218,12 @@ impl Specifics {
             spi.disabled(|spi| {
                 spi.set_clock_hz(LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            spi
+            let spi_cs = todo!();
+            (spi, spi_cs)
         };
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]
-        let spi = ();
+        let (spi, spi_cs) = ((), ());
 
         #[cfg(not(feature = "spi"))]
         let pwm = {
@@ -259,6 +265,7 @@ impl Specifics {
             tp1002: iomuxc.gpio_emc_b1.p40,
             tp1003: iomuxc.gpio_emc_b1.p41,
             spi,
+            spi_cs,
             pwm,
             i2c,
         }

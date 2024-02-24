@@ -54,10 +54,14 @@ pub type SpiPins = hal::lpspi::Pins<
 #[cfg(not(feature = "spi"))]
 /// Activate the `"spi"` feature to configure the SPI peripheral.
 pub type Spi = ();
+#[cfg(not(feature = "spi"))]
+pub type SpiCsPin = ();
 
 #[cfg(feature = "spi")]
 /// SPI peripheral.
 pub type Spi = hal::lpspi::Lpspi<SpiPins, 4>;
+#[cfg(feature = "spi")]
+pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_00>; // PCS0, P10
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio_ad_b1::GPIO_AD_B1_07, // SCL, P16
@@ -110,6 +114,7 @@ pub struct Specifics {
     pub ports: GpioPorts,
     pub console: Console,
     pub spi: Spi,
+    pub spi_cs: SpiCsPin,
     pub i2c: I2c,
     pub pwm: Pwm,
     pub trng: hal::trng::Trng,
@@ -126,7 +131,7 @@ impl Specifics {
         let mut gpio2 = hal::gpio::Port::new(gpio2);
 
         #[cfg(not(feature = "spi"))]
-        let led = gpio2.output(iomuxc.gpio_b0.p03);
+        let led = gpio2.output(iomuxc.gpio_b0.p03, false);
         #[cfg(feature = "spi")]
         let led = ();
 
@@ -146,7 +151,7 @@ impl Specifics {
         });
 
         #[cfg(feature = "spi")]
-        let spi = {
+        let (spi, spi_cs) = {
             let lpspi4 = unsafe { ral::lpspi::LPSPI4::instance() };
             let pins = SpiPins {
                 sdo: iomuxc.gpio_b0.p02,
@@ -157,11 +162,12 @@ impl Specifics {
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            spi
+            let spi_cs = gpio2.output(iomuxc.gpio_b0.p00, true);
+            (spi, spi_cs)
         };
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]
-        let spi = ();
+        let (spi, spi_cs) = ((), ());
 
         let lpi2c3 = unsafe { ral::lpi2c::LPI2C3::instance() };
         let i2c = I2c::new(
@@ -201,6 +207,7 @@ impl Specifics {
             ports: GpioPorts { gpio2 },
             console,
             spi,
+            spi_cs,
             i2c,
             pwm,
             trng,
