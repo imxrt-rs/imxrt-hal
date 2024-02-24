@@ -156,11 +156,14 @@ impl Specifics {
 
         let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
-        let led = gpio1.output(iomuxc.gpio_ad_b0.p09);
+        let led = gpio1.output(iomuxc.gpio_ad_b0.p09, false);
 
         let gpio5 = unsafe { ral::gpio::GPIO5::instance() };
         let mut gpio5 = hal::gpio::Port::new(gpio5);
         let button = hal::gpio::Input::without_pin(&mut gpio5, 0);
+
+        let gpio3 = unsafe { ral::gpio::GPIO3::instance() };
+        let mut gpio3 = hal::gpio::Port::new(gpio3);
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
         let mut console = hal::lpuart::Lpuart::new(
@@ -182,13 +185,12 @@ impl Specifics {
                 sdo: iomuxc.gpio_sd_b0.p02,
                 sdi: iomuxc.gpio_sd_b0.p03,
                 sck: iomuxc.gpio_sd_b0.p00,
-                pcs0: iomuxc.gpio_sd_b0.p01,
             };
             let mut spi = Spi::new(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            let spi_cs = todo!();
+            let spi_cs = gpio3.output(iomuxc.gpio_sd_b0.p01, true);
             (spi, spi_cs)
         };
         #[cfg(not(feature = "spi"))]

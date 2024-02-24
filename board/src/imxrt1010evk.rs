@@ -168,7 +168,7 @@ impl Specifics {
         let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
         let mut gpio2 = hal::gpio::Port::new(gpio2);
 
-        let led = gpio1.output(iomuxc.gpio.p11);
+        let led = gpio1.output(iomuxc.gpio.p11, false);
         let button = gpio2.input(iomuxc.gpio_sd.p05);
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
@@ -191,13 +191,12 @@ impl Specifics {
                 sdo: iomuxc.gpio_ad.p04,
                 sdi: iomuxc.gpio_ad.p03,
                 sck: iomuxc.gpio_ad.p06,
-                pcs0: iomuxc.gpio_ad.p05,
             };
             let mut spi = Spi::new(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            let spi_cs = todo!();
+            let spi_cs = gpio1.output(iomuxc.gpio_ad.p05, true);
             (spi, spi_cs)
         };
 

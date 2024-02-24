@@ -189,7 +189,7 @@ impl Specifics {
 
         let gpio9 = unsafe { ral::gpio::GPIO9::instance() };
         let mut gpio9 = hal::gpio::Port::new(gpio9);
-        let led = gpio9.output(iomuxc.gpio_ad.p04);
+        let led = gpio9.output(iomuxc.gpio_ad.p04, false);
 
         let console = unsafe { ral::lpuart::Instance::<{ CONSOLE_INSTANCE }>::instance() };
         let mut console = hal::lpuart::Lpuart::new(
@@ -212,13 +212,12 @@ impl Specifics {
                 sdo: iomuxc.gpio_ad.p30,
                 sdi: iomuxc.gpio_ad.p31,
                 sck: iomuxc.gpio_ad.p28,
-                pcs0: iomuxc.gpio_ad.p29,
             };
             let mut spi = Spi::new(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            let spi_cs = todo!();
+            let spi_cs = gpio9.output(iomuxc.gpio_ad.p29, true);
             (spi, spi_cs)
         };
         #[cfg(not(feature = "spi"))]

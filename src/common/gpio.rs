@@ -23,7 +23,7 @@
 //! let gpio_b0_04 = // Handle to GPIO_B0_04 IOMUXC pin, provided by BSP or higher-level HAL...
 //!     # unsafe { imxrt_iomuxc::imxrt1060::gpio_b0::GPIO_B0_04::new() };
 //!
-//! let output = gpio2.output(gpio_b0_04);
+//! let output = gpio2.output(gpio_b0_04, false);
 //! output.set();
 //! output.clear();
 //! output.toggle();
