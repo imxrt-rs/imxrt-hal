@@ -930,6 +930,88 @@ impl<P, const N: u8> eh02::blocking::serial::Write<u8> for Lpuart<P, N> {
     }
 }
 
+impl eio06::Error for ReadFlags {
+    fn kind(&self) -> eio06::ErrorKind {
+        eio06::ErrorKind::Other
+    }
+}
+
+impl<P, const N: u8> eio06::ErrorType for Lpuart<P, N> {
+    type Error = ReadFlags;
+}
+
+impl<P, const N: u8> eio06::WriteReady for Lpuart<P, N> {
+    fn write_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.status().contains(Status::TRANSMIT_EMPTY))
+    }
+}
+
+impl<P, const N: u8> eio06::Write for Lpuart<P, N> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        use eio06::WriteReady;
+
+        // Block until we can write.
+        // In combination with `WriteReady` this call can be non-blocking.
+        while !self.write_ready()? {}
+
+        let mut num_written = 0;
+        for word in buf {
+            self.write_byte(*word);
+            num_written += 1;
+
+            if !self.write_ready()? {
+                break;
+            }
+        }
+
+        Ok(num_written)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        while !self.status().contains(Status::TRANSMIT_COMPLETE) {}
+
+        Ok(())
+    }
+}
+
+impl<P, const N: u8> eio06::ReadReady for Lpuart<P, N> {
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.status().contains(Status::RECEIVE_FULL))
+    }
+}
+
+impl<P, const N: u8> eio06::Read for Lpuart<P, N> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        use eio06::ReadReady;
+
+        // Block until we can read.
+        // In combination with `ReadReady` this call can be non-blocking.
+        while !self.read_ready()? {}
+
+        let mut num_read = 0;
+        for word in buf {
+            let data = self.read_data();
+            self.clear_status(Status::W1C);
+
+            if data.flags().contains(ReadFlags::RXEMPT) {
+                break;
+            }
+
+            if data
+                .flags()
+                .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
+            {
+                return Err(data.flags());
+            }
+
+            *word = data.into();
+            num_read += 1;
+        }
+
+        Ok(num_read)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Baud, ReadData, ReadFlags, Status};
