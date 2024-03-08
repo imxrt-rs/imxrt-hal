@@ -353,7 +353,7 @@ impl<P, const N: u8> Lpuart<P, N> {
     /// Attempts to write a single byte to the bus.
     ///
     /// Returns `false` if the fifo was already full.
-    fn try_write(&mut self, byte: u8) -> bool {
+    pub fn try_write(&mut self, byte: u8) -> bool {
         ral::modify_reg!(ral::lpuart, self.lpuart, FIFO, TXOF: TXOF_1);
         self.write_byte(byte);
         ral::read_reg!(ral::lpuart, self.lpuart, FIFO, TXOF == TXOF_0)
@@ -361,13 +361,23 @@ impl<P, const N: u8> Lpuart<P, N> {
 
     /// Attempts to read a single byte from the bus.
     ///
-    /// Returns `None` if the read FIFO was empty.
-    fn try_read(&mut self) -> Option<ReadData> {
+    /// Returns:
+    ///   - `Ok(Some(u8))` if data was read
+    ///   - `Ok(None)` if the fifo was empty
+    ///   - `Err(..)` if a read error happened
+    pub fn try_read(&mut self) -> Result<Option<u8>, ReadFlags> {
         let data = self.read_data();
         if data.flags().contains(ReadFlags::RXEMPT) {
-            None
+            Ok(None)
         } else {
-            Some(data)
+            if data
+                .flags()
+                .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
+            {
+                Err(data.flags())
+            } else {
+                Ok(Some(data.into()))
+            }
         }
     }
 }
@@ -1011,28 +1021,21 @@ impl<P, const N: u8> eio06::Read for Lpuart<P, N> {
                 // This function is supposed to block until at least one word is
                 // received.
                 loop {
-                    if let Some(data) = self.try_read() {
+                    if let Some(data) = self.try_read()? {
                         break data;
                     }
                 }
             } else {
                 // If we already read at least one word, return once
                 // the buffer is empty
-                if let Some(data) = self.try_read() {
+                if let Some(data) = self.try_read()? {
                     data
                 } else {
                     break;
                 }
             };
 
-            if data
-                .flags()
-                .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
-            {
-                return Err(data.flags());
-            }
-
-            *word = data.into();
+            *word = data;
             num_read += 1;
         }
 
