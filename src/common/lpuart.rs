@@ -369,15 +369,13 @@ impl<P, const N: u8> Lpuart<P, N> {
         let data = self.read_data();
         if data.flags().contains(ReadFlags::RXEMPT) {
             Ok(None)
+        } else if data
+            .flags()
+            .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
+        {
+            Err(data.flags())
         } else {
-            if data
-                .flags()
-                .intersects(ReadFlags::PARITY_ERROR | ReadFlags::FRAME_ERROR | ReadFlags::NOISY)
-            {
-                Err(data.flags())
-            } else {
-                Ok(Some(data.into()))
-            }
+            Ok(Some(data.into()))
         }
     }
 }
