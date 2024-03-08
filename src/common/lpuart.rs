@@ -349,6 +349,27 @@ impl<P, const N: u8> Lpuart<P, N> {
             ral::modify_reg!(ral::lpuart, self.lpuart, BAUD, RDMAE: 0);
         }
     }
+
+    /// Attempts to write a single byte to the bus.
+    ///
+    /// Returns `false` if the fifo was already full.
+    fn try_write(&mut self, byte: u8) -> bool {
+        ral::modify_reg!(ral::lpuart, self.lpuart, FIFO, TXOF: TXOF_1);
+        self.write_byte(byte);
+        ral::read_reg!(ral::lpuart, self.lpuart, FIFO, TXOF == TXOF_0)
+    }
+
+    /// Attempts to read a single byte from the bus.
+    ///
+    /// Returns `None` if the read FIFO was empty.
+    fn try_read(&mut self) -> Option<ReadData> {
+        let data = self.read_data();
+        if data.flags().contains(ReadFlags::RXEMPT) {
+            None
+        } else {
+            Some(data)
+        }
+    }
 }
 
 fn flush_fifo<const N: u8>(lpuart: &Instance<N>, direction: Direction) {
@@ -946,22 +967,29 @@ impl<P, const N: u8> eio06::WriteReady for Lpuart<P, N> {
     }
 }
 
+impl<P, const N: u8> eio06::ReadReady for Lpuart<P, N> {
+    fn read_ready(&mut self) -> Result<bool, Self::Error> {
+        Ok(self.status().contains(Status::RECEIVE_FULL))
+    }
+}
+
 impl<P, const N: u8> eio06::Write for Lpuart<P, N> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
-        use eio06::WriteReady;
-
-        // Block until we can write.
-        // In combination with `WriteReady` this call can be non-blocking.
-        while !self.write_ready()? {}
-
         let mut num_written = 0;
         for word in buf {
-            self.write_byte(*word);
-            num_written += 1;
-
-            if !self.write_ready()? {
-                break;
+            if num_written == 0 {
+                // For the first word, continue trying until we send.
+                // This function is supposed to block until at least one word is
+                // sent.
+                while !self.try_write(*word) {}
+            } else {
+                // If we already sent at least one word, return once
+                // the buffer is full
+                if !self.try_write(*word) {
+                    break;
+                }
             }
+            num_written += 1;
         }
 
         Ok(num_written)
@@ -974,28 +1002,28 @@ impl<P, const N: u8> eio06::Write for Lpuart<P, N> {
     }
 }
 
-impl<P, const N: u8> eio06::ReadReady for Lpuart<P, N> {
-    fn read_ready(&mut self) -> Result<bool, Self::Error> {
-        Ok(self.status().contains(Status::RECEIVE_FULL))
-    }
-}
-
 impl<P, const N: u8> eio06::Read for Lpuart<P, N> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        use eio06::ReadReady;
-
-        // Block until we can read.
-        // In combination with `ReadReady` this call can be non-blocking.
-        while !self.read_ready()? {}
-
         let mut num_read = 0;
         for word in buf {
-            let data = self.read_data();
-            self.clear_status(Status::W1C);
-
-            if data.flags().contains(ReadFlags::RXEMPT) {
-                break;
-            }
+            let data = if num_read == 0 {
+                // For the first word, continue querying until we receive something.
+                // This function is supposed to block until at least one word is
+                // received.
+                loop {
+                    if let Some(data) = self.try_read() {
+                        break data;
+                    }
+                }
+            } else {
+                // If we already read at least one word, return once
+                // the buffer is empty
+                if let Some(data) = self.try_read() {
+                    data
+                } else {
+                    break;
+                }
+            };
 
             if data
                 .flags()
