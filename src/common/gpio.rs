@@ -23,7 +23,7 @@
 //! let gpio_b0_04 = // Handle to GPIO_B0_04 IOMUXC pin, provided by BSP or higher-level HAL...
 //!     # unsafe { imxrt_iomuxc::imxrt1060::gpio_b0::GPIO_B0_04::new() };
 //!
-//! let output = gpio2.output(gpio_b0_04);
+//! let output = gpio2.output(gpio_b0_04, false);
 //! output.set();
 //! output.clear();
 //! output.toggle();
@@ -60,12 +60,14 @@ impl<const N: u8> Port<N> {
     }
 
     /// Allocate an output GPIO.
-    pub fn output<P>(&mut self, mut pin: P) -> Output<P>
+    ///
+    /// `set` defines the initial state of the pin; `true` sets it high.
+    pub fn output<P>(&mut self, mut pin: P, set: bool) -> Output<P>
     where
         P: iomuxc::gpio::Pin<N>,
     {
         iomuxc::gpio::prepare(&mut pin);
-        Output::new(pin, self.register_block(), P::OFFSET)
+        Output::new(pin, self.register_block(), P::OFFSET, set)
     }
 
     /// Allocate an input GPIO.
@@ -135,8 +137,13 @@ pub struct Output<P> {
 unsafe impl<P: Send> Send for Output<P> {}
 
 impl<P> Output<P> {
-    fn new(pin: P, gpio: &'static ral::gpio::RegisterBlock, offset: u32) -> Self {
+    fn new(pin: P, gpio: &'static ral::gpio::RegisterBlock, offset: u32, set: bool) -> Self {
         let output = Self { pin, gpio, offset };
+        if set {
+            output.set();
+        } else {
+            output.clear();
+        }
         ral::modify_reg!(ral::gpio, gpio, GDIR, |gdir| gdir | output.mask());
         output
     }
@@ -197,7 +204,7 @@ impl<P> Output<P> {
 impl Output<()> {
     /// Allocate an output GPIO without a pin.
     ///
-    /// Prefer using [`Port::output`](Port::output) to create a GPIO ouptut with a
+    /// Prefer using [`Port::output`](Port::output) to create a GPIO output with a
     /// pin resource. That method ensures that pin resources are managed throughout
     /// your program, and that the pin is configured to operate as a GPIO output.
     ///
@@ -207,8 +214,10 @@ impl Output<()> {
     ///
     /// If you use this constructor, you're responsible for configuring the IOMUX
     /// multiplexer register.
-    pub fn without_pin<const N: u8>(port: &mut Port<N>, offset: u32) -> Self {
-        Self::new((), port.register_block(), offset)
+    ///
+    /// `set` defines the initial state of the pin; `true` sets it high.
+    pub fn without_pin<const N: u8>(port: &mut Port<N>, offset: u32, set: bool) -> Self {
+        Self::new((), port.register_block(), offset, set)
     }
 }
 

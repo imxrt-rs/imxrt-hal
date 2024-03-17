@@ -61,14 +61,17 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_ad::GPIO_AD_04, // SDO, J57_8
     iomuxc::gpio_ad::GPIO_AD_03, // SDI, J57_10
     iomuxc::gpio_ad::GPIO_AD_06, // SCK, J57_12
-    iomuxc::gpio_ad::GPIO_AD_05, // PCS0, J57_6
 >;
 
 #[cfg(feature = "spi")]
 pub type Spi = hal::lpspi::Lpspi<SpiPins, 1>;
+#[cfg(feature = "spi")]
+pub type SpiCsPin = hal::gpio::Output<iomuxc::gpio_ad::GPIO_AD_05>; // PCS0, J57_6
 
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
+#[cfg(not(feature = "spi"))]
+pub type SpiCsPin = ();
 
 pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio::GPIO_02, // SCL, J57_20
@@ -145,6 +148,7 @@ pub struct Specifics {
     pub ports: GpioPorts,
     pub console: Console,
     pub spi: Spi,
+    pub spi_cs: SpiCsPin,
     pub i2c: I2c,
     pub pwm: Pwm,
     pub tp34: Tp34,
@@ -164,7 +168,7 @@ impl Specifics {
         let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
         let mut gpio2 = hal::gpio::Port::new(gpio2);
 
-        let led = gpio1.output(iomuxc.gpio.p11);
+        let led = gpio1.output(iomuxc.gpio.p11, false);
         let button = gpio2.input(iomuxc.gpio_sd.p05);
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
@@ -181,24 +185,24 @@ impl Specifics {
         });
 
         #[cfg(feature = "spi")]
-        let spi = {
+        let (spi, spi_cs) = {
             let lpspi1 = unsafe { ral::lpspi::LPSPI1::instance() };
             let pins = SpiPins {
                 sdo: iomuxc.gpio_ad.p04,
                 sdi: iomuxc.gpio_ad.p03,
                 sck: iomuxc.gpio_ad.p06,
-                pcs0: iomuxc.gpio_ad.p05,
             };
             let mut spi = Spi::new(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            spi
+            let spi_cs = gpio1.output(iomuxc.gpio_ad.p05, true);
+            (spi, spi_cs)
         };
 
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]
-        let spi = ();
+        let (spi, spi_cs) = ((), ());
 
         let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };
         let i2c = I2c::new(
@@ -247,6 +251,7 @@ impl Specifics {
             ports: GpioPorts { gpio2 },
             console,
             spi,
+            spi_cs,
             i2c,
             pwm,
             tp34: iomuxc.gpio_sd.p02,

@@ -41,7 +41,6 @@
 //!     sdo: pads.gpio_b0.p02,
 //!     sdi: pads.gpio_b0.p01,
 //!     sck: pads.gpio_b0.p03,
-//!     pcs0: pads.gpio_b0.p00,
 //! };
 //!
 //! let mut spi4 = unsafe { LPSPI4::instance() };
@@ -199,7 +198,7 @@ pub enum LpspiError {
 pub struct Transaction {
     /// Enable byte swap.
     ///
-    /// When enabled (`true`), swap bytes with the `u32` word. This allows
+    /// When enabled (`true`), swap bytes within the `u32` word. This allows
     /// you to change the endianness of the 32-bit word transfer. The
     /// default is `false`.
     pub byte_swap: bool,
@@ -256,7 +255,22 @@ impl Transaction {
     }
 
     fn new_words<W>(data: &[W]) -> Result<Self, LpspiError> {
-        Transaction::new(8 * core::mem::size_of_val(data) as u16)
+        if let Ok(frame_size) = u16::try_from(8 * core::mem::size_of_val(data)) {
+            Transaction::new(frame_size)
+        } else {
+            Err(LpspiError::FrameSize)
+        }
+    }
+
+    fn frame_size_valid(frame_size: u16) -> bool {
+        const MIN_FRAME_SIZE: u16 = 8;
+        const MAX_FRAME_SIZE: u16 = 1 << 12;
+        const MIN_WORD_SIZE: u16 = 2;
+        const WORD_SIZE: u16 = 32;
+
+        let last_word_size = frame_size % WORD_SIZE;
+
+        (MIN_FRAME_SIZE..=MAX_FRAME_SIZE).contains(&frame_size) && (last_word_size >= MIN_WORD_SIZE)
     }
 
     /// Define a transaction by specifying the frame size, in bits.
@@ -270,10 +284,9 @@ impl Transaction {
     /// - `frame_size` fits within 12 bits; the implementation enforces this maximum value.
     /// - The minimum value for `frame_size` is 8; the implementation enforces this minimum
     ///   value.
+    /// - The last 32-bit word in the frame is at least 2 bits long.
     pub fn new(frame_size: u16) -> Result<Self, LpspiError> {
-        const MIN_FRAME_SIZE: u16 = 8;
-        const MAX_FRAME_SIZE: u16 = 1 << 12;
-        if (MIN_FRAME_SIZE..MAX_FRAME_SIZE).contains(&frame_size) {
+        if Self::frame_size_valid(frame_size) {
             Ok(Self {
                 byte_swap: false,
                 bit_order: Default::default(),
@@ -293,24 +306,27 @@ impl Transaction {
 ///
 /// This should only happen when the LPSPI peripheral is disabled.
 fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::RegisterBlock) {
-    let mut div = source_clock_hz / spi_clock_hz;
+    // Round up, so we always get a resulting SPI clock that is
+    // equal or less than the requested frequency.
+    let half_div =
+        u32::try_from(1 + u64::from(source_clock_hz - 1) / (u64::from(spi_clock_hz) * 2)).unwrap();
 
-    if source_clock_hz / div > spi_clock_hz {
-        div += 1;
-    }
+    // Make sure SCKDIV is between 0 and 255
+    // For some reason SCK starts to misbehave in between frames
+    // if half_div is less than 3.
+    let half_div = half_div.clamp(3, 128);
+    // Because half_div is in range [3,128], sckdiv is in range [4, 254].
+    let sckdiv = 2 * (half_div - 1);
 
-    // 0 <= div <= 255, and the true coefficient is really div + 2
-    let div = div.saturating_sub(2).clamp(0, 255);
-    ral::write_reg!(
-        ral::lpspi,
-        reg,
-        CCR,
-        SCKDIV: div,
-        // Both of these delays are arbitrary choices, and they should
-        // probably be configurable by the end-user.
-        DBT: div / 2,
-        SCKPCS: 0x1F,
-        PCSSCK: 0x1F
+    ral::write_reg!(ral::lpspi, reg, CCR,
+        // Delay between two clock transitions of two consecutive transfers
+        // is exactly sckdiv/2, which causes the transfer to be seamless.
+        DBT: half_div - 1,
+        // Add one sckdiv/2 setup and hold time before and after the transfer,
+        // to make sure the signal is stable at sample time
+        PCSSCK: half_div - 1,
+        SCKPCS: half_div - 1,
+        SCKDIV: sckdiv
     );
 }
 
@@ -329,6 +345,9 @@ pub struct Lpspi<P, const N: u8> {
     lpspi: ral::lpspi::Instance<N>,
     pins: P,
     bit_order: BitOrder,
+    tx_fifo_size: u16,
+    rx_fifo_size: u16,
+    mode: Mode,
 }
 
 /// Pins for a LPSPI device.
@@ -344,13 +363,12 @@ pub struct Lpspi<P, const N: u8> {
 ///     GPIO_B0_02,
 ///     GPIO_B0_01,
 ///     GPIO_B0_03,
-///     GPIO_B0_00,
 /// >;
 ///
 /// // Helper type for your SPI peripheral
 /// type Lpspi<const N: u8> = hal::lpspi::Lpspi<LpspiPins, N>;
 /// ```
-pub struct Pins<SDO, SDI, SCK, PCS0> {
+pub struct Pins<SDO, SDI, SCK> {
     /// Serial data out
     ///
     /// Data travels from the SPI host controller to the SPI device.
@@ -361,29 +379,24 @@ pub struct Pins<SDO, SDI, SCK, PCS0> {
     pub sdi: SDI,
     /// Serial clock
     pub sck: SCK,
-    /// Chip select 0
-    ///
-    /// (PCSx) convention matches the hardware.
-    pub pcs0: PCS0,
 }
 
-impl<SDO, SDI, SCK, PCS0, const N: u8> Lpspi<Pins<SDO, SDI, SCK, PCS0>, N>
+impl<SDO, SDI, SCK, const N: u8> Lpspi<Pins<SDO, SDI, SCK>, N>
 where
     SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
     SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
     SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    PCS0: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
 {
     /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
     /// When this call returns, the LPSPI pins are configured for their function.
     /// The peripheral is enabled after reset. The LPSPI clock speed is unspecified.
     /// The mode is [`MODE_0`]. The sample point is [`SamplePoint::DelayedEdge`].
-    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK, PCS0>) -> Self {
+    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK>) -> Self {
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
-        lpspi::prepare(&mut pins.pcs0);
+
         Self::init(lpspi, pins)
     }
 }
@@ -404,13 +417,29 @@ impl<P, const N: u8> Lpspi<P, N> {
     pub const N: u8 = N;
 
     fn init(lpspi: ral::lpspi::Instance<N>, pins: P) -> Self {
-        let mut spi = Lpspi {
+        let (tx_fifo_size_exp, rx_fifo_size_exp) =
+            ral::read_reg!(ral::lpspi, lpspi, PARAM, TXFIFO, RXFIFO);
+        let tx_fifo_size = 1 << tx_fifo_size_exp;
+        let rx_fifo_size = 1 << rx_fifo_size_exp;
+
+        let spi = Lpspi {
             lpspi,
             pins,
             bit_order: BitOrder::default(),
+            tx_fifo_size,
+            rx_fifo_size,
+            mode: MODE_0,
         };
-        ral::write_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_1);
-        ral::write_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0);
+
+        // Reset and disable
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_0, RST: RST_1);
+        while spi.is_enabled() {}
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RST: RST_0);
+
+        // Reset Fifos
+        ral::modify_reg!(ral::lpspi, spi.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
+
+        // Configure master mode
         ral::write_reg!(
             ral::lpspi,
             spi.lpspi,
@@ -418,9 +447,15 @@ impl<P, const N: u8> Lpspi<P, N> {
             MASTER: MASTER_1,
             SAMPLE: SAMPLE_1
         );
-        Disabled::new(&mut spi.lpspi).set_mode(MODE_0);
-        ral::write_reg!(ral::lpspi, spi.lpspi, FCR, RXWATER: 0xF, TXWATER: 0xF);
+
+        // Configure watermarks
+        ral::write_reg!(ral::lpspi, spi.lpspi, FCR,
+            RXWATER: 0,               // Notify when we have any data available
+            TXWATER: u32::from(tx_fifo_size) / 2 // Nofify when we have at least tx_fifo_size/2 space available
+        );
+
         ral::write_reg!(ral::lpspi, spi.lpspi, CR, MEN: MEN_1);
+
         spi
     }
 
@@ -430,6 +465,11 @@ impl<P, const N: u8> Lpspi<P, N> {
     }
 
     /// Enable (`true`) or disable (`false`) the peripheral.
+    ///
+    /// Note that disabling does not take effect immediately; instead the
+    /// peripheral finishes the current transfer and then disables itself.
+    /// It is required to check [`is_enabled()`](Self::is_enabled) repeatedly until the
+    /// peripheral is actually disabled.
     pub fn set_enable(&mut self, enable: bool) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: enable as u32)
     }
@@ -443,6 +483,46 @@ impl<P, const N: u8> Lpspi<P, N> {
         while ral::read_reg!(ral::lpspi, self.lpspi, CR, RST == RST_1) {
             ral::modify_reg!(ral::lpspi, self.lpspi, CR, RST: RST_0);
         }
+    }
+
+    /// Cancel the current transfer and force the driver back into idle
+    /// state.
+    ///
+    /// This should be done whenever an error occurred.
+    pub fn soft_reset(&mut self) {
+        // Backup previous registers
+        let ier = ral::read_reg!(ral::lpspi, self.lpspi, IER);
+        let der = ral::read_reg!(ral::lpspi, self.lpspi, DER);
+        let cfgr0 = ral::read_reg!(ral::lpspi, self.lpspi, CFGR0);
+        let cfgr1 = ral::read_reg!(ral::lpspi, self.lpspi, CFGR1);
+        let dmr0 = ral::read_reg!(ral::lpspi, self.lpspi, DMR0);
+        let dmr1 = ral::read_reg!(ral::lpspi, self.lpspi, DMR1);
+        let ccr = ral::read_reg!(ral::lpspi, self.lpspi, CCR);
+        let fcr = ral::read_reg!(ral::lpspi, self.lpspi, FCR);
+
+        // Backup enabled state
+        let enabled = self.is_enabled();
+
+        // Reset and disable
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: MEN_0, RST: RST_1);
+        while self.is_enabled() {}
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, RST: RST_0);
+
+        // Reset fifos
+        ral::modify_reg!(ral::lpspi, self.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
+
+        // Restore settings
+        ral::write_reg!(ral::lpspi, self.lpspi, IER, ier);
+        ral::write_reg!(ral::lpspi, self.lpspi, DER, der);
+        ral::write_reg!(ral::lpspi, self.lpspi, CFGR0, cfgr0);
+        ral::write_reg!(ral::lpspi, self.lpspi, CFGR1, cfgr1);
+        ral::write_reg!(ral::lpspi, self.lpspi, DMR0, dmr0);
+        ral::write_reg!(ral::lpspi, self.lpspi, DMR1, dmr1);
+        ral::write_reg!(ral::lpspi, self.lpspi, CCR, ccr);
+        ral::write_reg!(ral::lpspi, self.lpspi, FCR, fcr);
+
+        // Restore enabled state
+        self.set_enable(enabled);
     }
 
     /// Release the SPI driver components.
@@ -474,10 +554,8 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Temporarily disable the LPSPI peripheral.
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
-    /// LPSPI settings that require a fully disabled peripheral. This will clear the transmit
-    /// and receive FIFOs.
+    /// LPSPI settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
-        self.clear_fifos();
         let mut disabled = Disabled::new(&mut self.lpspi);
         func(&mut disabled)
     }
@@ -508,11 +586,56 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// This writes the bits described by `interrupts` as is to the register.
     /// To modify the existing interrupts flags, you should first call [`interrupts`](Lpspi::interrupts)
     /// to get the current state, then modify that state.
+    ///
+    /// Be aware that a critical section might be required to avoid a read-modify-write race condition
+    /// between [`interrupts`](Self::interrupts) and [`set_interrupts`](Self::set_interrupts).
     pub fn set_interrupts(&self, interrupts: Interrupts) {
         ral::write_reg!(ral::lpspi, self.lpspi, IER, interrupts.bits());
     }
 
+    /// Set the watermark level for a given direction.
+    ///
+    /// Returns the watermark level committed to the hardware. This may be different
+    /// than the supplied `watermark`, since it's limited by the hardware.
+    ///
+    /// When `direction == Direction::Rx`, the receive data flag is set whenever the
+    /// number of words in the receive FIFO is greater than `watermark`.
+    ///
+    /// When `direction == Direction::Tx`, the transmit data flag is set whenever the
+    /// the number of words in the transmit FIFO is less than, or equal, to `watermark`.
+    #[inline]
+    pub fn set_watermark(&mut self, direction: Direction, watermark: u16) -> u16 {
+        let max_watermark = match direction {
+            Direction::Rx => self.rx_fifo_size - 1,
+            Direction::Tx => self.tx_fifo_size - 1,
+        };
+
+        let watermark = watermark.min(max_watermark);
+
+        match direction {
+            Direction::Rx => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: u32::from(watermark))
+            }
+            Direction::Tx => {
+                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: u32::from(watermark))
+            }
+        }
+
+        watermark
+    }
+
+    /// Set the SPI mode for the peripheral.
+    ///
+    /// This only affects the next transfer; ongoing transfers
+    /// will not be influenced.
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+    }
+
     /// Clear any existing data in the SPI receive or transfer FIFOs.
+    ///
+    /// Note that this will **not** cancel a running transfer.
+    /// Use [`soft_reset()`](Self::soft_reset) for that usecase instead.
     #[inline]
     pub fn clear_fifo(&mut self, direction: Direction) {
         match direction {
@@ -522,17 +645,20 @@ impl<P, const N: u8> Lpspi<P, N> {
     }
 
     /// Clear both FIFOs.
+    ///
+    /// Note that this will **not** cancel a running transfer.
+    /// Use [`soft_reset()`](Self::soft_reset) for that usecase instead.
     pub fn clear_fifos(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, RTF: RTF_1, RRF: RRF_1);
     }
 
     /// Returns the watermark level for the given direction.
     #[inline]
-    pub fn watermark(&self, direction: Direction) -> u8 {
+    pub fn watermark(&self, direction: Direction) -> u16 {
         (match direction {
             Direction::Rx => ral::read_reg!(ral::lpspi, self.lpspi, FCR, RXWATER),
             Direction::Tx => ral::read_reg!(ral::lpspi, self.lpspi, FCR, TXWATER),
-        }) as u8
+        }) as u16
     }
 
     /// Returns the FIFO status.
@@ -589,7 +715,7 @@ impl<P, const N: u8> Lpspi<P, N> {
                 return Err(LpspiError::Fifo(Direction::Tx));
             }
             let fifo_status = self.fifo_status();
-            if !fifo_status.is_full(Direction::Tx) {
+            if fifo_status.txcount < self.tx_fifo_size {
                 return Ok(());
             }
         }
@@ -603,7 +729,12 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// You're responsible for making sure there's space in the transmit
     /// FIFO for this transaction command.
     pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
-        ral::modify_reg!(ral::lpspi, self.lpspi, TCR,
+        ral::write_reg!(ral::lpspi, self.lpspi, TCR,
+            CPOL: if self.mode.polarity == Polarity::IdleHigh {CPOL_1} else {CPOL_0},
+            CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition {CPHA_1} else {CPHA_0},
+            PRESCALE: PRESCALE_0,
+            PCS: PCS_0,
+            WIDTH: WIDTH_0,
             LSBF: transaction.bit_order as u32,
             BYSW: transaction.byte_swap as u32,
             RXMSK: transaction.receive_data_mask as u32,
@@ -612,6 +743,24 @@ impl<P, const N: u8> Lpspi<P, N> {
             CONT: transaction.continuous as u32,
             CONTC: transaction.continuing as u32
         );
+    }
+
+    /// Wait for all ongoing transactions to be finished.
+    pub fn flush(&mut self) -> Result<(), LpspiError> {
+        loop {
+            let status = self.status();
+
+            if status.intersects(Status::RECEIVE_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Rx));
+            }
+            if status.intersects(Status::TRANSMIT_ERROR) {
+                return Err(LpspiError::Fifo(Direction::Tx));
+            }
+
+            if !status.intersects(Status::BUSY) {
+                return Ok(());
+            }
+        }
     }
 
     /// Exchanges data with the SPI device.
@@ -855,20 +1004,6 @@ pub struct FifoStatus {
     pub txcount: u16,
 }
 
-impl FifoStatus {
-    /// Indicates if the FIFO is full for the given direction.
-    #[inline]
-    pub const fn is_full(self, direction: Direction) -> bool {
-        /// See PARAM register docs.
-        const MAX_FIFO_SIZE: u16 = 16;
-        let count = match direction {
-            Direction::Tx => self.txcount,
-            Direction::Rx => self.rxcount,
-        };
-        count >= MAX_FIFO_SIZE
-    }
-}
-
 bitflags::bitflags! {
     /// Interrupt flags.
     ///
@@ -904,25 +1039,14 @@ pub struct Disabled<'a, const N: u8> {
 impl<'a, const N: u8> Disabled<'a, N> {
     fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
-        ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
-        Self { lpspi, men }
-    }
 
-    /// Set the SPI mode for the peripheral
-    pub fn set_mode(&mut self, mode: Mode) {
-        // This could probably be changed when we're not disabled.
-        // However, there's rules about when you can read TCR.
-        // Specifically, reading TCR while it's being loaded from
-        // the transmit FIFO could result in an incorrect reading.
-        // Only permitting this when we're disabled might help
-        // us avoid something troublesome.
-        ral::modify_reg!(
-            ral::lpspi,
-            self.lpspi,
-            TCR,
-            CPOL: ((mode.polarity == Polarity::IdleHigh) as u32),
-            CPHA: ((mode.phase == Phase::CaptureOnSecondTransition) as u32)
-        );
+        // Request disable
+        ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
+        // Wait for the driver to finish its current transfer
+        // and enter disabled state
+        while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
+
+        Self { lpspi, men }
     }
 
     /// Set the LPSPI clock speed (Hz).
@@ -931,37 +1055,6 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
     pub fn set_clock_hz(&mut self, source_clock_hz: u32, clock_hz: u32) {
         set_spi_clock(source_clock_hz, clock_hz, self.lpspi);
-    }
-
-    /// Set the watermark level for a given direction.
-    ///
-    /// Returns the watermark level committed to the hardware. This may be different
-    /// than the supplied `watermark`, since it's limited by the hardware.
-    ///
-    /// When `direction == Direction::Rx`, the receive data flag is set whenever the
-    /// number of words in the receive FIFO is greater than `watermark`.
-    ///
-    /// When `direction == Direction::Tx`, the transmit data flag is set whenever the
-    /// the number of words in the transmit FIFO is less than, or equal, to `watermark`.
-    #[inline]
-    pub fn set_watermark(&mut self, direction: Direction, watermark: u8) -> u8 {
-        let max_watermark = match direction {
-            Direction::Rx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, RXFIFO),
-            Direction::Tx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, TXFIFO),
-        };
-
-        let watermark = watermark.min(max_watermark - 1);
-
-        match direction {
-            Direction::Rx => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: watermark as u32)
-            }
-            Direction::Tx => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: watermark as u32)
-            }
-        }
-
-        watermark
     }
 
     /// Set the sampling point of the LPSPI peripheral.
