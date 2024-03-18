@@ -66,6 +66,13 @@ pub(crate) mod ccm {
             clock_gate::lpi2c::<4>(),
         ];
 
+        /// All SAI clock gates.
+        pub const SAI_CLOCK_GATES: &[clock_gate::Locator] = &[
+            clock_gate::sai::<1>(),
+            clock_gate::sai::<2>(),
+            clock_gate::sai::<3>(),
+        ];
+
         /// All clock gates downstream of the IPG root clock.
         pub const IPG_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::adc::<1>(),

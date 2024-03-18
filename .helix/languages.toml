@@ -1,0 +1,2 @@
+[language-server.rust-analyzer.config]
+cargo = { features = ["imxrt1010"], target = "thumbv7em-none-eabihf" }
