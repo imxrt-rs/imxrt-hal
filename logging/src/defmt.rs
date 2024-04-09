@@ -97,7 +97,7 @@ mod frontend {
         // module shows that this is always accessed within the acquire-
         // release critical section, so there's only one access to this
         // mutable data.
-        unsafe { &mut ENCODER }
+        unsafe { &mut *core::ptr::addr_of_mut!(ENCODER) }
     }
 }
 
