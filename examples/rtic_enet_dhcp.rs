@@ -2,7 +2,7 @@
 //!
 //! The device acquires an IP address using DHCP. This can take a few seconds, so
 //! be patient. Plug it into your DHCP-capable router, and wait for it to assign
-//! an IP address. Check the device log for information on the assigned IP, or
+//! an IP address. Check the device defmt for information on the assigned IP, or
 //! check your router. The LED turns on once DHCP assignment completes.
 //!
 //! The transport behaviors depend on the `SocketDemo` configuration you select.
@@ -18,14 +18,6 @@
 
 #[rtic::app(device = board, peripherals = false, dispatchers = [BOARD_SWTASK0])]
 mod app {
-
-    /// When using the LPUART backend, you want to occasionally poll
-    /// for new log message. This interval (milliseconds) describes how
-    /// long you should wait in between polls.
-    ///
-    /// This constant does nothing when the USBD backend is used, since
-    /// the USBD backend uses its own timer for this purpose.
-    const LPUART_POLL_INTERVAL_MS: u32 = board::PIT_FREQUENCY / 1_000 * 4;
 
     /// Variations of this demo.
     ///
@@ -55,10 +47,6 @@ mod app {
 
     #[local]
     struct Local {
-        /// This timer tells us how frequently to poll
-        /// for logs. It's only used with the LPUART
-        /// logging backend.
-        poll_log: hal::pit::Pit<1>,
         /// For realizing blocking delays in the idle loop.
         delay: hal::timer::BlockingGpt<1, { board::GPT1_FREQUENCY }>,
         /// The ethernet instance.
@@ -69,60 +57,17 @@ mod app {
     }
 
     #[shared]
-    struct Shared {
-        /// The poller drives the logging backend.
-        poller: board::logging::Poller,
-    }
+    struct Shared {}
 
     #[init]
     fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
-        let (
-            board::Common {
-                pit: (_, mut poll_log, _, _),
-                gpt1,
-                usb1,
-                usbnc1,
-                usbphy1,
-                mut dma,
-                ..
-            },
-            board::Specifics {
-                led, console, enet, ..
-            },
-        ) = board::new();
-
-        // We only need the extra timer when the LPUART backend is used.
-        // The USBD backend uses the USB peripheral's internal timer to
-        // track time for us.
-        if board::logging::BACKEND == board::logging::Backend::Lpuart {
-            poll_log.set_load_timer_value(LPUART_POLL_INTERVAL_MS);
-            poll_log.set_interrupt_enable(true);
-            poll_log.enable();
-        } else {
-            poll_log.disable();
-        }
-
-        let usbd = hal::usbd::Instances {
-            usb: usb1,
-            usbnc: usbnc1,
-            usbphy: usbphy1,
-        };
-
-        let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
-        let poller = board::logging::init(
-            board::logging::Frontend::Log,
-            board::logging::BACKEND,
-            console,
-            dma_a,
-            usbd,
-        );
+        let (board::Common { gpt1, .. }, board::Specifics { led, enet, .. }) = board::new();
 
         let delay = hal::timer::Blocking::<_, { board::GPT1_FREQUENCY }>::from_gpt(gpt1);
 
         (
-            Shared { poller },
+            Shared {},
             Local {
-                poll_log,
                 delay,
                 enet: Some(enet),
                 led,
@@ -141,6 +86,8 @@ mod app {
     ])]
     fn idle(cx: idle::Context) -> ! {
         // Ethernet setup happens here, after init, in order to use interrupt-driven logging.
+        //
+        // TODO(mciantyre) that's not necessary if we use defmt_rtt.
         let idle::LocalResources {
             enet,
             delay,
@@ -163,10 +110,10 @@ mod app {
         );
         delay.block_ms(200);
 
-        log::info!("Initializing the PHY, and waiting for link...");
+        defmt::info!("Initializing the PHY, and waiting for link...");
         // Call blocks until the entire link is up! TODO(mciantyre) not block while the link isn't available.
         while let Err(what) = board::init_enet_phy(&mut dev) {
-            log::error!("Failed to initialize PHY: {what}");
+            defmt::error!("Failed to initialize PHY: {}", what);
             delay.block_ms(2000);
         }
 
@@ -190,7 +137,7 @@ mod app {
         let mut sockets = SocketSet::new(sockets.as_mut_slice());
         let dhcp_handle = sockets.add(dhcp_socket);
 
-        log::info!("Waiting for DHCP assignment...");
+        defmt::info!("Waiting for DHCP assignment...");
         loop {
             time += 100;
             delay.block_ms(100);
@@ -199,7 +146,7 @@ mod app {
             let dhcp_socket: &mut dhcpv4::Socket = sockets.get_mut(dhcp_handle);
             if let Some(dhcpv4::Event::Configured(config)) = dhcp_socket.poll() {
                 led.set();
-                log::info!("Received IP assignment! Address is {:?}", config.address);
+                defmt::info!("Received IP assignment! Address is {:?}", config.address);
                 iface.update_ip_addrs(|ips| {
                     ips.push(IpCidr::Ipv4(config.address)).unwrap();
                 });
@@ -213,7 +160,7 @@ mod app {
                 let buffer_split = socket_buffer.len() / 2;
                 let buffer_splits = socket_buffer.split_at_mut(buffer_split);
 
-                log::info!("Starting TCP loopback mode using port 5000");
+                defmt::info!("Starting TCP loopback mode using port 5000");
                 let mut tcp_socket = tcp::Socket::new(
                     tcp::SocketBuffer::new(buffer_splits.0),
                     tcp::SocketBuffer::new(buffer_splits.1),
@@ -223,7 +170,7 @@ mod app {
                     addr: None,
                     port: 5000,
                 }) {
-                    log::error!("Failed to listen on TCP socket: {err}");
+                    defmt::error!("Failed to listen on TCP socket: {}", err);
                     panic!();
                 }
                 let socket_handle = sockets.add(tcp_socket);
@@ -234,17 +181,17 @@ mod app {
                         let tcp_socket: &mut tcp::Socket = sockets.get_mut(socket_handle);
                         let available = match tcp_socket.recv_slice(msg) {
                             Err(tcp::RecvError::InvalidState) => {
-                                log::error!("TCP Receive error: invalid state");
+                                defmt::error!("TCP Receive error: invalid state");
                                 continue;
                             }
                             Err(tcp::RecvError::Finished) => {
-                                log::warn!("Receive error finished; re-listening on port 5000");
+                                defmt::warn!("Receive error finished; re-listening on port 5000");
                                 tcp_socket.abort();
                                 if let Err(err) = tcp_socket.listen(IpListenEndpoint {
                                     addr: None,
                                     port: 5000,
                                 }) {
-                                    log::error!("Failed to listen on TCP socket: {err}");
+                                    defmt::error!("Failed to listen on TCP socket: {}", err);
                                 }
                                 continue;
                             }
@@ -252,22 +199,22 @@ mod app {
                             Ok(n) => n,
                         };
 
-                        log::info!("Received {available} bytes from a client");
+                        defmt::info!("Received {} bytes from a client", available);
                         if let Some(remote) = tcp_socket.remote_endpoint() {
-                            log::info!("Remote client: {remote:?}");
+                            defmt::info!("Remote client: {:?}", remote);
                         } else {
-                            log::warn!("Not sure of the remote's IP address!");
+                            defmt::warn!("Not sure of the remote's IP address!");
                         }
 
                         if let Err(err) = tcp_socket.send_slice(&msg[..available]) {
-                            log::error!("TCP send error {err:?}");
+                            defmt::error!("TCP send error {:?}", err);
                             continue;
                         }
                     }
                 }
             }
             SocketDemo::UdpBroadcast => {
-                log::info!("Starting UDP broadcast mode");
+                defmt::info!("Starting UDP broadcast mode");
                 let not_receiving = udp::PacketBuffer::new(&mut [][..], &mut [][..]);
                 let mut udp_socket = udp::Socket::new(
                     not_receiving,
@@ -280,7 +227,7 @@ mod app {
                     addr: None,
                     port: 5000,
                 }) {
-                    log::error!("Failed to bind UDP socket: {err}");
+                    defmt::error!("Failed to bind UDP socket: {}", err);
                     panic!();
                 };
                 let socket_handle = sockets.add(udp_socket);
@@ -300,51 +247,14 @@ mod app {
                                 port: 5000,
                             },
                         ) {
-                            Ok(()) => log::info!("Sent buffer full of counter {counter}"),
-                            Err(err) => log::warn!("Failed to send counter {counter}: {err:?}"),
+                            Ok(()) => defmt::info!("Sent buffer full of counter {}", counter),
+                            Err(err) => {
+                                defmt::warn!("Failed to send counter {}: {:?}", counter, err)
+                            }
                         }
                     }
                 }
             }
         }
-    }
-
-    /// This interrupt fires
-    ///
-    /// - when log messages have been written (to the USB host).
-    /// - every few milliseconds; check the imxrt-log docs for the
-    ///   specific number.
-    #[task(binds = BOARD_USB1, priority = 1)]
-    fn usb_interrupt(_: usb_interrupt::Context) {
-        poll_logger::spawn().unwrap();
-    }
-
-    /// This interrupt fires
-    ///
-    /// - when log messages have been written.
-    ///
-    /// Notice how there's no "periodic" or "time" component here.
-    /// When using the LPUART backend, you should use another time
-    /// source, or a polling loop, to make sure poll periodically
-    /// happens. Without this, you won't see your log messages.
-    #[task(binds = BOARD_DMA_A, priority = 1)]
-    fn dma_interrupt(_: dma_interrupt::Context) {
-        poll_logger::spawn().unwrap();
-    }
-
-    /// Actually performs the poll call.
-    #[task(shared = [poller], priority = 2)]
-    fn poll_logger(mut cx: poll_logger::Context) {
-        cx.shared.poller.lock(|poller| poller.poll());
-    }
-
-    /// Periodically runs when using the LPUART logger to drain the log queue.
-    #[task(binds = BOARD_PIT, local = [poll_log], priority = 1)]
-    fn pit_interrupt(cx: pit_interrupt::Context) {
-        let pit_interrupt::LocalResources { poll_log } = cx.local;
-        while poll_log.is_elapsed() {
-            poll_log.clear_elapsed();
-        }
-        poll_logger::spawn().unwrap();
     }
 }
