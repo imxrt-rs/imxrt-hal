@@ -345,6 +345,7 @@ pub struct Lpspi<P, const N: u8> {
     lpspi: ral::lpspi::Instance<N>,
     pins: P,
     bit_order: BitOrder,
+    mode: Mode,
 }
 
 /// Pins for a LPSPI device.
@@ -420,10 +421,11 @@ impl<P, const N: u8> Lpspi<P, N> {
     pub const N: u8 = N;
 
     fn init(lpspi: ral::lpspi::Instance<N>, pins: P) -> Self {
-        let mut spi = Lpspi {
+        let spi = Lpspi {
             lpspi,
             pins,
             bit_order: BitOrder::default(),
+            mode: MODE_0,
         };
 
         // Reset and disable
@@ -442,7 +444,6 @@ impl<P, const N: u8> Lpspi<P, N> {
             MASTER: MASTER_1,
             SAMPLE: SAMPLE_1
         );
-        Disabled::new(&mut spi.lpspi).set_mode(MODE_0);
 
         let tx_fifo_size = spi.max_watermark(Direction::Tx);
         // Configure watermarks
@@ -513,7 +514,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
-        let mut disabled = Disabled::new(&mut self.lpspi);
+        let mut disabled = Disabled::new(&mut self.lpspi, &mut self.mode);
         func(&mut disabled)
     }
 
@@ -630,6 +631,14 @@ impl<P, const N: u8> Lpspi<P, N> {
         }
     }
 
+    /// Set the SPI mode for the peripheral.
+    ///
+    /// This only affects the next transfer; ongoing transfers
+    /// will not be influenced.
+    pub fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+    }
+
     /// Place a transaction definition into the transmit FIFO.
     ///
     /// Once this definition is popped from the transmit FIFO, this may
@@ -638,7 +647,12 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// You're responsible for making sure there's space in the transmit
     /// FIFO for this transaction command.
     pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
-        ral::modify_reg!(ral::lpspi, self.lpspi, TCR,
+        ral::write_reg!(ral::lpspi, self.lpspi, TCR,
+            CPOL: if self.mode.polarity == Polarity::IdleHigh { CPOL_1 } else { CPOL_0 },
+            CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition { CPHA_1 } else { CPHA_0 },
+            PRESCALE: PRESCALE_0,
+            PCS: PCS_0,
+            WIDTH: WIDTH_0,
             LSBF: transaction.bit_order as u32,
             BYSW: transaction.byte_swap as u32,
             RXMSK: transaction.receive_data_mask as u32,
@@ -1018,11 +1032,12 @@ bitflags::bitflags! {
 /// An LPSPI peripheral which is temporarily disabled.
 pub struct Disabled<'a, const N: u8> {
     lpspi: &'a ral::lpspi::Instance<N>,
+    mode: &'a mut Mode,
     men: bool,
 }
 
 impl<'a, const N: u8> Disabled<'a, N> {
-    fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
+    fn new(lpspi: &'a mut ral::lpspi::Instance<N>, mode: &'a mut Mode) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
 
         // Request disable
@@ -1030,24 +1045,16 @@ impl<'a, const N: u8> Disabled<'a, N> {
         // Wait for the driver to finish its current transfer
         // and enter disabled state
         while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
-        Self { lpspi, men }
+        Self { lpspi, mode, men }
     }
 
     /// Set the SPI mode for the peripheral
+    #[deprecated(
+        since = "0.5.5",
+        note = "Use Lpspi::set_mode to change modes while enabled."
+    )]
     pub fn set_mode(&mut self, mode: Mode) {
-        // This could probably be changed when we're not disabled.
-        // However, there's rules about when you can read TCR.
-        // Specifically, reading TCR while it's being loaded from
-        // the transmit FIFO could result in an incorrect reading.
-        // Only permitting this when we're disabled might help
-        // us avoid something troublesome.
-        ral::modify_reg!(
-            ral::lpspi,
-            self.lpspi,
-            TCR,
-            CPOL: ((mode.polarity == Polarity::IdleHigh) as u32),
-            CPHA: ((mode.phase == Phase::CaptureOnSecondTransition) as u32)
-        );
+        *self.mode = mode;
     }
 
     /// Set the LPSPI clock speed (Hz).

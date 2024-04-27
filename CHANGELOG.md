@@ -12,6 +12,8 @@ Introduce LPSPI improvements:
 - Rework LPSPI clock settings, initialization, and disable.
 - Add `flush()` method.
 - Add `soft_reset()` method.
+- Allow users to change the mode while enabled. Deprecate the corresponding
+  method on the `Disabled` helper.
 
 ## [0.5.4] 2023-11-26
 
