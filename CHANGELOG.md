@@ -14,6 +14,8 @@ Introduce LPSPI improvements:
 - Add `soft_reset()` method.
 - Allow users to change the mode while enabled. Deprecate the corresponding
   method on the `Disabled` helper.
+- Allow users to change the watermark while enabled. Deprecate the corresponding
+  method on the `Disabled` helper.
 
 ## [0.5.4] 2023-11-26
 

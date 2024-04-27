@@ -25,12 +25,10 @@ mod app {
     #[init]
     fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
         let (_, board::Specifics { mut spi, .. }) = board::new();
-        spi.disabled(|spi| {
-            // Trigger when the TX FIFO is empty.
-            spi.set_watermark(Direction::Tx, 0);
-            // Wait to receive at least 2 u32s.
-            spi.set_watermark(Direction::Rx, 1);
-        });
+        // Trigger when the TX FIFO is empty.
+        spi.set_watermark(Direction::Tx, 0);
+        // Wait to receive at least 2 u32s.
+        spi.set_watermark(Direction::Rx, 1);
         // Starts the I/O as soon as we're done initializing, since
         // the TX FIFO is empty.
         spi.set_interrupts(Interrupts::TRANSMIT_DATA);

@@ -898,6 +898,21 @@ impl<P, const N: u8> Lpspi<P, N> {
         // Restore enabled state
         self.set_enable(enabled);
     }
+
+    /// Set the watermark level for a given direction.
+    ///
+    /// Returns the watermark level committed to the hardware. This may be different
+    /// than the supplied `watermark`, since it's limited by the hardware.
+    ///
+    /// When `direction == Direction::Rx`, the receive data flag is set whenever the
+    /// number of words in the receive FIFO is greater than `watermark`.
+    ///
+    /// When `direction == Direction::Tx`, the transmit data flag is set whenever the
+    /// the number of words in the transmit FIFO is less than, or equal, to `watermark`.
+    #[inline]
+    pub fn set_watermark(&mut self, direction: Direction, watermark: u8) -> u8 {
+        set_watermark(&self.lpspi, direction, watermark)
+    }
 }
 
 bitflags::bitflags! {
@@ -1029,6 +1044,27 @@ bitflags::bitflags! {
     }
 }
 
+#[inline]
+fn set_watermark(lpspi: &ral::lpspi::RegisterBlock, direction: Direction, watermark: u8) -> u8 {
+    let max_watermark = match direction {
+        Direction::Rx => 1 << ral::read_reg!(ral::lpspi, lpspi, PARAM, RXFIFO),
+        Direction::Tx => 1 << ral::read_reg!(ral::lpspi, lpspi, PARAM, TXFIFO),
+    };
+
+    let watermark = watermark.min(max_watermark - 1);
+
+    match direction {
+        Direction::Rx => {
+            ral::modify_reg!(ral::lpspi, lpspi, FCR, RXWATER: watermark as u32)
+        }
+        Direction::Tx => {
+            ral::modify_reg!(ral::lpspi, lpspi, FCR, TXWATER: watermark as u32)
+        }
+    }
+
+    watermark
+}
+
 /// An LPSPI peripheral which is temporarily disabled.
 pub struct Disabled<'a, const N: u8> {
     lpspi: &'a ral::lpspi::Instance<N>,
@@ -1076,24 +1112,12 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// When `direction == Direction::Tx`, the transmit data flag is set whenever the
     /// the number of words in the transmit FIFO is less than, or equal, to `watermark`.
     #[inline]
+    #[deprecated(
+        since = "0.5.5",
+        note = "Use Lpspi::set_watermark to change watermark while enabled"
+    )]
     pub fn set_watermark(&mut self, direction: Direction, watermark: u8) -> u8 {
-        let max_watermark = match direction {
-            Direction::Rx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, RXFIFO),
-            Direction::Tx => 1 << ral::read_reg!(ral::lpspi, self.lpspi, PARAM, TXFIFO),
-        };
-
-        let watermark = watermark.min(max_watermark - 1);
-
-        match direction {
-            Direction::Rx => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, RXWATER: watermark as u32)
-            }
-            Direction::Tx => {
-                ral::modify_reg!(ral::lpspi, self.lpspi, FCR, TXWATER: watermark as u32)
-            }
-        }
-
-        watermark
+        set_watermark(self.lpspi, direction, watermark)
     }
 
     /// Set the sampling point of the LPSPI peripheral.
