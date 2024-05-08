@@ -20,9 +20,16 @@
 //! you instead want to manage chip select in software, you should be able to multiplex your own
 //! pins, then construct the driver [`without_pins`](Lpspi::without_pins).
 //!
+//! # Device support
+//!
+//! By default, the driver behaves as a SPI controller, coordinating I/O for other SPI peripherals.
+//! To behave like a peripheral, use [`set_peripheral_enable`](Disabled::set_peripheral_enable).
+//!
+//! As of this writing, you're expected to use the lower-level interface to perform device I/O.
+//!
 //! # Example
 //!
-//! Initialize an LPSPI with a 1MHz SCK. To understand how to configure the LPSPI
+//! Initialize an LPSPI controller with a 1MHz SCK. To understand how to configure the LPSPI
 //! peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
 //!
 //! ```no_run
@@ -1204,6 +1211,17 @@ impl<'a, const N: u8> Disabled<'a, N> {
                 ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, SAMPLE: SAMPLE_1)
             }
         }
+    }
+
+    /// Become an LPSPI peripheral.
+    ///
+    /// By default, the LPSPI driver acts as a controller, driving I/O.
+    /// By enabling peripheral functions (`true`), you can accept
+    /// and react to another controller's I/O. When you're acting as a
+    /// peripheral, you don't control the clock and chip select lines.
+    #[inline]
+    pub fn set_peripheral_enable(&mut self, enable: bool) {
+        ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, MASTER: !enable as u32);
     }
 }
 

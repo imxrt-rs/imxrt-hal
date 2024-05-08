@@ -278,6 +278,7 @@ fn configure_pins(
     super::Pads {
         ref mut gpio,
         ref mut gpio_sd,
+        ref mut gpio_ad,
         ..
     }: &mut super::Pads,
 ) {
@@ -302,6 +303,17 @@ fn configure_pins(
     // Set the pin muxing for the two test points.
     crate::iomuxc::ccm::prepare(&mut gpio_sd.p01);
     crate::iomuxc::ccm::prepare(&mut gpio_sd.p02);
+
+    const SPI_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+        .set_drive_strength(iomuxc::DriveStrength::R0_4)
+        .set_open_drain(iomuxc::OpenDrain::Disabled)
+        .set_hysteresis(iomuxc::Hysteresis::Disabled)
+        .set_pull_keeper(None);
+
+    iomuxc::configure(&mut gpio_ad.p04, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_ad.p03, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_ad.p06, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_ad.p05, SPI_PIN_CONFIG);
 }
 
 /// Helpers for the clock_out example.

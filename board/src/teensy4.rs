@@ -231,6 +231,7 @@ fn configure_pins(
     super::Pads {
         ref mut gpio_ad_b1,
         ref mut gpio_b1,
+        ref mut gpio_b0,
         ..
     }: &mut super::Pads,
 ) {
@@ -251,6 +252,17 @@ fn configure_pins(
 
     let button: &mut ButtonPad = &mut gpio_b1.p01;
     iomuxc::configure(button, BUTTON_CONFIG);
+
+    const SPI_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+        .set_drive_strength(iomuxc::DriveStrength::R0_4)
+        .set_open_drain(iomuxc::OpenDrain::Disabled)
+        .set_hysteresis(iomuxc::Hysteresis::Disabled)
+        .set_pull_keeper(None);
+
+    iomuxc::configure(&mut gpio_b0.p02, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_b0.p01, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_b0.p03, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_b0.p00, SPI_PIN_CONFIG);
 }
 
 #[cfg(target_arch = "arm")]

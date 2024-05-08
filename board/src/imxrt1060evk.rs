@@ -255,7 +255,9 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
 /// set alternates here.
 fn configure_pins(
     super::Pads {
-        ref mut gpio_ad_b1, ..
+        ref mut gpio_ad_b1,
+        ref mut gpio_sd_b0,
+        ..
     }: &mut super::Pads,
 ) {
     use crate::iomuxc;
@@ -270,6 +272,17 @@ fn configure_pins(
     let i2c_sda: &mut I2cSda = &mut gpio_ad_b1.p01;
     iomuxc::configure(i2c_scl, I2C_PIN_CONFIG);
     iomuxc::configure(i2c_sda, I2C_PIN_CONFIG);
+
+    const SPI_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
+        .set_drive_strength(iomuxc::DriveStrength::R0_4)
+        .set_open_drain(iomuxc::OpenDrain::Disabled)
+        .set_hysteresis(iomuxc::Hysteresis::Disabled)
+        .set_pull_keeper(None);
+
+    iomuxc::configure(&mut gpio_sd_b0.p02, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_sd_b0.p03, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_sd_b0.p00, SPI_PIN_CONFIG);
+    iomuxc::configure(&mut gpio_sd_b0.p01, SPI_PIN_CONFIG);
 }
 
 /// Helpers for the clock_out example.

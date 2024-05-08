@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Add LPSPI low-level clock configuration APIs.
+- Add LPSPI `set_peripheral_enable` to configure the driver as a SPI peripheral.
 
 ## [0.5.5] 2024-05-27
 

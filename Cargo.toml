@@ -127,6 +127,7 @@ opt-level = "z"
 lto = "fat"
 panic = "abort"
 overflow-checks = true
+debug = 2
 
 [profile.dev.build-override]
 opt-level = 0
@@ -161,6 +162,14 @@ required-features = ["board/spi"]
 
 [[example]]
 name = "rtic_spi_blocking"
+required-features = ["board/spi"]
+
+[[example]]
+name = "rtic_spi_controller"
+required-features = ["board/spi"]
+
+[[example]]
+name = "rtic_spi_peripheral"
 required-features = ["board/spi"]
 
 [[example]]

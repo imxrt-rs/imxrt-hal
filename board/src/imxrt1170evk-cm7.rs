@@ -271,6 +271,19 @@ fn configure_pins(iomuxc: &mut super::Pads) {
     let clko2: &mut Tp1003 = &mut iomuxc.gpio_emc_b1.p41;
     crate::iomuxc::ccm::prepare(clko1);
     crate::iomuxc::ccm::prepare(clko2);
+
+    // Can't use imxrt-iomuxc configuration APIs for this chip.
+    // See the -iomuxc issue tracker for more information.
+    //
+    // Safety: We have exclusive ownership of the (higher-level)
+    // IOMUXC instance.
+    let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
+
+    // SPI: High drive strength, slow slew, no pulls, not open drain.
+    ral::write_reg!(ral::iomuxc, iomuxc, SW_PAD_CTL_PAD_GPIO_AD_30, DSE: DSE_1_HIGH_DRIVER);
+    ral::write_reg!(ral::iomuxc, iomuxc, SW_PAD_CTL_PAD_GPIO_AD_31, DSE: DSE_1_HIGH_DRIVER);
+    ral::write_reg!(ral::iomuxc, iomuxc, SW_PAD_CTL_PAD_GPIO_AD_28, DSE: DSE_1_HIGH_DRIVER);
+    ral::write_reg!(ral::iomuxc, iomuxc, SW_PAD_CTL_PAD_GPIO_AD_29, DSE: DSE_1_HIGH_DRIVER);
 }
 
 pub mod interrupt {
