@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Add LPSPI low-level clock configuration APIs.
+
 ## [0.5.5] 2024-05-27
 
 Add embedded-hal 1 implementations for the following drivers:

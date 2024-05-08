@@ -333,6 +333,38 @@ fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::Regi
     );
 }
 
+/// LPSPI clock configurations.
+///
+/// This is a low-level API. You should prefer [`set_clock_hz`](Disabled::set_clock_hz)
+/// if you're not sure how to use these configurations.
+///
+/// All delays and dividers are in terms of the LPSPI functional clock cycles. They're
+/// written directly to the corresponding clock configuration register fields. See inline
+/// documentation to understand what values of zero represent.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct ClockConfigs {
+    /// SCK-to-PCS delay.
+    ///
+    /// This value is off-by-one: a value of zero indicates one cycle.
+    pub sckpcs: u8,
+    /// PCS-to-SCK delay.
+    ///
+    /// This value is off-by-one: a value of zero indicates one cycle.
+    pub pcssck: u8,
+    /// Delay between transfers.
+    ///
+    /// For normal transactions, this affects the PCS negation duration. In this
+    /// configuration, this value is off-by-two: a value of zero indicates two cycle.
+    ///
+    /// For continuous transactions, this affects the clock delay between words.
+    /// In this configuration, this value is off-by-one.
+    pub dbt: u8,
+    /// SCK divider.
+    ///
+    /// This value is off-by-two: a value of zero indicates two cycles.
+    pub sckdiv: u8,
+}
+
 /// An LPSPI driver.
 ///
 /// The driver exposes low-level methods for coordinating
@@ -925,6 +957,21 @@ impl<P, const N: u8> Lpspi<P, N> {
         // Reset the status flags, clearing the error condition for the next use.
         self.clear_status(Status::TRANSMIT_ERROR | Status::RECEIVE_ERROR);
     }
+
+    /// Return the driver's clock configurations.
+    ///
+    /// These values are decided by calls to [`set_clock_hz`](Disabled::set_clock_hz)
+    /// and [`set_clock_configs`](Disabled::set_clock_configs).
+    pub fn clock_configs(&self) -> ClockConfigs {
+        let (sckpcs, pcssck, dbt, sckdiv) =
+            ral::read_reg!(ral::lpspi, self.lpspi, CCR, SCKPCS, PCSSCK, DBT, SCKDIV);
+        ClockConfigs {
+            sckpcs: sckpcs as u8,
+            pcssck: pcssck as u8,
+            dbt: dbt as u8,
+            sckdiv: sckdiv as u8,
+        }
+    }
 }
 
 bitflags::bitflags! {
@@ -1111,6 +1158,19 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
     pub fn set_clock_hz(&mut self, source_clock_hz: u32, clock_hz: u32) {
         set_spi_clock(source_clock_hz, clock_hz, self.lpspi);
+    }
+
+    /// Set LPSPI timing configurations.
+    ///
+    /// If you're not sure how to select these timing values, prefer
+    /// [`set_clock_hz`](Self::set_clock_hz).
+    pub fn set_clock_configs(&mut self, timing: ClockConfigs) {
+        ral::write_reg!(ral::lpspi, self.lpspi, CCR,
+            SCKPCS: timing.sckpcs as u32,
+            PCSSCK: timing.pcssck as u32,
+            DBT: timing.dbt as u32,
+            SCKDIV: timing.sckdiv as u32,
+        );
     }
 
     /// Set the watermark level for a given direction.
