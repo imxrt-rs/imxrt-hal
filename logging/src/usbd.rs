@@ -243,6 +243,12 @@ pub struct UsbdConfigBuilder {
     cfg: UsbdConfig,
 }
 
+impl Default for UsbdConfigBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UsbdConfigBuilder {
     /// Create a new builder with the default values.
     pub const fn new() -> Self {

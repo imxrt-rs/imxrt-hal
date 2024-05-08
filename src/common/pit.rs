@@ -94,6 +94,7 @@ pub fn new<const N: u8>(pit: crate::ral::pit::Instance<N>) -> Channels {
 }
 
 mod private {
+    #[allow(dead_code)]
     pub trait Sealed {}
 }
 /// Describes a valid PIT channel.
