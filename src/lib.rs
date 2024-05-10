@@ -47,6 +47,7 @@
 //! |-------------------|------------------------------------------------------------------|
 //! | `"imxrt1010"`     | Enable features for the 1010 chips.                              |
 //! | `"imxrt1020"`     | Enable features for the 1020 chips.                              |
+//! | `"imxrt1050"`     | Enable features for the 1050 chips.                              |
 //! | `"imxrt1060"`     | Enable features for the 1060 chips.                              |
 //! | `"imxrt1064"`     | Enable features for the 1064 chips.                              |
 //! | `"imxrt1170"`     | Enable features for the 1170 chips.                              |

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+Add support for the i.MX RT 1050 processors with the `"imxrt1050"` feature.
+
 Add embedded-hal 1 implementations for the following drivers:
 
 - GPIO
