@@ -588,7 +588,7 @@ impl Baud {
             }
         }
 
-        let mut err = u32::max_value();
+        let mut err = u32::MAX;
         let mut best_osr = 0;
         let mut best_sbr = 0;
 
