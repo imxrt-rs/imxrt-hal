@@ -36,9 +36,25 @@ fn features_chip() -> HashSet<String> {
     features_10xx().into_iter().chain(features_11xx()).collect()
 }
 
+fn emit_cfg_checks<F>(cfg: &str, values: impl IntoIterator<Item = F>)
+where
+    F: std::fmt::Display,
+{
+    let quoted: Vec<String> = values
+        .into_iter()
+        .map(|value| format!("\"{}\"", value))
+        .collect();
+    let joined = quoted.join(", ");
+    // Single ":" permitted for backwards compatibility.
+    println!("cargo:rustc-check-cfg=cfg({cfg}, values({joined}))");
+}
+
 fn main() {
     let all_features = features_enabled();
     let feat_chip: HashSet<_> = features_chip();
+
+    emit_cfg_checks("chip", feat_chip.iter());
+    emit_cfg_checks("family", ["none", "imxrt10xx", "imxrt11xx"]);
 
     let enabled_chip: Vec<_> = all_features.intersection(&feat_chip).collect();
     assert!(

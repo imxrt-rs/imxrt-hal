@@ -10,10 +10,35 @@ fn extract_features() -> HashSet<String> {
         .collect()
 }
 
+fn emit_cfg_checks<F>(cfg: &str, values: impl IntoIterator<Item = F>)
+where
+    F: std::fmt::Display,
+{
+    let quoted: Vec<String> = values
+        .into_iter()
+        .map(|value| format!("\"{}\"", value))
+        .collect();
+    let joined = quoted.join(", ");
+    // Single ":" permitted for backwards compatibility.
+    println!("cargo:rustc-check-cfg=cfg({cfg}, values({joined}))");
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR").map(PathBuf::from)?;
     println!("cargo:rustc-link-search={}", out_dir.display());
     fs::write(out_dir.join("device.x"), DEVICE_X)?;
+
+    emit_cfg_checks(
+        "board",
+        [
+            "teensy4",
+            "imxrt1010evk",
+            "imxrt1170evk-cm7",
+            "imxrt1060evk",
+        ],
+    );
+    emit_cfg_checks("chip", ["imxrt1010", "imxrt1060", "imxrt1170"]);
+    emit_cfg_checks("family", ["imxrt10xx", "imxrt11xx"]);
 
     let features = extract_features();
     for feature in features {
