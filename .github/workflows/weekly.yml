@@ -1,0 +1,55 @@
+# Try to catch toolchain changes before they appear
+# in unrelated work.
+name: Weekly lints
+
+on:
+  workflow_dispatch:
+  schedule:
+  # Rust releases occur on Thursdays. Try to
+  # ping me around 7AM my time, every Thursday.
+  - cron: '0 11 * * THU'
+
+jobs:
+  # Lint the workspace through the board packages.
+  #
+  # Covers imxrt-hal, imxrt-log, and board. Excludes
+  # examples and tests.
+  lint-board:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+        - stable
+        - beta
+        - nightly
+        board:
+        - teensy4
+        - imxrt1010evk
+        - imxrt1170evk-cm7
+        - imxrt1060evk
+    steps:
+    - uses: actions/checkout@v6
+    - run: rustup toolchain install ${{ matrix.toolchain }} --no-self-update --profile minimal --component clippy --target thumbv7em-none-eabihf
+    - run: cargo +${{ matrix.toolchain }} --version
+    - run: cargo +${{ matrix.toolchain }} clippy --workspace --features=board/${{ matrix.board }} --target=thumbv7em-none-eabihf -- -D warnings
+
+  # Lint the workspace to cover chips that don't have a board.
+  #
+  # Covers only imxrt-hal and imxrt-log. No tests.
+  lint-rest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+        - stable
+        - beta
+        - nightly
+        chip:
+        - imxrt-ral/imxrt1021,imxrt1020
+    steps:
+    - uses: actions/checkout@v6
+    - run: rustup toolchain install ${{ matrix.toolchain }} --no-self-update --profile minimal --component clippy --target thumbv7em-none-eabihf
+    - run: cargo +${{ matrix.toolchain }} --version
+    - run: cargo +${{ matrix.toolchain }} clippy --package=imxrt-hal --package=imxrt-log --features=${{ matrix.chip }} --target=thumbv7em-none-eabihf -- -D warnings
