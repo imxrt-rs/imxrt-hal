@@ -29,7 +29,7 @@ mod app {
     const BIT_ORDER: BitOrder = BitOrder::Msb;
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (_, board::Specifics { mut spi, .. }) = board::new();
 
         spi.disabled(|spi| spi.set_peripheral_enable(true));
@@ -48,7 +48,7 @@ mod app {
         spi.set_watermark(Direction::Rx, 1);
         spi.set_interrupts(Interrupts::RECEIVE_DATA);
 
-        (Shared {}, Local { spi }, init::Monotonics())
+        (Shared {}, Local { spi })
     }
 
     #[task(binds=BOARD_SPI, local = [spi])]

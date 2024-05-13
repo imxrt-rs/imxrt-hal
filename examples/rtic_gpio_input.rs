@@ -23,7 +23,7 @@ mod app {
     }
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             board::Common {
                 pit: (_, _, pit, _),
@@ -40,7 +40,7 @@ mod app {
         let delay = BlockingPit::from_pit(pit);
         let button_port = ports.button_mut();
         button_port.set_interrupt(&button, Some(Trigger::FallingEdge));
-        (Shared {}, Local { led, button, delay }, init::Monotonics())
+        (Shared {}, Local { led, button, delay })
     }
 
     #[task(binds = BOARD_BUTTON, local = [led, delay, button])]

@@ -61,7 +61,7 @@ mod app {
     struct Shared {}
 
     #[init(local = [bus: Option<UsbBusAllocator<Bus>> = None])]
-    fn init(ctx: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(ctx: init::Context) -> (Shared, Local) {
         let (
             board::Common {
                 pit: (mut timer, _, _, _),
@@ -117,7 +117,6 @@ mod app {
                 poller,
                 timer,
             },
-            init::Monotonics(),
         )
     }
 
@@ -137,6 +136,7 @@ mod app {
             device,
             led,
             configured,
+            ..
         } = ctx.local;
 
         device.poll(&mut [class]);

@@ -26,7 +26,7 @@ mod app {
     }
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             _,
             board::Specifics {
@@ -54,7 +54,7 @@ mod app {
         submodule.set_load_ok(&mut module);
         submodule.set_running(&mut module, true);
 
-        (Shared {}, Local { led, submodule }, init::Monotonics())
+        (Shared {}, Local { led, submodule })
     }
 
     #[task(binds = BOARD_PWM, local = [led, submodule, counter: u32 = 0])]

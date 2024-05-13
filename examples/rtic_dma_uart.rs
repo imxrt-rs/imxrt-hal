@@ -34,7 +34,7 @@ mod app {
     }
 
     #[init(local = [buf: [u8; 32] = [0; 32]])]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(cx: init::Context) -> (Shared, Local) {
         let (
             board::Common { mut dma, .. },
             board::Specifics {
@@ -58,7 +58,6 @@ mod app {
                 buffer: cx.local.buf,
                 state: State::Receiving,
             },
-            init::Monotonics(),
         )
     }
 
@@ -70,6 +69,7 @@ mod app {
             state,
             buffer,
             console,
+            ..
         } = cx.local;
 
         while channel.is_interrupt() {

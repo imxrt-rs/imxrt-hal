@@ -37,7 +37,7 @@ mod app {
     }
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             board::Common {
                 pit: (_, _, mut pit, _),
@@ -51,13 +51,11 @@ mod app {
         pit.enable();
 
         spi.set_bit_order(BIT_ORDER);
-
         (
             Shared {
                 errors: AtomicU32::new(0),
             },
             Local { spi, pit },
-            init::Monotonics(),
         )
     }
 

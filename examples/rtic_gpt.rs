@@ -33,7 +33,7 @@ mod app {
     }
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             board::Common {
                 mut gpt1, mut gpt2, ..
@@ -44,7 +44,7 @@ mod app {
         init_gpt(&mut gpt2, GPT2_DELAY_MS);
 
         gpt1.enable();
-        (Shared { led, gpt1, gpt2 }, Local {}, init::Monotonics())
+        (Shared { led, gpt1, gpt2 }, Local {})
     }
 
     #[task(binds = BOARD_GPT1, shared = [led, gpt1, gpt2])]

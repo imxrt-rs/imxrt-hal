@@ -33,7 +33,7 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             _,
             board::Specifics {
@@ -53,7 +53,7 @@ mod app {
             // Interrupt when we receive a byte.
             console.set_interrupts(lpuart::Interrupts::RECEIVE_FULL);
         });
-        (Shared {}, Local { led, console }, init::Monotonics())
+        (Shared {}, Local { led, console })
     }
 
     #[task(binds = BOARD_CONSOLE, local = [led, console])]

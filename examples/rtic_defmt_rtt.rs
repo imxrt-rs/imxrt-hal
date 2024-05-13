@@ -33,7 +33,7 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(cx: init::Context) -> (Shared, Local) {
         let mut cortex_m = cx.core;
         let (
             board::Common {
@@ -50,7 +50,7 @@ mod app {
         make_log.set_interrupt_enable(true);
         make_log.enable();
 
-        (Shared {}, Local { led, make_log }, init::Monotonics())
+        (Shared {}, Local { led, make_log })
     }
 
     #[task(binds = BOARD_PIT, local = [led, make_log, counter: u32 = 0], priority = 1)]
@@ -59,6 +59,7 @@ mod app {
             make_log,
             led,
             counter,
+            ..
         } = cx.local;
 
         // Is it time for us to send a new log message?

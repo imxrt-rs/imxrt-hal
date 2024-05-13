@@ -19,7 +19,7 @@ mod app {
     }
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             board::Common {
                 pit: (_, _, mut pit, _),
@@ -30,7 +30,7 @@ mod app {
         pit.set_interrupt_enable(true);
         pit.set_load_timer_value(PIT_DELAY_MS);
         pit.enable();
-        (Shared {}, Local { led, pit }, init::Monotonics())
+        (Shared {}, Local { led, pit })
     }
 
     #[task(binds = BOARD_PIT, local = [led, pit])]

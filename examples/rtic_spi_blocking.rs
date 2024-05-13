@@ -26,7 +26,7 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (
             board::Common {
                 pit: (_, _, pit, _),
@@ -34,7 +34,7 @@ mod app {
             },
             board::Specifics { spi, .. },
         ) = board::new();
-        (Shared {}, Local { spi, pit }, init::Monotonics())
+        (Shared {}, Local { spi, pit })
     }
 
     #[idle(local = [spi, pit])]

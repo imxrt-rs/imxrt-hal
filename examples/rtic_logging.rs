@@ -63,7 +63,7 @@ mod app {
     }
 
     #[init]
-    fn init(cx: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(cx: init::Context) -> (Shared, Local) {
         let mut cortex_m = cx.core;
         let (
             board::Common {
@@ -112,7 +112,6 @@ mod app {
                 poll_log,
                 make_log,
             },
-            init::Monotonics(),
         )
     }
 
@@ -141,7 +140,7 @@ mod app {
 
     /// Actually performs the poll call.
     #[task(shared = [poller], priority = 2)]
-    fn poll_logger(mut cx: poll_logger::Context) {
+    async fn poll_logger(mut cx: poll_logger::Context) {
         cx.shared.poller.lock(|poller| poller.poll());
     }
 
@@ -152,6 +151,7 @@ mod app {
             make_log,
             led,
             counter,
+            ..
         } = cx.local;
 
         // Is it time for us to poll the logger?
