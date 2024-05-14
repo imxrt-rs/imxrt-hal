@@ -11,6 +11,8 @@
 - `timer::*PitChan`
 - `lpspi::Disabled::{set_mode, set_watermark}`
 
+**BREAKING** `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
+
 ## [0.5.6] 2024-07-05
 
 - Add LPSPI low-level clock configuration APIs.

@@ -132,10 +132,6 @@ pub enum LpspiError {
     FrameSize,
     /// FIFO error in the given direction.
     Fifo(Direction),
-    /// Bus is busy at the start of a transfer.
-    Busy,
-    /// Caller provided no data.
-    NoData,
 }
 
 /// An LPSPI transaction definition.
