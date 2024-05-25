@@ -5,6 +5,9 @@
 - Add LPSPI low-level clock configuration APIs.
 - Add LPSPI `set_peripheral_enable` to configure the driver as a SPI peripheral.
 
+When the LPI2C driver concludes a transaction, it ensures that the controller
+is idle before returning.
+
 ## [0.5.5] 2024-05-27
 
 Add embedded-hal 1 implementations for the following drivers:

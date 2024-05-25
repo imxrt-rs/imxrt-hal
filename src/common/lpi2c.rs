@@ -229,7 +229,6 @@ impl<P, const N: u8> Lpi2c<P, N> {
         let mut disabled = Disabled::new(&mut self.lpi2c);
         func(&mut disabled)
     }
-
     /// If the bus is busy, return the status flags in the error
     /// position.
     fn check_busy(&self) -> Result<(), ControllerStatus> {
@@ -241,32 +240,39 @@ impl<P, const N: u8> Lpi2c<P, N> {
         }
     }
 
-    /// Block until there's space in the transmit FIFO..
-    ///
-    /// Return errors if detected.
-    fn wait_for_transmit(&self) -> Result<(), ControllerStatus> {
+    /// Keep checking for errors until `what` produces a value.
+    fn wait_for<T>(
+        &self,
+        what: impl Fn(ControllerStatus) -> Option<T>,
+    ) -> Result<T, ControllerStatus> {
         loop {
             let status = self.controller_status();
             if status.has_error() {
                 return Err(status);
-            } else if status.contains(ControllerStatus::TRANSMIT_DATA) {
-                return Ok(());
+            }
+            if let Some(val) = what(status) {
+                return Ok(val);
             }
         }
+    }
+
+    /// Wait for the controller to become idle.
+    fn wait_for_controller_idle(&self) -> Result<(), ControllerStatus> {
+        self.wait_for(ControllerStatus::break_controller_idle)
+    }
+
+    /// Block until there's space in the transmit FIFO..
+    ///
+    /// Return errors if detected.
+    fn wait_for_transmit(&self) -> Result<(), ControllerStatus> {
+        self.wait_for(ControllerStatus::break_transmit_space)
     }
 
     /// Block until receiving a byte of data.
     ///
     /// Returns errors if detected.
     fn wait_for_data(&self) -> Result<u8, ControllerStatus> {
-        loop {
-            let status = self.controller_status();
-            if status.has_error() {
-                return Err(status);
-            } else if let Some(data) = self.read_data_register() {
-                return Ok(data);
-            }
-        }
+        self.wait_for(|_| self.read_data_register())
     }
 
     /// Wait for the end of packet, which happens for STOP or repeated
@@ -275,14 +281,7 @@ impl<P, const N: u8> Lpi2c<P, N> {
     /// Returns errors if detected. This will not unblock for a non-repeated
     /// START.
     fn wait_for_end_of_packet(&self) -> Result<(), ControllerStatus> {
-        loop {
-            let status = self.controller_status();
-            if status.has_error() {
-                return Err(status);
-            } else if status.contains(ControllerStatus::END_PACKET) {
-                return Ok(());
-            }
-        }
+        self.wait_for(ControllerStatus::break_end_of_packet)
     }
 
     /// Borrow the pins.
@@ -487,7 +486,22 @@ impl ControllerStatus {
         self.contains(Self::BUS_BUSY) && !self.contains(Self::CONTROLLER_BUSY)
     }
 
-    /// Indicates if this tatus has any error bits set.
+    /// Break when the controller is idle.
+    fn break_controller_idle(self) -> Option<()> {
+        (!self.contains(Self::CONTROLLER_BUSY)).then_some(())
+    }
+
+    /// Break when there's an end of packet.
+    fn break_end_of_packet(self) -> Option<()> {
+        self.contains(Self::END_PACKET).then_some(())
+    }
+
+    /// Break when there's space in the TX FIFO.
+    fn break_transmit_space(self) -> Option<()> {
+        self.contains(Self::TRANSMIT_DATA).then_some(())
+    }
+
+    /// Indicates if any error bit is set.
     const fn has_error(self) -> bool {
         self.intersects(Self::ERRORS)
     }
@@ -664,7 +678,6 @@ impl<P, const N: u8> blocking::WriteIterRead for Lpi2c<P, N> {
         self.check_busy()?;
         self.clear_fifo();
         self.clear_controller_status(ControllerStatus::W1C);
-
         self.wait_for_transmit()?;
         self.enqueue_controller_command(ControllerCommand::write(address));
 
@@ -693,6 +706,7 @@ impl<P, const N: u8> blocking::WriteIterRead for Lpi2c<P, N> {
         self.wait_for_transmit()?;
         self.enqueue_controller_command(ControllerCommand::Stop);
         self.wait_for_end_of_packet()?;
+        self.wait_for_controller_idle()?;
 
         Ok(())
     }
@@ -882,6 +896,7 @@ mod transaction {
             self.lpi2c
                 .enqueue_controller_command(ControllerCommand::Stop);
             self.lpi2c.wait_for_end_of_packet()?;
+            self.lpi2c.wait_for_controller_idle()?;
             Ok(())
         }
     }

@@ -3,21 +3,21 @@
 //! Requires an MPU9250. The board queries the sensor's WHO_AM_I
 //! register using various types of I2C write-read sequences. The
 //! clock should be 400KHz.
+//!
+//! The example tries to pipeline LPI2C transactions. Success is indicated
+//! by not panicking and constant activity on your scope. To understand loop
+//! start and end points, probe your LED / another output on your scope;
+//! the loop flips the output every iteration.
 
 #![no_main]
 #![no_std]
 
-use imxrt_hal as hal;
-
-use eh02::{blocking::i2c, blocking::serial::Write as _};
+use eh02::blocking::i2c;
 
 /// MPU9250 I2C address
 const MPU9250_ADDRESS: u8 = 0x68;
 const WHO_AM_I_REG: u8 = 0x75;
 const WHO_AM_I_RESP: u8 = 0x71;
-
-const GPT1_DELAY_MS: u32 = board::GPT1_FREQUENCY / 1_000 * 500;
-const GPT1_OCR: hal::gpt::OutputCompareRegister = hal::gpt::OutputCompareRegister::OCR1;
 
 /// This should show a repeated start.
 fn who_am_i_write_read<I>(i2c: &mut I) -> Result<bool, I::Error>
@@ -68,76 +68,30 @@ where
     Ok(out[0] == WHO_AM_I_RESP)
 }
 
-fn write_error(console: &mut board::Console, _: hal::lpi2c::ControllerStatus) {
-    // TODO more helpful error reporting...
-    console.bwrite_all(b"I2C error\r\n").ok();
-}
-
-fn query_mpu(
-    ctx: &[u8],
-    console: &mut board::Console,
-    func: impl FnOnce() -> Result<bool, hal::lpi2c::ControllerStatus>,
-) {
-    console.bwrite_all(ctx).ok();
-    match func() {
-        Ok(true) => {
-            console.bwrite_all(b"OK\r\n").ok();
-        }
-        Ok(false) => {
-            console.bwrite_all(b"Wrong response\r\n").ok();
-        }
-        Err(err) => {
-            write_error(console, err);
-        }
-    }
-}
-
 #[imxrt_rt::entry]
 fn main() -> ! {
     let (
-        board::Common { mut gpt1, .. },
-        board::Specifics {
-            led,
-            mut console,
-            mut i2c,
+        board::Common {
+            pit: (mut pit, _, _, _),
             ..
         },
+        board::Specifics { led, mut i2c, .. },
     ) = board::new();
 
-    gpt1.set_output_compare_count(GPT1_OCR, GPT1_DELAY_MS);
-    gpt1.set_mode(hal::gpt::Mode::Restart);
-    gpt1.enable();
+    // Delay for scope set up / pin settle time.
+    pit.set_load_timer_value(board::PIT_FREQUENCY);
+    pit.enable();
+    while !pit.is_elapsed() {}
+    pit.clear_elapsed();
+    pit.disable();
 
     led.set();
     loop {
-        while !gpt1.is_elapsed(GPT1_OCR) {}
-        gpt1.clear_elapsed(GPT1_OCR);
-
-        query_mpu(
-            b"Querying WHO_AM_I with write-read... ",
-            &mut console,
-            || who_am_i_write_read(&mut i2c),
-        );
-
-        query_mpu(
-            b"Querying WHO_AM_I with write-then-read... ",
-            &mut console,
-            || who_am_i_write_then_read(&mut i2c),
-        );
-
-        query_mpu(
-            b"Querying WHO_AM_I with transactional write-read... ",
-            &mut console,
-            || who_am_i_transaction_write_read(&mut i2c),
-        );
-
-        query_mpu(
-            b"Querying WHO_AM_I with transactional write-then-read... ",
-            &mut console,
-            || who_am_i_transaction_write_then_read(&mut i2c),
-        );
+        assert!(who_am_i_write_read(&mut i2c).unwrap());
+        assert!(who_am_i_write_then_read(&mut i2c).unwrap());
+        assert!(who_am_i_transaction_write_read(&mut i2c).unwrap());
+        assert!(who_am_i_transaction_write_then_read(&mut i2c).unwrap());
 
         led.toggle();
-        console.bwrite_all(b"\r\n\r\n").ok();
     }
 }
