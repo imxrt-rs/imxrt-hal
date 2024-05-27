@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
+## [0.5.5] 2024-05-27
+
 Add embedded-hal 1 implementations for the following drivers:
 
 - GPIO
+- LPUART
+- LPI2C
 
 Introduce LPSPI improvements:
 
@@ -306,7 +310,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.3...main
+[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.5...main
+[0.5.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.4...0.5.5
 [0.5.4]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.3...0.5.4
 [0.5.3]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.2...0.5.3
 [0.5.2]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.1...0.5.2
