@@ -19,7 +19,7 @@ version = "0.5.5"
 version = "1.0"
 
 [dependencies.bitflags]
-version = "1.2"
+version = "1.3.1"
 
 [dependencies.fugit]
 version = "0.3"
@@ -39,7 +39,7 @@ features = ["async-await"]
 
 [dependencies.eh02]
 package = "embedded-hal"
-version = "0.2"
+version = "0.2.6"
 
 [dependencies.eh1]
 package = "embedded-hal"
@@ -99,7 +99,7 @@ eh02-unproven = []
 members = ["board", "logging"]
 
 [workspace.dependencies]
-imxrt-dma = "0.1"
+imxrt-dma = "0.1.1"
 imxrt-iomuxc = "0.2.1"
 imxrt-hal = { version = "0.5", path = "." }
 imxrt-log = { path = "logging", default-features = false, features = [
@@ -107,7 +107,7 @@ imxrt-log = { path = "logging", default-features = false, features = [
     "lpuart",
     "usbd",
 ] }
-imxrt-ral = "0.5"
+imxrt-ral = "0.5.4"
 imxrt-rt = "0.1"
 imxrt-usbd = "0.2"
 
