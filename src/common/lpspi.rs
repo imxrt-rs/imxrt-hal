@@ -75,28 +75,14 @@
 //!
 //! # Limitations
 //!
-//! ## embedded-hal 0.2 Transaction API
-//!
-//! Due to [a hardware defect][1], this driver does not yet support the EH02 SPI transaction API.
-//! An early iteration of this driver reproduced the issue discussed in that forum. This driver may
-//! be able to work around the defect in software, but it hasn't been explored.
-//!
-//! [1]: https://community.nxp.com/t5/i-MX-RT/RT1050-LPSPI-last-bit-not-completing-in-continuous-mode/m-p/898460
-//!
-//! [`Transaction`] exposes the continuous / continuing flags, so you're free to model advanced
-//! transactions. However, keep in mind that disabling the receiver during a continuous transaction
-//! may not work as expected.
-//!
-//! ## embedded-hal 1.0 `SpiDevice`
-//!
 //! The current implementation of the EH1 `SpiDevice` trait does not support the `DelayNs`
 //! operation. Implementing this was impossible while keeping backwards compatibility.
 //! This may change in a future release.
 //!
 //! If you need support for the `DelayNs` operation you can use one of the devices from
-//! [`embedded_hal_bus::spi`][2].
+//! [`embedded_hal_bus::spi`][1].
 //!
-//! [2]: https://docs.rs/embedded-hal-bus/latest/embedded_hal_bus/spi/index.html
+//! [1]: https://docs.rs/embedded-hal-bus/latest/embedded_hal_bus/spi/index.html
 
 use core::marker::PhantomData;
 use core::task::Poll;
@@ -1443,6 +1429,56 @@ where
     }
 }
 
+impl<P, const N: u8, W> eh02::blocking::spi::Transactional<W> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+    W: Word + 'static,
+{
+    type Error = LpspiError;
+
+    fn exec(
+        &mut self,
+        operations: &mut [eh02::blocking::spi::Operation<'_, W>],
+    ) -> Result<(), Self::Error> {
+        use eh02::blocking::spi::Operation;
+
+        let operations_len = operations.len();
+
+        if operations_len == 0 {
+            return Ok(());
+        }
+
+        crate::spin_on(async {
+            let mut continuing = false;
+
+            for (i, op) in operations.iter_mut().enumerate() {
+                // For the last transaction `continuous` needs to be set to false.
+                // Otherwise the hardware fails to correctly de-assert CS.
+                let continuous = i + 1 != operations_len;
+                match op {
+                    Operation::Write(data) => {
+                        self.spin_write_no_read(continuous, continuing, data)
+                            .await?
+                    }
+                    Operation::Transfer(data) => {
+                        self.spin_transfer_in_place(continuous, continuing, data)
+                            .await?;
+                    }
+                }
+
+                continuing = true;
+            }
+
+            Ok(())
+        })
+        .map_err(|err| {
+            self.recover_from_error();
+            err
+        })?;
+
+        self.flush()
+    }
+}
 
 impl eh1::spi::Error for LpspiError {
     fn kind(&self) -> eh1::spi::ErrorKind {
