@@ -163,6 +163,22 @@ mod app {
 
                 delay();
             }
+
+            {
+                use eh1::spi::{
+                    Operation::{Read, TransferInPlace},
+                    SpiDevice,
+                };
+
+                let mut read = [0u8; 7];
+                let mut xfer = [0u8; 16];
+                for idx in 0..xfer.len() {
+                    xfer[idx] = idx as u8;
+                }
+
+                spi.transaction(&mut [TransferInPlace(&mut xfer), Read(&mut read)])
+                    .unwrap();
+            }
         }
     }
 }
