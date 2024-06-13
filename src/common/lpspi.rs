@@ -1288,9 +1288,6 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N> {
 
 /// Describes SPI words that can participate in transactions.
 trait Word: Copy + Into<u32> + TryFrom<u32> {
-    const MAX: Self;
-    const ZERO: Self;
-
     /// Repeatedly call `provider` to produce yourself,
     /// then turn yourself into a LPSPI word.
     fn pack_word(bit_order: BitOrder, provider: impl FnMut() -> Option<Self>) -> u32;
@@ -1301,8 +1298,6 @@ trait Word: Copy + Into<u32> + TryFrom<u32> {
 }
 
 impl Word for u8 {
-    const MAX: u8 = u8::MAX;
-    const ZERO: u8 = 0;
     fn pack_word(bit_order: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
         let mut word = 0;
         match bit_order {
@@ -1333,8 +1328,6 @@ impl Word for u8 {
 }
 
 impl Word for u16 {
-    const MAX: u16 = u16::MAX;
-    const ZERO: u16 = 0;
     fn pack_word(bit_order: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
         let mut word = 0;
         match bit_order {
@@ -1365,8 +1358,6 @@ impl Word for u16 {
 }
 
 impl Word for u32 {
-    const MAX: u32 = u32::MAX;
-    const ZERO: u32 = 0;
     fn pack_word(_: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
         provider().unwrap_or(0)
     }
