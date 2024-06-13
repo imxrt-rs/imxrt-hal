@@ -1432,15 +1432,6 @@ where
     }
 }
 
-/// Transmits dummy values.
-struct TransmitDummies;
-
-impl TransmitData for TransmitDummies {
-    fn next_word(&mut self, _: BitOrder) -> u32 {
-        u32::MAX
-    }
-}
-
 /// Receive data into a buffer.
 struct ReceiveBuffer<'a, W> {
     /// The write position.
@@ -1493,13 +1484,6 @@ where
     fn next_word(&mut self, word: u32) {
         W::unpack_word(word, |elem| self.next_write(elem));
     }
-}
-
-/// Receive dummy data.
-struct ReceiveDummies;
-
-impl ReceiveData for ReceiveDummies {
-    fn next_word(&mut self, _: u32) {}
 }
 
 /// Computes how may Ws fit inside a LPSPI word.
