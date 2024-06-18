@@ -59,7 +59,7 @@ mod app {
 
             assert!(spi.fifo_status().rxcount == 2);
 
-            while let Some(_) = spi.read_data() {}
+            while spi.read_data().is_some() {}
         }
     }
 }
