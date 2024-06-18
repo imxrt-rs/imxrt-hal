@@ -7,16 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        components: rustfmt
-    - uses: actions-rs/cargo@v1
-      name: Check formatting
-      with:
-        command: fmt
-        args: --all -- --check
+    - name: Install a stable toolchain with rustfmt
+      run: rustup toolchain install stable --no-self-update --profile minimal --component rustfmt
+    - name: Check formatting
+      run: cargo fmt --all -- --check
 
   # Checks the common HAL for all chips supported by imxrt-ral.
   lint-hal:
@@ -37,16 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        components: clippy
-    - uses: actions-rs/clippy-check@v1
-      name: Lint imxrt-hal
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --features=${{ matrix.chips }} --package=imxrt-hal -- -D warnings
+    - name: Install a stable toolchain with clippy
+      run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
+    - name: Lint imxrt-hal
+      run: cargo clippy --features=${{ matrix.chips }} --package=imxrt-hal -- -D warnings
 
   # Indirectly checks & lints the HAL with the HAL's chip feature, and also
   # checks & lints the imxrt-log package.
@@ -65,16 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        components: clippy
-    - uses: actions-rs/clippy-check@v1
-      name: Lint imxrt-log
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --features=${{ matrix.chips }} --package=imxrt-log --package=imxrt-hal -- -D warnings
+    - name: Install a stable toolchain with clippy
+      run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
+    - name: Lint imxrt-log
+      run: cargo clippy --features=${{ matrix.chips }} --package=imxrt-log --package=imxrt-hal -- -D warnings
   
   # Lint and build examples for boards.
   examples:
@@ -105,22 +87,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        components: clippy
-        target: thumbv7em-none-eabihf
+    - name: Install a stable toolchain, clippy, for the MCU target
+      run: rustup toolchain install stable --no-self-update --profile minimal --component clippy --target thumbv7em-none-eabihf
     - name: Lint board and examples
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf
+      run: cargo clippy ${{ matrix.config }} --target=thumbv7em-none-eabihf -- -D warnings
     - name: Build examples
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
+      run: cargo build ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
 
   # Run unit, integration tests.
   #
@@ -141,15 +113,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
+    - name: Install a stable toolchain
+      run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run unit, integration tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
+      run: cargo test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
 
   # Ensures that documentation builds, and that links are valid
   docs:
@@ -159,13 +126,9 @@ jobs:
       RUSTDOCFLAGS: -D warnings
     steps:
     - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+    - name: Install a stable toolchain
+      run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run documentation tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --features=board/teensy4 --workspace --doc
+      run: cargo test --features=board/teensy4 --workspace --doc
     - name: Check documentation, doclinks throughout workspace
       run: cargo doc --workspace --no-deps --features=board/teensy4
