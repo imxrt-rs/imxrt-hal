@@ -6,7 +6,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install a stable toolchain with rustfmt
       run: rustup toolchain install stable --no-self-update --profile minimal --component rustfmt
     - name: Check formatting
@@ -30,7 +30,7 @@ jobs:
         - imxrt-ral/imxrt1176_cm7
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-hal
@@ -52,7 +52,7 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-log
@@ -86,7 +86,7 @@ jobs:
           --example=rtic_usb_serial --example=rtic_usb_test_class --example=rtic_usb_keypress --example=rtic_usb_mouse
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install a stable toolchain, clippy, for the MCU target
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy --target thumbv7em-none-eabihf
     - name: Lint board and examples
@@ -112,7 +112,7 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install a stable toolchain
       run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run unit, integration tests
@@ -125,7 +125,7 @@ jobs:
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install a stable toolchain
       run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run documentation tests
