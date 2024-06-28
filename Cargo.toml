@@ -158,7 +158,7 @@ pin-utils = "0.1"
 usb-device = { version = "0.2", features = ["test-class-high-speed"] }
 usbd-serial = "0.1"
 usbd-hid = "0.6"
-wm8960 = "0.1.0"
+wm8960 = "0.1.1"
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dev-dependencies]
 board = { path = "board" }
