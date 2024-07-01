@@ -60,12 +60,11 @@ pub type Spi = ();
 /// SPI peripheral.
 pub type Spi = hal::lpspi::Lpspi<SpiPins, 4>;
 
-pub type I2cPins = hal::lpi2c::Pins<
-    iomuxc::gpio_ad_b1::GPIO_AD_B1_07, // SCL, P16
-    iomuxc::gpio_ad_b1::GPIO_AD_B1_06, // SDA, P17
->;
+type I2cScl = iomuxc::gpio_ad_b1::GPIO_AD_B1_00; // P19
+type I2cSda = iomuxc::gpio_ad_b1::GPIO_AD_B1_01; // P18
+pub type I2cPins = hal::lpi2c::Pins<I2cScl, I2cSda>;
 
-pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 3>;
+pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 1>;
 
 /// PWM components.
 pub mod pwm {
@@ -165,12 +164,12 @@ impl Specifics {
         #[allow(clippy::let_unit_value)]
         let spi = ();
 
-        let lpi2c3 = unsafe { ral::lpi2c::LPI2C3::instance() };
+        let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };
         let i2c = I2c::new(
-            lpi2c3,
+            lpi2c1,
             I2cPins {
-                scl: iomuxc.gpio_ad_b1.p07,
-                sda: iomuxc.gpio_ad_b1.p06,
+                scl: iomuxc.gpio_ad_b1.p00,
+                sda: iomuxc.gpio_ad_b1.p01,
             },
             &super::I2C_BAUD_RATE,
         );
@@ -243,8 +242,10 @@ fn configure_pins(
         .set_speed(iomuxc::Speed::Fast)
         .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup22k));
 
-    iomuxc::configure(&mut gpio_ad_b1.p07, I2C_PIN_CONFIG);
-    iomuxc::configure(&mut gpio_ad_b1.p06, I2C_PIN_CONFIG);
+    let scl: &mut I2cScl = &mut gpio_ad_b1.p00;
+    iomuxc::configure(scl, I2C_PIN_CONFIG);
+    let sda: &mut I2cSda = &mut gpio_ad_b1.p01;
+    iomuxc::configure(sda, I2C_PIN_CONFIG);
 
     const BUTTON_CONFIG: iomuxc::Config = iomuxc::Config::zero()
         .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup100k))
