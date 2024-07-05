@@ -103,6 +103,7 @@ PROVIDE(BOARD_PWM = DefaultHandler);
 PROVIDE(BOARD_DMA_A = DefaultHandler);
 PROVIDE(BOARD_DMA_B = DefaultHandler);
 PROVIDE(BOARD_PIT = DefaultHandler);
+PROVIDE(BOARD_SAI1 = DefaultHandler);
 PROVIDE(BOARD_GPT1 = DefaultHandler);
 PROVIDE(BOARD_GPT2 = DefaultHandler);
 PROVIDE(BOARD_USB1 = DefaultHandler);

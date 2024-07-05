@@ -375,4 +375,21 @@ where
     }]
 }
 
+/// Returns the SAI clock gate locators.
+#[inline(always)]
+pub const fn sai<const N: u8>() -> Locator
+where
+    ral::sai::Instance<N>: ral::Valid,
+{
+    [
+        locator(CCGR5, CG9),
+        locator(CCGR5, CG10),
+        locator(CCGR5, CG11),
+    ][if N == ral::SOLE_INSTANCE {
+        N as usize
+    } else {
+        N as usize - 1
+    }]
+}
+
 pub use crate::chip::config::ccm::clock_gate::*;

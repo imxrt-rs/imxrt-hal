@@ -57,6 +57,16 @@ pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
 /// host and the MCU.
 pub type ConsolePins = crate::hal::lpuart::Pins<iomuxc::gpio::GPIO_10, iomuxc::gpio::GPIO_09>;
 
+pub type Sai1MclkPin = iomuxc::gpio::GPIO_08;
+
+pub type Sai1TxPins =
+    hal::sai::Pins<iomuxc::gpio::GPIO_07, iomuxc::gpio::GPIO_06, iomuxc::gpio::GPIO_04>;
+
+pub type Sai1RxPins =
+    hal::sai::Pins<iomuxc::gpio::GPIO_02, iomuxc::gpio::GPIO_01, iomuxc::gpio::GPIO_03>;
+
+pub type Sai1 = hal::sai::Sai<1, Sai1MclkPin, Sai1TxPins, ()>;
+
 pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_ad::GPIO_AD_04, // SDO, J57_8
     iomuxc::gpio_ad::GPIO_AD_03, // SDI, J57_10
@@ -146,6 +156,7 @@ pub struct Specifics {
     pub console: Console,
     pub spi: Spi,
     pub i2c: I2c,
+    pub sai1: Sai1,
     pub pwm: Pwm,
     pub tp34: Tp34,
     pub tp31: Tp31,
@@ -179,6 +190,16 @@ impl Specifics {
             console.set_baud(&super::CONSOLE_BAUD);
             console.set_parity(None);
         });
+
+        let sai1 = {
+            let sai1 = unsafe { ral::sai::SAI1::instance() };
+            let pins = Sai1TxPins {
+                sync: iomuxc.gpio.p07,
+                bclk: iomuxc.gpio.p06,
+                data: iomuxc.gpio.p04,
+            };
+            Sai1::from_tx(sai1, iomuxc.gpio.p08, pins)
+        };
 
         #[cfg(feature = "spi")]
         let spi = {
@@ -248,6 +269,7 @@ impl Specifics {
             console,
             spi,
             i2c,
+            sai1,
             pwm,
             tp34: iomuxc.gpio_sd.p02,
             tp31: iomuxc.gpio_sd.p01,
@@ -356,6 +378,7 @@ pub mod interrupt {
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7;
     pub const BOARD_DMA_B: Interrupt = Interrupt::DMA11;
     pub const BOARD_PIT: Interrupt = Interrupt::PIT;
+    pub const BOARD_SAI1: Interrupt = Interrupt::SAI1;
     pub const BOARD_GPT1: Interrupt = Interrupt::GPT1;
     pub const BOARD_GPT2: Interrupt = Interrupt::GPT2;
     pub const BOARD_USB1: Interrupt = Interrupt::USB_OTG1;
@@ -369,6 +392,7 @@ pub mod interrupt {
         (BOARD_DMA_A, syms::BOARD_DMA_A),
         (BOARD_DMA_B, syms::BOARD_DMA_B),
         (BOARD_PIT, syms::BOARD_PIT),
+        (BOARD_SAI1, syms::BOARD_SAI1),
         (BOARD_GPT1, syms::BOARD_GPT1),
         (BOARD_GPT2, syms::BOARD_GPT2),
         (BOARD_USB1, syms::BOARD_USB1),
