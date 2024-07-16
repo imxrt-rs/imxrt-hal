@@ -95,7 +95,7 @@ mod app {
         pit.set_interrupt_enable(MAKE_LOG_CHANNEL, true);
         pit.enable(MAKE_LOG_CHANNEL);
 
-        let usbd = hal::usbd::Instances {
+        let usbd = imxrt_usbd::Instances {
             usb: usb1,
             usbnc: usbnc1,
             usbphy: usbphy1,

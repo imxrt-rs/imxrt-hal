@@ -72,10 +72,6 @@ workspace = true
 [dependencies.imxrt-ral]
 workspace = true
 
-[dependencies.imxrt-usbd]
-workspace = true
-optional = true
-
 [package.metadata.docs.rs]
 default-target = "thumbv7em-none-eabihf"
 features = ["imxrt-ral/imxrt1062", "imxrt1060"]
@@ -85,7 +81,6 @@ features = ["imxrt-ral/imxrt1062", "imxrt1060"]
 ###############
 
 [features]
-default = ["imxrt-usbd"]
 imxrt1010 = ["imxrt-iomuxc/imxrt1010"]
 imxrt1020 = ["imxrt-iomuxc/imxrt1020"]
 imxrt1060 = ["imxrt-iomuxc/imxrt1060"]
@@ -150,6 +145,7 @@ codegen-units = 256
 
 [dev-dependencies]
 imxrt-rt = { workspace = true }
+imxrt-usbd = { workspace = true }
 menu = "0.3.2"
 rtic = { version = "2.0", features = ["thumbv7-backend"] }
 log = "0.4"
@@ -222,3 +218,6 @@ git = "https://github.com/imxrt-rs/imxrt-ral"
 
 [patch.crates-io.imxrt-iomuxc]
 git = "https://github.com/imxrt-rs/imxrt-iomuxc"
+
+[patch.crates-io.imxrt-usbd]
+git = "https://github.com/imxrt-rs/imxrt-usbd"

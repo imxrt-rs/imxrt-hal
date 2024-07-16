@@ -21,11 +21,11 @@
 
 #[rtic::app(device = board, peripherals = false)]
 mod app {
-    use hal::usbd::{BusAdapter, EndpointMemory, EndpointState, Speed};
     use imxrt_hal as hal;
     use imxrt_hal::pit::Channel;
 
     const PIT_CHANNEL: Channel = Channel::Chan0;
+    use imxrt_usbd::{BusAdapter, EndpointMemory, EndpointState, Speed};
 
     use usb_device::{
         bus::UsbBusAllocator,
@@ -89,7 +89,7 @@ mod app {
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         let poller = board::logging::lpuart(FRONTEND, console, dma_a);
 
-        let usbd = hal::usbd::Instances {
+        let usbd = imxrt_usbd::Instances {
             usb: usb1,
             usbnc: usbnc1,
             usbphy: usbphy1,

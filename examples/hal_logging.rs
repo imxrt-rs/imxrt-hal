@@ -59,7 +59,7 @@ fn main() -> ! {
     pit.set_interrupt_enable(PIT_CHANNEL, false);
     pit.enable(PIT_CHANNEL);
 
-    let usbd = hal::usbd::Instances {
+    let usbd = imxrt_usbd::Instances {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,

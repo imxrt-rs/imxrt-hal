@@ -85,12 +85,12 @@ impl Default for LoggingConfig {
 ///
 /// See the crate-level documentation to understand how the USB device backend works.
 #[cfg(feature = "usbd")]
-pub fn usbd_with_config<P: imxrt_usbd::Peripherals>(
-    peripherals: P,
+pub fn usbd_with_config<const N: u8>(
+    peripherals: imxrt_usbd::Instances<N>,
     interrupts: super::Interrupts,
     frontend_config: &LoggingConfig,
     backend_config: &crate::UsbdConfig,
-) -> Result<Poller, crate::AlreadySetError<P>> {
+) -> Result<Poller, crate::AlreadySetError<imxrt_usbd::Instances<N>>> {
     let (producer, consumer) = match BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new(peripherals)),
@@ -110,10 +110,10 @@ pub fn usbd_with_config<P: imxrt_usbd::Peripherals>(
 /// This function uses default configurations for the frontend and backend.
 /// See the crate-level documentation to understand how the USB device backend works.
 #[cfg(feature = "usbd")]
-pub fn usbd<P: imxrt_usbd::Peripherals>(
-    peripherals: P,
+pub fn usbd<const N: u8>(
+    peripherals: imxrt_usbd::Instances<N>,
     interrupts: super::Interrupts,
-) -> Result<Poller, crate::AlreadySetError<P>> {
+) -> Result<Poller, crate::AlreadySetError<imxrt_usbd::Instances<N>>> {
     usbd_with_config(
         peripherals,
         interrupts,

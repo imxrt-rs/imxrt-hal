@@ -11,7 +11,6 @@ const MAKE_LOG_INTERVAL_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
 use hal::pit::Channel;
 use imxrt_hal as hal;
-
 const FRONTEND: board::logging::Frontend = board::logging::Frontend::Log;
 const BACKEND: board::logging::Backend = board::logging::BACKEND;
 const PIT_CHANNEL: Channel = Channel::Chan2;
@@ -39,7 +38,7 @@ fn main() -> ! {
     pit.set_interrupt_enable(PIT_CHANNEL, false);
     pit.enable(PIT_CHANNEL);
 
-    let usbd = hal::usbd::Instances {
+    let usbd = imxrt_usbd::Instances {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,

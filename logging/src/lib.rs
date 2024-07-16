@@ -161,7 +161,7 @@
 //! /// Returns `None` if any USB peripheral instance is taken,
 //! /// or if initialization fails.
 //! fn initialize_logger() -> Option<imxrt_log::Poller> {
-//!     let usb_instances = hal::usbd::Instances {
+//!     let usb_instances = imxrt_usbd::Instances {
 //!         usb: unsafe { ral::usb::USB1::instance() },
 //!         usbnc: unsafe { ral::usbnc::USBNC1::instance() },
 //!         usbphy: unsafe { ral::usbphy::USBPHY1::instance() },

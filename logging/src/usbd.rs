@@ -124,8 +124,8 @@ impl Backend {
 /// # Panics
 ///
 /// Panics if called more than once.
-pub(crate) fn init<P: imxrt_usbd::Peripherals>(
-    peripherals: P,
+pub(crate) fn init<const N: u8>(
+    peripherals: imxrt_usbd::Instances<N>,
     interrupts: crate::Interrupts,
     consumer: super::Consumer,
     config: &UsbdConfig,

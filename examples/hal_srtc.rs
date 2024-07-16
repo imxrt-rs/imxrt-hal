@@ -50,7 +50,7 @@ fn main() -> ! {
         board::Specifics { led, console, .. },
     ) = board::new();
 
-    let usbd = hal::usbd::Instances {
+    let usbd = imxrt_usbd::Instances {
         usb: usb1,
         usbnc: usbnc1,
         usbphy: usbphy1,

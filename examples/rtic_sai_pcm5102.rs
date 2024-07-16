@@ -135,7 +135,7 @@ mod app {
             pit.disable(POLL_LOG_CHANNEL);
         }
 
-        let usbd = hal::usbd::Instances {
+        let usbd = imxrt_usbd::Instances {
             usb: usb1,
             usbnc: usbnc1,
             usbphy: usbphy1,

@@ -315,8 +315,9 @@ pub mod blocking {
 /// features. Then, simply define the default backend in your module.
 #[cfg(feature = "imxrt-log")]
 pub mod logging {
-    use crate::hal::{dma::channel::Channel, lpuart::Lpuart, usbd::Instances};
+    use crate::hal::{dma::channel::Channel, lpuart::Lpuart};
     pub use imxrt_log::Poller;
+    use imxrt_usbd::Instances;
     pub const BACKEND: Backend = crate::board_impl::DEFAULT_LOGGING_BACKEND;
 
     /// Select the logging front-end.
