@@ -204,3 +204,7 @@ name = "rtic_defmt_rtt"
 [[example]]
 name = "hal_i2c_lcd1602"
 required-features = ["board/lcd1602"]
+
+[patch.crates-io.usbd-hid-macros]
+git = "https://github.com/imxrt-rs/usbd-hid.git"
+branch = "patch-imxrt-hal-0.5"
