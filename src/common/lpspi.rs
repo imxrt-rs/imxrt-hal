@@ -16,9 +16,9 @@
 //! Blocking full-duplex transfers and writes will observe an asserted chip select while data
 //! frames are exchanged / written.
 //!
-//! This driver generally assumes that you're using the peripheral-controlled chip select. If
-//! you instead want to manage chip select in software, you should be able to multiplex your own
-//! pins, then construct the driver [`without_pins`](Lpspi::without_pins).
+//! If you instead want to manage chip select in software, you can use [`NoChipSelect`] as
+//! the CS pin. You can also construct the driver [`without_pins`](Lpspi::without_pins) and
+//! multiplex your own pins.
 //!
 //! # Device support
 //!
@@ -75,15 +75,14 @@
 //!
 //! # Limitations
 //!
-//! Due to [a hardware defect][1], this driver does not yet support the EH02 SPI transaction API.
-//! An early iteration of this driver reproduced the issue discussed in that forum. This driver may
-//! be able to work around the defect in software, but it hasn't been explored.
+//! The current implementation of the EH1 `SpiDevice` trait does not support the `DelayNs`
+//! operation. Implementing this was impossible while keeping backwards compatibility.
+//! This may change in a future release.
 //!
-//! [1]: https://community.nxp.com/t5/i-MX-RT/RT1050-LPSPI-last-bit-not-completing-in-continuous-mode/m-p/898460
+//! If you need support for the `DelayNs` operation you can use one of the devices from
+//! [`embedded_hal_bus::spi`][1].
 //!
-//! [`Transaction`] exposes the continuous / continuing flags, so you're free to model advanced
-//! transactions. However, keep in mind that disabling the receiver during a continuous transaction
-//! may not work as expected.
+//! [1]: https://docs.rs/embedded-hal-bus/latest/embedded_hal_bus/spi/index.html
 
 use core::marker::PhantomData;
 use core::task::Poll;
@@ -92,6 +91,13 @@ use crate::iomuxc::{consts, lpspi};
 use crate::ral;
 
 pub use eh02::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+
+mod private {
+    pub trait Sealed {}
+
+    impl<T> Sealed for T where T: super::lpspi::Pin<Signal = super::lpspi::Pcs0> {}
+    impl<Module: super::consts::Unsigned> Sealed for super::NoChipSelect<Module> {}
+}
 
 /// Data direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -368,6 +374,51 @@ pub struct ClockConfigs {
     pub sckdiv: u8,
 }
 
+/// A pin usable as chip select.
+///
+/// This is the same as [`imxrt_iomuxc::lpspi::Pin<Signal = Pcs0>`](imxrt_iomuxc::lpspi::Pin),
+/// except it also allows passing [`NoChipSelect`].
+pub trait ChipSelect: private::Sealed {
+    #[doc(hidden)]
+    type Module: consts::Unsigned;
+
+    #[doc(hidden)]
+    fn prepare(&mut self);
+}
+
+impl<T> ChipSelect for T
+where
+    T: lpspi::Pin<Signal = lpspi::Pcs0>,
+{
+    type Module = T::Module;
+
+    fn prepare(&mut self) {
+        lpspi::prepare(self);
+    }
+}
+
+/// A virtual pin indicating that peripheral-controlled chip select should not be used.
+#[derive(Debug, Default)]
+pub struct NoChipSelect<Module> {
+    _module: PhantomData<Module>,
+}
+
+impl<Module: consts::Unsigned> ChipSelect for NoChipSelect<Module> {
+    type Module = Module;
+
+    fn prepare(&mut self) {}
+}
+
+/// Types that are assumed to have a (real) chip select pin.
+pub trait HasChipSelect {}
+
+impl<SDO, SDI, SCK, PCS0> HasChipSelect for Pins<SDO, SDI, SCK, PCS0> where
+    PCS0: lpspi::Pin<Signal = lpspi::Pcs0>
+{
+}
+
+impl HasChipSelect for () {}
+
 /// An LPSPI driver.
 ///
 /// The driver exposes low-level methods for coordinating
@@ -427,7 +478,7 @@ where
     SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
     SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
     SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    PCS0: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
+    PCS0: ChipSelect<Module = consts::Const<N>>,
 {
     /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
@@ -438,7 +489,7 @@ where
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
-        lpspi::prepare(&mut pins.pcs0);
+        pins.pcs0.prepare();
         Self::init(lpspi, pins)
     }
 }
@@ -666,10 +717,6 @@ impl<P, const N: u8> Lpspi<P, N> {
         .await
     }
 
-    pub(crate) fn wait_for_transmit_fifo_space(&self) -> Result<(), LpspiError> {
-        crate::spin_on(self.spin_for_fifo_space())
-    }
-
     /// Wait for receive data in a (concurrent) spin loop.
     ///
     /// This future does not care about the RX FIFO watermark. Instead, it
@@ -784,55 +831,137 @@ impl<P, const N: u8> Lpspi<P, N> {
         }
     }
 
-    fn exchange<W: Word>(&mut self, data: &mut [W]) -> Result<(), LpspiError> {
+    async fn spin_transfer_in_place<W: Word>(
+        &mut self,
+        continuous: bool,
+        continuing: bool,
+        data: &mut [W],
+    ) -> Result<(), LpspiError> {
         if data.is_empty() {
             return Ok(());
         }
 
-        let mut transaction = Transaction::new_words(data)?;
-        transaction.bit_order = self.bit_order();
-
-        self.wait_for_transmit_fifo_space()?;
+        let transaction = Transaction {
+            continuing,
+            continuous,
+            bit_order: self.bit_order(),
+            ..Transaction::new_words(data)?
+        };
+        self.spin_for_fifo_space().await?;
         self.enqueue_transaction(&transaction);
 
         let word_count = word_count(data);
         let (tx, rx) = transfer_in_place(data);
-
-        crate::spin_on(futures::future::try_join(
+        futures::future::try_join(
             self.spin_transmit(tx, word_count),
             self.spin_receive(rx, word_count),
-        ))
-        .map_err(|err| {
-            self.recover_from_error();
-            err
-        })?;
-
-        self.flush()?;
+        )
+        .await?;
 
         Ok(())
     }
 
-    fn write_no_read<W: Word>(&mut self, data: &[W]) -> Result<(), LpspiError> {
+    async fn spin_transfer<W: Word>(
+        &mut self,
+        continuous: bool,
+        continuing: bool,
+        read: &mut [W],
+        write: &[W],
+    ) -> Result<(), LpspiError> {
+        if read.is_empty() {
+            return self.spin_write_no_read(continuous, continuing, write).await;
+        }
+
+        if write.is_empty() {
+            return self.spin_read_no_write(continuous, continuing, read).await;
+        }
+
+        let read_len = read.len();
+        let write_len = write.len();
+
+        let min_len = read_len.min(write_len);
+
+        let (read_front, read_back) = read.split_at_mut(min_len);
+        let (write_front, write_back) = write.split_at(min_len);
+
+        let transaction = Transaction {
+            continuing,
+            continuous: continuous | (read_len != write_len),
+            bit_order: self.bit_order(),
+            ..Transaction::new_words(read_front)?
+        };
+        self.spin_for_fifo_space().await?;
+        self.enqueue_transaction(&transaction);
+
+        let word_count = word_count(read_front);
+        let tx = TransmitBuffer::new(write_front);
+        let rx = ReceiveBuffer::new(read_front);
+        futures::future::try_join(
+            self.spin_transmit(tx, word_count),
+            self.spin_receive(rx, word_count),
+        )
+        .await?;
+
+        if !read_back.is_empty() {
+            self.spin_read_no_write(continuous, true, read_back).await?;
+        } else if !write_back.is_empty() {
+            self.spin_write_no_read(continuous, true, write_back)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn spin_read_no_write<W: Word>(
+        &mut self,
+        continuous: bool,
+        continuing: bool,
+        data: &mut [W],
+    ) -> Result<(), LpspiError> {
         if data.is_empty() {
             return Ok(());
         }
 
-        let mut transaction = Transaction::new_words(data)?;
-        transaction.receive_data_mask = true;
-        transaction.bit_order = self.bit_order();
+        let transaction = Transaction {
+            continuous,
+            continuing,
+            transmit_data_mask: true,
+            bit_order: self.bit_order(),
+            ..Transaction::new_words(data)?
+        };
+        self.spin_for_fifo_space().await?;
+        self.enqueue_transaction(&transaction);
 
-        self.wait_for_transmit_fifo_space()?;
+        let word_count = word_count(data);
+        let rx = ReceiveBuffer::new(data);
+        self.spin_receive(rx, word_count).await?;
+
+        Ok(())
+    }
+
+    async fn spin_write_no_read<W: Word>(
+        &mut self,
+        continuous: bool,
+        continuing: bool,
+        data: &[W],
+    ) -> Result<(), LpspiError> {
+        if data.is_empty() {
+            return Ok(());
+        }
+
+        let transaction = Transaction {
+            continuous,
+            continuing,
+            receive_data_mask: true,
+            bit_order: self.bit_order(),
+            ..Transaction::new_words(data)?
+        };
+        self.spin_for_fifo_space().await?;
         self.enqueue_transaction(&transaction);
 
         let word_count = word_count(data);
         let tx = TransmitBuffer::new(data);
-
-        crate::spin_on(self.spin_transmit(tx, word_count)).map_err(|err| {
-            self.recover_from_error();
-            err
-        })?;
-
-        self.flush()?;
+        self.spin_transmit(tx, word_count).await?;
 
         Ok(())
     }
@@ -1198,54 +1327,236 @@ impl<const N: u8> Drop for Disabled<'_, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for Lpspi<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+{
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u8]) -> Result<&'a [u8], Self::Error> {
-        self.exchange(words)?;
+        eh1::spi::SpiDevice::transfer_in_place(self, words)?;
         Ok(words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for Lpspi<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+{
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u16]) -> Result<&'a [u16], Self::Error> {
-        self.exchange(words)?;
+        eh1::spi::SpiDevice::transfer_in_place(self, words)?;
         Ok(words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for Lpspi<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+{
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u32]) -> Result<&'a [u32], Self::Error> {
-        self.exchange(words)?;
+        eh1::spi::SpiDevice::transfer_in_place(self, words)?;
         Ok(words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u8> for Lpspi<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Write<u8> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+{
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
-        self.write_no_read(words)
+        eh1::spi::SpiDevice::write(self, words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u16> for Lpspi<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Write<u16> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+{
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
-        self.write_no_read(words)
+        eh1::spi::SpiDevice::write(self, words)
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N> {
+impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+{
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        self.write_no_read(words)
+        eh1::spi::SpiDevice::write(self, words)
+    }
+}
+
+impl<P, const N: u8, W> eh02::blocking::spi::Transactional<W> for Lpspi<P, N>
+where
+    P: HasChipSelect,
+    W: Word + 'static,
+{
+    type Error = LpspiError;
+
+    fn exec(
+        &mut self,
+        operations: &mut [eh02::blocking::spi::Operation<'_, W>],
+    ) -> Result<(), Self::Error> {
+        use eh02::blocking::spi::Operation;
+
+        let operations_len = operations.len();
+
+        if operations_len == 0 {
+            return Ok(());
+        }
+
+        crate::spin_on(async {
+            let mut continuing = false;
+
+            for (i, op) in operations.iter_mut().enumerate() {
+                // For the last transaction `continuous` needs to be set to false.
+                // Otherwise the hardware fails to correctly de-assert CS.
+                let continuous = i + 1 != operations_len;
+                match op {
+                    Operation::Write(data) => {
+                        self.spin_write_no_read(continuous, continuing, data)
+                            .await?
+                    }
+                    Operation::Transfer(data) => {
+                        self.spin_transfer_in_place(continuous, continuing, data)
+                            .await?;
+                    }
+                }
+
+                continuing = true;
+            }
+
+            Ok(())
+        })
+        .map_err(|err| {
+            self.recover_from_error();
+            err
+        })?;
+
+        self.flush()
+    }
+}
+
+impl eh1::spi::Error for LpspiError {
+    fn kind(&self) -> eh1::spi::ErrorKind {
+        use eh1::spi::ErrorKind;
+
+        match self {
+            LpspiError::Fifo(Direction::Rx) => ErrorKind::Overrun,
+            _ => ErrorKind::Other,
+        }
+    }
+}
+
+impl<P, const N: u8> eh1::spi::ErrorType for Lpspi<P, N> {
+    type Error = LpspiError;
+}
+
+impl<const N: u8, SDO, SDI, SCK> eh1::spi::SpiBus
+    for Lpspi<Pins<SDO, SDI, SCK, NoChipSelect<consts::Const<N>>>, N>
+{
+    fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+        crate::spin_on(self.spin_read_no_write(false, false, words)).map_err(|err| {
+            self.recover_from_error();
+            err
+        })
+    }
+
+    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+        crate::spin_on(self.spin_write_no_read(false, false, words)).map_err(|err| {
+            self.recover_from_error();
+            err
+        })
+    }
+
+    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+        crate::spin_on(self.spin_transfer(false, false, read, write)).map_err(|err| {
+            self.recover_from_error();
+            err
+        })
+    }
+
+    fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+        crate::spin_on(self.spin_transfer_in_place(false, false, words)).map_err(|err| {
+            self.recover_from_error();
+            err
+        })
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        self.flush()
+    }
+}
+
+impl<P, const N: u8, W> eh1::spi::SpiDevice<W> for Lpspi<P, N>
+where
+    W: Word + 'static,
+    P: HasChipSelect,
+{
+    fn transaction(
+        &mut self,
+        operations: &mut [eh1::spi::Operation<'_, W>],
+    ) -> Result<(), Self::Error> {
+        use eh1::spi::Operation;
+
+        let operations_len = operations.len();
+
+        if operations_len == 0 {
+            return Ok(());
+        }
+
+        crate::spin_on(async {
+            let mut continuing = false;
+
+            for (i, op) in operations.iter_mut().enumerate() {
+                // For the last transaction `continuous` needs to be set to false.
+                // Otherwise the hardware fails to correctly de-assert CS.
+                let continuous = i + 1 != operations_len;
+                match op {
+                    Operation::Read(data) | Operation::Transfer(data, []) => {
+                        self.spin_read_no_write(continuous, continuing, data)
+                            .await?;
+                    }
+                    Operation::Write(data) | Operation::Transfer([], data) => {
+                        self.spin_write_no_read(continuous, continuing, data)
+                            .await?;
+                    }
+                    Operation::Transfer(read, write) => {
+                        self.spin_transfer(continuous, continuing, read, write)
+                            .await?;
+                    }
+                    Operation::TransferInPlace(data) => {
+                        self.spin_transfer_in_place(continuous, continuing, data)
+                            .await?;
+                    }
+                    Operation::DelayNs(_) => {
+                        panic!(
+                            "DelayNs not implemented, please use embedded-hal-bus if you need it."
+                        );
+                    }
+                }
+
+                continuing = true;
+            }
+
+            Ok(())
+        })
+        .map_err(|err| {
+            self.recover_from_error();
+            err
+        })?;
+
+        self.flush()
     }
 }
 
@@ -1412,7 +1723,6 @@ impl<'a, W> ReceiveBuffer<'a, W>
 where
     W: Word,
 {
-    #[cfg(test)] // TODO(mciantyre) remove once needed in non-test code.
     fn new(buffer: &'a mut [W]) -> Self {
         // Safety: pointer offset math meets expectations.
         unsafe { Self::from_raw(buffer.as_mut_ptr(), buffer.len()) }

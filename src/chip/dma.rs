@@ -141,6 +141,12 @@ impl<P, const N: u8> lpuart::Lpuart<P, N> {
 // LPSPI
 use crate::lpspi;
 
+impl<P, const N: u8> lpspi::Lpspi<P, N> {
+    pub(crate) fn wait_for_transmit_fifo_space(&self) -> Result<(), lpspi::LpspiError> {
+        crate::spin_on(self.spin_for_fifo_space())
+    }
+}
+
 unsafe impl<P, const N: u8> peripheral::Source<u32> for lpspi::Lpspi<P, N> {
     fn source_signal(&self) -> u32 {
         LPSPI_DMA_RX_MAPPING[N as usize - 1]
