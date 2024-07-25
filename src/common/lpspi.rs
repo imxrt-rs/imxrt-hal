@@ -802,10 +802,7 @@ impl<P, const N: u8> Lpspi<P, N> {
             self.spin_transmit(tx, word_count),
             self.spin_receive(rx, word_count),
         ))
-        .map_err(|err| {
-            self.recover_from_error();
-            err
-        })?;
+        .inspect_err(|_| self.recover_from_error())?;
 
         self.flush()?;
 
@@ -827,9 +824,8 @@ impl<P, const N: u8> Lpspi<P, N> {
         let word_count = word_count(data);
         let tx = TransmitBuffer::new(data);
 
-        crate::spin_on(self.spin_transmit(tx, word_count)).map_err(|err| {
+        crate::spin_on(self.spin_transmit(tx, word_count)).inspect_err(|_| {
             self.recover_from_error();
-            err
         })?;
 
         self.flush()?;
