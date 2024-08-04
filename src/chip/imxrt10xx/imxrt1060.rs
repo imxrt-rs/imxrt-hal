@@ -23,6 +23,7 @@ pub(crate) mod ccm {
 
     pub(crate) mod analog {
         pub mod pll1;
+        pub mod pll7;
     }
 
     /// Re-exported by the common clock_gate module.
