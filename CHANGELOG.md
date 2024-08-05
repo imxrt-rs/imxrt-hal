@@ -13,6 +13,10 @@
 
 **BREAKING** `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
 
+## [0.5.7] 2024-08-05
+
+Add PLL7 (USB2 PLL) for 1060 MCUs.
+
 ## [0.5.6] 2024-07-05
 
 - Add LPSPI low-level clock configuration APIs.
@@ -330,6 +334,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.6...main
+[0.5.7]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.6...0.5.7
 [0.5.6]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.5...0.5.6
 [0.5.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.4...0.5.5
 [0.5.4]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.3...0.5.4
