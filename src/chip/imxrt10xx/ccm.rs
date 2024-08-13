@@ -330,6 +330,52 @@ pub mod lpi2c_clk {
     }
 }
 
+
+/// FLEXCAN clock root
+pub mod flexcan_clk {
+    use crate::ral::{self, ccm::CCM};
+
+    /// Returns the LPI2C clock divider.
+    #[inline(always)]
+    pub fn divider(ccm: &CCM) -> u32 {
+        ral::read_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_PODF) + 1
+    }
+
+    /// The smallest LPI2C clock divider.
+    pub const MIN_DIVIDER: u32 = 1;
+    /// The largest LPI2C clock divider.
+    pub const MAX_DIVIDER: u32 = 64;
+
+    #[inline(always)]
+    pub fn set_divider(ccm: &mut CCM, divider: u32) {
+        let podf = divider.clamp(MIN_DIVIDER, MAX_DIVIDER) - 1;
+        ral::modify_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_PODF: podf);
+    }
+
+    /// Flexcan clock selections.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[repr(u32)]
+    pub enum Selection {
+        /// Derive from the crystal oscillator.
+        Oscillator = 1,
+    }
+
+    /// Returns the Flexcan clock selection.
+    #[inline(always)]
+    pub fn selection(ccm: &CCM) -> Selection {
+        match ral::read_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_SEL) {
+            1 => Selection::Oscillator,
+            _ => unreachable!(),
+        }
+    }
+
+    /// Set the LPI2C clock selection.
+    #[inline(always)]
+    pub fn set_selection(ccm: &mut CCM, selection: Selection) {
+        ral::modify_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_SEL: selection as u32);
+    }
+}
+
 /// LPSPI clock root.
 ///
 /// `lpspi_clk` provides the clock source for all LPSPI peripherals.
