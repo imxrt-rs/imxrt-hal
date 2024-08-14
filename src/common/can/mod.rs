@@ -50,8 +50,8 @@ use imxrt_iomuxc::consts::Const;
 use ral::{modify_reg, read_reg, write_reg};
 
 use crate::ccm;
-use crate::iomuxc::flexcan;
 use crate::iomuxc::consts::{Unsigned, U1, U2};
+use crate::iomuxc::flexcan;
 use crate::ral;
 
 use core::marker::PhantomData;
@@ -134,6 +134,25 @@ impl Unclocked {
     }
 }
 
+// /// A CAN peripheral which is temporarily disabled.
+// pub struct Disabled<'a, const N: u8> {
+//     can: &'a ral::can::Instance<N>,
+//     men: bool,
+// }
+
+// impl<'a, const N: u8> Disabled<'a, N> {
+//     fn new(can: &'a mut ral::can::Instance<N>) -> Self {
+//         let men = ral::read_reg!(ral::can, can, MCR, MEN == MEN_1);
+
+//         // Request disable
+//         ral::modify_reg!(ral::lpspi, lpspi, CR, MEN: MEN_0);
+//         // Wait for the driver to finish its current transfer
+//         // and enter disabled state
+//         while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
+//         Self { can, mode, men }
+//     }
+// }
+
 /// A Can builder that can build a Can peripheral
 pub struct Builder<const M: u8> {
     _module: PhantomData<ral::can::Instance<M>>,
@@ -141,8 +160,7 @@ pub struct Builder<const M: u8> {
     clock_frequency: u32,
 }
 
-impl<const M: u8> Builder<M>
-{
+impl<const M: u8> Builder<M> {
     fn new(clock_frequency: u32, reg: ral::can::Instance<M>) -> Self {
         Builder {
             _module: PhantomData,
@@ -151,7 +169,7 @@ impl<const M: u8> Builder<M>
         }
     }
 
-    /// Builds a Can peripheral.
+    // /// Builds a Can peripheral.
     // pub fn build<TX, RX>(self, mut tx: TX, mut rx: RX) -> CAN<M>
     // where
     //     TX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Tx>,
@@ -187,35 +205,25 @@ pub struct MailboxData {
     pub mailbox_number: u8,
 }
 
-impl<Tx, Rx, const N: u8> CAN<Pins<Tx, Rx>, N> 
-where 
-Tx: flexcan::Pin<
-    Signal = flexcan::Tx,
-    Module = Const<N>,
->,
-Rx: flexcan::Pin<
-    Signal = flexcan::Rx,
-    Module = Const<N>,
->,
+impl<Tx, Rx, const N: u8> CAN<Pins<Tx, Rx>, N>
+where
+    Tx: flexcan::Pin<Signal = flexcan::Tx, Module = Const<N>>,
+    Rx: flexcan::Pin<Signal = flexcan::Rx, Module = Const<N>>,
 {
     pub fn new(
         instance: ral::can::Instance<N>,
         mut tx: Tx,
         mut rx: Rx,
         clock_frequency: u32,
-    ) -> Self
-   
-    {
+    ) -> Self {
         imxrt_iomuxc::flexcan::prepare(&mut tx);
         imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-        Self::init(instance, tx, rx)
+        // TODO: clock frequency of 0 here is a placeholder.
+        Self::init(instance, Pins { tx, rx }, 0)
     }
 
-    fn init(instance: ral::can::Instance<N>,
-        pins: Pins<Tx, Rx>,
-        clock_frequency: u32,
-    ) -> Self {
+    fn init(instance: ral::can::Instance<N>, pins: Pins<Tx, Rx>, clock_frequency: u32) -> Self {
         let mut can = CAN {
             reg: instance,
             pins,
@@ -227,54 +235,53 @@ Rx: flexcan::Pin<
         can
     }
 
-    fn enable_clocks( 
-        handle: &mut ral::ccm::RegisterBlock,
-        clock_select: ccm::can::ClockSelect,
-        divider: ccm::can::PrescalarSelect,
-    ) -> u32 {
-        let ccm = handle;
+    // fn enable_clocks(
+    //     handle: &mut ral::ccm::RegisterBlock,
+    //     clock_select: ccm::can::ClockSelect,
+    //     divider: ccm::can::PrescalarSelect,
+    // ) -> u32 {
+    //     let ccm = handle;
 
-        // First, disable the clocks for Can1 and Can2
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR0,
-            CG7: 0b00,
-            CG8: 0b00,
-            CG9: 0b00,
-            CG10: 0b00
-        );
+    //     // First, disable the clocks for Can1 and Can2
+    //     ral::modify_reg!(
+    //         ral::ccm,
+    //         ccm,
+    //         CCGR0,
+    //         CG7: 0b00,
+    //         CG8: 0b00,
+    //         CG9: 0b00,
+    //         CG10: 0b00
+    //     );
 
-        let clk_sel = match clock_select {
-            ccm::can::ClockSelect::OSC => ral::ccm::CSCMR2::CAN_CLK_SEL::RW::CAN_CLK_SEL_1,
-        };
+    //     let clk_sel = match clock_select {
+    //         ccm::can::ClockSelect::OSC => ral::ccm::CSCMR2::CAN_CLK_SEL::RW::CAN_CLK_SEL_1,
+    //     };
 
-        // Select clock, and commit prescalar
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CSCMR2,
-            CAN_CLK_PODF: ral::ccm::CSCMR2::CAN_CLK_PODF::RW::DIVIDE_1,
-            CAN_CLK_SEL: clk_sel
-        );
+    //     // Select clock, and commit prescalar
+    //     ral::modify_reg!(
+    //         ral::ccm,
+    //         ccm,
+    //         CSCMR2,
+    //         CAN_CLK_PODF: ral::ccm::CSCMR2::CAN_CLK_PODF::RW::DIVIDE_1,
+    //         CAN_CLK_SEL: clk_sel
+    //     );
 
-        // Enable the clocks for Can1 and Can2
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR0,
-            CG7: 0b11,
-            CG8: 0b11,
-            CG9: 0b11,
-            CG10: 0b11
-        );
+    //     // Enable the clocks for Can1 and Can2
+    //     ral::modify_reg!(
+    //         ral::ccm,
+    //         ccm,
+    //         CCGR0,
+    //         CG7: 0b11,
+    //         CG8: 0b11,
+    //         CG9: 0b11,
+    //         CG10: 0b11
+    //     );
 
-        let source_clock = clock_select as u32 / divider as u32;
-    }
+    //     let source_clock = clock_select as u32 / divider as u32;
+    // }
 }
 
-impl<P, const M: u8> CAN<P, M>
-{
+impl<P, const M: u8> CAN<P, M> {
     pub const NUMBER_FIFO_RX_MAILBOXES: u32 = 6;
 
     // fn new(clock_frequency: u32, reg: ral::can::Instance<M>) -> Self {
@@ -293,12 +300,12 @@ impl<P, const M: u8> CAN<P, M>
         // log::info!("CTRL1: {:X}", ral::read_reg!(ral::can, self.reg, CTRL1));
         // log::info!("CTRL2: {:X}", ral::read_reg!(ral::can, self.reg, CTRL2));
         // log::info!(
-            // "RXMGMASK: {:X}",
-            // ral::read_reg!(ral::can, self.reg, RXMGMASK)
+        // "RXMGMASK: {:X}",
+        // ral::read_reg!(ral::can, self.reg, RXMGMASK)
         // );
         // log::info!(
-            // "RXFGMASK: {:X}",
-            // ral::read_reg!(ral::can, self.reg, RXFGMASK)
+        // "RXFGMASK: {:X}",
+        // ral::read_reg!(ral::can, self.reg, RXFGMASK)
         // );
 
         let max_fifo_filters = (read_reg!(ral::can, self.reg, CTRL2, RFFN) + 1) * 8;
@@ -309,10 +316,10 @@ impl<P, const M: u8> CAN<P, M>
             let idflt_tab =
                 unsafe { core::ptr::read_volatile((mailbox_idflt_tab_addr) as *mut u32) };
             // log::info!(
-                // "IDFLT_TAB[{}, {:X}]: {:X}",
-                // mailbox_number,
-                // mailbox_idflt_tab_addr,
-                // idflt_tab
+            // "IDFLT_TAB[{}, {:X}]: {:X}",
+            // mailbox_number,
+            // mailbox_idflt_tab_addr,
+            // idflt_tab
             // );
         }
     }
@@ -378,7 +385,7 @@ impl<P, const M: u8> CAN<P, M>
     }
 
     pub fn is_can2(&self) -> bool {
-        M  == 2
+        M == 2
     }
 
     pub(crate) fn base_address(&self) -> u32 {
@@ -446,7 +453,6 @@ impl<P, const M: u8> CAN<P, M>
     }
 
     pub fn set_baud_rate(&mut self, baud: u32) {
-
         fn calc_result(baud: u32, clock_freq: u32, divisor: u32) -> u32 {
             clock_freq / baud / (divisor + 1)
         }
@@ -459,9 +465,9 @@ impl<P, const M: u8> CAN<P, M>
 
         let mut divisor = 0;
         let mut best_divisor: u32 = 0;
-        
+
         let mut result: u32 = calc_result(baud, clock_freq, divisor);
-        
+
         let mut error = calc_error(baud, clock_freq, result, divisor);
         let mut best_error = error;
 

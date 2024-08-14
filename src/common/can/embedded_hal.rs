@@ -1,14 +1,13 @@
 //! `embedded_hal` trait impls.
 
-use super::{Data, Frame, Error, CAN};
+use super::{Data, Error, Frame, CAN};
 use crate::iomuxc::consts::Unsigned;
 
 use embedded_can;
 pub(crate) use embedded_can::ErrorKind;
 pub use embedded_can::{ExtendedId, Id, StandardId};
 
-impl<const M: u8> embedded_can::nb::Can for CAN<M>
-{
+impl<P, const M: u8> embedded_can::nb::Can for CAN<P, M> {
     type Frame = Frame;
 
     type Error = Error;
@@ -34,7 +33,7 @@ impl embedded_can::Error for Error {
         match self {
             Self::NoRxData => embedded_can::ErrorKind::Other,
             Self::NoTxMailbox => embedded_can::ErrorKind::Other,
-            Self::EmbeddedHal(e) => e.kind()
+            Self::EmbeddedHal(e) => e.kind(),
         }
     }
 }
@@ -42,12 +41,8 @@ impl embedded_can::Error for Error {
 impl embedded_can::Frame for Frame {
     fn new(id: impl Into<Id>, data: &[u8]) -> Option<Self> {
         let id = match id.into() {
-            Id::Standard(id) => unsafe {
-                Id::Standard(StandardId::new_unchecked(id.as_raw()))
-            },
-            Id::Extended(id) => unsafe {
-                Id::Extended(ExtendedId::new_unchecked(id.as_raw()))
-            },
+            Id::Standard(id) => unsafe { Id::Standard(StandardId::new_unchecked(id.as_raw())) },
+            Id::Extended(id) => unsafe { Id::Extended(ExtendedId::new_unchecked(id.as_raw())) },
         };
 
         let data = Data::new(data)?;
@@ -56,12 +51,8 @@ impl embedded_can::Frame for Frame {
 
     fn new_remote(id: impl Into<Id>, dlc: usize) -> Option<Self> {
         let id = match id.into() {
-            Id::Standard(id) => unsafe {
-                Id::Standard(StandardId::new_unchecked(id.as_raw()))
-            },
-            Id::Extended(id) => unsafe {
-                Id::Extended(ExtendedId::new_unchecked(id.as_raw()))
-            },
+            Id::Standard(id) => unsafe { Id::Standard(StandardId::new_unchecked(id.as_raw())) },
+            Id::Extended(id) => unsafe { Id::Extended(ExtendedId::new_unchecked(id.as_raw())) },
         };
 
         if dlc <= 8 {
@@ -84,12 +75,8 @@ impl embedded_can::Frame for Frame {
     #[inline]
     fn id(&self) -> Id {
         match self.id() {
-            Id::Standard(id) => unsafe {
-                Id::Standard(StandardId::new_unchecked(id.as_raw()))
-            },
-            Id::Extended(id) => unsafe {
-                Id::Extended(ExtendedId::new_unchecked(id.as_raw()))
-            },
+            Id::Standard(id) => unsafe { Id::Standard(StandardId::new_unchecked(id.as_raw())) },
+            Id::Extended(id) => unsafe { Id::Extended(ExtendedId::new_unchecked(id.as_raw())) },
         }
     }
 
