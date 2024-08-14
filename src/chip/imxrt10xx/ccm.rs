@@ -355,15 +355,24 @@ pub mod flexcan_clk {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u32)]
     pub enum Selection {
+        /// Derive from pll3_sw_clk divided clock (60M)
+        PLL3_60 = 0,
         /// Derive from the crystal oscillator.
         Oscillator = 1,
+        /// Derive from pll3_sw_clk divided clock (80M)
+        PLL3_80 = 2,
+        /// Disable flexcan clock
+        Disable = 3,
     }
 
     /// Returns the Flexcan clock selection.
     #[inline(always)]
     pub fn selection(ccm: &CCM) -> Selection {
         match ral::read_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_SEL) {
+            0 => Selection::PLL3_60,
             1 => Selection::Oscillator,
+            2 => Selection::PLL3_80,
+            3 => Selection::Disable,
             _ => unreachable!(),
         }
     }
