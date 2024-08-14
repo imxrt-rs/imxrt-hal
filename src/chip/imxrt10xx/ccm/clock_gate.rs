@@ -317,7 +317,7 @@ where
 
 /// Returns the FlexCAN clock gate locator.
 #[inline(always)]
-pub const fn flexcan<const N: u8>() -> Locator
+pub const fn can<const N: u8>() -> Locator
 where
     ral::can::Instance<N>: ral::Valid,
 {
@@ -330,7 +330,7 @@ where
 
 /// Returns the FlexCAN Peripheral Engine gate locator.
 #[inline(always)]
-pub const fn flexcan_pe<const N: u8>() -> Locator
+pub const fn can_pe<const N: u8>() -> Locator
 where
     ral::can::Instance<N>: ral::Valid,
 {
