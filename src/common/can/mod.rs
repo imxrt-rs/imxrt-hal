@@ -850,6 +850,7 @@ impl<P, const M: u8> CAN<P, M> {
         }
 
         let code = self.read_mailbox_code(mailbox_number);
+        let cr = CodeReg::new(code);
         let c = FlexCanMailboxCSCode::from_code_reg(code);
 
         let mailbox_addr = self.mailbox_number_to_address(mailbox_number);
@@ -859,14 +860,22 @@ impl<P, const M: u8> CAN<P, M> {
             c if c.is_tx_mailbox() => None,
             // full or overrun
             c if (c == FlexCanMailboxCSCode::RxFull) | (c == FlexCanMailboxCSCode::RxOverrun) => {
+                let dlc = cr.dlc();
                 let id =
                     unsafe { core::ptr::read_volatile((mailbox_addr + 0x4_u32) as *const u32) };
                 let data0 =
                     unsafe { core::ptr::read_volatile((mailbox_addr + 0x8_u32) as *const u32) };
-                let data1 =
-                    unsafe { core::ptr::read_volatile((mailbox_addr + 0xC_u32) as *const u32) };
+                // Only valid if the DLC is > 4
+                let data1 = {
+                    if dlc > 4 {
+                        unsafe { core::ptr::read_volatile((mailbox_addr + 0xC_u32) as *const u32) }
+                    } else {
+                        0_u32
+                    }
+                };
 
                 let mut data: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+
                 for i in 0..4 {
                     data[3 - i] = (data0 >> (8 * i)) as u8;
                 }
