@@ -219,8 +219,7 @@ where
         imxrt_iomuxc::flexcan::prepare(&mut tx);
         imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-        // TODO: clock frequency of 0 here is a placeholder.
-        Self::init(instance, Pins { tx, rx }, 0)
+        Self::init(instance, Pins { tx, rx }, clock_frequency)
     }
 
     fn init(instance: ral::can::Instance<N>, pins: Pins<Tx, Rx>, clock_frequency: u32) -> Self {
