@@ -46,6 +46,7 @@ mod frame;
 
 pub use self::embedded_hal::{ExtendedId, Id, StandardId};
 pub use frame::{CodeReg, Data, FlexCanMailboxCSCode, Frame, IdReg};
+use imxrt_iomuxc::consts::Const;
 use ral::{modify_reg, read_reg, write_reg};
 
 use crate::ccm;
@@ -151,22 +152,30 @@ impl<const M: u8> Builder<M>
     }
 
     /// Builds a Can peripheral.
-    pub fn build<TX, RX>(self, mut tx: TX, mut rx: RX) -> CAN<M>
-    where
-        TX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Tx>,
-        RX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Rx>,
-    {
-        imxrt_iomuxc::flexcan::prepare(&mut tx);
-        imxrt_iomuxc::flexcan::prepare(&mut rx);
+    // pub fn build<TX, RX>(self, mut tx: TX, mut rx: RX) -> CAN<M>
+    // where
+    //     TX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Tx>,
+    //     RX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Rx>,
+    // {
+    //     imxrt_iomuxc::flexcan::prepare(&mut tx);
+    //     imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-        CAN::new(self.clock_frequency, self.reg)
-    }
+    //     CAN::new(self.clock_frequency, self.reg)
+    // }
+}
+
+pub struct Pins<Tx, Rx> {
+    /// CAN TX Pin
+    pub tx: Tx,
+    /// CAN RX Pin
+    pub rx: Rx,
 }
 
 /// A Can master
 ///
-pub struct CAN<const M: u8> {
+pub struct CAN<P, const M: u8> {
     reg: ral::can::Instance<M>,
+    pins: P,
     _module: PhantomData<ral::can::RegisterBlock>,
     clock_frequency: u32,
     _mailbox_reader_index: u8,
@@ -178,13 +187,38 @@ pub struct MailboxData {
     pub mailbox_number: u8,
 }
 
-impl<const M: u8> CAN<M>
+impl<Tx, Rx, const N: u8> CAN<Pins<Tx, Rx>, N> 
+where 
+Tx: flexcan::Pin<
+    Signal = flexcan::Tx,
+    Module = Const<N>,
+>,
+Rx: flexcan::Pin<
+    Signal = flexcan::Rx,
+    Module = Const<N>,
+>,
 {
-    pub const NUMBER_FIFO_RX_MAILBOXES: u32 = 6;
+    pub fn new(
+        instance: ral::can::Instance<N>,
+        mut tx: Tx,
+        mut rx: Rx,
+        clock_frequency: u32,
+    ) -> Self
+   
+    {
+        imxrt_iomuxc::flexcan::prepare(&mut tx);
+        imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-    fn new(clock_frequency: u32, reg: ral::can::Instance<M>) -> Self {
+        Self::init(instance, tx, rx)
+    }
+
+    fn init(instance: ral::can::Instance<N>,
+        pins: Pins<Tx, Rx>,
+        clock_frequency: u32,
+    ) -> Self {
         let mut can = CAN {
-            reg,
+            reg: instance,
+            pins,
             _module: PhantomData,
             clock_frequency,
             _mailbox_reader_index: 0,
@@ -192,6 +226,67 @@ impl<const M: u8> CAN<M>
         can.begin();
         can
     }
+
+    fn enable_clocks( 
+        handle: &mut ral::ccm::RegisterBlock,
+        clock_select: ccm::can::ClockSelect,
+        divider: ccm::can::PrescalarSelect,
+    ) -> u32 {
+        let ccm = handle;
+
+        // First, disable the clocks for Can1 and Can2
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR0,
+            CG7: 0b00,
+            CG8: 0b00,
+            CG9: 0b00,
+            CG10: 0b00
+        );
+
+        let clk_sel = match clock_select {
+            ccm::can::ClockSelect::OSC => ral::ccm::CSCMR2::CAN_CLK_SEL::RW::CAN_CLK_SEL_1,
+        };
+
+        // Select clock, and commit prescalar
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CSCMR2,
+            CAN_CLK_PODF: ral::ccm::CSCMR2::CAN_CLK_PODF::RW::DIVIDE_1,
+            CAN_CLK_SEL: clk_sel
+        );
+
+        // Enable the clocks for Can1 and Can2
+        ral::modify_reg!(
+            ral::ccm,
+            ccm,
+            CCGR0,
+            CG7: 0b11,
+            CG8: 0b11,
+            CG9: 0b11,
+            CG10: 0b11
+        );
+
+        let source_clock = clock_select as u32 / divider as u32;
+    }
+}
+
+impl<P, const M: u8> CAN<P, M>
+{
+    pub const NUMBER_FIFO_RX_MAILBOXES: u32 = 6;
+
+    // fn new(clock_frequency: u32, reg: ral::can::Instance<M>) -> Self {
+    //     let mut can = CAN {
+    //         reg,
+    //         _module: PhantomData,
+    //         clock_frequency,
+    //         _mailbox_reader_index: 0,
+    //     };
+    //     can.begin();
+    //     can
+    // }
 
     pub fn print_registers(&self) {
         // log::info!("MCR: {:X}", ral::read_reg!(ral::can, self.reg, MCR));
