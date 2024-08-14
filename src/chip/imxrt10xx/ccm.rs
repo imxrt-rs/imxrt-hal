@@ -18,7 +18,7 @@ pub use crate::common::ccm::XTAL_OSCILLATOR_HZ;
 //     pub(crate) base: ral::ccm::Instance,
 //     pub(crate) analog: ral::ccm_analog::Instance,
 // }
-// 
+//
 // impl Handle {
 //     pub fn raw(&mut self) -> (&ral::ccm::Instance, &ral::ccm_analog::Instance) {
 //         (&self.base, &self.analog)
@@ -330,20 +330,19 @@ pub mod lpi2c_clk {
     }
 }
 
-
 /// FLEXCAN clock root
 pub mod flexcan_clk {
     use crate::ral::{self, ccm::CCM};
 
-    /// Returns the LPI2C clock divider.
+    /// Returns the flexcan clock divider.
     #[inline(always)]
     pub fn divider(ccm: &CCM) -> u32 {
         ral::read_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_PODF) + 1
     }
 
-    /// The smallest LPI2C clock divider.
+    /// The smallest flexcan clock divider.
     pub const MIN_DIVIDER: u32 = 1;
-    /// The largest LPI2C clock divider.
+    /// The largest flexcan clock divider.
     pub const MAX_DIVIDER: u32 = 64;
 
     #[inline(always)]
@@ -369,7 +368,7 @@ pub mod flexcan_clk {
         }
     }
 
-    /// Set the LPI2C clock selection.
+    /// Set the Flexcan clock selection.
     #[inline(always)]
     pub fn set_selection(ccm: &mut CCM, selection: Selection) {
         ral::modify_reg!(ral::ccm, ccm, CSCMR2, CAN_CLK_SEL: selection as u32);
