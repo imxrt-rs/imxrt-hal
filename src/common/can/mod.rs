@@ -74,65 +74,65 @@ pub enum Error {
 ///
 /// The `Unclocked` struct represents the unconfigured Can peripherals.
 /// Once clocked, you'll have the ability to build Can peripherals from the
-/// compatible processor pins.
-pub struct Unclocked {
-    pub(crate) can1: ral::can::Instance<1>,
-    pub(crate) can2: ral::can::Instance<2>,
-}
+// /// compatible processor pins.
+// pub struct Unclocked {
+//     pub(crate) can1: ral::can::Instance<1>,
+//     pub(crate) can2: ral::can::Instance<2>,
+// }
 
-impl Unclocked {
-    /// Enable clocks to all Can modules, returning a builder for the two Can modules.
-    pub fn clock(
-        self,
-        // handle: &mut ccm::Handle,
-        handle: &mut ral::ccm::RegisterBlock,
-        clock_select: ccm::can::ClockSelect,
-        divider: ccm::can::PrescalarSelect,
-    ) -> (Builder<1>, Builder<2>) {
-        let ccm = handle;
+// impl Unclocked {
+//     /// Enable clocks to all Can modules, returning a builder for the two Can modules.
+//     pub fn clock(
+//         self,
+//         // handle: &mut ccm::Handle,
+//         handle: &mut ral::ccm::RegisterBlock,
+//         clock_select: ccm::can::ClockSelect,
+//         divider: ccm::can::PrescalarSelect,
+//     ) -> (Builder<1>, Builder<2>) {
+//         let ccm = handle;
 
-        // First, disable the clocks for Can1 and Can2
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR0,
-            CG7: 0b00,
-            CG8: 0b00,
-            CG9: 0b00,
-            CG10: 0b00
-        );
+//         // First, disable the clocks for Can1 and Can2
+//         ral::modify_reg!(
+//             ral::ccm,
+//             ccm,
+//             CCGR0,
+//             CG7: 0b00,
+//             CG8: 0b00,
+//             CG9: 0b00,
+//             CG10: 0b00
+//         );
 
-        let clk_sel = match clock_select {
-            ccm::can::ClockSelect::OSC => ral::ccm::CSCMR2::CAN_CLK_SEL::RW::CAN_CLK_SEL_1,
-        };
+//         let clk_sel = match clock_select {
+//             ccm::can::ClockSelect::OSC => ral::ccm::CSCMR2::CAN_CLK_SEL::RW::CAN_CLK_SEL_1,
+//         };
 
-        // Select clock, and commit prescalar
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CSCMR2,
-            CAN_CLK_PODF: ral::ccm::CSCMR2::CAN_CLK_PODF::RW::DIVIDE_1,
-            CAN_CLK_SEL: clk_sel
-        );
+//         // Select clock, and commit prescalar
+//         ral::modify_reg!(
+//             ral::ccm,
+//             ccm,
+//             CSCMR2,
+//             CAN_CLK_PODF: ral::ccm::CSCMR2::CAN_CLK_PODF::RW::DIVIDE_1,
+//             CAN_CLK_SEL: clk_sel
+//         );
 
-        // Enable the clocks for Can1 and Can2
-        ral::modify_reg!(
-            ral::ccm,
-            ccm,
-            CCGR0,
-            CG7: 0b11,
-            CG8: 0b11,
-            CG9: 0b11,
-            CG10: 0b11
-        );
+//         // Enable the clocks for Can1 and Can2
+//         ral::modify_reg!(
+//             ral::ccm,
+//             ccm,
+//             CCGR0,
+//             CG7: 0b11,
+//             CG8: 0b11,
+//             CG9: 0b11,
+//             CG10: 0b11
+//         );
 
-        let source_clock = clock_select as u32 / divider as u32;
-        (
-            Builder::new(source_clock, self.can1),
-            Builder::new(source_clock, self.can2),
-        )
-    }
-}
+//         let source_clock = clock_select as u32 / divider as u32;
+//         (
+//             Builder::new(source_clock, self.can1),
+//             Builder::new(source_clock, self.can2),
+//         )
+//     }
+// }
 
 // /// A CAN peripheral which is temporarily disabled.
 // pub struct Disabled<'a, const N: u8> {
@@ -153,34 +153,34 @@ impl Unclocked {
 //     }
 // }
 
-/// A Can builder that can build a Can peripheral
-pub struct Builder<const M: u8> {
-    _module: PhantomData<ral::can::Instance<M>>,
-    reg: ral::can::Instance<M>,
-    clock_frequency: u32,
-}
+// /// A Can builder that can build a Can peripheral
+// pub struct Builder<const M: u8> {
+//     _module: PhantomData<ral::can::Instance<M>>,
+//     reg: ral::can::Instance<M>,
+//     clock_frequency: u32,
+// }
 
-impl<const M: u8> Builder<M> {
-    fn new(clock_frequency: u32, reg: ral::can::Instance<M>) -> Self {
-        Builder {
-            _module: PhantomData,
-            reg,
-            clock_frequency,
-        }
-    }
+// impl<const M: u8> Builder<M> {
+//     fn new(clock_frequency: u32, reg: ral::can::Instance<M>) -> Self {
+//         Builder {
+//             _module: PhantomData,
+//             reg,
+//             clock_frequency,
+//         }
+//     }
 
-    // /// Builds a Can peripheral.
-    // pub fn build<TX, RX>(self, mut tx: TX, mut rx: RX) -> CAN<M>
-    // where
-    //     TX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Tx>,
-    //     RX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Rx>,
-    // {
-    //     imxrt_iomuxc::flexcan::prepare(&mut tx);
-    //     imxrt_iomuxc::flexcan::prepare(&mut rx);
+//     // /// Builds a Can peripheral.
+//     // pub fn build<TX, RX>(self, mut tx: TX, mut rx: RX) -> CAN<M>
+//     // where
+//     //     TX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Tx>,
+//     //     RX: flexcan::Pin<Module = ral::can::Instance<M>, Signal = flexcan::Rx>,
+//     // {
+//     //     imxrt_iomuxc::flexcan::prepare(&mut tx);
+//     //     imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-    //     CAN::new(self.clock_frequency, self.reg)
-    // }
-}
+//     //     CAN::new(self.clock_frequency, self.reg)
+//     // }
+// }
 
 pub struct Pins<Tx, Rx> {
     /// CAN TX Pin
