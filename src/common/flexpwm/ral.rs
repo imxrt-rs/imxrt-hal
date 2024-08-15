@@ -182,7 +182,7 @@ pub type Submodules<const N: u8> = (
 );
 
 /// Shorthand to allocate four submodules for PWM `N`.
-pub fn submodules<const N: u8>(pwm: &crate::ral::pwm::Instance<N>) -> Submodules<N> {
+pub(crate) fn submodules<const N: u8>(pwm: &crate::ral::pwm::Instance<N>) -> Submodules<N> {
     (
         Submodule(core::ptr::addr_of!(pwm.SM[0]) as *const _),
         Submodule(core::ptr::addr_of!(pwm.SM[1]) as *const _),
