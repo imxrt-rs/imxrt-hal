@@ -104,6 +104,8 @@ mod frontend {
 #[defmt::global_logger]
 struct Logger;
 
+// Safety: we rely on a critical section acquire in order to meet the
+// defmt::Logger safety contract.
 unsafe impl defmt::Logger for Logger {
     fn acquire() {
         frontend::acquire(|producer, encoder| {
@@ -195,6 +197,8 @@ pub fn lpuart<P, const LPUART: u8>(
 
     critical_section::with(|_| {
         frontend::init(producer);
+        // Safety: "called once" requirement met by the buffer split, above.
+        // Only the first successful split flows into this call.
         unsafe { crate::lpuart::init(lpuart, dma_channel, consumer, interrupts) };
         Ok(crate::Poller::new(crate::lpuart::VTABLE))
     })

@@ -1394,7 +1394,7 @@ trait ReceiveData {
 struct TransmitBuffer<'a, W> {
     /// The read position.
     ptr: *const W,
-    /// One past the end of the buffer.
+    /// At the end of the buffer.
     end: *const W,
     _buffer: PhantomData<&'a [W]>,
 }
@@ -1410,11 +1410,13 @@ where
 
     /// # Safety
     ///
-    /// `ptr + len` must be in bounds, or one past the end of the
+    /// `ptr + len` must be in bounds, or at the end of the
     /// allocation.
     unsafe fn from_raw(ptr: *const W, len: usize) -> Self {
         Self {
             ptr,
+            // Safety: caller upholds contract that ptr + len
+            // must be in bounds, or at the end.
             end: unsafe { ptr.add(len) },
             _buffer: PhantomData,
         }
@@ -1446,7 +1448,7 @@ where
 struct ReceiveBuffer<'a, W> {
     /// The write position.
     ptr: *mut W,
-    /// One past the end of the buffer.
+    /// At the end of the buffer.
     end: *const W,
     _buffer: PhantomData<&'a [W]>,
 }
@@ -1463,11 +1465,13 @@ where
 
     /// # Safety
     ///
-    /// `ptr + len` must be in bounds, or one past the end of the
+    /// `ptr + len` must be in bounds, or at the end of the
     /// allocation.
     unsafe fn from_raw(ptr: *mut W, len: usize) -> Self {
         Self {
             ptr,
+            // Safety: caller upholds contract that ptr + len
+            // must be in bounds, or at the end.
             end: unsafe { ptr.cast_const().add(len) },
             _buffer: PhantomData,
         }

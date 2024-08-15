@@ -146,7 +146,8 @@ impl core::fmt::Debug for TempMon {
 impl TempMon {
     /// Initialize and create the temperature monitor.
     pub fn new(tempmon: ral::tempmon::TEMPMON) -> Self {
-        // this operation is safe. This value is read-only and set by the manufacturer.
+        // Safety: This value is read-only and set by the manufacturer. imxrt-ral
+        // is constructed to always point at a valid OCOTP instance.
         let calibration = unsafe { ral::read_reg!(ral::ocotp, OCOTP, ANA1) };
 
         // The ral doesn't provide direct access to the values.

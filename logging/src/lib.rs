@@ -377,6 +377,9 @@ impl Poller {
     /// in each transfer.
     #[inline]
     pub fn poll(&mut self) {
+        // Safety: poll() implementations can only be called from one execution
+        // context, to completion. Taking a &mut receiver ensures that this call
+        // isn't happening concurrently with itself.
         unsafe { (self.vtable.poll)() };
     }
 }
