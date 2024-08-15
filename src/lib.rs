@@ -81,7 +81,11 @@
 //! `"unproven"` feature enabled in embedded-hal 0.2.
 
 #![no_std]
-#![warn(missing_docs, unsafe_op_in_unsafe_fn)]
+#![warn(
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks
+)]
 
 use imxrt_ral as ral;
 
