@@ -256,7 +256,8 @@
 #![warn(
     missing_docs,
     unsafe_op_in_unsafe_fn,
-    clippy::undocumented_unsafe_blocks
+    clippy::undocumented_unsafe_blocks,
+    clippy::missing_safety_doc
 )]
 
 #[cfg(feature = "defmt")]
