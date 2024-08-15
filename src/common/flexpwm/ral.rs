@@ -167,10 +167,17 @@ impl<const N: u8, const M: u8> ::core::ops::Deref for Submodule<N, M> {
     type Target = RegisterBlock;
     #[inline]
     fn deref(&self) -> &Self::Target {
+        // Safety: Pointer is valid per `submodules` implementation, below.
+        // Layout of RegisterBlock is checked against the reference manual.
+        // The size of RegisterBlock is correct, meaning that we never access
+        // beyond the memory of the original pointer.
         unsafe { &*self.0 }
     }
 }
 
+// Safety: The pointer wrapped by Submodule points into static MMIO registers;
+// see `submodules` for specifics. That owned pointer can be sent across execution
+// contexts.
 unsafe impl<const N: u8, const M: u8> Send for Submodule<N, M> {}
 
 /// Four submodules for the `N`th PWM instance.

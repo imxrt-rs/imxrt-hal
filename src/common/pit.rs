@@ -83,6 +83,9 @@ pub fn new<const N: u8>(pit: crate::ral::pit::Instance<N>) -> Channels {
     crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[2], TCTRL, 0);
     crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[3], TCTRL, 0);
 
+    // Safety: we own the larger PIT peripheral instance. The caller
+    // (or the user who fabricated the larger PIT instance) ensures
+    // that we're not aliasing that peripheral.
     unsafe {
         (
             Pit::new(&pit),
@@ -256,6 +259,9 @@ impl<const CHAN: u8> Pit<CHAN> {
     }
 }
 
+// Safety: reference to static MMIO can be moved across execution contexts.
+// Study of this module reveals that the safe API splits the larger PIT
+// peripheral instance into separate, non-aliasing channels.
 unsafe impl<const CHAN: u8> Send for Pit<CHAN> {}
 
 /// Two chained PIT timer channels.

@@ -83,6 +83,8 @@ use mappings::*;
 // LPUART
 use crate::lpuart;
 
+// Safety: a LPUART can support writes from a DMA engine into its data register.
+// The peripheral is static, so it's always a valid target for memory writes.
 unsafe impl<P, const N: u8> peripheral::Destination<u8> for lpuart::Lpuart<P, N> {
     fn destination_signal(&self) -> u32 {
         LPUART_DMA_TX_MAPPING[N as usize - 1]
@@ -98,6 +100,8 @@ unsafe impl<P, const N: u8> peripheral::Destination<u8> for lpuart::Lpuart<P, N>
     }
 }
 
+// Safety: a LPUART can support reads performed by a DMA engine from its data
+// register. The peripheral is static and always valid for reading.
 unsafe impl<P, const N: u8> peripheral::Source<u8> for lpuart::Lpuart<P, N> {
     fn source_signal(&self) -> u32 {
         LPUART_DMA_RX_MAPPING[N as usize - 1]
@@ -141,6 +145,8 @@ impl<P, const N: u8> lpuart::Lpuart<P, N> {
 // LPSPI
 use crate::lpspi;
 
+// Safety: a LPSPI can provide data for a DMA transfer. Its receive data register
+// points to static memory.
 unsafe impl<P, const N: u8> peripheral::Source<u32> for lpspi::Lpspi<P, N> {
     fn source_signal(&self) -> u32 {
         LPSPI_DMA_RX_MAPPING[N as usize - 1]
@@ -156,6 +162,8 @@ unsafe impl<P, const N: u8> peripheral::Source<u32> for lpspi::Lpspi<P, N> {
     }
 }
 
+// Safety: a LPSPI can receive data for a DMA transfer. Its transmit data register
+// points to static memory.
 unsafe impl<P, const N: u8> peripheral::Destination<u32> for lpspi::Lpspi<P, N> {
     fn destination_signal(&self) -> u32 {
         LPSPI_DMA_TX_MAPPING[N as usize - 1]
@@ -171,6 +179,8 @@ unsafe impl<P, const N: u8> peripheral::Destination<u32> for lpspi::Lpspi<P, N> 
     }
 }
 
+// Safety: a LPSPI can perform bi-directional I/O from a single buffer. Reads from
+// the buffer are always performed before writes.
 unsafe impl<P, const N: u8> peripheral::Bidirectional<u32> for lpspi::Lpspi<P, N> {}
 
 impl<P, const N: u8> lpspi::Lpspi<P, N> {
@@ -242,6 +252,8 @@ impl<P, const N: u8> lpspi::Lpspi<P, N> {
 use crate::adc;
 
 #[cfg(family = "imxrt10xx")]
+// Safety: an ADC source adapter points to a static register that's always valid
+// for reads.
 unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N> {
     fn source_signal(&self) -> u32 {
         ADC_DMA_RX_MAPPING[if N == ral::SOLE_INSTANCE {

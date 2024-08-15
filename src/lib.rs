@@ -261,6 +261,10 @@ pub mod usbd {
         pub usbphy: ral::usbphy::Instance<N>,
     }
 
+    // Safety: pointers to USB peripheral blocks come from
+    // imxrt-ral, which provides correct addresses. We take
+    // ownership of the peripheral instances, preventing others
+    // from aliasing the peripherals.
     unsafe impl<const N: u8> Peripherals for Instances<N> {
         fn usb(&self) -> *const () {
             (&*self.usb as *const ral::usb::RegisterBlock).cast()
