@@ -12,9 +12,6 @@ pub(crate) mod ccm {
     #[path = "pre_periph_clk_pll1.rs"]
     pub mod pre_periph_clk;
 
-    #[path = "can.rs"]
-    pub mod can;
-
     mod periph_clk2_podf;
     mod periph_clk2_sel;
 
