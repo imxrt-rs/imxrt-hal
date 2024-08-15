@@ -253,7 +253,11 @@
 //! [log-docs]: https://docs.rs/log/0.4/log/
 
 #![no_std]
-#![warn(missing_docs, unsafe_op_in_unsafe_fn)]
+#![warn(
+    missing_docs,
+    unsafe_op_in_unsafe_fn,
+    clippy::undocumented_unsafe_blocks
+)]
 
 #[cfg(feature = "defmt")]
 pub mod defmt;
