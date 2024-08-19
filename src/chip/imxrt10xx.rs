@@ -28,6 +28,10 @@ pub(crate) mod reexports {
     pub use super::{adc, dcdc, tempmon, trng};
 }
 
+pub(crate) mod drivers {
+    pub use super::config::drivers::*;
+}
+
 pub(crate) mod iomuxc {
     pub use super::config::pads;
     use crate::ral;

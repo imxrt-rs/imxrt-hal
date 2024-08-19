@@ -5,6 +5,13 @@
 
 pub use imxrt_iomuxc::imxrt1060 as pads;
 
+// mod can;
+/// Drivers available for this chip
+#[path = "drivers"]
+pub(crate) mod drivers {
+    pub mod can;   
+}
+
 #[path = "ccm"]
 pub(crate) mod ccm {
     pub mod arm_divider;

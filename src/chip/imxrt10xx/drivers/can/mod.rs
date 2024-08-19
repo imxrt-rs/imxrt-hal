@@ -49,7 +49,6 @@ pub use frame::{CodeReg, Data, FlexCanMailboxCSCode, Frame, IdReg};
 use imxrt_iomuxc::consts::Const;
 use ral::{modify_reg, read_reg, write_reg};
 
-use crate::ccm;
 use crate::iomuxc::consts::{Unsigned, U1, U2};
 use crate::iomuxc::flexcan;
 use crate::ral;
