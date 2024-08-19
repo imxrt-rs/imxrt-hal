@@ -58,8 +58,6 @@
 
 use crate::ral::{self, ccm::CCM};
 
-pub mod can;
-
 /// A clock gate setting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
