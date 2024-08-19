@@ -1,5 +1,5 @@
-use super::*;
-
+use crate::ccm::clock_gate::{locator, Gate::*, Locator, Register::*};
+use crate::ral;
 /// Returns the FlexCAN clock gate locator.
 #[inline(always)]
 pub const fn can<const N: u8>() -> Locator

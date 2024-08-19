@@ -58,6 +58,8 @@
 
 use crate::ral::{self, ccm::CCM};
 
+pub mod can;
+
 /// A clock gate setting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -90,7 +92,7 @@ impl Setting {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
-enum Register {
+pub(crate) enum Register {
     CCGR0,
     CCGR1,
     CCGR2,
@@ -107,7 +109,7 @@ use Register::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
-enum Gate {
+pub(crate) enum Gate {
     CG0,
     CG1,
     CG2,
@@ -147,7 +149,7 @@ pub struct Locator {
     gate: Gate,
 }
 
-const fn locator(register: Register, gate: Gate) -> Locator {
+pub(crate) const fn locator(register: Register, gate: Gate) -> Locator {
     Locator { register, gate }
 }
 
