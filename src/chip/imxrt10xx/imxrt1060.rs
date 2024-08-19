@@ -35,7 +35,7 @@ pub(crate) mod ccm {
     pub mod can_clk;
 
     /// Re-exported by the common clock_gate module.
-    pub(crate) mod clock_gate {        
+    pub(crate) mod clock_gate {
         use crate::chip::ccm::clock_gate;
         mod can;
 
