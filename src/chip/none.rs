@@ -5,7 +5,7 @@ pub mod ccm {
 }
 pub mod dma {}
 pub mod lpi2c {}
-pub mod drivers {}
 
+pub(crate) mod drivers {}
 pub(crate) mod reexports {}
 pub(crate) mod iomuxc {}

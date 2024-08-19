@@ -32,9 +32,12 @@ pub(crate) mod ccm {
         pub mod pll1;
     }
 
+    pub mod can_clk;
+
     /// Re-exported by the common clock_gate module.
-    pub(crate) mod clock_gate {
+    pub(crate) mod clock_gate {        
         use crate::chip::ccm::clock_gate;
+        mod can;
 
         /// All clock gates downstream of the PERCLK root clock.
         pub const PERCLK_CLOCK_GATES: &[clock_gate::Locator] = &[
@@ -75,10 +78,10 @@ pub(crate) mod ccm {
 
         /// All clock gates downstream of the flexcan root clock
         pub const FLEXCAN_CLOCK_GATES: &[clock_gate::Locator] = &[
-            clock_gate::can::<1>(),
-            clock_gate::can::<2>(),
-            clock_gate::can_pe::<1>(),
-            clock_gate::can_pe::<2>(),
+            can::can::<1>(),
+            can::can::<2>(),
+            can::can_pe::<1>(),
+            can::can_pe::<2>(),
         ];
 
         /// All clock gates downstream of the IPG root clock.
