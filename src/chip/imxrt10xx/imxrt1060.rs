@@ -78,10 +78,10 @@ pub(crate) mod ccm {
 
         /// All clock gates downstream of the flexcan root clock
         pub const FLEXCAN_CLOCK_GATES: &[clock_gate::Locator] = &[
-            clock_gate::can::can::<1>(),
-            clock_gate::can::can::<2>(),
-            clock_gate::can::can_pe::<1>(),
-            clock_gate::can::can_pe::<2>(),
+            can::can::<1>(),
+            can::can::<2>(),
+            can::can_pe::<1>(),
+            can::can_pe::<2>(),
         ];
 
         /// All clock gates downstream of the IPG root clock.
