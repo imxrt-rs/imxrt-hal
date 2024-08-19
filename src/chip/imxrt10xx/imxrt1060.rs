@@ -9,7 +9,7 @@ pub use imxrt_iomuxc::imxrt1060 as pads;
 /// Drivers available for this chip
 #[path = "drivers"]
 pub(crate) mod drivers {
-    pub mod can;   
+    pub mod can;
 }
 
 #[path = "ccm"]
