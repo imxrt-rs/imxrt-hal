@@ -29,6 +29,7 @@ pub(crate) mod reexports {
 }
 
 pub(crate) mod drivers {
+    #[allow(unused)] // Not entirely sure how to work around this. Could use some help here!
     pub use super::config::drivers::*;
 }
 
