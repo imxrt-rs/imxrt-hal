@@ -12,6 +12,7 @@ pub const MIN_DIVIDER: u32 = 1;
 /// The largest flexcan clock divider.
 pub const MAX_DIVIDER: u32 = 64;
 
+/// Set the flexcan clock divider
 #[inline(always)]
 pub fn set_divider(ccm: &mut CCM, divider: u32) {
     let podf = divider.clamp(MIN_DIVIDER, MAX_DIVIDER) - 1;
