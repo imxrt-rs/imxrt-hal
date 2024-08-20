@@ -67,6 +67,8 @@ pub enum Error {
     /// enum
     EmbeddedHal(embedded_hal::ErrorKind),
 }
+
+/// Pins used for the CAN object
 pub struct Pins<Tx, Rx> {
     /// CAN TX Pin
     pub tx: Tx,
@@ -74,11 +76,10 @@ pub struct Pins<Tx, Rx> {
     pub rx: Rx,
 }
 
-/// A Can master
-///
+/// A CAN master
 pub struct CAN<P, const M: u8> {
     reg: ral::can::Instance<M>,
-    pins: P,
+    _pins: PhantomData<P>,
     _module: PhantomData<ral::can::RegisterBlock>,
     clock_frequency: u32,
     _mailbox_reader_index: u8,
@@ -104,13 +105,13 @@ where
         imxrt_iomuxc::flexcan::prepare(&mut tx);
         imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-        Self::init(instance, Pins { tx, rx }, clock_frequency)
+        Self::init(instance, clock_frequency)
     }
 
-    fn init(instance: ral::can::Instance<N>, pins: Pins<Tx, Rx>, clock_frequency: u32) -> Self {
+    fn init(instance: ral::can::Instance<N>, clock_frequency: u32) -> Self {
         let mut can = CAN {
             reg: instance,
-            pins,
+            _pins: PhantomData,
             _module: PhantomData,
             clock_frequency,
             _mailbox_reader_index: 0,
@@ -122,35 +123,6 @@ where
 
 impl<P, const M: u8> CAN<P, M> {
     pub const NUMBER_FIFO_RX_MAILBOXES: u32 = 6;
-
-    pub fn print_registers(&self) {
-        // log::info!("MCR: {:X}", ral::read_reg!(ral::can, self.reg, MCR));
-        // log::info!("CTRL1: {:X}", ral::read_reg!(ral::can, self.reg, CTRL1));
-        // log::info!("CTRL2: {:X}", ral::read_reg!(ral::can, self.reg, CTRL2));
-        // log::info!(
-        // "RXMGMASK: {:X}",
-        // ral::read_reg!(ral::can, self.reg, RXMGMASK)
-        // );
-        // log::info!(
-        // "RXFGMASK: {:X}",
-        // ral::read_reg!(ral::can, self.reg, RXFGMASK)
-        // );
-
-        let max_fifo_filters = (read_reg!(ral::can, self.reg, CTRL2, RFFN) + 1) * 8;
-
-        for mailbox_number in 0..max_fifo_filters {
-            let mailbox_idflt_tab_addr =
-                self.mailbox_number_to_idflt_tab_address(mailbox_number as u8);
-            let idflt_tab =
-                unsafe { core::ptr::read_volatile((mailbox_idflt_tab_addr) as *mut u32) };
-            // log::info!(
-            // "IDFLT_TAB[{}, {:X}]: {:X}",
-            // mailbox_number,
-            // mailbox_idflt_tab_addr,
-            // idflt_tab
-            // );
-        }
-    }
 
     fn while_frozen<F: FnMut(&mut Self) -> R, R>(&mut self, mut act: F) -> R {
         let frz_flag_negate = ral::read_reg!(ral::can, self.reg, MCR, FRZACK == FRZACK_0);
