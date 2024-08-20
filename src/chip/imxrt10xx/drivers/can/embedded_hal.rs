@@ -1,7 +1,6 @@
 //! `embedded_hal` trait impls.
 
 use super::{Data, Error, Frame, CAN};
-use crate::iomuxc::consts::Unsigned;
 
 use embedded_can;
 pub(crate) use embedded_can::ErrorKind;

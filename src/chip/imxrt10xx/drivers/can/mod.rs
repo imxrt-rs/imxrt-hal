@@ -7,35 +7,29 @@
 //!
 //! ```no_run
 //! use imxrt_hal;
+//! use imxrt_ral;
 //!
-//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//! let can1_inst = unsafe { imxrt_ral::can::CAN1::instance() };
+//! let pads = unsafe { imxrt_hal::iomuxc::pads::Pads::new() }; // let p23 = imxrt_hal::iomuxc.gpio_ad_b1.p09,
 //!
-//! let (can1_builder, _) = peripherals.can.clock(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt_hal::ccm::can::ClockSelect::OSC,
-//!     imxrt_hal::ccm::can::PrescalarSelect::DIVIDE_1,
+//! let clock_frequency = imxrt_hal::ccm::XTAL_OSCILLATOR_HZ;
+//! let mut can1 = imxrt_hal::can::CAN::new(
+//!     can1_inst,
+//!     pads.gpio_ad_b1.p08,
+//!     pads.gpio_ad_b1.p09,
+//!     clock_frequency,
 //! );
 //!
-//! let mut can1 = can1_builder.build(
-//!     peripherals.iomuxc.ad_b1.p08,
-//!     peripherals.iomuxc.ad_b1.p09
-//! );
-//!
-//! can1.set_baud_rate(1_000_000);
+//! can1.set_baud_rate(125_000);
 //! can1.set_max_mailbox(16);
-//! can1.enable_fifo();
-//! can1.set_fifo_interrupt(true);
-//! can1.set_fifo_accept_all();
-//!
+//! can1.disable_fifo();
 //! // create a `Frame` with `StandardID` 0x00
 //! // and `Data` [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
 //! let id = imxrt_hal::can::Id::from(imxrt_hal::can::StandardId::new(0x00).unwrap());
 //! let data: [u8; 8] = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
 //! let frame = imxrt_hal::can::Frame::new_data(id, data);
-//!
 //! // read all available mailboxes for any available frames
 //! can1.read_mailboxes();
-//!
 //! // transmit the frame
 //! can1.transmit(&frame);
 //! ```
@@ -49,8 +43,6 @@ pub use frame::{CodeReg, Data, FlexCanMailboxCSCode, Frame, IdReg};
 use imxrt_iomuxc::consts::Const;
 use ral::{modify_reg, read_reg, write_reg};
 
-use crate::ccm;
-use crate::iomuxc::consts::{Unsigned, U1, U2};
 use crate::iomuxc::flexcan;
 use crate::ral;
 
@@ -69,6 +61,8 @@ pub enum Error {
     /// enum
     EmbeddedHal(embedded_hal::ErrorKind),
 }
+
+/// Pins used for the CAN object
 pub struct Pins<Tx, Rx> {
     /// CAN TX Pin
     pub tx: Tx,
@@ -76,19 +70,21 @@ pub struct Pins<Tx, Rx> {
     pub rx: Rx,
 }
 
-/// A Can master
-///
+/// A CAN master
 pub struct CAN<P, const M: u8> {
     reg: ral::can::Instance<M>,
-    pins: P,
+    _pins: PhantomData<P>,
     _module: PhantomData<ral::can::RegisterBlock>,
     clock_frequency: u32,
     _mailbox_reader_index: u8,
 }
 
+/// Data contained within a Mailbox
 #[derive(Debug)]
 pub struct MailboxData {
+    /// Frame data
     pub frame: Frame,
+    /// Mailbox number associated with this data
     pub mailbox_number: u8,
 }
 
@@ -97,6 +93,9 @@ where
     Tx: flexcan::Pin<Signal = flexcan::Tx, Module = Const<N>>,
     Rx: flexcan::Pin<Signal = flexcan::Rx, Module = Const<N>>,
 {
+    /// Creates a new CAN object.
+    /// 1. Prepares the supplied TX and RX pins for flexcan operation
+    /// 2. Initializes the CAN peripheral hardware + starts peripheral operation
     pub fn new(
         instance: ral::can::Instance<N>,
         mut tx: Tx,
@@ -106,13 +105,13 @@ where
         imxrt_iomuxc::flexcan::prepare(&mut tx);
         imxrt_iomuxc::flexcan::prepare(&mut rx);
 
-        Self::init(instance, Pins { tx, rx }, clock_frequency)
+        Self::init(instance, clock_frequency)
     }
 
-    fn init(instance: ral::can::Instance<N>, pins: Pins<Tx, Rx>, clock_frequency: u32) -> Self {
+    fn init(instance: ral::can::Instance<N>, clock_frequency: u32) -> Self {
         let mut can = CAN {
             reg: instance,
-            pins,
+            _pins: PhantomData,
             _module: PhantomData,
             clock_frequency,
             _mailbox_reader_index: 0,
@@ -123,36 +122,8 @@ where
 }
 
 impl<P, const M: u8> CAN<P, M> {
+    /// Number of FIFO RX mailboxes
     pub const NUMBER_FIFO_RX_MAILBOXES: u32 = 6;
-
-    pub fn print_registers(&self) {
-        // log::info!("MCR: {:X}", ral::read_reg!(ral::can, self.reg, MCR));
-        // log::info!("CTRL1: {:X}", ral::read_reg!(ral::can, self.reg, CTRL1));
-        // log::info!("CTRL2: {:X}", ral::read_reg!(ral::can, self.reg, CTRL2));
-        // log::info!(
-        // "RXMGMASK: {:X}",
-        // ral::read_reg!(ral::can, self.reg, RXMGMASK)
-        // );
-        // log::info!(
-        // "RXFGMASK: {:X}",
-        // ral::read_reg!(ral::can, self.reg, RXFGMASK)
-        // );
-
-        let max_fifo_filters = (read_reg!(ral::can, self.reg, CTRL2, RFFN) + 1) * 8;
-
-        for mailbox_number in 0..max_fifo_filters {
-            let mailbox_idflt_tab_addr =
-                self.mailbox_number_to_idflt_tab_address(mailbox_number as u8);
-            let idflt_tab =
-                unsafe { core::ptr::read_volatile((mailbox_idflt_tab_addr) as *mut u32) };
-            // log::info!(
-            // "IDFLT_TAB[{}, {:X}]: {:X}",
-            // mailbox_number,
-            // mailbox_idflt_tab_addr,
-            // idflt_tab
-            // );
-        }
-    }
 
     fn while_frozen<F: FnMut(&mut Self) -> R, R>(&mut self, mut act: F) -> R {
         let frz_flag_negate = ral::read_reg!(ral::can, self.reg, MCR, FRZACK == FRZACK_0);
@@ -164,6 +135,8 @@ impl<P, const M: u8> CAN<P, M> {
         res
     }
 
+    /// Initializes the CAN peripheral
+    /// See section 43.8.1: FLEXCAN Initialization Sequence of the i.MX RT1060 Processor Reference Manual for details
     pub fn begin(&mut self) {
         ral::modify_reg!(ral::can, self.reg, MCR, MDIS: MDIS_0);
 
@@ -206,55 +179,73 @@ impl<P, const M: u8> CAN<P, M> {
         self.exit_freeze_mode();
     }
 
+    /// Returns the instance number
     pub fn instance_number(&self) -> u8 {
         M
     }
 
+    /// Returns `true` if this is `can1`
     pub fn is_can1(&self) -> bool {
         M == 1
     }
 
+    /// Returns `true` if this is `can2`
     pub fn is_can2(&self) -> bool {
         M == 2
     }
 
+    /// Returns the base address of this peripheral
     pub(crate) fn base_address(&self) -> u32 {
         let addr: *const ral::can::RegisterBlock = &*self.reg;
         addr as u32
     }
 
+    /// Relinquishes ownership of the instance
     pub fn free(self) -> ral::can::Instance<M> {
         self.reg
     }
 
+    /// Performs a soft reset of the flexcan peripheral
     fn soft_reset(&mut self) {
         ral::modify_reg!(ral::can, self.reg, MCR, SOFTRST: SOFTRST_1);
         while ral::read_reg!(ral::can, self.reg, MCR, SOFTRST == SOFTRST_1) {}
     }
 
+    /// Enters freeze mode
+    /// See section 43.7.10.1: Freeze Mode of the i.MX RT1060 Processor Reference Manual for details
     fn enter_freeze_mode(&mut self) {
         ral::modify_reg!(ral::can, self.reg, MCR, FRZ: FRZ_1);
         ral::modify_reg!(ral::can, self.reg, MCR, HALT: HALT_1);
         while ral::read_reg!(ral::can, self.reg, MCR, FRZACK != FRZACK_1) {}
     }
 
+    /// Exits freeze mode
+    /// See section 43.7.10.1: Freeze Mode of the i.MX RT1060 Processor Reference Manual for details
     fn exit_freeze_mode(&mut self) {
         ral::modify_reg!(ral::can, self.reg, MCR, HALT: HALT_0);
         while ral::read_reg!(ral::can, self.reg, MCR, FRZACK != FRZACK_0) {}
     }
 
+    /// Sets the [`MRP`](imxrt_ral::can::CTRL2::MRP) (Mailboxes Reception Priority) bit.
     pub fn set_mrp(&mut self, mrp: bool) {
         ral::modify_reg!(ral::can, self.reg, CTRL2, MRP: mrp as u32)
     }
 
+    /// Sets the [`RRS`](imxrt_ral::can::CTRL2::RRS) (Remote Request Frame) bit.
     pub fn set_rrs(&mut self, rrs: bool) {
         ral::modify_reg!(ral::can, self.reg, CTRL2, RRS: rrs as u32)
     }
 
+    /// Returns the clock frequency
+    ///
+    /// NOTE: This clock frequency is not derived from reading clocks.
+    /// It is calculated based on the input clock frequency when the [`CAN`] object was created
     pub fn get_clock(&self) -> u32 {
         self.clock_frequency
     }
 
+    /// Returns an Optional `\[u32; 3\]` lookup table for setting
+    /// [`PROPSEG`](imxrt_ral::can::CTRL1::PROPSEG), [`PSEG1`](imxrt_ral::can::CTRL1::PSEG1), and [`PSEG2`](imxrt_ral::can::CTRL1::PSEG2) registers in [`Self::set_baud_rate()`]
     fn result_to_bit_table(&self, result: u8) -> Option<[u32; 3]> {
         match result {
             0 => Some([0, 0, 1]),
@@ -282,6 +273,8 @@ impl<P, const M: u8> CAN<P, M> {
         }
     }
 
+    /// Sets the baud rate of the CAN peripheral.
+    /// See section 44.4.9.8: Protocol Timing of the i.MX RT1060 Processor Reference Manual for details.
     pub fn set_baud_rate(&mut self, baud: u32) {
         fn calc_result(baud: u32, clock_freq: u32, divisor: u32) -> u32 {
             clock_freq / baud / (divisor + 1)
@@ -343,6 +336,7 @@ impl<P, const M: u8> CAN<P, M> {
         });
     }
 
+    /// Set the max mailbox index
     pub fn set_max_mailbox(&mut self, last: u8) {
         let last = last.clamp(1, 64) - 1;
         self.while_frozen(|this| {
@@ -356,15 +350,18 @@ impl<P, const M: u8> CAN<P, M> {
         });
     }
 
+    /// Get the max mailbox index
     fn get_max_mailbox(&self) -> u8 {
         ral::read_reg!(ral::can, self.reg, MCR, MAXMB) as u8
     }
 
+    /// Write value to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) registers
     fn write_iflag(&mut self, value: u64) {
         write_reg!(ral::can, self.reg, IFLAG1, value as u32);
         write_reg!(ral::can, self.reg, IFLAG2, (value >> 32) as u32);
     }
 
+    /// Write bit to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) register indicating mailbox interrupt
     fn write_iflag_bit(&mut self, mailbox_number: u8) {
         if mailbox_number < 32 {
             modify_reg!(ral::can, self.reg, IFLAG1, |reg| reg
@@ -375,6 +372,7 @@ impl<P, const M: u8> CAN<P, M> {
         }
     }
 
+    /// Write bit to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) register indicating masked mailbox interrupt
     fn write_imask_bit(&mut self, mailbox_number: u8, value: bool) {
         if mailbox_number < 32 {
             modify_reg!(ral::can, self.reg, IMASK1, |reg| reg
@@ -385,21 +383,27 @@ impl<P, const M: u8> CAN<P, M> {
         }
     }
 
+    /// Read [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) registers
     fn read_iflag(&self) -> u64 {
         (ral::read_reg!(ral::can, self.reg, IFLAG2) as u64) << 32
             | ral::read_reg!(ral::can, self.reg, IFLAG1) as u64
     }
 
+    /// Read [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) / [`IMASK2`](imxrt_ral::can::RegisterBlock::IMASK2) registers
     fn read_imask(&self) -> u64 {
         (ral::read_reg!(ral::can, self.reg, IMASK2) as u64) << 32
             | ral::read_reg!(ral::can, self.reg, IMASK1) as u64
     }
 
+    /// Write value to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) / [`IMASK2`](imxrt_ral::can::RegisterBlock::IMASK2) registers
     fn write_imask(&mut self, value: u64) {
         write_reg!(ral::can, self.reg, IMASK1, value as u32);
         write_reg!(ral::can, self.reg, IMASK2, (value >> 32) as u32);
     }
 
+    /// Set RX FIFO to
+    /// 1. Enabled: `true`
+    /// 2. Disabled: `false`
     pub fn set_fifo(&mut self, enabled: bool) {
         self.while_frozen(|this| {
             modify_reg!(ral::can, this.reg, MCR, RFEN: RFEN_0);
@@ -463,22 +467,29 @@ impl<P, const M: u8> CAN<P, M> {
         })
     }
 
+    /// Wrapper around [`Self::set_fifo(true)`](Self::set_fifo())
     pub fn enable_fifo(&mut self) {
         self.set_fifo(true);
     }
 
+    /// Wrapper around [`Self::set_fifo(false)`](Self::set_fifo())
     pub fn disable_fifo(&mut self) {
         self.set_fifo(false);
     }
 
+    #[allow(rustdoc::private_intra_doc_links)]
+    /// Wrapper around [`Self::set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::RejectAll`]
     pub fn set_fifo_reject_all(&mut self) {
         self.set_fifo_filter_mask(filter::FlexCanFlten::RejectAll)
     }
 
+    #[allow(rustdoc::private_intra_doc_links)]
+    /// Wrapper around [`Self::set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::AcceptAll`]
     pub fn set_fifo_accept_all(&mut self) {
         self.set_fifo_filter_mask(filter::FlexCanFlten::AcceptAll)
     }
 
+    /// Set the FIFO filter mask
     fn set_fifo_filter_mask(&mut self, flten: filter::FlexCanFlten) {
         if !self.fifo_enabled() {
             return;
@@ -527,6 +538,7 @@ impl<P, const M: u8> CAN<P, M> {
         })
     }
 
+    /// Set the FIFO filter to [`filter`]
     pub fn set_fifo_filter(&mut self, filter: filter::FlexCanFilter) {
         if !self.fifo_enabled() {
             return;
@@ -613,6 +625,9 @@ impl<P, const M: u8> CAN<P, M> {
         })
     }
 
+    /// Set the FIFO interrupt to
+    /// 1. Enabled: `true`
+    /// 2. Disabled: `false`
     pub fn set_fifo_interrupt(&mut self, enabled: bool) {
         /* FIFO must be enabled first */
         if !self.fifo_enabled() {
@@ -632,10 +647,12 @@ impl<P, const M: u8> CAN<P, M> {
         }
     }
 
+    /// Returns whether or not the FIFO is enabled
     fn fifo_enabled(&self) -> bool {
         ral::read_reg!(ral::can, self.reg, MCR, RFEN == RFEN_1)
     }
 
+    /// Returns the mailbox offset, accounting for FIFO mailbox usage
     fn mailbox_offset(&self) -> u8 {
         if self.fifo_enabled() {
             let max_mailbox = self.get_max_mailbox() as u32;
@@ -765,24 +782,24 @@ impl<P, const M: u8> CAN<P, M> {
     /// In order to transmit a Can frame, the CPU must prepare a Message Buffer for
     /// transmission by executing the procedure found here.
     ///
-    /// 1. Check if the respective interruption bit is set and clear it.
+    /// 1.  Check if the respective interruption bit is set and clear it.
     ///
-    /// 2. If the MB is active (transmission pending), write the ABORT code (0b1001) to the
-    /// CODE field of the Control and Status word to request an abortion of the
-    /// transmission. Wait for the corresponding IFLAG to be asserted by polling the IFLAG
-    /// register or by the interrupt request if enabled by the respective IMASK. Then read
-    /// back the CODE field to check if the transmission was aborted or transmitted (see
-    /// Transmission Abort Mechanism). If backwards compatibility is desired (MCR[AEN]
-    /// bit negated), just write the INACTIVE code (0b1000) to the CODE field to inactivate
-    /// the MB but then the pending frame may be transmitted without notification (see
-    /// Message Buffer Inactivation).
+    /// 2.  If the MB is active (transmission pending), write the ABORT code (0b1001) to the
+    ///     CODE field of the Control and Status word to request an abortion of the
+    ///     transmission. Wait for the corresponding IFLAG to be asserted by polling the IFLAG
+    ///     register or by the interrupt request if enabled by the respective IMASK. Then read
+    ///     back the CODE field to check if the transmission was aborted or transmitted (see
+    ///     Transmission Abort Mechanism). If backwards compatibility is desired (MCR[AEN]
+    ///     bit negated), just write the INACTIVE code (0b1000) to the CODE field to inactivate
+    ///     the MB but then the pending frame may be transmitted without notification (see
+    ///     Message Buffer Inactivation).
     ///
-    /// 3. Write the ID word.
+    /// 3.  Write the ID word.
     ///
-    /// 4. Write the data bytes.
+    /// 4.  Write the data bytes.
     ///
-    /// 5. Write the DLC, Control and Code fields of the Control and Status word to activate
-    /// the MB.
+    /// 5.  Write the DLC, Control and Code fields of the Control and Status word to activate
+    ///     the MB.
     ///
     /// Once the MB is activated, it will participate into the arbitration process and eventually be
     /// transmitted according to its priority.
@@ -839,6 +856,7 @@ impl<P, const M: u8> CAN<P, M> {
         self.write_imask_bit(mailbox_number, false);
     }
 
+    /// Read Mailboxes, returning an optional [`MailboxData`] value containing any new Mailbox values.
     pub fn read_mailboxes(&mut self) -> Option<MailboxData> {
         let mut iflag: u64;
         let mut cycle_limit: u8 = 3;
@@ -880,6 +898,9 @@ impl<P, const M: u8> CAN<P, M> {
         None
     }
 
+    /// Handle Mailbox Interrupts.
+    /// Returns an optional [`MailboxData`] containing mailbox data if the DMA is disabled.
+    /// If DMA is enabled, the FIFO can't be handled in the ISR
     #[inline(always)]
     pub fn handle_interrupt(&mut self) -> Option<MailboxData> {
         let imask = self.read_imask();
@@ -902,6 +923,9 @@ impl<P, const M: u8> CAN<P, M> {
         None
     }
 
+    /// Transmit a Frame.
+    ///
+    /// Returns an error if no TX mailboxes are available
     #[inline(always)]
     pub fn transmit(&mut self, frame: &Frame) -> nb::Result<(), Error> {
         for i in self.mailbox_offset()..self.get_max_mailbox() {

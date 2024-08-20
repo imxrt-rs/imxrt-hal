@@ -93,7 +93,6 @@ mod chip;
 mod common {
     pub use imxrt_dma as dma;
 
-    pub mod can;
     pub mod ccm;
     pub mod flexpwm;
     pub mod gpio;
@@ -108,7 +107,7 @@ mod common {
 
 // These common drivers have no associated chip APIs, so
 // export them directly.
-pub use common::{can, flexpwm, gpio, gpt, lpi2c, lpspi, lpuart, pit, snvs, timer};
+pub use common::{flexpwm, gpio, gpt, lpi2c, lpspi, lpuart, pit, snvs, timer};
 
 /// Clock control module.
 ///
@@ -293,6 +292,11 @@ pub mod iomuxc {
     pub use crate::chip::iomuxc::*;
     pub use imxrt_iomuxc::prelude::*;
 }
+
+/// Chip-specific drivers
+#[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
+#[allow(unused)] // Not entirely sure how to work around this. Could use some help here!
+pub use crate::chip::drivers::*;
 
 #[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
 pub use crate::chip::reexports::*;

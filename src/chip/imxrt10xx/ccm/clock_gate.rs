@@ -90,7 +90,7 @@ impl Setting {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
-enum Register {
+pub(crate) enum Register {
     CCGR0,
     CCGR1,
     CCGR2,
@@ -107,7 +107,7 @@ use Register::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
-enum Gate {
+pub(crate) enum Gate {
     CG0,
     CG1,
     CG2,
@@ -147,7 +147,7 @@ pub struct Locator {
     gate: Gate,
 }
 
-const fn locator(register: Register, gate: Gate) -> Locator {
+pub(crate) const fn locator(register: Register, gate: Gate) -> Locator {
     Locator { register, gate }
 }
 
@@ -309,32 +309,6 @@ where
         locator(CCGR3, CG0),
         locator(CCGR7, CG6),
     ][if N == ral::SOLE_INSTANCE {
-        N as usize
-    } else {
-        N as usize - 1
-    }]
-}
-
-/// Returns the FlexCAN clock gate locator.
-#[inline(always)]
-pub const fn can<const N: u8>() -> Locator
-where
-    ral::can::Instance<N>: ral::Valid,
-{
-    [locator(CCGR0, CG7), locator(CCGR0, CG9)][if N == ral::SOLE_INSTANCE {
-        N as usize
-    } else {
-        N as usize - 1
-    }]
-}
-
-/// Returns the FlexCAN Peripheral Engine gate locator.
-#[inline(always)]
-pub const fn can_pe<const N: u8>() -> Locator
-where
-    ral::can::Instance<N>: ral::Valid,
-{
-    [locator(CCGR0, CG8), locator(CCGR0, CG10)][if N == ral::SOLE_INSTANCE {
         N as usize
     } else {
         N as usize - 1

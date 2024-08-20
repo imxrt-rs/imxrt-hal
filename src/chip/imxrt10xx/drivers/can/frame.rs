@@ -97,6 +97,7 @@ impl Frame {
         self.data.len() as u8
     }
 
+    /// Returns the Message Buffer Word 0 with the Message Buffer Code set to [`FlexCanMailboxCSCode::TxOnce`] (DATA)
     #[inline(always)]
     pub fn to_tx_once_code(&self) -> u32 {
         ((self.dlc() as u32) << CodeReg::DLC_SHIFT) | FlexCanMailboxCSCode::TxOnce.to_code_reg()
@@ -124,21 +125,41 @@ impl PartialEq for Frame {
     }
 }
 
+/// Message Buffer Code
+///
+/// 4-bit field accessed by CPU (read or write) as part of the
+/// message buffer matching / arbitration process
+///
+/// See Section 43.5, and Table 43-5/43-6 in the i.MX RT1060 Processor Reference Manual for additional information
+///
+/// TODO: Rename to MBCode as reference manual calls this "Message Buffer Code"
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum FlexCanMailboxCSCode {
+    /// MB is not active
     RxInactive = 0b0000,
+    /// MB is active and empty
     RxEmpty = 0b0100,
+    /// MB is full
     RxFull = 0b0010,
+    /// MB is being overwreitten into a full buffer
     RxOverrun = 0b0110,
+    /// A frame was configured to recognize a Remote Request Frame and transmit a Response Frame in return
     RxAnswer = 0b1010,
+    /// FlexCAN is updating the contents of the MB. The CPU must not access the MB.
     RxBusy = 0b0001,
 
+    /// MB is not active
     TxInactive = 0b1000,
+    /// MB is aborted
     TxAbort = 0b1001,
+    /// MB is a Tx Data Frame (MB RTR must be 0)
+    /// TODO: Rename this to TXData (Manual refers to this as "DATA")
     TxOnce = 0b1100,
+    /// MB is a Tx Response Frame from an incomming Remote Request Frame
     TxAnswer = 0b1110,
 
+    /// Code did not match any expected value
     Unknown,
 }
 
@@ -162,16 +183,21 @@ impl ::core::convert::From<u8> for FlexCanMailboxCSCode {
 }
 
 impl FlexCanMailboxCSCode {
+    /// Shifts the CODE to the proper offset within the Message Buffer Word 0. Returns a full 32b word
     #[inline(always)]
     pub fn to_code_reg(&self) -> u32 {
         (*self as u32) << CodeReg::CODE_SHIFT
     }
 
+    /// Extracts the CODE from Message Buffer Word 0. Returns the CODE
     #[inline(always)]
     pub fn from_code_reg(reg: u32) -> Self {
         Self::from(((reg & CodeReg::CODE_MASK) >> CodeReg::CODE_SHIFT) as u8)
     }
 
+    /// Returs whether or not the CODE corresponds to a TX mailbox
+    /// `true` -> this CODE is associated with a TX mailbox
+    /// `false` -> this CODE is not associated with a TX mailbox
     #[inline(always)]
     pub fn is_tx_mailbox(&self) -> bool {
         (*self as u8) >> 3 != 0
@@ -260,6 +286,7 @@ impl CodeReg {
         ((self.0 & Self::TIMESTAMP_MASK) >> Self::TIMESTAMP_SHIFT) as u16
     }
 
+    /// Returns the DLC (Length of Data in bytes) from Message Buffer Word 0
     pub fn dlc(&self) -> u8 {
         ((self.0 & Self::DLC_MASK) >> Self::DLC_SHIFT) as u8
     }
@@ -343,11 +370,13 @@ impl IdReg {
         Self::new(id)
     }
 
+    /// Turns the current ID into a [`StandardID`](embedded_can::StandardId).
     #[inline(always)]
     pub fn to_standard(&self) -> Id {
         Id::Extended(unsafe { ExtendedId::new_unchecked(self.0 >> Self::STANDARD_SHIFT) })
     }
 
+    /// Turns the current ID into an [`ExtendedID`](embedded_can::ExtendedId).
     #[inline(always)]
     pub fn to_extended(&self) -> Id {
         Id::Standard(unsafe { StandardId::new_unchecked((self.0 >> Self::EXTENDED_SHIFT) as u16) })
