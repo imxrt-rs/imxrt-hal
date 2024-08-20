@@ -786,24 +786,24 @@ impl<P, const M: u8> CAN<P, M> {
     /// In order to transmit a Can frame, the CPU must prepare a Message Buffer for
     /// transmission by executing the procedure found here.
     ///
-    /// 1. Check if the respective interruption bit is set and clear it.
+    /// 1.  Check if the respective interruption bit is set and clear it.
     ///
-    /// 2. If the MB is active (transmission pending), write the ABORT code (0b1001) to the
-    /// CODE field of the Control and Status word to request an abortion of the
-    /// transmission. Wait for the corresponding IFLAG to be asserted by polling the IFLAG
-    /// register or by the interrupt request if enabled by the respective IMASK. Then read
-    /// back the CODE field to check if the transmission was aborted or transmitted (see
-    /// Transmission Abort Mechanism). If backwards compatibility is desired (MCR[AEN]
-    /// bit negated), just write the INACTIVE code (0b1000) to the CODE field to inactivate
-    /// the MB but then the pending frame may be transmitted without notification (see
-    /// Message Buffer Inactivation).
+    /// 2.  If the MB is active (transmission pending), write the ABORT code (0b1001) to the
+    ///     CODE field of the Control and Status word to request an abortion of the
+    ///     transmission. Wait for the corresponding IFLAG to be asserted by polling the IFLAG
+    ///     register or by the interrupt request if enabled by the respective IMASK. Then read
+    ///     back the CODE field to check if the transmission was aborted or transmitted (see
+    ///     Transmission Abort Mechanism). If backwards compatibility is desired (MCR[AEN]
+    ///     bit negated), just write the INACTIVE code (0b1000) to the CODE field to inactivate
+    ///     the MB but then the pending frame may be transmitted without notification (see
+    ///     Message Buffer Inactivation).
     ///
-    /// 3. Write the ID word.
+    /// 3.  Write the ID word.
     ///
-    /// 4. Write the data bytes.
+    /// 4.  Write the data bytes.
     ///
-    /// 5. Write the DLC, Control and Code fields of the Control and Status word to activate
-    /// the MB.
+    /// 5.  Write the DLC, Control and Code fields of the Control and Status word to activate
+    ///     the MB.
     ///
     /// Once the MB is activated, it will participate into the arbitration process and eventually be
     /// transmitted according to its priority.
