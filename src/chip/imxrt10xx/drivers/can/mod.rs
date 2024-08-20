@@ -226,12 +226,12 @@ impl<P, const M: u8> CAN<P, M> {
         while ral::read_reg!(ral::can, self.reg, MCR, FRZACK != FRZACK_0) {}
     }
 
-    /// Sets the [`CTRL2::MRP`] (Mailboxes Reception Priority) bit.
+    /// Sets the [`MRP`](imxrt_ral::can::CTRL2::MRP) (Mailboxes Reception Priority) bit.
     pub fn set_mrp(&mut self, mrp: bool) {
         ral::modify_reg!(ral::can, self.reg, CTRL2, MRP: mrp as u32)
     }
 
-    /// Sets the [`CTRL2::RRS`] (Remote Request Frame) bit.
+    /// Sets the [`RRS`](imxrt_ral::can::CTRL2::RRS) (Remote Request Frame) bit.
     pub fn set_rrs(&mut self, rrs: bool) {
         ral::modify_reg!(ral::can, self.reg, CTRL2, RRS: rrs as u32)
     }
@@ -244,8 +244,8 @@ impl<P, const M: u8> CAN<P, M> {
         self.clock_frequency
     }
 
-    /// Returns an Optional `[u32; 3]` lookup table for setting
-    /// [`PROPSEG`], [`PSEG1`], and [`PSEG2`] registers in [`set_baud_rate()`]
+    /// Returns an Optional `\[u32; 3\]` lookup table for setting
+    /// [`PROPSEG`](imxrt_ral::can::CTRL1::PROPSEG), [`PSEG1`](imxrt_ral::can::CTRL1::PSEG1), and [`PSEG2`](imxrt_ral::can::CTRL1::PSEG2) registers in [`Self::set_baud_rate()`]
     fn result_to_bit_table(&self, result: u8) -> Option<[u32; 3]> {
         match result {
             0 => Some([0, 0, 1]),
@@ -355,13 +355,13 @@ impl<P, const M: u8> CAN<P, M> {
         ral::read_reg!(ral::can, self.reg, MCR, MAXMB) as u8
     }
 
-    /// Write value to [`IFLAG`] registers
+    /// Write value to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) registers
     fn write_iflag(&mut self, value: u64) {
         write_reg!(ral::can, self.reg, IFLAG1, value as u32);
         write_reg!(ral::can, self.reg, IFLAG2, (value >> 32) as u32);
     }
 
-    /// Write bit to [`IFLAG`] register indicating mailbox interrupt
+    /// Write bit to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) register indicating mailbox interrupt
     fn write_iflag_bit(&mut self, mailbox_number: u8) {
         if mailbox_number < 32 {
             modify_reg!(ral::can, self.reg, IFLAG1, |reg| reg
@@ -372,7 +372,7 @@ impl<P, const M: u8> CAN<P, M> {
         }
     }
 
-    /// Write bit to [`IMASK`] register indicating masked mailbox interrupt
+    /// Write bit to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) register indicating masked mailbox interrupt
     fn write_imask_bit(&mut self, mailbox_number: u8, value: bool) {
         if mailbox_number < 32 {
             modify_reg!(ral::can, self.reg, IMASK1, |reg| reg
@@ -383,19 +383,19 @@ impl<P, const M: u8> CAN<P, M> {
         }
     }
 
-    /// Read [`IFLAG`] registers
+    /// Read [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) registers
     fn read_iflag(&self) -> u64 {
         (ral::read_reg!(ral::can, self.reg, IFLAG2) as u64) << 32
             | ral::read_reg!(ral::can, self.reg, IFLAG1) as u64
     }
 
-    /// Read [`IMASK`] registers
+    /// Read [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) / [`IMASK2`](imxrt_ral::can::RegisterBlock::IMASK2) registers
     fn read_imask(&self) -> u64 {
         (ral::read_reg!(ral::can, self.reg, IMASK2) as u64) << 32
             | ral::read_reg!(ral::can, self.reg, IMASK1) as u64
     }
 
-    /// Write value to [`IMASK`] registers
+    /// Write value to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) / [`IMASK2`](imxrt_ral::can::RegisterBlock::IMASK2) registers
     fn write_imask(&mut self, value: u64) {
         write_reg!(ral::can, self.reg, IMASK1, value as u32);
         write_reg!(ral::can, self.reg, IMASK2, (value >> 32) as u32);
@@ -467,22 +467,22 @@ impl<P, const M: u8> CAN<P, M> {
         })
     }
 
-    /// Wrapper around [`set_fifo(true)`]
+    /// Wrapper around [`Self::set_fifo(true)`](Self::set_fifo())
     pub fn enable_fifo(&mut self) {
         self.set_fifo(true);
     }
 
-    /// Wrapper around [`set_fifo(false)`]
+    /// Wrapper around [`Self::set_fifo(false)`](Self::set_fifo())
     pub fn disable_fifo(&mut self) {
         self.set_fifo(false);
     }
 
-    /// Wrapper around [`set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::RejectAll`]
+    /// Wrapper around [`Self::set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::RejectAll`]
     pub fn set_fifo_reject_all(&mut self) {
         self.set_fifo_filter_mask(filter::FlexCanFlten::RejectAll)
     }
 
-    /// Wrapper around [`set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::AcceptAll`]
+    /// Wrapper around [`Self::set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::AcceptAll`]
     pub fn set_fifo_accept_all(&mut self) {
         self.set_fifo_filter_mask(filter::FlexCanFlten::AcceptAll)
     }

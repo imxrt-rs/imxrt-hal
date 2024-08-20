@@ -19,8 +19,6 @@ pub enum FlexCanIde {
 }
 
 /// Filter enable/disable.
-///
-/// Used by [`set_fifo_filter_mask()`]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub enum FlexCanFlten {
     /// Accept all CAN frames (filtering is disabled)
@@ -31,8 +29,6 @@ pub enum FlexCanFlten {
 }
 
 /// FlexCAN Filter.
-///
-/// Use this struct in conjunction with [`set_fifo_filter()`]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct FlexCanFilter {
     /// Mailbox ID that this filter will apply to
