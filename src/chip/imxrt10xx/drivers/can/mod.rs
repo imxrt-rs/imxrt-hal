@@ -7,35 +7,29 @@
 //!
 //! ```no_run
 //! use imxrt_hal;
+//! use imxrt_ral;
 //!
-//! let mut peripherals = imxrt_hal::Peripherals::take().unwrap();
+//! let can1_inst = unsafe { imxrt_ral::can::CAN1::instance() };
+//! let pads = unsafe { imxrt_hal::iomuxc::pads::Pads::new() }; // let p23 = imxrt_hal::iomuxc.gpio_ad_b1.p09,
 //!
-//! let (can1_builder, _) = peripherals.can.clock(
-//!     &mut peripherals.ccm.handle,
-//!     imxrt_hal::ccm::can::ClockSelect::OSC,
-//!     imxrt_hal::ccm::can::PrescalarSelect::DIVIDE_1,
+//! let clock_frequency = imxrt_hal::ccm::XTAL_OSCILLATOR_HZ;
+//! let mut can1 = imxrt_hal::can::CAN::new(
+//!     can1_inst,
+//!     pads.gpio_ad_b1.p08,
+//!     pads.gpio_ad_b1.p09,
+//!     clock_frequency,
 //! );
 //!
-//! let mut can1 = can1_builder.build(
-//!     peripherals.iomuxc.ad_b1.p08,
-//!     peripherals.iomuxc.ad_b1.p09
-//! );
-//!
-//! can1.set_baud_rate(1_000_000);
+//! can1.set_baud_rate(125_000);
 //! can1.set_max_mailbox(16);
-//! can1.enable_fifo();
-//! can1.set_fifo_interrupt(true);
-//! can1.set_fifo_accept_all();
-//!
+//! can1.disable_fifo();
 //! // create a `Frame` with `StandardID` 0x00
 //! // and `Data` [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
 //! let id = imxrt_hal::can::Id::from(imxrt_hal::can::StandardId::new(0x00).unwrap());
 //! let data: [u8; 8] = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
 //! let frame = imxrt_hal::can::Frame::new_data(id, data);
-//!
 //! // read all available mailboxes for any available frames
 //! can1.read_mailboxes();
-//!
 //! // transmit the frame
 //! can1.transmit(&frame);
 //! ```
