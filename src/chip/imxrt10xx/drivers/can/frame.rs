@@ -370,13 +370,13 @@ impl IdReg {
         Self::new(id)
     }
 
-    /// Turns the current ID into a [`StandardID`](embedded_can::id::StandardId).
+    /// Turns the current ID into a [`StandardID`](embedded_can::StandardId).
     #[inline(always)]
     pub fn to_standard(&self) -> Id {
         Id::Extended(unsafe { ExtendedId::new_unchecked(self.0 >> Self::STANDARD_SHIFT) })
     }
 
-    /// Turns the current ID into an [`ExtendedID`](embedded_can::id::ExtendedId).
+    /// Turns the current ID into an [`ExtendedID`](embedded_can::ExtendedId).
     #[inline(always)]
     pub fn to_extended(&self) -> Id {
         Id::Standard(unsafe { StandardId::new_unchecked((self.0 >> Self::EXTENDED_SHIFT) as u16) })

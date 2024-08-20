@@ -477,11 +477,13 @@ impl<P, const M: u8> CAN<P, M> {
         self.set_fifo(false);
     }
 
+    #[allow(rustdoc::private_intra_doc_links)]
     /// Wrapper around [`Self::set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::RejectAll`]
     pub fn set_fifo_reject_all(&mut self) {
         self.set_fifo_filter_mask(filter::FlexCanFlten::RejectAll)
     }
 
+    #[allow(rustdoc::private_intra_doc_links)]
     /// Wrapper around [`Self::set_fifo_filter_mask()`] which sets the filter mask to [`filter::FlexCanFlten::AcceptAll`]
     pub fn set_fifo_accept_all(&mut self) {
         self.set_fifo_filter_mask(filter::FlexCanFlten::AcceptAll)
