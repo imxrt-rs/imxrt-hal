@@ -38,7 +38,7 @@ pub(crate) mod ccm {
     pub(crate) mod clock_gate {
         use crate::chip::ccm::clock_gate;
         mod can;
-
+        pub use can::{can, can_pe};
         /// All clock gates downstream of the PERCLK root clock.
         pub const PERCLK_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::pit(),

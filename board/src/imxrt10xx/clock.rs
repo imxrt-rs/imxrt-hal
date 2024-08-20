@@ -71,9 +71,6 @@ pub const UART_CLK_FREQUENCY: u32 = clock_tree::uart_frequency(RUN_MODE);
 /// The LPSPI clock frequency (Hz).
 pub const LPSPI_CLK_FREQUENCY: u32 = clock_tree::lpspi_frequency(RUN_MODE);
 
-/// The CAN clock frequency (Hz).
-pub const CAN_CLK_FREQUENCY: u32 = clock_tree::can_frequency(RUN_MODE);
-
 /// The LPI2C clock frequency (Hz).
 pub const LPI2C_CLK_FREQUENCY: u32 = clock_tree::lpi2c_frequency(RUN_MODE);
 
