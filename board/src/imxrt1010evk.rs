@@ -51,6 +51,9 @@ type ButtonPad = iomuxc::gpio_sd::GPIO_SD_05;
 
 /// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
+
+/// The debug serial console's pins.
+///
 /// The UART routes to the DAP coprocessor, so the specific pins are not
 /// important. To interact with the console, attach to the serial interface of
 /// your board's DAP coprocssor. The coprocessor shuttles the data between your
@@ -83,6 +86,8 @@ pub mod pwm {
     use super::iomuxc;
     use crate::hal::flexpwm;
 
+    /// The PWM peripheral instance.
+    ///
     /// The RAL qualifies this as "PWM 0," even if the board schematic and
     /// reference manual qualify this as "PWM 1." This is due to how the RAL
     /// auto-generated register definitions in the presence of multiple instances

@@ -46,6 +46,8 @@ pub type Button = hal::gpio::Input<()>;
 /// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
 
+/// The debug serial console's pins.
+///
 /// The UART routes to the DAP coprocessor, so the specific pins are not
 /// important. To interact with the console, attach to the serial interface of
 /// your board's DAP coprocssor. The coprocessor shuttles the data between your
