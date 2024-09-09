@@ -18,6 +18,8 @@ pub(crate) mod reexports {
     pub use super::usbphy;
 }
 
+pub(crate) mod drivers {}
+
 pub(crate) mod iomuxc {
     pub use super::config::pads;
     use crate::ral;
