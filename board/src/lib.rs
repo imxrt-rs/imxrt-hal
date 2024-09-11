@@ -50,6 +50,10 @@ mod board_impl;
 #[path = "imxrt1180evk-cm33.rs"]
 mod board_impl;
 
+#[cfg(board = "vmu-rt1170-cm7")]
+#[path = "vmu-rt1170-cm7.rs"]
+mod board_impl;
+
 #[cfg(feature = "lcd1602")]
 pub use lcd_1602_i2c as lcd1602;
 

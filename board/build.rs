@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "imxrt1170evk-cm7",
             "imxrt1060evk",
             "imxrt1180evk-cm33",
+            "vmu-rt1170-cm7",
         ],
     );
     emit_cfg_checks("chip", ["imxrt1010", "imxrt1060", "imxrt1170", "imxrt1180"]);
@@ -95,6 +96,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("cargo:rustc-cfg=board=\"imxrt1180evk-cm33\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1180\"");
             }
+            "vmu_rt1170_cm7" => {
+                imxrt_rt::RuntimeBuilder::from_flexspi(
+                    imxrt_rt::Family::Imxrt1170,
+                    16 * 1024 * 1024,
+                )
+                .rodata(imxrt_rt::Memory::Dtcm)
+                .stack_size(32 * 1024)
+                .build()?;
+                println!("cargo:rustc-cfg=board=\"vmu-rt1170-cm7\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
+                println!("cargo:rustc-cfg=family=\"imxrt11xx\"");
+            }
+
             _ => continue,
         }
         return Ok(());

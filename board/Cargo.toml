@@ -92,6 +92,10 @@ optional = true
 version = "0.1"
 optional = true
 
+[target.thumbv7em-none-eabihf.dependencies.vmu-rt1170-fcb]
+version = "0.1"
+optional = true
+
 [features]
 imxrt1010evk = [
     "sai",
@@ -139,6 +143,17 @@ imxrt1180evk-cm33 = [
     "defmt-rtt",
     "panic-probe",
 ]
+
+vmu-rt1170-cm7 = [
+    "imxrt-iomuxc/imxrt1170",
+    "imxrt-ral/imxrt1176_cm7",
+    "imxrt-hal/imxrt1170",
+    "vmu-rt1170-fcb",
+    "defmt-rtt",
+    "panic-probe",
+    "imxrt-log",
+]
+
 logging-defmt = ["imxrt-log/defmt"]
 
 # Some boards (Teensy 4) require a resource
