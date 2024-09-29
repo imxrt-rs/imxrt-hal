@@ -593,8 +593,8 @@ impl Baud {
         let mut best_sbr = 0;
 
         let mut osr = 8;
-        let mut sbr = 1;
         while osr <= 32 {
+            let mut sbr = 1;
             while sbr < 8192 {
                 let b = source_clock_hz / (sbr * osr);
                 let e = max(baud, b) - min(baud, b);
@@ -1065,6 +1065,24 @@ mod tests {
         } else {
             assert_eq!(BAUD.osr, 8);
         }
+        assert!(!BAUD.bothedge);
+    }
+
+    #[test]
+    fn non_default_sbr_baud() {
+        // Assume the 24MHz XTAL clock.
+        const UART_CLOCK_HZ: u32 = 24_000_000;
+        // The best baud rate we can get is
+        const EXPECTED_BAUD: u32 = 9600;
+        // for a target baud of
+        const TARGET_BAUD: u32 = 9600;
+
+        const BAUD: Baud = Baud::compute(UART_CLOCK_HZ, TARGET_BAUD);
+
+        assert_eq!(BAUD.value(UART_CLOCK_HZ), EXPECTED_BAUD);
+
+        assert_eq!(BAUD.osr, 10, "OSR: {}", BAUD.osr);
+        assert_eq!(BAUD.sbr, 250, "SBR: {}", BAUD.sbr);
         assert!(!BAUD.bothedge);
     }
 
