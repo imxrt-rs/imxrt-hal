@@ -56,7 +56,7 @@ impl Frame {
 
     /// Returns true if this frame is an extended frame.
     #[inline(always)]
-    pub fn is_extended(&self) -> bool {
+    fn is_extended(&self) -> bool {
         self.code.is_extended()
     }
 
@@ -112,6 +112,10 @@ impl Frame {
         } else {
             None
         }
+    }
+
+    pub fn code(&self) -> CodeReg {
+        self.code
     }
 }
 
@@ -293,8 +297,9 @@ impl CodeReg {
 
     /// Returns `true` if the code reg is an extended identifier.
     #[inline(always)]
-    fn is_extended(self) -> bool {
-        self.0 & Self::IDE_MASK != 0
+    pub fn is_extended(self) -> bool {
+        // self.0 & Self::IDE_MASK != 0
+        self.0 & (1 << 21) != 0
     }
 
     /// Returns `true` if the code reg is a standard identifier.
@@ -373,13 +378,13 @@ impl IdReg {
     /// Turns the current ID into a [`StandardID`](embedded_can::StandardId).
     #[inline(always)]
     pub fn to_standard(&self) -> Id {
-        Id::Extended(unsafe { ExtendedId::new_unchecked(self.0 >> Self::STANDARD_SHIFT) })
+        Id::Standard(unsafe { StandardId::new_unchecked((self.0 >> Self::STANDARD_SHIFT) as u16) })
     }
 
     /// Turns the current ID into an [`ExtendedID`](embedded_can::ExtendedId).
     #[inline(always)]
     pub fn to_extended(&self) -> Id {
-        Id::Standard(unsafe { StandardId::new_unchecked((self.0 >> Self::EXTENDED_SHIFT) as u16) })
+        Id::Extended(unsafe { ExtendedId::new_unchecked(self.0 >> Self::EXTENDED_SHIFT) })
     }
 }
 
@@ -482,3 +487,15 @@ macro_rules! data_from_array {
 }
 
 data_from_array!(0, 1, 2, 3, 4, 5, 6, 7, 8);
+
+impl From<&[u8]> for Data {
+    #[inline(always)]
+    fn from(slice: &[u8]) -> Self {
+        let mut bytes = [0; 8];
+        bytes[..slice.len()].copy_from_slice(slice);
+        Self {
+            len: slice.len() as u8,
+            bytes,
+        }
+    }
+}
