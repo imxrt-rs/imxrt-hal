@@ -740,7 +740,7 @@ impl<P, const M: u8> CAN<P, M> {
                 read_reg!(ral::can, self.reg, TIMER);
                 self.write_iflag_bit(mailbox_number);
 
-                let frame = Frame::new_from_raw(code, id, data);
+                let frame = Frame::new_from_raw(code, id, &data[..dlc as usize]);
 
                 Some(MailboxData {
                     frame,
