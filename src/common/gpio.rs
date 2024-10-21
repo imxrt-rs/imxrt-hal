@@ -197,7 +197,7 @@ impl<P> Output<P> {
 impl Output<()> {
     /// Allocate an output GPIO without a pin.
     ///
-    /// Prefer using [`Port::output`](Port::output) to create a GPIO ouptut with a
+    /// Prefer using [`Port::output`](Port::output) to create a GPIO output with a
     /// pin resource. That method ensures that pin resources are managed throughout
     /// your program, and that the pin is configured to operate as a GPIO output.
     ///
@@ -296,7 +296,7 @@ impl<P> Input<P> {
 impl Input<()> {
     /// Allocate an input GPIO without a pin.
     ///
-    /// Prefer using [`Port::input`](Port::input) to create a GPIO ouptut with a
+    /// Prefer using [`Port::input`](Port::input) to create a GPIO input with a
     /// pin resource. That method ensures that pin resources are managed throughout
     /// your program, and that the pin is configured to operate as a GPIO input.
     ///
