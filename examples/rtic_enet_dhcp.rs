@@ -60,7 +60,7 @@ mod app {
     struct Shared {}
 
     #[init]
-    fn init(_: init::Context) -> (Shared, Local, init::Monotonics) {
+    fn init(_: init::Context) -> (Shared, Local) {
         let (board::Common { gpt1, .. }, board::Specifics { led, enet, .. }) = board::new();
 
         let delay = hal::timer::Blocking::<_, { board::GPT1_FREQUENCY }>::from_gpt(gpt1);
@@ -72,7 +72,6 @@ mod app {
                 enet: Some(enet),
                 led,
             },
-            init::Monotonics(),
         )
     }
 
@@ -97,6 +96,7 @@ mod app {
             socket_buffer,
             msg,
             udp_tx_meta,
+            ..
         } = cx.local;
         let enet = enet.take().unwrap();
 
