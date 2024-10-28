@@ -4,12 +4,13 @@
 //! Asynchronous peripherals can then read the queue to
 //! transport data.
 
-use core::{cell::RefCell, mem::MaybeUninit};
+use core::cell::RefCell;
 
 use super::Filters;
 
 use bbqueue as bbq;
 use critical_section::Mutex;
+use static_cell::StaticCell;
 
 struct Logger<'a, const N: usize> {
     producer: Mutex<RefCell<bbq::Producer<'a, N>>>,
@@ -55,24 +56,18 @@ impl<const N: usize> core::fmt::Write for Writer<'_, '_, N> {
 
 /// Initialize the logging frontend.
 ///
-/// # Safety
+/// # Panics
 ///
-/// Caller must ensure that this function is only called once.
-pub(crate) unsafe fn init(
+/// Panics if called more than once.
+pub(crate) fn init(
     producer: bbq::Producer<'static, { crate::BUFFER_SIZE }>,
     config: &super::LoggingConfig,
 ) -> Result<(), crate::AlreadySetError<()>> {
-    static mut LOGGER: MaybeUninit<Logger<'static, { crate::BUFFER_SIZE }>> = MaybeUninit::uninit();
-    // Safety: write to static mut. Assumed that this only happens once.
-    // We should be preventing multiple callers with the critical section,
-    // so the "only happens once" is to ensure that we're not changing the
-    // static while the logger is active.
-    let logger = unsafe {
-        LOGGER.write(Logger {
-            producer: Mutex::new(RefCell::new(producer)),
-            filters: super::Filters(config.filters),
-        })
-    };
+    static LOGGER: StaticCell<Logger<'static, { crate::BUFFER_SIZE }>> = StaticCell::new();
+    let logger = LOGGER.init(Logger {
+        producer: Mutex::new(RefCell::new(producer)),
+        filters: super::Filters(config.filters),
+    });
     ::log::set_logger(logger)
         .map(|_| ::log::set_max_level(config.max_level))
         .map_err(|_| crate::AlreadySetError::new(()))

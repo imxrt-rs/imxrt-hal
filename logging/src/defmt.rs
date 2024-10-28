@@ -17,88 +17,119 @@ use imxrt_hal::{dma::channel::Channel, lpuart::Lpuart};
 mod frontend {
     use super::Producer;
     use core::{
+        cell::{Cell, RefCell},
         mem::MaybeUninit,
         sync::atomic::{AtomicBool, Ordering},
     };
     use critical_section::RestoreState;
 
-    /// The defmt global_logger is a static singleton. This differs
-    /// from the log singleton, which is dynamically set at runtime.
-    ///
-    /// Since the singleton is static, it could be invoked before
-    /// PRODUCER has been initialized. This INIT flag guards against
-    /// that case.
-    static INIT: AtomicBool = AtomicBool::new(false);
-    /// The producer holds encoded defmt frames.
-    ///
-    /// Assume initialized when INIT is true.
-    static mut PRODUCER: MaybeUninit<Producer> = MaybeUninit::uninit();
-
-    /// The restore state for the critical section.
-    static mut RESTORE_STATE: RestoreState = RestoreState::invalid();
-
-    pub fn init(producer: Producer) {
-        // Safety: module inspection shows that this function is only called once,
-        // so we're not changing the pointed-to value while another accessor is
-        // looking at this memory.
-        unsafe { PRODUCER.write(producer) };
-        INIT.store(true, Ordering::Release);
+    pub(super) struct Frontend {
+        init: AtomicBool,
+        producer: RefCell<MaybeUninit<Producer>>,
+        restore_state: Cell<RestoreState>,
+        encoder: RefCell<defmt::Encoder>,
     }
 
-    /// Try to acquire the logger, skipping everything if the logger isn't initialized.
-    pub fn acquire<R>(func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R) -> Option<R> {
-        INIT.load(Ordering::Acquire).then(|| {
-            // Safety: we're relying on the defmt::Logger user to meet some of these
-            // critical section guarantees. We're also relying on the firmware developer
-            // to either
-            //
-            // - build separate binaries for multi-core systems
-            // - select a proper critical_section implementation for those multi-core systems
-            //   that needed to share the logging queue.
-            unsafe { RESTORE_STATE = critical_section::acquire() };
+    // Safety: The frontend uses internal critical sections to prevent
+    // concurrent access. The frontend uses an initializatino flag to
+    // track uninitialized memory.
+    unsafe impl Sync for Frontend {}
 
+    impl Frontend {
+        const fn new() -> Self {
+            Self {
+                init: AtomicBool::new(false),
+                producer: RefCell::new(MaybeUninit::uninit()),
+                restore_state: Cell::new(RestoreState::invalid()),
+                encoder: RefCell::new(defmt::Encoder::new()),
+            }
+        }
+
+        pub(super) fn init(&self, producer: Producer) {
+            // Safety: module inspection shows that this function is only called once,
+            // so we're not changing the pointed-to value while another accessor is
+            // looking at this memory.
+            *self.producer.borrow_mut() = MaybeUninit::new(producer);
+            self.init.store(true, Ordering::Release);
+        }
+
+        /// # Safety
+        ///
+        /// Caller must check that init is true, and that we're within a critical
+        /// section.
+        unsafe fn with_producer_encoder<R>(
+            &self,
+            func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R,
+        ) -> R {
             // Safety:
-            // - the memory is initialized because INIT is true.
+            // - the memory is initialized because init is true.
             // - we have exclusive access due to acquire.
-            func(unsafe { PRODUCER.assume_init_mut() }, encoder())
-        })
+            unsafe {
+                let mut producer = self.producer.borrow_mut();
+                let producer = producer.assume_init_mut();
+
+                let mut encoder = self.encoder.borrow_mut();
+                func(producer, &mut encoder)
+            }
+        }
+
+        /// Try to acquire the logger, skipping everything if the logger isn't initialized.
+        pub fn acquire<R>(
+            &self,
+            func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R,
+        ) -> Option<R> {
+            self.init.load(Ordering::Acquire).then(|| {
+                // Safety: we're relying on the defmt::Logger user to meet some of these
+                // critical section guarantees. We're also relying on the firmware developer
+                // to either
+                //
+                // - build separate binaries for multi-core systems
+                // - select a proper critical_section implementation for those multi-core systems
+                //   that needed to share the logging queue.
+                unsafe { self.restore_state.set(critical_section::acquire()) };
+
+                // Safety: Acquired critical section, and init is true.
+                unsafe { self.with_producer_encoder(func) }
+            })
+        }
+
+        /// Try to release the logger, skipping everything if the loger isn't initialized.
+        pub fn release<R>(
+            &self,
+            func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R,
+        ) -> Option<R> {
+            self.init.load(Ordering::Acquire).then(|| {
+                // Safety:
+                // - init is true.
+                // - if we're releasing the critical section, we must
+                //   already have acquired the critical section.
+                let result = unsafe { self.with_producer_encoder(func) };
+
+                // Safety: we're relying on the defmt::Logger user to meet some critical
+                // section guarantees. See the related safety comment on acquire.
+                unsafe {
+                    critical_section::release(self.restore_state.replace(RestoreState::invalid()))
+                };
+
+                result
+            })
+        }
+
+        pub fn write<R>(
+            &self,
+            func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R,
+        ) -> Option<R> {
+            self.init.load(Ordering::Acquire).then(|| {
+                // Safety:
+                // - the memory is initialized because INIT is true.
+                // - the defmt user can only call this after calling
+                //   acquire, so there's only one mutable access.
+                unsafe { self.with_producer_encoder(func) }
+            })
+        }
     }
 
-    /// Try to release the logger, skipping everything if the loger isn't initialized.
-    pub fn release<R>(func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R) -> Option<R> {
-        INIT.load(Ordering::Acquire).then(|| {
-            // Safety:
-            // - the memory is initialized.
-            // - the defmt user can only call this after calling
-            //   acquire, so this is the only mutable access.
-            let result = func(unsafe { PRODUCER.assume_init_mut() }, encoder());
-
-            // Safety: we're relying on the defmt::Logger user to meet some critical
-            // section guarantees. See the related safety comment on acquire.
-            unsafe { critical_section::release(RESTORE_STATE) };
-            result
-        })
-    }
-
-    pub fn write<R>(func: impl FnOnce(&mut Producer, &mut defmt::Encoder) -> R) -> Option<R> {
-        INIT.load(Ordering::Acquire).then(|| {
-            // Safety:
-            // - the memory is initialized because INIT is true.
-            // - the defmt user can only call this after calling
-            //   acquire, so there's only one mutable access.
-            func(unsafe { PRODUCER.assume_init_mut() }, encoder())
-        })
-    }
-
-    /// Access the defmt log frame encoder.
-    fn encoder() -> &'static mut defmt::Encoder {
-        static mut ENCODER: defmt::Encoder = defmt::Encoder::new();
-        // Safety: memory is statically initialized. Inspection of this
-        // module shows that this is always accessed within the acquire-
-        // release critical section, so there's only one access to this
-        // mutable data.
-        unsafe { &mut *core::ptr::addr_of_mut!(ENCODER) }
-    }
+    pub(super) static FRONTEND: Frontend = Frontend::new();
 }
 
 #[defmt::global_logger]
@@ -108,7 +139,7 @@ struct Logger;
 // defmt::Logger safety contract.
 unsafe impl defmt::Logger for Logger {
     fn acquire() {
-        frontend::acquire(|producer, encoder| {
+        frontend::FRONTEND.acquire(|producer, encoder| {
             encoder.start_frame(|buffer| {
                 let _ = crate::try_write_producer(buffer, producer);
             });
@@ -123,7 +154,7 @@ unsafe impl defmt::Logger for Logger {
     // make this assumption safe.
 
     unsafe fn release() {
-        frontend::release(|producer, encoder| {
+        frontend::FRONTEND.release(|producer, encoder| {
             encoder.end_frame(|buffer| {
                 let _ = crate::try_write_producer(buffer, producer);
             });
@@ -131,7 +162,7 @@ unsafe impl defmt::Logger for Logger {
     }
 
     unsafe fn write(bytes: &[u8]) {
-        frontend::write(|producer, encoder| {
+        frontend::FRONTEND.write(|producer, encoder| {
             encoder.write(bytes, |buffer| {
                 let _ = crate::try_write_producer(buffer, producer);
             });
@@ -158,10 +189,9 @@ pub fn usb_with_config<P: imxrt_usbd::Peripherals>(
     };
 
     critical_section::with(|_| {
-        frontend::init(producer);
-        // Safety: BUFFER.try_split() guarantees that this is only called once.
-        unsafe { crate::usbd::init(peripherals, interrupts, consumer, backend_config) };
-        Ok(crate::Poller::new(crate::usbd::VTABLE))
+        frontend::FRONTEND.init(producer);
+        let backend = crate::usbd::init(peripherals, interrupts, consumer, backend_config);
+        Ok(crate::Poller::new(backend))
     })
 }
 
@@ -196,10 +226,8 @@ pub fn lpuart<P, const LPUART: u8>(
     };
 
     critical_section::with(|_| {
-        frontend::init(producer);
-        // Safety: "called once" requirement met by the buffer split, above.
-        // Only the first successful split flows into this call.
-        unsafe { crate::lpuart::init(lpuart, dma_channel, consumer, interrupts) };
-        Ok(crate::Poller::new(crate::lpuart::VTABLE))
+        frontend::FRONTEND.init(producer);
+        let backend = crate::lpuart::init(lpuart, dma_channel, consumer, interrupts);
+        Ok(crate::Poller::new(backend))
     })
 }

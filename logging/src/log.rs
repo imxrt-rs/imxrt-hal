@@ -96,15 +96,12 @@ pub fn usbd_with_config<P: imxrt_usbd::Peripherals>(
         Err(_) => return Err(crate::AlreadySetError::new(peripherals)),
     };
 
-    // Safety: both can only be called once. We use try_split
-    // (above) to meet that requirement. If that method is called
-    // more than once, subsequent calls are an error.
-    critical_section::with(|_| unsafe {
+    critical_section::with(|_| {
         if frontend::init(producer, frontend_config).is_err() {
             return Err(crate::AlreadySetError::new(peripherals));
         }
-        crate::usbd::init(peripherals, interrupts, consumer, backend_config);
-        Ok(Poller::new(crate::usbd::VTABLE))
+        let backend = crate::usbd::init(peripherals, interrupts, consumer, backend_config);
+        Ok(Poller::new(backend))
     })
 }
 
@@ -140,14 +137,12 @@ pub fn lpuart_with_config<P, const LPUART: u8>(
         Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),
     };
 
-    // Safety: all of this can only happen once. We use try_split
-    // to meet that requirement.
-    critical_section::with(|_| unsafe {
+    critical_section::with(|_| {
         if frontend::init(producer, frontend_config).is_err() {
             return Err(crate::AlreadySetError::new((lpuart, dma_channel)));
         }
-        crate::lpuart::init(lpuart, dma_channel, consumer, interrupts);
-        Ok(Poller::new(crate::lpuart::VTABLE))
+        let backend = crate::lpuart::init(lpuart, dma_channel, consumer, interrupts);
+        Ok(Poller::new(backend))
     })
 }
 

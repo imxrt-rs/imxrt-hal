@@ -12,6 +12,7 @@ readme = "README.md"
 [dependencies]
 critical-section = "1"
 bbqueue = "0.5"
+static_cell = "2.1.0"
 
 [dependencies.defmt]
 optional = true
