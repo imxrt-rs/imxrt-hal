@@ -1,6 +1,6 @@
 //! USB serial (CDC) backend using imxrt-usbd.
 
-use core::mem::MaybeUninit;
+use static_cell::StaticCell;
 use usb_device::device::UsbDeviceState;
 
 const VID_PID: usb_device::device::UsbVidPid = usb_device::device::UsbVidPid(0x5824, 0x27dd);
@@ -20,11 +20,6 @@ type BusAllocator = usb_device::bus::UsbBusAllocator<Bus>;
 type Class<'a> = usbd_serial::CdcAcmClass<'a, Bus>;
 type Device<'a> = usb_device::device::UsbDevice<'a, Bus>;
 
-static mut BUS: MaybeUninit<BusAllocator> = MaybeUninit::uninit();
-static mut CLASS: MaybeUninit<Class<'static>> = MaybeUninit::uninit();
-static mut DEVICE: MaybeUninit<Device<'static>> = MaybeUninit::uninit();
-static mut CONSUMER: MaybeUninit<crate::Consumer> = MaybeUninit::uninit();
-
 /// High-speed bulk endpoint limit.
 const MAX_PACKET_SIZE: usize = crate::config::USB_BULK_MPS;
 /// Size for control transfers on endpoint 0.
@@ -32,168 +27,137 @@ const EP0_CONTROL_PACKET_SIZE: usize = 64;
 /// The USB GPT timer we use to (infrequently) check for data.
 const GPT_INSTANCE: imxrt_usbd::gpt::Instance = imxrt_usbd::gpt::Instance::Gpt0;
 
-pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll };
+pub(crate) struct Backend {
+    class: Class<'static>,
+    device: Device<'static>,
+    consumer: crate::Consumer,
+    configured: bool,
+}
 
-/// Drive the logging behavior.
-///
-/// # Safety
-///
-/// This may only be called from one execution context. It can only be called
-/// after all `static mut`s are initialized.
-///
-/// By exposing this function through a [`Poller`](crate::Poller), we make both
-/// of these guarantees. The `Poller` indirectly "owns" the static mut memory,
-/// and the crate design ensures that there's only one `Poller` object in existence.
-unsafe fn poll() {
-    static mut CONFIGURED: bool = false;
-    #[inline(always)]
-    fn is_configured() -> bool {
-        // Safety: poll() isn't reentrant. Only poll() can
-        // read this state.
-        unsafe { CONFIGURED }
-    }
-    #[inline(always)]
-    fn set_configured(configured: bool) {
-        // Safety: poll() isn't reentrant. Only poll() can
-        // modify this state.s
-        unsafe { CONFIGURED = configured };
-    }
-
-    // Safety: caller ensures that these are initializd, and that the function
-    // isn't reentrant.
-    let (device, class) = unsafe { (DEVICE.assume_init_mut(), CLASS.assume_init_mut()) };
-
-    // Is there a CDC class event, like a completed transfer? If so, check
-    // the consumer immediately, even if a timer hasn't expired.
-    //
-    // Checking the consumer on class traffic lets the driver burst out data.
-    // Suppose the user wants to use the USB GPT timer, and they configure a very
-    // long interval. That interval expires, and we see tons of data in the consumer.
-    // We should write that out as fast as possible, even if the timer hasn't elapsed.
-    // That's the behavior provided by the class_event flag.
-    let class_event = device.poll(&mut [class]);
-    let timer_event = device.bus().gpt_mut(GPT_INSTANCE, |gpt| {
-        let mut elapsed = false;
-        while gpt.is_elapsed() {
-            gpt.clear_elapsed();
-            elapsed = true;
-        }
-        // Simulate a timer event if the timer is not running.
+impl Backend {
+    pub(crate) fn poll(&mut self) {
+        // Is there a CDC class event, like a completed transfer? If so, check
+        // the consumer immediately, even if a timer hasn't expired.
         //
-        // If the timer is not running, its because the user disabled interrupts,
-        // and they're using their own timer / polling loop. There might not always
-        // be a class traffic (transfer complete) event when the user polls, so
-        // signaling true allows the poll to check the consumer for new data and
-        // send it.
-        //
-        // If the timer is running, checking the consumer depends on the elapsed
-        // timer.
-        elapsed || !gpt.is_running()
-    });
-    let check_consumer = class_event || timer_event;
-
-    if device.state() != UsbDeviceState::Configured {
-        if is_configured() {
-            // Turn off the timer, but only if we were previously configured.
-            device.bus().gpt_mut(GPT_INSTANCE, |gpt| gpt.stop());
-        }
-        set_configured(false);
-        // We can't use the class if we're not configured,
-        // so bail out here.
-        return;
-    }
-
-    // We're now configured. Are we newly configured?
-    if !is_configured() {
-        // Must call this when we transition into configured.
-        device.bus().configure();
-        device.bus().gpt_mut(GPT_INSTANCE, |gpt| {
-            // There's no need for a timer if interrupts are disabled.
-            // If the user disabled USB interrupts and decided to poll this
-            // from another timer, this USB timer could unnecessarily block
-            // that timer from checking the consumer queue.
-            if gpt.is_interrupt_enabled() {
-                gpt.run()
+        // Checking the consumer on class traffic lets the driver burst out data.
+        // Suppose the user wants to use the USB GPT timer, and they configure a very
+        // long interval. That interval expires, and we see tons of data in the consumer.
+        // We should write that out as fast as possible, even if the timer hasn't elapsed.
+        // That's the behavior provided by the class_event flag.
+        let class_event = self.device.poll(&mut [&mut self.class]);
+        let timer_event = self.device.bus().gpt_mut(GPT_INSTANCE, |gpt| {
+            let mut elapsed = false;
+            while gpt.is_elapsed() {
+                gpt.clear_elapsed();
+                elapsed = true;
             }
+            // Simulate a timer event if the timer is not running.
+            //
+            // If the timer is not running, its because the user disabled interrupts,
+            // and they're using their own timer / polling loop. There might not always
+            // be a class traffic (transfer complete) event when the user polls, so
+            // signaling true allows the poll to check the consumer for new data and
+            // send it.
+            //
+            // If the timer is running, checking the consumer depends on the elapsed
+            // timer.
+            elapsed || !gpt.is_running()
         });
-        set_configured(true);
-    }
+        let check_consumer = class_event || timer_event;
 
-    // If the host sends us data, pretend to read it.
-    // This prevents us from continuously NAKing the host,
-    // which the host might not appreciate.
-    class.read_packet(&mut []).ok();
-
-    // There's no need to wait if we were are newly configured.
-    if check_consumer {
-        // Safety: consumer is initialized if poll() is running. Caller ensures
-        // that poll() is not reentrant.
-        let consumer = unsafe { CONSUMER.assume_init_mut() };
-        if let Ok(grant) = consumer.read() {
-            let buf = grant.buf();
-            // Don't try to write more than we can fit in a single packet!
-            // See the usbd-serial documentation for this caveat. We didn't
-            // statically allocate enough space for anything larger.
-            if let Ok(written) = class.write_packet(&buf[..MAX_PACKET_SIZE.min(buf.len())]) {
-                grant.release(written);
-                // Log data is in the intermediate buffer, so it's OK to release the grant.
-                //
-                // If the I/O fails here, we'll try again on the next poll. There's no guarantee
-                // we'll see a improvement though...
+        if self.device.state() != UsbDeviceState::Configured {
+            if self.configured {
+                // Turn off the timer, but only if we were previously configured.
+                self.device.bus().gpt_mut(GPT_INSTANCE, |gpt| gpt.stop());
             }
-        } // else, no data, or some error. Let those logs accumulate!
+            self.configured = false;
+            // We can't use the class if we're not configured,
+            // so bail out here.
+            return;
+        }
+
+        // We're now configured. Are we newly configured?
+        if !self.configured {
+            // Must call this when we transition into configured.
+            self.device.bus().configure();
+            self.device.bus().gpt_mut(GPT_INSTANCE, |gpt| {
+                // There's no need for a timer if interrupts are disabled.
+                // If the user disabled USB interrupts and decided to poll this
+                // from another timer, this USB timer could unnecessarily block
+                // that timer from checking the consumer queue.
+                if gpt.is_interrupt_enabled() {
+                    gpt.run()
+                }
+            });
+            self.configured = true;
+        }
+
+        // If the host sends us data, pretend to read it.
+        // This prevents us from continuously NAKing the host,
+        // which the host might not appreciate.
+        self.class.read_packet(&mut []).ok();
+
+        // There's no need to wait if we were are newly configured.
+        if check_consumer {
+            if let Ok(grant) = self.consumer.read() {
+                let buf = grant.buf();
+                // Don't try to write more than we can fit in a single packet!
+                // See the usbd-serial documentation for this caveat. We didn't
+                // statically allocate enough space for anything larger.
+                if let Ok(written) = self
+                    .class
+                    .write_packet(&buf[..MAX_PACKET_SIZE.min(buf.len())])
+                {
+                    grant.release(written);
+                    // Log data is in the intermediate buffer, so it's OK to release the grant.
+                    //
+                    // If the I/O fails here, we'll try again on the next poll. There's no guarantee
+                    // we'll see a improvement though...
+                }
+            } // else, no data, or some error. Let those logs accumulate!
+        }
     }
 }
 
 /// Initialize the USB logger.
 ///
-/// # Safety
+/// # Panics
 ///
-/// This can only be called once.
-pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
+/// Panics if called more than once.
+pub(crate) fn init<P: imxrt_usbd::Peripherals>(
     peripherals: P,
     interrupts: crate::Interrupts,
     consumer: super::Consumer,
     config: &UsbdConfig,
-) {
-    // Safety: mutable static write. This only occurs once, and poll()
-    // cannot run by the time we're writing this memory.
-    unsafe { CONSUMER.write(consumer) };
-
-    let bus: &mut usb_device::class_prelude::UsbBusAllocator<imxrt_usbd::BusAdapter> = {
-        // Safety: we ensure that the bus, class, and all other related USB objects
-        // are accessed in poll(). poll() is not reentrant, so there's no racing
-        // occuring across executing contexts.
-        let bus = unsafe {
-            imxrt_usbd::BusAdapter::without_critical_sections(
-                peripherals,
-                &ENDPOINT_MEMORY,
-                &ENDPOINT_STATE,
-                crate::config::USB_SPEED,
-            )
-        };
-        bus.set_interrupts(interrupts == crate::Interrupts::Enabled);
-        bus.gpt_mut(GPT_INSTANCE, |gpt| {
-            gpt.stop();
-            gpt.clear_elapsed();
-            gpt.set_interrupt_enabled(interrupts == crate::Interrupts::Enabled);
-            gpt.set_mode(imxrt_usbd::gpt::Mode::Repeat);
-            gpt.set_load(config.poll_interval_us);
-            gpt.reset();
+) -> &'static mut Backend {
+    static BACKEND: StaticCell<Backend> = StaticCell::new();
+    BACKEND.init_with(|| {
+        static BUS: StaticCell<BusAllocator> = StaticCell::new();
+        let bus = BUS.init_with(|| {
+            // Safety: we ensure that the bus, class, and all other related USB objects
+            // are accessed in poll(). poll() is not reentrant, so there's no racing
+            // occuring across executing contexts.
+            let bus = unsafe {
+                imxrt_usbd::BusAdapter::without_critical_sections(
+                    peripherals,
+                    &ENDPOINT_MEMORY,
+                    &ENDPOINT_STATE,
+                    crate::config::USB_SPEED,
+                )
+            };
+            bus.set_interrupts(interrupts == crate::Interrupts::Enabled);
+            bus.gpt_mut(GPT_INSTANCE, |gpt| {
+                gpt.stop();
+                gpt.clear_elapsed();
+                gpt.set_interrupt_enabled(interrupts == crate::Interrupts::Enabled);
+                gpt.set_mode(imxrt_usbd::gpt::Mode::Repeat);
+                gpt.set_load(config.poll_interval_us);
+                gpt.reset();
+            });
+            usb_device::bus::UsbBusAllocator::new(bus)
         });
-        let bus = usb_device::bus::UsbBusAllocator::new(bus);
-        // Safety: mutable static write. This only occurs once, and poll()
-        // cannot run by the time we're writing this memory.
-        unsafe { BUS.write(bus) }
-    };
-
-    {
         let class = usbd_serial::CdcAcmClass::new(bus, MAX_PACKET_SIZE as u16);
-        // Safety: mutable static write. See the above discussion for BUS.
-        unsafe { CLASS.write(class) };
-    }
 
-    {
         let device = usb_device::device::UsbDeviceBuilder::new(bus, VID_PID)
             .strings(&[usb_device::device::StringDescriptors::default().product(PRODUCT)])
             .unwrap()
@@ -213,9 +177,13 @@ pub(crate) unsafe fn init<P: imxrt_usbd::Peripherals>(
             }
         }
 
-        // Safety: mutable static write. See the above discussion for BUS.
-        unsafe { DEVICE.write(device) };
-    }
+        Backend {
+            class,
+            device,
+            consumer,
+            configured: false,
+        }
+    })
 }
 
 /// USB device configuration builder.

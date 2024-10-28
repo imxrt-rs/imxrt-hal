@@ -6,136 +6,140 @@
 //! with a borrowed producer, then finish the initialization once everything
 //! is OK from the first phase.
 
-use core::mem::MaybeUninit;
-
 use imxrt_hal::{
     dma::{channel, peripheral::Destination},
     lpuart::{Direction, Lpuart},
 };
+use static_cell::StaticCell;
 
-static mut CONSUMER: MaybeUninit<crate::Consumer> = MaybeUninit::uninit();
-static mut CHANNEL: MaybeUninit<channel::Channel> = MaybeUninit::uninit();
+pub(crate) struct Backend {
+    consumer: crate::Consumer,
+    channel: channel::Channel,
+}
 
-pub(crate) const VTABLE: crate::PollerVTable = crate::PollerVTable { poll };
-
-/// Drive the logging behavior.
-///
-/// # Safety
-///
-/// This may only be called from one execution context. It can only be called
-/// after `CONSUMER` and `CHANNEL` are initialized.
-///
-/// By exposing this function through a [`Poller`](crate::Poller), we make both
-/// of these guarantees. The `Poller` indirectly "owns" the static mut memory,
-/// and the crate design ensures that there's only one `Poller` object in existence.
-unsafe fn poll() {
-    // Safety: caller ensures that these are initializd, and that the function
-    // isn't reentrant.
-    let (consumer, channel) = unsafe { (CONSUMER.assume_init_mut(), CHANNEL.assume_init_mut()) };
-
-    // Could be high if the user enabled DMA interrupts.
-    while channel.is_interrupt() {
-        channel.clear_interrupt();
-    }
-
-    assert!(!channel.is_error(), "{:?}", channel.error_status());
-
-    // Don't schedule another transfer while one is enabled.
-    // DMA channel configuration will automatically disable
-    // when the transfer completes (set_disable_on_completion).
-    if channel.is_enabled() {
-        return;
-    }
-
-    let complete = {
-        let mut complete = false;
-        while channel.is_complete() {
-            channel.clear_complete();
-            complete = true;
+impl Backend {
+    /// Drive the logging behavior.
+    ///
+    /// # Safety
+    ///
+    /// This may only be called from one execution context. It can only be called
+    /// after `CONSUMER` and `CHANNEL` are initialized.
+    ///
+    /// By exposing this function through a [`Poller`](crate::Poller), we make both
+    /// of these guarantees. The `Poller` indirectly "owns" the static mut memory,
+    /// and the crate design ensures that there's only one `Poller` object in existence.
+    pub(crate) fn poll(&mut self) {
+        // Could be high if the user enabled DMA interrupts.
+        while self.channel.is_interrupt() {
+            self.channel.clear_interrupt();
         }
-        complete
-    };
 
-    // If we're at this point, there's no active transfer. So if
-    // there's data available, we should try to schedule that transfer.
-    //
-    // The DMA controller references a slice of the buffer that we haven't
-    // yet released. If the last transfer completed, it's time for us to
-    // release that buffer for the producer.
-    //
-    // The goal is to only call read once, and handle cases where
-    // transfers complete, and / or there's new data. It helps to decompose
-    // into two branches, then studying the paths through these two branches.
-    //
-    //  if complete { /* Call read, and release grant based on last transfer size */}
-    //  if let Ok(grant) = consumer.read() {
-    //    /* Schedule next transfer with grant contents. */
-    //  }
-    if let Ok(grant) = consumer.read() {
-        // completed holds whatever we previously transferred.
-        // new either holds
-        //
-        // 1. the data accumulated since the start of the last transfer.
-        // 2. all of the data accumulated since the last call to poll.
-        let (completed, new) = if complete {
-            let transferred: usize = channel.beginning_transfer_iterations().into();
-            let buf = grant.buf();
-            (&buf[..transferred], &buf[transferred..])
-        } else {
-            (&[][..], grant.buf())
+        assert!(
+            !self.channel.is_error(),
+            "{:?}",
+            self.channel.error_status()
+        );
+
+        // Don't schedule another transfer while one is enabled.
+        // DMA channel configuration will automatically disable
+        // when the transfer completes (set_disable_on_completion).
+        if self.channel.is_enabled() {
+            return;
+        }
+
+        let complete = {
+            let mut complete = false;
+            while self.channel.is_complete() {
+                self.channel.clear_complete();
+                complete = true;
+            }
+            complete
         };
 
-        if !new.is_empty() {
-            // Safety: the buffer is static and will always be valid while the transfer
-            // is active.
-            unsafe { channel::set_source_linear_buffer(channel, new) };
-            // Safety: the iterations are based on the number of elements in the collection,
-            // so we're not indexing out of bounds.
-            unsafe { channel.set_transfer_iterations(new.len().min(u16::MAX as usize) as u16) };
-            // Safety: transfer is correctly set up here, and in the init method.
-            unsafe { channel.enable() };
-        }
+        // If we're at this point, there's no active transfer. So if
+        // there's data available, we should try to schedule that transfer.
+        //
+        // The DMA controller references a slice of the buffer that we haven't
+        // yet released. If the last transfer completed, it's time for us to
+        // release that buffer for the producer.
+        //
+        // The goal is to only call read once, and handle cases where
+        // transfers complete, and / or there's new data. It helps to decompose
+        // into two branches, then studying the paths through these two branches.
+        //
+        //  if complete { /* Call read, and release grant based on last transfer size */}
+        //  if let Ok(grant) = consumer.read() {
+        //    /* Schedule next transfer with grant contents. */
+        //  }
+        if let Ok(grant) = self.consumer.read() {
+            // completed holds whatever we previously transferred.
+            // new either holds
+            //
+            // 1. the data accumulated since the start of the last transfer.
+            // 2. all of the data accumulated since the last call to poll.
+            let (completed, new) = if complete {
+                let transferred: usize = self.channel.beginning_transfer_iterations().into();
+                let buf = grant.buf();
+                (&buf[..transferred], &buf[transferred..])
+            } else {
+                (&[][..], grant.buf())
+            };
 
-        if !completed.is_empty() {
-            let completed = completed.len();
-            grant.release(completed);
+            if !new.is_empty() {
+                // Safety: the buffer is static and will always be valid while the transfer
+                // is active.
+                unsafe { channel::set_source_linear_buffer(&mut self.channel, new) };
+                // Safety: the iterations are based on the number of elements in the collection,
+                // so we're not indexing out of bounds.
+                unsafe {
+                    self.channel
+                        .set_transfer_iterations(new.len().min(u16::MAX as usize) as u16)
+                };
+                // Safety: transfer is correctly set up here, and in the init method.
+                unsafe { self.channel.enable() };
+            }
+
+            if !completed.is_empty() {
+                let completed = completed.len();
+                grant.release(completed);
+            }
         }
     }
 }
 
 /// Initialize the LPUART logger.
 ///
-/// # Safety
+/// # Panics
 ///
-/// This call must only be called once. This call must happen before `poll` is invoked.
-pub(crate) unsafe fn init<P, const LPUART: u8>(
+/// Panics if called more than once.
+pub(crate) fn init<P, const LPUART: u8>(
     mut lpuart: Lpuart<P, LPUART>,
-    channel: channel::Channel,
+    mut channel: channel::Channel,
     consumer: crate::Consumer,
     interrupts: crate::Interrupts,
-) {
+) -> &'static mut Backend {
     channel.disable();
     channel.clear_complete();
     channel.clear_error();
 
-    // Safety: mutable static access. Caller only calls this once, and poll() isn't
-    // accessible by this point. There's no race on the consumer.
-    unsafe { CONSUMER.write(consumer) };
-    // Safety: mutable static access. See above.
-    let channel = unsafe { CHANNEL.write(channel) };
+    static BACKEND: StaticCell<Backend> = StaticCell::new();
+    BACKEND.init_with(move || {
+        channel.set_disable_on_completion(true);
+        channel.set_interrupt_on_completion(interrupts == crate::Interrupts::Enabled);
 
-    channel.set_disable_on_completion(true);
-    channel.set_interrupt_on_completion(interrupts == crate::Interrupts::Enabled);
+        channel
+            .set_channel_configuration(channel::Configuration::enable(lpuart.destination_signal()));
+        // Safety: element size is appropriate for the buffer type.
+        unsafe { channel.set_minor_loop_bytes(core::mem::size_of::<u8>() as u32) };
 
-    channel.set_channel_configuration(channel::Configuration::enable(lpuart.destination_signal()));
-    // Safety: element size is appropriate for the buffer type.
-    unsafe { channel.set_minor_loop_bytes(core::mem::size_of::<u8>() as u32) };
+        // Safety: hardware address is valid.
+        unsafe { channel::set_destination_hardware(&mut channel, lpuart.destination_address()) };
 
-    // Safety: hardware address is valid.
-    unsafe { channel::set_destination_hardware(channel, lpuart.destination_address()) };
+        lpuart.disable(|lpuart| {
+            lpuart.disable_fifo(Direction::Tx);
+        });
+        lpuart.enable_destination(); // Note: this call is never undone.
 
-    lpuart.disable(|lpuart| {
-        lpuart.disable_fifo(Direction::Tx);
-    });
-    lpuart.enable_destination(); // Note: this call is never undone.
+        Backend { channel, consumer }
+    })
 }

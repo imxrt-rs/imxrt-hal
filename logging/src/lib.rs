@@ -357,8 +357,7 @@ type Consumer = bbqueue::Consumer<'static, { crate::BUFFER_SIZE }>;
 /// Since it manages static, mutable state, there can only be one instance
 /// of a `Poller` in any program.
 pub struct Poller {
-    _marker: core::marker::PhantomData<*mut ()>,
-    vtable: PollerVTable,
+    inner: Inner,
 }
 
 // Safety: it's OK to move this across execution contexts.
@@ -367,10 +366,9 @@ pub struct Poller {
 unsafe impl Send for Poller {}
 
 impl Poller {
-    fn new(vtable: PollerVTable) -> Self {
+    fn new<B: Into<Inner>>(backend: B) -> Self {
         Poller {
-            _marker: core::marker::PhantomData,
-            vtable,
+            inner: backend.into(),
         }
     }
 
@@ -382,15 +380,34 @@ impl Poller {
     /// in each transfer.
     #[inline]
     pub fn poll(&mut self) {
-        // Safety: poll() implementations can only be called from one execution
-        // context, to completion. Taking a &mut receiver ensures that this call
-        // isn't happening concurrently with itself.
-        unsafe { (self.vtable.poll)() };
+        self.inner.poll();
     }
 }
 
-struct PollerVTable {
-    poll: unsafe fn(),
+enum Inner {
+    Lpuart(&'static mut lpuart::Backend),
+    Usbd(&'static mut usbd::Backend),
+}
+
+impl From<&'static mut lpuart::Backend> for Inner {
+    fn from(backend: &'static mut lpuart::Backend) -> Self {
+        Inner::Lpuart(backend)
+    }
+}
+
+impl From<&'static mut usbd::Backend> for Inner {
+    fn from(backend: &'static mut usbd::Backend) -> Self {
+        Inner::Usbd(backend)
+    }
+}
+
+impl Inner {
+    fn poll(&mut self) {
+        match self {
+            Self::Lpuart(backend) => backend.poll(),
+            Self::Usbd(backend) => backend.poll(),
+        }
+    }
 }
 
 #[cfg(test)]
