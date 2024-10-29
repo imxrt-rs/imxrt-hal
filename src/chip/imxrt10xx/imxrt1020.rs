@@ -5,6 +5,8 @@
 
 pub use imxrt_iomuxc::imxrt1020 as pads;
 
+pub(crate) mod drivers {}
+
 #[path = "ccm"]
 pub(crate) mod ccm {
     pub mod arm_divider;
