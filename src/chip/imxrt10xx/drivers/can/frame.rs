@@ -38,6 +38,20 @@ impl Frame {
         }
     }
 
+    /// Creates a new data frame.
+    #[inline(always)]
+    pub fn new_from_raw_slice(code: u32, id: u32, data: &[u8]) -> Option<Self> {
+        if let Some(data) = Data::new(data) {
+            Some(Self {
+                code: CodeReg::new(code),
+                id: IdReg::new(id),
+                data,
+            })
+        } else {
+            None
+        }
+    }
+
     /// Creates a new remote frame with configurable data length code (DLC).
     ///
     /// # Panics
@@ -232,7 +246,7 @@ impl CodeReg {
     const RTR_MASK: u32 = 0b1_u32 << Self::RTR_SHIFT;
 
     const DLC_SHIFT: u32 = 16;
-    const DLC_MASK: u32 = 0b111_u32 << Self::DLC_SHIFT;
+    const DLC_MASK: u32 = 0b1111_u32 << Self::DLC_SHIFT;
 
     const TIMESTAMP_SHIFT: u32 = 0;
     const TIMESTAMP_MASK: u32 = 0xFFFF_u32 << Self::TIMESTAMP_SHIFT;
@@ -487,15 +501,3 @@ macro_rules! data_from_array {
 }
 
 data_from_array!(0, 1, 2, 3, 4, 5, 6, 7, 8);
-
-impl From<&[u8]> for Data {
-    #[inline(always)]
-    fn from(slice: &[u8]) -> Self {
-        let mut bytes = [0; 8];
-        bytes[..slice.len()].copy_from_slice(slice);
-        Self {
-            len: slice.len() as u8,
-            bytes,
-        }
-    }
-}
