@@ -26,7 +26,7 @@ fn features_10xx() -> HashSet<String> {
 }
 
 fn features_11xx() -> HashSet<String> {
-    ["imxrt1160", "imxrt1170"]
+    ["imxrt1160", "imxrt1170", "imxrt1180"]
         .iter()
         .map(ToString::to_string)
         .collect()

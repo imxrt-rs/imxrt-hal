@@ -30,6 +30,11 @@ jobs:
         - imxrt-ral/imxrt1176_cm7
         - imxrt-ral/imxrt1189_cm7
         - imxrt-ral/imxrt1189_cm33
+        # We can't lint the 1180 through lint-log. The logging package
+        # requires DMA-capable LPUART, and there's no DMA support for
+        # the 1180.
+        - imxrt-ral/imxrt1189_cm33,imxrt1180
+        - imxrt-ral/imxrt1189_cm7,imxrt1180
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
