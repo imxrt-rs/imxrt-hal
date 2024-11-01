@@ -13,6 +13,11 @@
 
 **BREAKING** `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
 
+## [0.5.8] 2024-11-01
+
+Fix LPUART baud rate computation, ensuring updates to SBR when evaluating other
+best baud rates. Change how larger LPUART baud rates can be computed.
+
 ## [0.5.7] 2024-08-05
 
 Add PLL7 (USB2 PLL) for 1060 MCUs.
@@ -333,7 +338,8 @@ The release includes 0.3.1 fixes.
 
 Prior releases were not tracked with a changelog entry.
 
-[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.6...main
+[Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.8...main
+[0.5.8]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.7...0.5.8
 [0.5.7]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.6...0.5.7
 [0.5.6]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.5...0.5.6
 [0.5.5]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.4...0.5.5
