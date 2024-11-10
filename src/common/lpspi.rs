@@ -810,8 +810,7 @@ impl<P, const N: u8> Lpspi<P, N> {
             return Ok(());
         }
 
-        let mut transaction = Transaction::new_words(data)?;
-        transaction.bit_order = self.bit_order();
+        let transaction = self.bus_transaction(data)?;
 
         self.wait_for_transmit_fifo_space()?;
         self.enqueue_transaction(&transaction);
@@ -835,9 +834,8 @@ impl<P, const N: u8> Lpspi<P, N> {
             return Ok(());
         }
 
-        let mut transaction = Transaction::new_words(data)?;
+        let mut transaction = self.bus_transaction(data)?;
         transaction.receive_data_mask = true;
-        transaction.bit_order = self.bit_order();
 
         self.wait_for_transmit_fifo_space()?;
         self.enqueue_transaction(&transaction);
@@ -991,6 +989,13 @@ impl<P, const N: u8> Lpspi<P, N> {
             dbt: dbt as u8,
             sckdiv: sckdiv as u8,
         }
+    }
+
+    /// Produce a transaction that considers bus-managed software state.
+    pub(crate) fn bus_transaction<W>(&self, words: &[W]) -> Result<Transaction, LpspiError> {
+        let mut transaction = Transaction::new_words(words)?;
+        transaction.bit_order = self.bit_order();
+        Ok(transaction)
     }
 }
 
