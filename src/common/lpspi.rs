@@ -261,6 +261,10 @@ pub struct Transaction {
     /// `Transaction`, one that had [`continuous`](Self::continuous) set.
     /// The default value is `false`.
     pub continuing: bool,
+    /// The SPI mode for the transaction.
+    ///
+    /// By default, this is [`MODE_0`].
+    pub mode: Mode,
     /// Selects the hardware-managed peripheral chip select for the transaction.
     ///
     /// See [`Pcs`] for more information.
@@ -323,6 +327,7 @@ impl Transaction {
                 frame_size: frame_size - 1,
                 continuing: false,
                 continuous: false,
+                mode: MODE_0,
                 pcs: Default::default(),
             })
         } else {
@@ -752,10 +757,10 @@ impl<P, const N: u8> Lpspi<P, N> {
     ///
     /// You're responsible for making sure there's space in the transmit
     /// FIFO for this transaction command.
-    pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
+    pub fn enqueue_transaction(&self, transaction: &Transaction) {
         ral::write_reg!(ral::lpspi, self.lpspi, TCR,
-            CPOL: if self.mode.polarity == Polarity::IdleHigh { CPOL_1 } else { CPOL_0 },
-            CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition { CPHA_1 } else { CPHA_0 },
+            CPOL: if transaction.mode.polarity == Polarity::IdleHigh { CPOL_1 } else { CPOL_0 },
+            CPHA: if transaction.mode.phase == Phase::CaptureOnSecondTransition { CPHA_1 } else { CPHA_0 },
             PRESCALE: PRESCALE_0,
             PCS: PCS_0,
             WIDTH: WIDTH_0,
@@ -991,6 +996,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     pub(crate) fn bus_transaction<W>(&self, words: &[W]) -> Result<Transaction, LpspiError> {
         let mut transaction = Transaction::new_words(words)?;
         transaction.bit_order = self.bit_order();
+        transaction.mode = self.mode;
         Ok(transaction)
     }
 }
