@@ -98,7 +98,8 @@ pub type SpiPcs0 = iomuxc::gpio_ad::GPIO_AD_29;
 const SPI_INSTANCE: u8 = 1;
 
 #[cfg(feature = "spi")]
-pub type Spi = hal::lpspi::Lpspi<SpiPins, { SPI_INSTANCE }>;
+pub type Spi =
+    hal::lpspi::ExclusiveDevice<SpiPins, SpiPcs0, crate::PanickingDelay, { SPI_INSTANCE }>;
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
 
@@ -209,15 +210,15 @@ impl Specifics {
                 sdi: iomuxc.gpio_ad.p31,
                 sck: iomuxc.gpio_ad.p28,
             };
-            crate::iomuxc::lpspi::prepare({
-                let pcs0: &mut SpiPcs0 = &mut iomuxc.gpio_ad.p29;
-                pcs0
-            });
-            let mut spi = Spi::new(lpspi1, pins);
+            let mut spi = hal::lpspi::Lpspi::new(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
-            spi
+            hal::lpspi::ExclusiveDevice::with_pcs0(
+                spi,
+                iomuxc.gpio_ad.p29,
+                crate::PanickingDelay::new(),
+            )
         };
         #[cfg(not(feature = "spi"))]
         #[allow(clippy::let_unit_value)]

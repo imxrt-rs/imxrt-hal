@@ -11,14 +11,25 @@
 //!
 //! # Chip selects (CS) for SPI peripherals
 //!
-//! The iMXRT SPI peripherals have one or more peripheral-controlled chip selects (CS). Using
-//! the peripheral-controlled CS means that you do not need a GPIO to coordinate SPI operations.
-//! Blocking full-duplex transfers and writes will observe an asserted chip select while data
-//! frames are exchanged / written.
+//! The iMXRT SPI peripherals have one or more hardware-controlled chip selects (CS). Using
+//! the hardware-controlled CS means that you do not need a GPIO to coordinate SPI operations.
+//! The driver nevertheless works with software-managed CS.
 //!
-//! This driver generally assumes that you're using the peripheral-controlled chip select. If
-//! you instead want to manage chip select in software, you should be able to multiplex your own
-//! pins, then construct the driver [`without_pins`](Lpspi::without_pins).
+//! Generally, an [`Lpspi`] is capable of using hardware-controlled chip select. However, it only
+//! does that if you mux your hardware chip select to the LPSPI instance. The device abstractions
+//! provided by this module can do that for you.
+//!
+//! Here's how [`Lpspi`] implements the various embedded-hal traits, when considering hardware-
+//! and software-managed CS.
+//!
+//! - `Lpspi` implements the blocking traits defined in embedded-hal 0.2. If you're using
+//!   software-managed CS, then you're responsible for toggling your pin as required. If you're
+//!   using hardware-managed CS, then the transactions performed on the bus use [`Pcs::Pcs0`]
+//!   by default, or the value you supply to [`Lpspi::set_chip_select`].
+//! - `Lpspi` implements the blocking *bus* traits defined in embedded-hal 1.0. If you're using
+//!   software-managed CS, you can use `embedded-hal-bus` to pair `Lpspi` with a GPIO. If you're
+//!   using hardware-managed CS, use [`ExclusiveDevice`] or [`RefCellDevice`] to pair `Lpspi`
+//!   with a chip select.
 //!
 //! # Device support
 //!
@@ -83,7 +94,11 @@
 //! [`Transaction`] exposes the continuous / continuing flags, so you're free to model advanced
 //! transactions. However, keep in mind that disabling the receiver during a continuous transaction
 //! may not work as expected.
+//!
+//! Since we cannot reliably use continuous transactions, we're forced to use a single transaction to
+//! realize `SpiDevice` transactions. This limits the total number of bytes transacted to 512.
 
+use core::cell::RefCell;
 use core::marker::PhantomData;
 use core::task::Poll;
 
@@ -91,6 +106,7 @@ use crate::iomuxc::{consts, lpspi};
 use crate::ral;
 
 pub use eh02::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+use eh1::spi::Operation;
 
 /// Data direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -308,11 +324,8 @@ impl Transaction {
     }
 
     fn new_words<W>(data: &[W]) -> Result<Self, LpspiError> {
-        if let Ok(frame_size) = u16::try_from(8 * core::mem::size_of_val(data)) {
-            Transaction::new(frame_size)
-        } else {
-            Err(LpspiError::FrameSize)
-        }
+        let bits = frame_size(data)?;
+        Transaction::new(bits)
     }
 
     fn frame_size_valid(frame_size: u16) -> bool {
@@ -354,6 +367,14 @@ impl Transaction {
             Err(LpspiError::FrameSize)
         }
     }
+}
+
+fn frame_size<W>(buffer: &[W]) -> Result<u16, LpspiError> {
+    let bits = size_of_val(buffer)
+        .checked_mul(8)
+        .ok_or(LpspiError::FrameSize)?;
+
+    bits.try_into().map_err(|_| LpspiError::FrameSize)
 }
 
 /// Sets the clock speed parameters.
@@ -474,6 +495,7 @@ pub struct Lpspi<P, const N: u8> {
     bit_order: BitOrder,
     mode: Mode,
     ccr_cache: CcrCache,
+    pcs: Pcs,
 }
 
 /// Pins for a LPSPI device.
@@ -549,6 +571,7 @@ impl<P, const N: u8> Lpspi<P, N> {
             mode: MODE_0,
             // Once we issue a reset, below, these are zero.
             ccr_cache: CcrCache { dbt: 0, sckdiv: 0 },
+            pcs: Pcs::default(),
         };
 
         // Reset and disable
@@ -630,6 +653,23 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// and writes, set the configuration as part of the transaction.
     pub fn set_bit_order(&mut self, bit_order: BitOrder) {
         self.bit_order = bit_order;
+    }
+
+    /// Returns the hardware chip select used by the LPSPI bus.
+    ///
+    /// If you have not multiplexed a PCS pin to this LPSPI instance,
+    /// then the value is meaningless.
+    pub fn chip_select(&self) -> Pcs {
+        self.pcs
+    }
+
+    /// Set the hardware chip select used by this LPSPI bus.
+    ///
+    /// This affects all subsequent transactions. In-flight transactions,
+    /// if any, are not affected. If you have not multiplexed a PCS pin
+    /// to this LPSPI instance, then this configuration is meaningless.
+    pub fn set_chip_select(&mut self, pcs: Pcs) {
+        self.pcs = pcs;
     }
 
     /// Temporarily disable the LPSPI peripheral.
@@ -751,6 +791,43 @@ impl<P, const N: u8> Lpspi<P, N> {
         .await
     }
 
+    /// Spin until the transmit FIFO is empty.
+    ///
+    /// Check for both receive and transmit errors, allowing us to realize
+    /// a flush operation.
+    async fn spin_for_fifo_exhaustion(&self) -> Result<(), LpspiError> {
+        core::future::poll_fn(|_| {
+            let status = self.status();
+
+            if status.intersects(Status::RECEIVE_ERROR) {
+                return Poll::Ready(Err(LpspiError::Fifo(Direction::Rx)));
+            }
+            if status.intersects(Status::TRANSMIT_ERROR) {
+                return Poll::Ready(Err(LpspiError::Fifo(Direction::Tx)));
+            }
+
+            // Contributor testing reveals that the busy flag may not set once
+            // the TX FIFO is filled. This means a sequence like
+            //
+            //     lpspi.write(&[...])?;
+            //     lpspi.flush()?;
+            //
+            // could pass through flush without observing busy. Therefore, we
+            // also check the FIFO contents. Even if the peripheral isn't
+            // busy, the FIFO should be non-empty.
+            //
+            // We can't just rely on the FIFO contents, since the FIFO could be
+            // empty while the transaction is completing. (There's data in the
+            // shift register, and PCS is still asserted.)
+            if !status.intersects(Status::BUSY) && self.fifo_status().is_empty(Direction::Tx) {
+                return Poll::Ready(Ok(()));
+            }
+
+            Poll::Pending
+        })
+        .await
+    }
+
     pub(crate) fn wait_for_transmit_fifo_space(&self) -> Result<(), LpspiError> {
         crate::spin_on(self.spin_for_fifo_space())
     }
@@ -841,80 +918,7 @@ impl<P, const N: u8> Lpspi<P, N> {
 
     /// Wait for all ongoing transactions to be finished.
     pub fn flush(&mut self) -> Result<(), LpspiError> {
-        loop {
-            let status = self.status();
-
-            if status.intersects(Status::RECEIVE_ERROR) {
-                return Err(LpspiError::Fifo(Direction::Rx));
-            }
-            if status.intersects(Status::TRANSMIT_ERROR) {
-                return Err(LpspiError::Fifo(Direction::Tx));
-            }
-
-            // Contributor testing reveals that the busy flag may not set once
-            // the TX FIFO is filled. This means a sequence like
-            //
-            //     lpspi.write(&[...])?;
-            //     lpspi.flush()?;
-            //
-            // could pass through flush without observing busy. Therefore, we
-            // also check the FIFO contents. Even if the peripheral isn't
-            // busy, the FIFO should be non-empty.
-            //
-            // We can't just rely on the FIFO contents, since the FIFO could be
-            // empty while the transaction is completing. (There's data in the
-            // shift register, and PCS is still asserted.)
-            if !status.intersects(Status::BUSY) && self.fifo_status().is_empty(Direction::Tx) {
-                return Ok(());
-            }
-        }
-    }
-
-    fn exchange<W: Word>(&mut self, data: &mut [W]) -> Result<(), LpspiError> {
-        if data.is_empty() {
-            return Ok(());
-        }
-
-        let transaction = self.bus_transaction(data)?;
-
-        self.wait_for_transmit_fifo_space()?;
-        self.enqueue_transaction(&transaction);
-
-        let word_count = word_count(data);
-        let (tx, rx) = transfer_in_place(data);
-
-        crate::spin_on(futures::future::try_join(
-            self.spin_transmit(tx, word_count),
-            self.spin_receive(rx, word_count),
-        ))
-        .inspect_err(|_| self.recover_from_error())?;
-
-        self.flush()?;
-
-        Ok(())
-    }
-
-    fn write_no_read<W: Word>(&mut self, data: &[W]) -> Result<(), LpspiError> {
-        if data.is_empty() {
-            return Ok(());
-        }
-
-        let mut transaction = self.bus_transaction(data)?;
-        transaction.receive_data_mask = true;
-
-        self.wait_for_transmit_fifo_space()?;
-        self.enqueue_transaction(&transaction);
-
-        let word_count = word_count(data);
-        let tx = TransmitBuffer::new(data);
-
-        crate::spin_on(self.spin_transmit(tx, word_count)).inspect_err(|_| {
-            self.recover_from_error();
-        })?;
-
-        self.flush()?;
-
-        Ok(())
+        crate::spin_on(self.spin_for_fifo_exhaustion())
     }
 
     /// Let the peripheral act as a DMA source.
@@ -1051,10 +1055,128 @@ impl<P, const N: u8> Lpspi<P, N> {
 
     /// Produce a transaction that considers bus-managed software state.
     pub(crate) fn bus_transaction<W>(&self, words: &[W]) -> Result<Transaction, LpspiError> {
-        let mut transaction = Transaction::new_words(words)?;
+        self.transaction_for_frame_size(frame_size(words)?)
+    }
+
+    fn transaction_for_frame_size(&self, bits: u16) -> Result<Transaction, LpspiError> {
+        let mut transaction = Transaction::new(bits)?;
         transaction.bit_order = self.bit_order();
         transaction.mode = self.mode;
+        transaction.pcs = self.chip_select();
         Ok(transaction)
+    }
+
+    fn operation_transaction<W>(
+        &self,
+        op: &Operation<W>,
+    ) -> Result<Option<Transaction>, LpspiError> {
+        let buffer: &[W] = match op {
+            Operation::DelayNs(_) => return Ok(None),
+            Operation::Read(buffer) => buffer,
+            Operation::Write(buffer) => buffer,
+            Operation::TransferInPlace(buffer) => buffer,
+            Operation::Transfer(recv, send) => {
+                if recv.len() > send.len() {
+                    recv
+                } else {
+                    send
+                }
+            }
+        };
+        Transaction::new_words(buffer).map(Some)
+    }
+
+    /// Perform one or more operations within an LPSPI transaction.
+    ///
+    /// If you know there's no delay operations, you may pass in a no-op / panicking
+    /// `delay_ns`. Any operation with an empty buffer is skipped.
+    ///
+    /// The implementation executes all operations within a single, non-continuous
+    /// transaction. We can't use a continuous transaction without risking the
+    /// undocumented hardware errata described in this module's documentation.
+    /// This means users are limited to transacting 512 bytes across all operations.
+    ///
+    /// This will not flush when complete. Callers may need to do that themselves.
+    fn transact<W: Word>(
+        &mut self,
+        operations: &mut [Operation<W>],
+        mut delay_ns: impl FnMut(u32),
+    ) -> Result<(), LpspiError> {
+        if operations.is_empty() {
+            return Ok(());
+        }
+
+        for op in operations.iter() {
+            self.operation_transaction(op)?;
+        }
+
+        let len = operations.len();
+        let (tx_schedule, rx_schedule) = schedule(operations);
+
+        let tx_state_machine = async {
+            let mut continuing = false;
+            for mut desc in tx_schedule {
+                // This delay is blocking, so it stalls the RX state machine.
+                // We need to prevent an RX FIFO overrun while we're stalled.
+                // To prevent that, we'll flush the transmit FIFO before delaying.
+                // This increases the transaction latency when writes operations
+                // preceded delay operations, but this is acceptable; our delay
+                // is "at least" best effort.
+                if let Some(ns) = desc.delay_ns() {
+                    self.spin_for_fifo_exhaustion().await?;
+                    delay_ns(ns);
+                    continue;
+                }
+
+                let mut transaction = self.transaction_for_frame_size(desc.frame_size)?;
+                transaction.continuous = len > 1;
+                transaction.continuing = continuing;
+
+                self.spin_for_fifo_space().await?;
+                self.enqueue_transaction(&transaction);
+
+                let total_words = desc.total_words();
+                if let Some(tx_buffer) = desc.tx_buffer.take() {
+                    self.spin_transmit(tx_buffer, desc.tx_words).await?;
+                }
+
+                self.spin_transmit(TransmitDummies, total_words.saturating_sub(desc.tx_words))
+                    .await?;
+
+                continuing = true;
+            }
+
+            let fin = self.transaction_for_frame_size(8).unwrap();
+            self.spin_for_fifo_space().await?;
+            self.enqueue_transaction(&fin);
+
+            Ok(())
+        };
+
+        let rx_state_machine = async {
+            for mut desc in rx_schedule {
+                if desc.is_delay_ns() {
+                    continue;
+                }
+                let total_words = desc.total_words();
+                if let Some(rx_buffer) = desc.rx_buffer.take() {
+                    self.spin_receive(rx_buffer, desc.rx_words).await?;
+                }
+
+                self.spin_receive(ReceiveDummies, total_words.saturating_sub(desc.rx_words))
+                    .await?;
+            }
+            Ok(())
+        };
+
+        // Run those transmit and receive state machines together.
+        crate::spin_on(futures::future::try_join(
+            tx_state_machine,
+            rx_state_machine,
+        ))
+        .inspect_err(|_| self.recover_from_error())?;
+
+        Ok(())
     }
 }
 
@@ -1295,6 +1417,10 @@ impl<'a, const N: u8> Disabled<'a, N> {
     }
 }
 
+fn no_delay_needed(_: u32) {
+    unreachable!()
+}
+
 impl<const N: u8> Drop for Disabled<'_, N> {
     fn drop(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: self.men as u32);
@@ -1305,7 +1431,7 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for Lpspi<P, N> {
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u8]) -> Result<&'a [u8], Self::Error> {
-        self.exchange(words)?;
+        self.transact(&mut [Operation::TransferInPlace(words)], no_delay_needed)?;
         Ok(words)
     }
 }
@@ -1314,7 +1440,7 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for Lpspi<P, N> {
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u16]) -> Result<&'a [u16], Self::Error> {
-        self.exchange(words)?;
+        self.transact(&mut [Operation::TransferInPlace(words)], no_delay_needed)?;
         Ok(words)
     }
 }
@@ -1323,7 +1449,7 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for Lpspi<P, N> {
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u32]) -> Result<&'a [u32], Self::Error> {
-        self.exchange(words)?;
+        self.transact(&mut [Operation::TransferInPlace(words)], no_delay_needed)?;
         Ok(words)
     }
 }
@@ -1332,7 +1458,9 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u8> for Lpspi<P, N> {
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
-        self.write_no_read(words)
+        self.transact(&mut [Operation::Write(words)], no_delay_needed)?;
+        self.flush()?;
+        Ok(())
     }
 }
 
@@ -1340,7 +1468,9 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u16> for Lpspi<P, N> {
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
-        self.write_no_read(words)
+        self.transact(&mut [Operation::Write(words)], no_delay_needed)?;
+        self.flush()?;
+        Ok(())
     }
 }
 
@@ -1348,7 +1478,90 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N> {
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
-        self.write_no_read(words)
+        self.transact(&mut [Operation::Write(words)], no_delay_needed)?;
+        self.flush()?;
+        Ok(())
+    }
+}
+
+impl eh1::spi::Error for LpspiError {
+    fn kind(&self) -> eh1::spi::ErrorKind {
+        use eh1::spi::ErrorKind;
+
+        match self {
+            LpspiError::Fifo(Direction::Rx) => ErrorKind::Overrun,
+            _ => ErrorKind::Other,
+        }
+    }
+}
+
+impl<P, const N: u8> eh1::spi::ErrorType for Lpspi<P, N> {
+    type Error = LpspiError;
+}
+
+impl<P, const N: u8> eh1::spi::SpiBus<u8> for Lpspi<P, N> {
+    fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Read(words)], no_delay_needed)
+    }
+
+    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Write(words)], no_delay_needed)
+    }
+
+    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Transfer(read, write)], no_delay_needed)
+    }
+
+    fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::TransferInPlace(words)], no_delay_needed)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Lpspi::flush(self)
+    }
+}
+
+impl<P, const N: u8> eh1::spi::SpiBus<u16> for Lpspi<P, N> {
+    fn read(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Read(words)], no_delay_needed)
+    }
+
+    fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Write(words)], no_delay_needed)
+    }
+
+    fn transfer(&mut self, read: &mut [u16], write: &[u16]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Transfer(read, write)], no_delay_needed)
+    }
+
+    fn transfer_in_place(&mut self, words: &mut [u16]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::TransferInPlace(words)], no_delay_needed)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Lpspi::flush(self)
+    }
+}
+
+impl<P, const N: u8> eh1::spi::SpiBus<u32> for Lpspi<P, N> {
+    fn read(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Read(words)], no_delay_needed)
+    }
+
+    fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Write(words)], no_delay_needed)
+    }
+
+    fn transfer(&mut self, read: &mut [u32], write: &[u32]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::Transfer(read, write)], no_delay_needed)
+    }
+
+    fn transfer_in_place(&mut self, words: &mut [u32]) -> Result<(), Self::Error> {
+        self.transact(&mut [Operation::TransferInPlace(words)], no_delay_needed)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Lpspi::flush(self)
     }
 }
 
@@ -1450,6 +1663,222 @@ impl Word for u32 {
     }
 }
 
+/// Low-level description of an LPSPI operation.
+///
+/// Interpretation depends on the TX or RX state machine.
+/// The TX state machine interprets a delay using `delay_ns`.
+struct Descriptor<'w, W> {
+    frame_size: u16,
+    tx_buffer: Option<TransmitBuffer<'w, W>>,
+    tx_words: usize,
+    rx_buffer: Option<ReceiveBuffer<'w, W>>,
+    rx_words: usize,
+}
+
+impl<W> Descriptor<'_, W> {
+    /// The number of 32-bit LPSPI words transacted by this descriptor.
+    fn total_words(&self) -> usize {
+        self.tx_words.max(self.rx_words)
+    }
+
+    fn is_delay_ns(&self) -> bool {
+        self.tx_buffer.is_none() && self.rx_buffer.is_none()
+    }
+
+    /// Returns the delay, in nanoseconds, if this descriptor describes
+    /// a delay operation.
+    fn delay_ns(&self) -> Option<u32> {
+        if self.is_delay_ns() {
+            Some(self.tx_words as u32)
+        } else {
+            None
+        }
+    }
+}
+
+/// The schedule splits the user's SPI operations for transmit
+/// and receive state machines.
+///
+/// Use [`schedule`] to produce two of these, one per state machine.
+/// Then, execute the [`Descriptor`]s produced by the schedule.
+struct Schedule<'o, 'w, W: 'static> {
+    /// Our position in the user's (slice of) operations.
+    ptr: *mut Operation<'w, W>,
+    /// The address at the end of the slice.
+    end: *mut Operation<'w, W>,
+    /// Capture the lifetime of the (slice of) operations.
+    _lt: PhantomData<&'o mut [Operation<'w, W>]>,
+}
+
+impl<'w, W: Word + 'static> Iterator for Schedule<'_, 'w, W> {
+    type Item = Descriptor<'w, W>;
+    fn next(&mut self) -> Option<Self::Item> {
+        // Safety: We do not form multiple mutable references to either
+        // the Operation variants, or the mutable buffers wrapped by Operation
+        // variants. The pointer-len bounds are in bounds, and their lifetimes
+        // do not exceed the lifetimes of the derived slices.
+        unsafe {
+            if self.ptr == self.end {
+                return None;
+            }
+
+            /// Access a pointer to the inner slice.
+            fn decay_ref_ref_slice<W>(buffer: &&[W]) -> *const W {
+                buffer.as_ptr()
+            }
+
+            /// Access the pointer to the inner slice.
+            fn decay_ref_mut_slice<W>(buffer: &&mut [W]) -> *mut W {
+                // Safety: see inline notes.
+                unsafe {
+                    // Dispell the shared reference which conveys that the
+                    // inner exclusive reference cannot be mutated.
+                    let buffer: *const &mut [W] = buffer;
+
+                    // We know that &mut [T] -> *mut [T] is OK.
+                    // Perform the same cast through the outer pointer.
+                    let buffer: *const *mut [W] = buffer.cast();
+
+                    // Get the fat pointer. We're reading initialized
+                    // and aligned memory, since the outer shared
+                    // reference must be initialized and aligned.
+                    let buffer: *mut [W] = buffer.read();
+
+                    // This is
+                    //
+                    //  impl *mut [T] { pub fn as_ptr(self) }
+                    //
+                    // which isn't yet stable.
+                    buffer as *mut W
+                }
+            }
+
+            // Shared reference to an operation from
+            // a mutable pointer. This shared reference
+            // can exist with other shared references.
+            // (We'll also never form multiple shared
+            // references, since iteration of all schedules
+            // occurs in the same execution context).
+            let op: &Operation<'w, W> = &*self.ptr;
+            let descriptor = match op {
+                // Sentinel handled by the transmit state machine.
+                Operation::DelayNs(ns) => Descriptor {
+                    frame_size: 0,
+                    tx_buffer: None,
+                    tx_words: *ns as _,
+                    rx_buffer: None,
+                    rx_words: 0,
+                },
+                Operation::Read(buffer) => {
+                    let frame_size = frame_size(buffer).unwrap();
+                    let len = buffer.len();
+                    let word_count = word_count(buffer);
+                    let buffer: *mut W = decay_ref_mut_slice(buffer);
+                    let rx = ReceiveBuffer::from_raw(buffer, len);
+                    Descriptor {
+                        frame_size,
+                        tx_buffer: None,
+                        tx_words: 0,
+                        rx_buffer: Some(rx),
+                        rx_words: word_count,
+                    }
+                }
+                Operation::Write(buffer) => {
+                    let frame_size = frame_size(buffer).unwrap();
+                    let len = buffer.len();
+                    let word_count = word_count(buffer);
+                    let buffer = decay_ref_ref_slice(buffer);
+                    let tx = TransmitBuffer::from_raw(buffer, len);
+                    Descriptor {
+                        frame_size,
+                        tx_buffer: Some(tx),
+                        tx_words: word_count,
+                        rx_buffer: None,
+                        rx_words: 0,
+                    }
+                }
+                Operation::TransferInPlace(buffer) => {
+                    let frame_size = frame_size(buffer).unwrap();
+                    let len = buffer.len();
+                    let word_count = word_count(buffer);
+                    let buffer: *mut W = decay_ref_mut_slice(buffer);
+                    let tx = TransmitBuffer::from_raw(buffer, len);
+                    let rx = ReceiveBuffer::from_raw(buffer, len);
+                    Descriptor {
+                        frame_size,
+                        tx_buffer: Some(tx),
+                        tx_words: word_count,
+                        rx_buffer: Some(rx),
+                        rx_words: word_count,
+                    }
+                }
+                Operation::Transfer(recv, send) => {
+                    let frame_size = if recv.len() > send.len() {
+                        frame_size(recv)
+                    } else {
+                        frame_size(send)
+                    }
+                    .unwrap();
+
+                    let recv_words = word_count(recv);
+                    let send_words = word_count(send);
+
+                    let rx_len = recv.len();
+                    let tx_len = send.len();
+
+                    let recv: *mut W = decay_ref_mut_slice(recv);
+                    let send: *const W = decay_ref_ref_slice(send);
+
+                    let rx = ReceiveBuffer::from_raw(recv, rx_len);
+                    let tx = TransmitBuffer::from_raw(send, tx_len);
+
+                    Descriptor {
+                        frame_size,
+                        tx_buffer: Some(tx),
+                        tx_words: send_words,
+                        rx_buffer: Some(rx),
+                        rx_words: recv_words,
+                    }
+                }
+            };
+
+            // Remains in bounds, or points to the element at the
+            // end of the slice. Bounds check is at the top.
+            self.ptr = self.ptr.add(1);
+
+            Some(descriptor)
+        }
+    }
+}
+
+/// Produce a schedule, one for each TX and RX state machine.
+fn schedule<'ops, 'w, W: Word + 'static>(
+    ops: &mut [Operation<'w, W>],
+) -> (Schedule<'ops, 'w, W>, Schedule<'ops, 'w, W>) {
+    // Safety: We track the lifetime of all memory through
+    // the schedule. Inspection of the Schedule interation
+    // shows that we never form an exclusive reference to
+    // any memory.
+    unsafe {
+        let len = ops.len();
+        let ptr = ops.as_mut_ptr();
+        let end = ptr.add(len);
+
+        (
+            Schedule {
+                ptr,
+                end,
+                _lt: PhantomData,
+            },
+            Schedule {
+                ptr,
+                end,
+                _lt: PhantomData,
+            },
+        )
+    }
+}
+
 /// Generalizes how we prepare LPSPI words for transmit.
 trait TransmitData {
     /// Get the next word for the transmit FIFO.
@@ -1473,15 +1902,10 @@ struct TransmitBuffer<'a, W> {
     _buffer: PhantomData<&'a [W]>,
 }
 
-impl<'a, W> TransmitBuffer<'a, W>
+impl<W> TransmitBuffer<'_, W>
 where
     W: Word,
 {
-    fn new(buffer: &'a [W]) -> Self {
-        // Safety: pointer offset math meets expectations.
-        unsafe { Self::from_raw(buffer.as_ptr(), buffer.len()) }
-    }
-
     /// # Safety
     ///
     /// `ptr + len` must be in bounds, or at the end of the
@@ -1540,12 +1964,6 @@ impl<W> ReceiveBuffer<'_, W>
 where
     W: Word,
 {
-    #[cfg(test)] // TODO(mciantyre) remove once needed in non-test code.
-    fn new(buffer: &mut [W]) -> Self {
-        // Safety: pointer offset math meets expectations.
-        unsafe { Self::from_raw(buffer.as_mut_ptr(), buffer.len()) }
-    }
-
     /// # Safety
     ///
     /// `ptr + len` must be in bounds, or at the end of the
@@ -1595,7 +2013,7 @@ where
 struct ReceiveDummies;
 
 impl ReceiveData for ReceiveDummies {
-    fn next_word(&mut self, _: u32) {}
+    fn next_word(&mut self, _: BitOrder, _: u32) {}
 }
 
 /// Computes how may Ws fit inside a LPSPI word.
@@ -1608,21 +2026,215 @@ const fn word_count<W: Word>(words: &[W]) -> usize {
     words.len().div_ceil(per_word::<W>())
 }
 
-/// Creates the transmit and receive buffer objects for an
-/// in-place transfer.
-fn transfer_in_place<W: Word>(buffer: &mut [W]) -> (TransmitBuffer<'_, W>, ReceiveBuffer<'_, W>) {
-    // Safety: pointer math meets expectation. This produces
-    // a mutable and immutable pointer to the same mutable buffer.
-    // Module inspection shows that these pointers never become
-    // references. We maintain the lifetime across both objects,
-    // so the buffer isn't dropped.
-    unsafe {
-        let len = buffer.len();
-        let ptr = buffer.as_mut_ptr();
-        (
-            TransmitBuffer::from_raw(ptr, len),
-            ReceiveBuffer::from_raw(ptr, len),
-        )
+/// A SPI device with hardware-managed chip select.
+///
+/// `B` is the [`Lpspi`] bus type. The helper types
+/// [`ExclusiveDevice`] and [`RefCellDevice`] impose
+/// a specific kind of `B`. Prefer those types.
+///
+/// `CS` is your chip select pad. If you don't care about
+/// pin type states, you can elide this type using the
+/// various `without_pin` constructors.
+///
+/// `D` is a delay type. If you don't need a delay, you can
+/// use a dummy type that panics or does nothing.
+pub struct Device<B, CS, D: eh1::delay::DelayNs> {
+    bus: B,
+    cs: CS,
+    delay: D,
+    pcs: Pcs,
+}
+
+impl<B, CS, D: eh1::delay::DelayNs> Device<B, CS, D> {
+    /// Borrow the bus.
+    pub fn bus(&self) -> &B {
+        &self.bus
+    }
+    /// Exclusively borrow the bus.
+    ///
+    /// Be careful when changing bus settings, especially the
+    /// chip select.
+    pub fn bus_mut(&mut self) -> &mut B {
+        &mut self.bus
+    }
+
+    /// Release the device components.
+    ///
+    /// The components' states are unspecified.
+    pub fn release(self) -> (B, CS, D) {
+        (self.bus, self.cs, self.delay)
+    }
+
+    fn with_pin(bus: B, mut cs: CS, delay: D, pcs: Pcs) -> Self
+    where
+        CS: lpspi::Pin,
+    {
+        lpspi::prepare(&mut cs);
+        Self::new(bus, cs, delay, pcs)
+    }
+
+    fn new(bus: B, cs: CS, delay: D, pcs: Pcs) -> Self {
+        Self {
+            bus,
+            cs,
+            delay,
+            pcs,
+        }
+    }
+}
+
+impl<B, CS, D: eh1::delay::DelayNs> eh1::spi::ErrorType for Device<B, CS, D> {
+    type Error = LpspiError;
+}
+
+/// A device that owns the LPSPI bus.
+///
+/// Use this is you have no other SPI peripherals connected
+/// to your bus.
+pub type ExclusiveDevice<P, CS, D, const N: u8> = Device<Lpspi<P, N>, CS, D>;
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> ExclusiveDevice<P, CS, D, N> {
+    /// Construct the device with its PCS0 hardware chip select.
+    pub fn with_pcs0(mut bus: Lpspi<P, N>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
+    {
+        bus.set_chip_select(Pcs::Pcs0);
+        Self::with_pin(bus, cs, delay, Pcs::Pcs0)
+    }
+    /// Construct the device with its PCS1 hardware chip select.
+    pub fn with_pcs1(mut bus: Lpspi<P, N>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs1>,
+    {
+        bus.set_chip_select(Pcs::Pcs1);
+        Self::with_pin(bus, cs, delay, Pcs::Pcs1)
+    }
+    /// Construct the device with its PCS2 hardware chip select.
+    pub fn with_pcs2(mut bus: Lpspi<P, N>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs2>,
+    {
+        bus.set_chip_select(Pcs::Pcs2);
+        Self::with_pin(bus, cs, delay, Pcs::Pcs2)
+    }
+    /// Construct the device with its PCS3 hardware chip select.
+    pub fn with_pcs3(mut bus: Lpspi<P, N>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs3>,
+    {
+        bus.set_chip_select(Pcs::Pcs3);
+        Self::with_pin(bus, cs, delay, Pcs::Pcs3)
+    }
+}
+
+impl<P, D: eh1::delay::DelayNs, const N: u8> ExclusiveDevice<P, (), D, N> {
+    /// Construct the device without a chip select type state.
+    ///
+    /// You're responsible for muxing the chip select pin to the hardware.
+    pub fn without_pin(mut bus: Lpspi<P, N>, pcs: Pcs, delay: D) -> Self {
+        bus.set_chip_select(pcs);
+        Self::new(bus, (), delay, pcs)
+    }
+}
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> eh1::spi::SpiDevice<u8>
+    for ExclusiveDevice<P, CS, D, N>
+{
+    fn transaction(&mut self, operations: &mut [Operation<'_, u8>]) -> Result<(), Self::Error> {
+        self.bus.transact(operations, |ns| self.delay.delay_ns(ns))
+    }
+}
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> eh1::spi::SpiDevice<u16>
+    for ExclusiveDevice<P, CS, D, N>
+{
+    fn transaction(&mut self, operations: &mut [Operation<'_, u16>]) -> Result<(), Self::Error> {
+        self.bus.transact(operations, |ns| self.delay.delay_ns(ns))
+    }
+}
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> eh1::spi::SpiDevice<u32>
+    for ExclusiveDevice<P, CS, D, N>
+{
+    fn transaction(&mut self, operations: &mut [Operation<'_, u32>]) -> Result<(), Self::Error> {
+        self.bus.transact(operations, |ns| self.delay.delay_ns(ns))
+    }
+}
+
+/// A device that can share the LPSPI bus in a single context.
+///
+/// Use this if you can share all of your devices within a single
+/// execution context.
+pub type RefCellDevice<'a, P, CS, D, const N: u8> = Device<&'a RefCell<Lpspi<P, N>>, CS, D>;
+
+impl<'a, P, CS, D: eh1::delay::DelayNs, const N: u8> RefCellDevice<'a, P, CS, D, N> {
+    /// Construct the device with its PCS0 hardware chip select.
+    pub fn with_pcs0(bus: &'a RefCell<Lpspi<P, N>>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
+    {
+        Self::with_pin(bus, cs, delay, Pcs::Pcs0)
+    }
+    /// Construct the device with its PCS1 hardware chip select.
+    pub fn with_pcs1(bus: &'a RefCell<Lpspi<P, N>>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs1>,
+    {
+        Self::with_pin(bus, cs, delay, Pcs::Pcs1)
+    }
+    /// Construct the device with its PCS2 hardware chip select.
+    pub fn with_pcs2(bus: &'a RefCell<Lpspi<P, N>>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs2>,
+    {
+        Self::with_pin(bus, cs, delay, Pcs::Pcs2)
+    }
+    /// Construct the device with its PCS3 hardware chip select.
+    pub fn with_pcs3(bus: &'a RefCell<Lpspi<P, N>>, cs: CS, delay: D) -> Self
+    where
+        CS: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs3>,
+    {
+        Self::with_pin(bus, cs, delay, Pcs::Pcs3)
+    }
+}
+
+impl<'a, P, D: eh1::delay::DelayNs, const N: u8> RefCellDevice<'a, P, (), D, N> {
+    /// Construct the device without a chip select type state.
+    ///
+    /// You're responsible for muxing the chip select pin to the hardware.
+    pub fn without_pin(bus: &'a RefCell<Lpspi<P, N>>, pcs: Pcs, delay: D) -> Self {
+        Self::new(bus, (), delay, pcs)
+    }
+}
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> eh1::spi::SpiDevice<u8>
+    for RefCellDevice<'_, P, CS, D, N>
+{
+    fn transaction(&mut self, operations: &mut [Operation<'_, u8>]) -> Result<(), Self::Error> {
+        let mut bus = self.bus.borrow_mut();
+        bus.set_chip_select(self.pcs);
+        bus.transact(operations, |ns| self.delay.delay_ns(ns))
+    }
+}
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> eh1::spi::SpiDevice<u16>
+    for RefCellDevice<'_, P, CS, D, N>
+{
+    fn transaction(&mut self, operations: &mut [Operation<'_, u16>]) -> Result<(), Self::Error> {
+        let mut bus = self.bus.borrow_mut();
+        bus.set_chip_select(self.pcs);
+        bus.transact(operations, |ns| self.delay.delay_ns(ns))
+    }
+}
+
+impl<P, CS, D: eh1::delay::DelayNs, const N: u8> eh1::spi::SpiDevice<u32>
+    for RefCellDevice<'_, P, CS, D, N>
+{
+    fn transaction(&mut self, operations: &mut [Operation<'_, u32>]) -> Result<(), Self::Error> {
+        let mut bus = self.bus.borrow_mut();
+        bus.set_chip_select(self.pcs);
+        bus.transact(operations, |ns| self.delay.delay_ns(ns))
     }
 }
 
@@ -1630,11 +2242,206 @@ fn transfer_in_place<W: Word>(buffer: &mut [W]) -> (TransmitBuffer<'_, W>, Recei
 /// in firmware. Consider running these with miri to evaluate unsafe usages.
 #[cfg(test)]
 mod tests {
+    use super::{Descriptor, Operation, ReceiveBuffer, TransmitBuffer, Word};
+
+    impl<W> ReceiveBuffer<'_, W>
+    where
+        W: Word,
+    {
+        fn new(buffer: &mut [W]) -> Self {
+            // Safety: pointer offset math meets expectations.
+            unsafe { Self::from_raw(buffer.as_mut_ptr(), buffer.len()) }
+        }
+    }
+
+    impl<W> TransmitBuffer<'_, W>
+    where
+        W: Word,
+    {
+        fn new(buffer: &[W]) -> Self {
+            // Safety: pointer offset math meets expectations.
+            unsafe { Self::from_raw(buffer.as_ptr(), buffer.len()) }
+        }
+    }
+
+    /// Creates the transmit and receive buffer objects for an
+    /// in-place transfer.
+    fn transfer_in_place<W: Word>(
+        buffer: &mut [W],
+    ) -> (TransmitBuffer<'_, W>, ReceiveBuffer<'_, W>) {
+        // Safety: pointer math meets expectation. This produces
+        // a mutable and immutable pointer to the same mutable buffer.
+        // Module inspection shows that these pointers never become
+        // references. We maintain the lifetime across both objects,
+        // so the buffer isn't dropped.
+        unsafe {
+            let len = buffer.len();
+            let ptr = buffer.as_mut_ptr();
+            (
+                TransmitBuffer::from_raw(ptr, len),
+                ReceiveBuffer::from_raw(ptr, len),
+            )
+        }
+    }
+
+    #[test]
+    fn schedule_tranfers_in_place_interleaved_u32() {
+        const FST: [u32; 7] = [3_u32, 4, 5, 6, 7, 8, 9];
+        let mut fst = FST;
+
+        const SND: [u32; 2] = [55_u32, 77];
+        let mut snd = SND;
+
+        const TRD: [u32; 9] = [87_u32, 88, 89, 90, 91, 92, 93, 94, 95];
+        let mut trd = TRD;
+
+        let mut operations = [
+            Operation::TransferInPlace(&mut fst),
+            Operation::TransferInPlace(&mut snd),
+            Operation::TransferInPlace(&mut trd),
+        ];
+
+        let initials: [&[u32]; 3] = [&FST, &SND, &TRD];
+
+        let (tx_sched, rx_sched) = super::schedule(&mut operations);
+        let sched = tx_sched.zip(rx_sched);
+
+        let update = |elem| elem + 1;
+        for ((tx_desc, rx_desc), initial) in sched.zip(initials) {
+            let mut tx = tx_desc.tx_buffer.unwrap();
+            let mut rx = rx_desc.rx_buffer.unwrap();
+
+            for elem in initial {
+                assert_eq!(*elem, tx.next_read().unwrap());
+                rx.next_write(update(*elem));
+            }
+        }
+
+        assert_eq!(fst, FST.map(update));
+        assert_eq!(snd, SND.map(update));
+        assert_eq!(trd, TRD.map(update));
+    }
+
+    #[test]
+    fn schedule_tranfers_scattered_u32() {
+        const DATA: [u32; 7] = [3_u32, 4, 5, 6, 7, 8, 9];
+        let mut incoming = [0; 13];
+        let outgoing = DATA;
+
+        let mut operations = [Operation::Transfer(&mut incoming, &outgoing)];
+
+        let (tx_sched, rx_sched) = super::schedule(&mut operations);
+        let sched = tx_sched.zip(rx_sched);
+
+        let update = |elem| elem + 13;
+        for (tx_desc, rx_desc) in sched {
+            let mut tx = tx_desc.tx_buffer.unwrap();
+            let mut rx = rx_desc.rx_buffer.unwrap();
+
+            for elem in DATA {
+                assert_eq!(elem, tx.next_read().unwrap());
+                rx.next_write(update(elem));
+            }
+
+            for rest in 249..255 {
+                rx.next_write(rest)
+            }
+        }
+
+        assert_eq!(
+            incoming,
+            [16, 17, 18, 19, 20, 21, 22, 249, 250, 251, 252, 253, 254]
+        );
+    }
+
+    #[test]
+    fn schedule_writes_u32() {
+        const DATA: [u32; 7] = [3_u32, 4, 5, 6, 7, 8, 9];
+        let outgoing = DATA;
+
+        let mut operations = [Operation::Write(&outgoing)];
+
+        let (mut tx_sched, mut rx_sched) = super::schedule(&mut operations);
+
+        fn assert_descriptor(desc: &mut Descriptor<u32>) {
+            let mut tx_buffer = desc.tx_buffer.take().unwrap();
+            for elem in DATA {
+                assert_eq!(elem, tx_buffer.next_read().unwrap())
+            }
+            assert_eq!(desc.tx_words, 7);
+            assert_eq!(desc.rx_words, 0);
+            assert!(desc.rx_buffer.is_none());
+        }
+
+        let mut tx_desc = tx_sched.next().unwrap();
+        assert_descriptor(&mut tx_desc);
+
+        let mut rx_desc = rx_sched.next().unwrap();
+        assert_descriptor(&mut rx_desc);
+
+        assert!(tx_sched.next().is_none());
+        assert!(rx_sched.next().is_none());
+    }
+
+    #[test]
+    fn schedule_reads_u32() {
+        let mut incoming = [0; 13];
+        let mut operations = [Operation::Read(&mut incoming)];
+
+        let (mut tx_sched, mut rx_sched) = super::schedule(&mut operations);
+
+        fn assert_descriptor(desc: &mut Descriptor<u32>, fill: &[u32]) {
+            let mut rx_buffer = desc.rx_buffer.take().unwrap();
+            for &elem in fill {
+                rx_buffer.next_write(elem);
+            }
+            assert_eq!(desc.rx_words, 13);
+            assert_eq!(desc.tx_words, 0);
+            assert!(desc.tx_buffer.is_none());
+        }
+
+        let mut tx_desc = tx_sched.next().unwrap();
+        assert_descriptor(&mut tx_desc, &[22, 33, 44, 55, 66]);
+
+        let mut rx_desc = rx_sched.next().unwrap();
+        assert_descriptor(&mut rx_desc, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+
+        assert!(tx_sched.next().is_none());
+        assert!(rx_sched.next().is_none());
+
+        assert_eq!(incoming, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    }
+
+    #[test]
+    fn schedule_delay_ns() {
+        let mut operations: [Operation<u32>; 1] = [Operation::DelayNs(314)];
+        let (mut tx_sched, mut rx_sched) = super::schedule(&mut operations);
+
+        let tx = tx_sched.next().unwrap();
+        assert!(tx.rx_buffer.is_none());
+        assert!(tx.tx_buffer.is_none());
+        assert_eq!(tx.rx_words, 0);
+        assert_eq!(tx.tx_words, 314);
+        assert!(tx.is_delay_ns());
+        assert_eq!(tx.delay_ns(), Some(314));
+
+        let rx = rx_sched.next().unwrap();
+        assert!(rx.rx_buffer.is_none());
+        assert!(rx.tx_buffer.is_none());
+        assert_eq!(rx.rx_words, 0);
+        assert_eq!(rx.tx_words, 314);
+        assert!(rx.is_delay_ns());
+        assert_eq!(rx.delay_ns(), Some(314));
+
+        assert!(tx_sched.next().is_none());
+        assert!(rx_sched.next().is_none());
+    }
+
     #[test]
     fn transfer_in_place_interleaved_read_write_u32() {
         const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
         let mut buffer = BUFFER;
-        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+        let (mut tx, mut rx) = transfer_in_place(&mut buffer);
 
         for elem in BUFFER {
             assert_eq!(elem, tx.next_read().unwrap());
@@ -1648,7 +2455,7 @@ mod tests {
     fn transfer_in_place_interleaved_write_read_u32() {
         const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
         let mut buffer = BUFFER;
-        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+        let (mut tx, mut rx) = transfer_in_place(&mut buffer);
 
         for elem in BUFFER {
             rx.next_write(elem + 1);
@@ -1662,7 +2469,7 @@ mod tests {
     fn transfer_in_place_bulk_read_write_u32() {
         const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
         let mut buffer = BUFFER;
-        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+        let (mut tx, mut rx) = transfer_in_place(&mut buffer);
 
         for elem in BUFFER {
             assert_eq!(elem, tx.next_read().unwrap());
@@ -1678,7 +2485,7 @@ mod tests {
     fn transfer_in_place_bulk_write_read_u32() {
         const BUFFER: [u32; 9] = [42u32, 43, 44, 45, 46, 47, 48, 49, 50];
         let mut buffer = BUFFER;
-        let (mut tx, mut rx) = super::transfer_in_place(&mut buffer);
+        let (mut tx, mut rx) = transfer_in_place(&mut buffer);
 
         for elem in BUFFER {
             rx.next_write(elem + 1);
