@@ -13,7 +13,7 @@ keywords = { workspace = true }
 categories = { workspace = true }
 license = { workspace = true }
 edition = { workspace = true }
-version = "0.5.7"
+version = "0.6.0"
 
 [dependencies.cfg-if]
 version = "1.0"
@@ -106,14 +106,14 @@ members = ["board", "logging"]
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
-imxrt-iomuxc = "0.2.1"
-imxrt-hal = { version = "0.5", path = "." }
+imxrt-iomuxc = "0.3.0"
+imxrt-hal = { version = "0.6", path = "." }
 imxrt-log = { path = "logging", default-features = false, features = [
     "log",
     "lpuart",
     "usbd",
 ] }
-imxrt-ral = "0.5"
+imxrt-ral = "0.6"
 imxrt-rt = "0.1"
 imxrt-usbd = "0.3"
 
@@ -204,3 +204,9 @@ name = "rtic_defmt_rtt"
 [[example]]
 name = "hal_i2c_lcd1602"
 required-features = ["board/lcd1602"]
+
+[patch.crates-io.imxrt-ral]
+git = "https://github.com/imxrt-rs/imxrt-ral"
+
+[patch.crates-io.imxrt-iomuxc]
+git = "https://github.com/imxrt-rs/imxrt-iomuxc"

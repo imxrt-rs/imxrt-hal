@@ -1,6 +1,6 @@
 [package]
 name = "imxrt-log"
-version = "0.1.2"
+version = "0.2.0"
 edition = { workspace = true }
 description = "Logging extensions for i.MX RT processors."
 repository = { workspace = true }

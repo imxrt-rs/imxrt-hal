@@ -5,6 +5,11 @@
 **BREAKING** Update `imxrt-usbd` to 0.3. Users are required to update to
 `usb-device` 0.3 and its compatible dependencies.
 
+**BREAKING** Update imxrt-rs dependencies that affect the public API:
+
+- `imxrt-ral` 0.6
+- `iomxrt-iomuxc` 0.3
+
 **BREAKING** Remove deprecated APIs
 
 - `clko2::Selection::TracClk`

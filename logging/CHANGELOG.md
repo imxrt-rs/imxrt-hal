@@ -5,6 +5,7 @@
 **BREAKING** Integrate breaking dependencies for the USB back-end:
 
 - `imxrt-usbd` 0.3
+- `imxrt-hal` 0.6
 - `usb-device` 0.3
 - `usbd-serial` 0.2
 
