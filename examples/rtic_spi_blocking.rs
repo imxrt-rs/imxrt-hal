@@ -71,13 +71,13 @@ mod app {
                     spi.write(&U32_WORDS).unwrap();
                 }
 
-                const U8_WORDS: [u8; 7] = [0xDEu8, 0xAD, 0xBE, 0xEF, 0xA5, 0x00, 0x1D];
+                const U8_WORDS: [u8; 7] = [0xDEu8, 0xAD, 0xBE, 0xEF, 0x12, 0x34, 0x56];
                 for bit_order in BIT_ORDERS {
                     spi.set_bit_order(bit_order);
                     spi.write(&U8_WORDS).unwrap();
                 }
 
-                const U16_WORDS: [u16; 3] = [0xDEADu16, 0xBEEF, 0xA5A5];
+                const U16_WORDS: [u16; 3] = [0xDEADu16, 0xBEEF, 0x1234];
                 for bit_order in BIT_ORDERS {
                     spi.set_bit_order(bit_order);
                     spi.write(&U16_WORDS).unwrap();
@@ -91,22 +91,53 @@ mod app {
             spi.set_bit_order(hal::lpspi::BitOrder::Msb);
 
             // Make sure concatenated elements look correct on the wire.
+            // Make sure we can read those elements.
             {
-                use eh02::blocking::spi::Write;
+                use eh02::blocking::spi::Transfer;
+                use hal::lpspi::BitOrder;
 
-                spi.write(&[1u8, 2, 3]).unwrap();
-                spi.write(&[1u8, 2, 3, 4]).unwrap();
-                spi.write(&[1u8, 2, 3, 4, 5]).unwrap();
-                spi.write(&[1u8, 2, 3, 4, 5, 6]).unwrap();
-                spi.write(&[1u8, 2, 3, 4, 5, 6, 7]).unwrap();
+                macro_rules! transfer_test {
+                    ($arr:expr, $bit_order:expr) => {
+                        let bit_order_name = match $bit_order {
+                            BitOrder::Msb => "MSB",
+                            BitOrder::Lsb => "LSB",
+                        };
 
-                spi.write(&[0x0102u16, 0x0304, 0x0506]).unwrap();
-                spi.write(&[0x0102u16, 0x0304, 0x0506, 0x0708]).unwrap();
-                spi.write(&[0x0102u16, 0x0304, 0x0506, 0x0708, 0x090A])
-                    .unwrap();
+                        spi.set_bit_order($bit_order);
+                        let mut buffer = $arr;
+                        spi.transfer(&mut buffer).unwrap();
+                        defmt::assert_eq!(buffer, $arr, "Bit Order {}", bit_order_name);
+                    };
+                }
 
-                spi.write(&[0x01020304u32, 0x05060708, 0x090A0B0C]).unwrap();
+                transfer_test!([1u8, 2, 3], BitOrder::Msb);
+                transfer_test!([1u8, 2, 3], BitOrder::Lsb);
 
+                transfer_test!([1u8, 2, 3, 4], BitOrder::Msb);
+                transfer_test!([1u8, 2, 3, 4], BitOrder::Lsb);
+
+                transfer_test!([1u8, 2, 3, 4, 5], BitOrder::Msb);
+                transfer_test!([1u8, 2, 3, 4, 5], BitOrder::Lsb);
+
+                transfer_test!([1u8, 2, 3, 4, 5, 6], BitOrder::Msb);
+                transfer_test!([1u8, 2, 3, 4, 5, 6], BitOrder::Lsb);
+
+                transfer_test!([1u8, 2, 3, 4, 5, 6, 7], BitOrder::Msb);
+                transfer_test!([1u8, 2, 3, 4, 5, 6, 7], BitOrder::Lsb);
+
+                transfer_test!([0x0102u16, 0x0304, 0x0506], BitOrder::Msb);
+                transfer_test!([0x0102u16, 0x0304, 0x0506], BitOrder::Lsb);
+
+                transfer_test!([0x0102u16, 0x0304, 0x0506, 0x0708], BitOrder::Msb);
+                transfer_test!([0x0102u16, 0x0304, 0x0506, 0x0708], BitOrder::Lsb);
+
+                transfer_test!([0x0102u16, 0x0304, 0x0506, 0x0708, 0x090A], BitOrder::Msb);
+                transfer_test!([0x0102u16, 0x0304, 0x0506, 0x0708, 0x090A], BitOrder::Lsb);
+
+                transfer_test!([0x01020304u32, 0x05060708, 0x090A0B0C], BitOrder::Msb);
+                transfer_test!([0x01020304u32, 0x05060708, 0x090A0B0C], BitOrder::Lsb);
+
+                spi.set_bit_order(BitOrder::Msb);
                 delay();
             }
 

@@ -13,6 +13,11 @@
 
 **BREAKING** `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
 
+Correct LPSPI receive operations. Previously, `u8` and `u16` elements received
+by the driver were returned out of order to the user. This release fixes the
+ordering. If you were correcting this behavior in application code, you'll need
+to remove that behavior before adopting this fix.
+
 ## [0.5.8] 2024-11-01
 
 Fix LPUART baud rate computation, ensuring updates to SBR when evaluating other

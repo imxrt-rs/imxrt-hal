@@ -716,7 +716,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     async fn spin_receive(&self, mut data: impl ReceiveData, len: usize) -> Result<(), LpspiError> {
         for _ in 0..len {
             let word = self.spin_for_word().await?;
-            data.next_word(word);
+            data.next_word(self.bit_order, word);
         }
         Ok(())
     }
@@ -1256,8 +1256,10 @@ trait Word: Copy + Into<u32> + TryFrom<u32> {
     fn pack_word(bit_order: BitOrder, provider: impl FnMut() -> Option<Self>) -> u32;
 
     /// Given a word, deconstruct the word and call the
-    /// `sink` with those components.
-    fn unpack_word(word: u32, sink: impl FnMut(Self));
+    /// `sink` with those components. `valid_bytes` conveys
+    /// how many bytes in `word` are valid. It's never more
+    /// than four, and it's never zero.
+    fn unpack_word(word: u32, bit_order: BitOrder, valid_bytes: usize, sink: impl FnMut(Self));
 }
 
 impl Word for u8 {
@@ -1283,9 +1285,14 @@ impl Word for u8 {
 
         word
     }
-    fn unpack_word(word: u32, mut sink: impl FnMut(Self)) {
-        for offset in [0, 8, 16, 24] {
-            sink((word >> offset) as u8);
+    fn unpack_word(word: u32, bit_order: BitOrder, valid_bytes: usize, mut sink: impl FnMut(Self)) {
+        let mut offsets = [0usize, 8, 16, 24];
+        let valid = &mut offsets[..valid_bytes];
+        if matches!(bit_order, BitOrder::Msb) {
+            valid.reverse();
+        }
+        for offset in valid {
+            sink((word >> *offset) as u8);
         }
     }
 }
@@ -1313,9 +1320,16 @@ impl Word for u16 {
 
         word
     }
-    fn unpack_word(word: u32, mut sink: impl FnMut(Self)) {
-        for offset in [0, 16] {
-            sink((word >> offset) as u16);
+    fn unpack_word(word: u32, bit_order: BitOrder, valid_bytes: usize, mut sink: impl FnMut(Self)) {
+        let mut offsets = [0usize, 16];
+        let valid = &mut offsets[..valid_bytes / 2];
+
+        if matches!(bit_order, BitOrder::Msb) {
+            valid.reverse();
+        }
+
+        for offset in valid {
+            sink((word >> *offset) as u16);
         }
     }
 }
@@ -1324,7 +1338,7 @@ impl Word for u32 {
     fn pack_word(_: BitOrder, mut provider: impl FnMut() -> Option<Self>) -> u32 {
         provider().unwrap_or(0)
     }
-    fn unpack_word(word: u32, mut sink: impl FnMut(Self)) {
+    fn unpack_word(word: u32, _: BitOrder, _: usize, mut sink: impl FnMut(Self)) {
         sink(word)
     }
 }
@@ -1340,7 +1354,7 @@ trait TransmitData {
 /// Generalizes how we save LPSPI data into memory.
 trait ReceiveData {
     /// Invoked each time we read data from the queue.
-    fn next_word(&mut self, word: u32);
+    fn next_word(&mut self, bit_order: BitOrder, word: u32);
 }
 
 /// Transmit data from a buffer.
@@ -1442,14 +1456,22 @@ where
             }
         }
     }
+
+    fn array_len(&self) -> usize {
+        // Safety: end and ptr derive from the same allocation.
+        // We always update ptr in multiples of it's object type.
+        // The end pointer is always at a higher address in memory.
+        unsafe { self.end.byte_offset_from(self.ptr) as _ }
+    }
 }
 
 impl<W> ReceiveData for ReceiveBuffer<'_, W>
 where
     W: Word,
 {
-    fn next_word(&mut self, word: u32) {
-        W::unpack_word(word, |elem| self.next_write(elem));
+    fn next_word(&mut self, bit_order: BitOrder, word: u32) {
+        let valid_bytes = self.array_len().min(size_of_val(&word));
+        W::unpack_word(word, bit_order, valid_bytes, |elem| self.next_write(elem));
     }
 }
 
@@ -1645,7 +1667,10 @@ mod tests {
 
     #[test]
     fn receive_buffer() {
-        use super::{ReceiveBuffer, ReceiveData};
+        // See notes in transmit_buffer test to understand MSB and LSB
+        // transformations.
+
+        use super::{BitOrder::*, ReceiveBuffer, ReceiveData};
 
         //
         // u8
@@ -1653,10 +1678,21 @@ mod tests {
 
         let mut buffer = [0u8; 9];
         let mut rx = ReceiveBuffer::new(&mut buffer);
-        rx.next_word(0xDEADBEEF);
-        rx.next_word(0xAD1CAC1D);
-        rx.next_word(0x04030201);
-        rx.next_word(0x55555555);
+        rx.next_word(Msb, 0xDEADBEEF);
+        rx.next_word(Msb, 0xAD1CAC1D);
+        rx.next_word(Msb, 0x04030201);
+        rx.next_word(Msb, 0x55555555);
+        assert_eq!(
+            buffer,
+            [0xDE, 0xAD, 0xBE, 0xEF, 0xAD, 0x1C, 0xAC, 0x1D, 0x01]
+        );
+
+        let mut buffer = [0u8; 9];
+        let mut rx = ReceiveBuffer::new(&mut buffer);
+        rx.next_word(Lsb, 0xDEADBEEF);
+        rx.next_word(Lsb, 0xAD1CAC1D);
+        rx.next_word(Lsb, 0x04030201);
+        rx.next_word(Lsb, 0x55555555);
         assert_eq!(
             buffer,
             [0xEF, 0xBE, 0xAD, 0xDE, 0x1D, 0xAC, 0x1C, 0xAD, 0x01]
@@ -1668,10 +1704,18 @@ mod tests {
 
         let mut buffer = [0u16; 5];
         let mut rx = ReceiveBuffer::new(&mut buffer);
-        rx.next_word(0xDEADBEEF);
-        rx.next_word(0xAD1CAC1D);
-        rx.next_word(0x04030201);
-        rx.next_word(0x55555555);
+        rx.next_word(Msb, 0xDEADBEEF);
+        rx.next_word(Msb, 0xAD1CAC1D);
+        rx.next_word(Msb, 0x04030201);
+        rx.next_word(Msb, 0x55555555);
+        assert_eq!(buffer, [0xDEAD, 0xBEEF, 0xAD1C, 0xAC1D, 0x0201]);
+
+        let mut buffer = [0u16; 5];
+        let mut rx = ReceiveBuffer::new(&mut buffer);
+        rx.next_word(Lsb, 0xDEADBEEF);
+        rx.next_word(Lsb, 0xAD1CAC1D);
+        rx.next_word(Lsb, 0x04030201);
+        rx.next_word(Lsb, 0x55555555);
         assert_eq!(buffer, [0xBEEF, 0xDEAD, 0xAC1D, 0xAD1C, 0x0201]);
 
         //
@@ -1680,10 +1724,18 @@ mod tests {
 
         let mut buffer = [0u32; 3];
         let mut rx = ReceiveBuffer::new(&mut buffer);
-        rx.next_word(0xDEADBEEF);
-        rx.next_word(0xAD1CAC1D);
-        rx.next_word(0x77777777);
-        rx.next_word(0x55555555);
+        rx.next_word(Msb, 0xDEADBEEF);
+        rx.next_word(Msb, 0xAD1CAC1D);
+        rx.next_word(Msb, 0x77777777);
+        rx.next_word(Msb, 0x55555555);
+        assert_eq!(buffer, [0xDEADBEEF, 0xAD1CAC1D, 0x77777777]);
+
+        let mut buffer = [0u32; 3];
+        let mut rx = ReceiveBuffer::new(&mut buffer);
+        rx.next_word(Lsb, 0xDEADBEEF);
+        rx.next_word(Lsb, 0xAD1CAC1D);
+        rx.next_word(Lsb, 0x77777777);
+        rx.next_word(Lsb, 0x55555555);
         assert_eq!(buffer, [0xDEADBEEF, 0xAD1CAC1D, 0x77777777]);
     }
 
