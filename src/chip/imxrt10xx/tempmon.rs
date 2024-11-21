@@ -130,6 +130,19 @@ pub struct TempMon {
     hot_temp: i32,
 }
 
+// We have to impl Debug by hand because the codegen'ed
+// ral::tempmon::TEMPMON doesn't impl Debug...
+impl core::fmt::Debug for TempMon {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // Note: omit `base` which doesn't impl Debug or Display
+        fmt.debug_struct("TempMon")
+            .field("scaler", &format_args!("{}", self.scaler))
+            .field("hot_count", &format_args!("{}", self.hot_count))
+            .field("hot_temp", &format_args!("{}", self.hot_temp))
+            .finish()
+    }
+}
+
 impl TempMon {
     /// Initialize and create the temperature monitor.
     pub fn new(tempmon: ral::tempmon::TEMPMON) -> Self {
