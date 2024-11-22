@@ -28,6 +28,8 @@ jobs:
         - imxrt-ral/imxrt1064
         - imxrt-ral/imxrt1176_cm4
         - imxrt-ral/imxrt1176_cm7
+        - imxrt-ral/imxrt1189_cm7
+        - imxrt-ral/imxrt1189_cm33
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
