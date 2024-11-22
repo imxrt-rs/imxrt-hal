@@ -8,7 +8,15 @@ pub mod ccm;
 pub mod dcdc;
 #[path = "dma.rs"]
 pub mod dma;
+#[path = "gpio.rs"]
+pub mod gpio;
+#[path = "pit.rs"]
+pub mod pit;
+#[path = "snvs.rs"]
+pub mod snvs;
 pub mod tempmon;
+#[path = "timer.rs"]
+pub mod timer;
 pub mod trng;
 
 cfg_if::cfg_if! {
@@ -25,7 +33,7 @@ cfg_if::cfg_if! {
 }
 
 pub(crate) mod reexports {
-    pub use super::{adc, dcdc, tempmon, trng};
+    pub use super::{adc, dcdc, gpio, pit, snvs, tempmon, timer, trng};
 }
 
 pub(crate) mod iomuxc {

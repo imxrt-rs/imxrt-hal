@@ -11,11 +11,21 @@ cfg_if::cfg_if! {
     if #[cfg(chip = "imxrt1170")] {
         #[path = "imxrt11xx/imxrt1170.rs"]
         pub(crate) mod config;
+
+        #[path = "gpio.rs"]
+        pub mod gpio;
+        #[path = "pit.rs"]
+        pub mod pit;
+        #[path = "snvs.rs"]
+        pub mod snvs;
+        #[path = "timer.rs"]
+        pub mod timer;
     }
 }
 
 pub(crate) mod reexports {
-    pub use super::usbphy;
+    #[cfg(chip = "imxrt1170")]
+    pub use super::{gpio, pit, snvs, timer, usbphy};
 }
 
 pub(crate) mod iomuxc {

@@ -5,7 +5,9 @@
 //!
 //! - the secure real-time counter (SRTC) in the low-power (LP) domain.
 
+#[path = "snvs/ral.rs"]
 mod ral;
+#[path = "snvs/srtc.rs"]
 pub mod srtc;
 
 pub use ral::lp::Core as LpCore;

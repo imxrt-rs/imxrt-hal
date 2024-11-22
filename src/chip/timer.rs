@@ -41,7 +41,7 @@
 //! possible drivers. You're encouraged to adapt [`RawCountDown`] to implement a
 //! `CountDown` implementation for your specific driver.
 
-use crate::{gpt, pit};
+use crate::{chip::pit, gpt};
 
 /// An interface for hardware timers.
 ///
