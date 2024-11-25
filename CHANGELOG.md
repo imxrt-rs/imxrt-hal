@@ -2,10 +2,14 @@
 
 ## [Unreleased]
 
+## [0.5.9] 2024-11-24
+
 Correct LPSPI receive operations. Previously, `u8` and `u16` elements received
 by the driver were returned out of order to the user. This release fixes the
 ordering. If you were correcting this behavior in application code, you'll need
 to remove that behavior before adopting this fix.
+
+Add `core::fmt::Debug` implementation for `TempMon`.
 
 ## [0.5.8] 2024-11-01
 
@@ -333,6 +337,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.8...main
+[0.5.9]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.8...0.5.9
 [0.5.8]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.7...0.5.8
 [0.5.7]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.6...0.5.7
 [0.5.6]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.5...0.5.6
