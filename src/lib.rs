@@ -208,6 +208,15 @@ pub mod dma {
     pub use crate::common::dma::*;
 }
 
+/// Ethernet MAC.
+///
+/// When enabled, this module re-exports types from the `imxrt-enet` package.
+/// It's compatible with `smoltcp`.
+#[cfg(feature = "imxrt-enet")]
+pub mod enet {
+    pub use imxrt_enet::*;
+}
+
 /// USB device.
 ///
 /// This module re-exports types from the `imxrt-usbd` package. The driver is compatible

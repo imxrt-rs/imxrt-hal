@@ -29,6 +29,8 @@ enum ClockSource {
     /// SYS_PLL1, with dedicated 1GHz frequency
     /// for ETH.
     SysPll1,
+    /// SYS_PLL1 with a fixed divide-by-2.
+    SysPll1Div2,
     /// SYS_PLL2, main PLL (no PFDs).
     SysPll2,
     /// SYS_PLL3, main PLL (no PDFs).
@@ -50,6 +52,7 @@ impl ClockSource {
         match (self, run_mode) {
             (ClockSource::ArmCm7, RunMode::Overdrive) => 1_000_000_000, // Brr...
             (ClockSource::SysPll1, _) => 1_000_000_000,
+            (ClockSource::SysPll1Div2, _) => 1_000_000_000 / 2,
             (ClockSource::SysPll2, _) => 528_000_000,
             (ClockSource::SysPll3, _) => 480_000_000,
             (ClockSource::XtalOsc24MHz, _) => XTAL_OSCILLATOR_HZ,
@@ -105,6 +108,12 @@ fn configure_clock_root(offset: usize, selection: &Selection, ccm: &mut CCM) {
         CLOCK_ROOT_STATUS0,
         CHANGING == 1
     ) {}
+}
+
+#[inline(always)]
+fn clock_root_on(offset: usize, ccm: &mut CCM, on: bool) {
+    let clock_root = &ccm.CLOCK_ROOT[offset];
+    ral::modify_reg!(ral::ccm::clockroot, clock_root, CLOCK_ROOT_CONTROL, OFF: !on as u32);
 }
 
 /// Set the bus clock (IPG) configuration for the Cortex M7.
@@ -262,4 +271,44 @@ where
     // LPSPI1 -> CLOCK_ROOT43
     // LPSPI6 -> CLOCK_ROOT48
     configure_clock_root(N as usize + 42, &lpspi_selection::<N>(run_mode), ccm);
+}
+
+pub const ENET1_FREQUENCY: u32 = 50_000_000;
+
+/// Turn on / off all ENET root clocks.
+pub fn enet_root_on(ccm: &mut CCM, on: bool) {
+    for offset in 51..=57 {
+        clock_root_on(offset, ccm, on);
+    }
+}
+
+/// Configure clocks for all-things ETH.
+///
+/// When this call returns, the ENET clock frequencies matches the value returned
+/// by [`enet_frequency`].
+pub fn configure_enet(run_mode: RunMode, ccm: &mut CCM) {
+    const ENET1_ROOT_CLOCK_SOURCE: ClockSource = ClockSource::SysPll1Div2;
+    let enet1_divider: u32 = ENET1_ROOT_CLOCK_SOURCE.frequency(run_mode) / ENET1_FREQUENCY;
+    configure_clock_root(
+        51,
+        &Selection {
+            mux: 4,
+            source: ENET1_ROOT_CLOCK_SOURCE,
+            divider: enet1_divider,
+        },
+        ccm,
+    );
+
+    // All other ENET clocks are at 24MHz.
+    for offset in 52..=57 {
+        configure_clock_root(
+            offset,
+            &Selection {
+                mux: 0b001,
+                source: ClockSource::XtalOsc24MHz,
+                divider: 1,
+            },
+            ccm,
+        );
+    }
 }

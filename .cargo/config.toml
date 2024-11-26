@@ -6,3 +6,4 @@ rustflags = [
     "-C", "link-arg=-error-limit=0",
     "-C", "link-arg=-nmagic",
 ]
+runner = ["probe-rs", "run", "--chip=mimxrt1170"]
