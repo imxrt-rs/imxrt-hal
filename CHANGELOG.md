@@ -22,6 +22,7 @@
 - There is no more `PCS0` type state associated with the LPSPI bus.
 
 Introduce a hardware chip select and SPI mode into each LPSPI transaction.
+Add an LPSPI configuration for hardware chip selects.
 
 **BREAKING** The following peripherals are not available on the 1180. Therefore,
 they are no longer considered common. However, their APIs are unchanged, and they
