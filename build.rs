@@ -53,7 +53,10 @@ fn main() {
     let all_features = features_enabled();
     let feat_chip: HashSet<_> = features_chip();
 
-    emit_cfg_checks("chip", feat_chip.iter());
+    emit_cfg_checks(
+        "chip",
+        feat_chip.iter().chain(std::iter::once(&"none".into())),
+    );
     emit_cfg_checks("family", ["none", "imxrt10xx", "imxrt11xx"]);
 
     let enabled_chip: Vec<_> = all_features.intersection(&feat_chip).collect();

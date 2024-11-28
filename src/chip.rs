@@ -1,15 +1,10 @@
-//! Chip family APIs.
-//!
-//! These submodules may vary by chip family.
+//! Chip APIs.
 
-cfg_if::cfg_if! {
-    if #[cfg(family = "imxrt10xx")] {
-        mod imxrt10xx;
-        pub use imxrt10xx::*;
-    } else if #[cfg(family = "imxrt11xx")] {
-        mod imxrt11xx;
-        pub use imxrt11xx::*;
-    } else {
-        mod none; pub use none::*;
-    }
-}
+#[cfg_attr(chip = "imxrt1010", path = "chip/imxrt1010.rs")]
+#[cfg_attr(chip = "imxrt1020", path = "chip/imxrt1020.rs")]
+#[cfg_attr(chip = "imxrt1060", path = "chip/imxrt1060.rs")]
+#[cfg_attr(chip = "imxrt1170", path = "chip/imxrt1170.rs")]
+#[cfg_attr(chip = "none", path = "chip/none.rs")]
+pub(crate) mod selection;
+
+pub use selection::*;

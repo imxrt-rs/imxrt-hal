@@ -299,7 +299,7 @@ pub mod iomuxc {
 }
 
 #[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
-pub use crate::chip::reexports::*;
+pub use crate::chip::*;
 
 /// Simply spin on the future.
 fn spin_on<F: core::future::Future>(future: F) -> F::Output {
