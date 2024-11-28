@@ -152,6 +152,26 @@ pub enum Pcs {
     Pcs3,
 }
 
+/// The hardware chip select polarity.
+///
+/// Use [`Disabled::set_chip_select_polarity`] to configure
+/// each chip select's polarity. Consult your peripheral's
+/// documentation to understand which polarity is expected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u32)]
+pub enum PcsPolarity {
+    /// The chip select is active low.
+    ///
+    /// When idle, the chip select is high. This is
+    /// the default state.
+    #[default]
+    ActiveLow,
+    /// The chip select is active high.
+    ///
+    /// When idle, the chip select is low.
+    ActiveHigh,
+}
+
 /// An LPSPI transaction definition.
 ///
 /// The transaction defines how many bits the driver sends or recieves.
@@ -1213,6 +1233,21 @@ impl<'a, const N: u8> Disabled<'a, N> {
     #[inline]
     pub fn set_peripheral_enable(&mut self, enable: bool) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, MASTER: !enable as u32);
+    }
+
+    /// Set the polarity for the `pcs` hardware chip select.
+    ///
+    /// By default, all polarities are active low.
+    #[inline]
+    pub fn set_chip_select_polarity(&mut self, pcs: Pcs, polarity: PcsPolarity) {
+        let pcspol = ral::read_reg!(ral::lpspi, self.lpspi, CFGR1, PCSPOL);
+        let mask = 1 << pcs as u32;
+        let pcspol = if polarity == PcsPolarity::ActiveHigh {
+            pcspol | mask
+        } else {
+            pcspol & !mask
+        };
+        ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, PCSPOL: pcspol);
     }
 }
 
