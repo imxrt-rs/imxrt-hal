@@ -46,6 +46,10 @@ mod board_impl;
 #[path = "imxrt1170evk-cm7.rs"]
 mod board_impl;
 
+#[cfg(board = "imxrt1180evk-cm33")]
+#[path = "imxrt1180evk-cm33.rs"]
+mod board_impl;
+
 #[cfg(feature = "lcd1602")]
 pub use lcd_1602_i2c as lcd1602;
 
@@ -58,6 +62,7 @@ pub use board_impl::*;
 ///
 /// This includes timers, DMA channels, and things
 /// that don't necessarily depend on a pinout.
+#[cfg(any(chip = "imxrt1010", chip = "imxrt1060", chip = "imxrt1170"))]
 pub struct Common {
     /// PIT channels.
     pub pit: hal::pit::Channels,
@@ -87,6 +92,7 @@ pub struct Common {
     pub usbphy1: UsbPhy1,
 }
 
+#[cfg(any(chip = "imxrt1010", chip = "imxrt1060", chip = "imxrt1170"))]
 impl Common {
     /// Prepares common resources.
     fn new() -> Self {
@@ -126,6 +132,16 @@ impl Common {
     }
 }
 
+#[cfg(chip = "imxrt1180")]
+#[non_exhaustive]
+pub struct Common {}
+
+#[cfg(chip = "imxrt1180")]
+impl Common {
+    fn new() -> Self {
+        Self {}
+    }
+}
 /// Board entrypoint.
 ///
 /// Use this to configure the hardware and acquire peripherals.
@@ -172,6 +188,9 @@ use iomuxc::imxrt1060::Pads;
 
 #[cfg(chip = "imxrt1170")]
 use iomuxc::imxrt1170::Pads;
+
+#[cfg(chip = "imxrt1180")]
+use iomuxc::imxrt1180::Pads;
 
 /// Convert the IOMUXC peripheral into pad objects.
 fn convert_iomuxc(_: ral::iomuxc::IOMUXC) -> Pads {

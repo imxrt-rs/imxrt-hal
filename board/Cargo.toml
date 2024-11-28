@@ -37,11 +37,11 @@ version = "0.7"
 features = ["critical-section-single-core"]
 
 # Use existing FCB, instead of defining inline.
-[target.thumbv7em-none-eabihf.dependencies.teensy4-fcb]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.teensy4-fcb]
 optional = true
 version = "0.3"
 
-[target.thumbv7em-none-eabihf.dependencies.teensy4-panic]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.teensy4-panic]
 optional = true
 version = "0.2"
 
@@ -55,35 +55,39 @@ version = "0.3"
 optional = true
 
 # knurling-rs style defmt-rtt with panic-probe
-[target.thumbv7em-none-eabihf.dependencies.defmt-rtt]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.defmt-rtt]
 version = "0.4"
 optional = true
 
-[target.thumbv7em-none-eabihf.dependencies.panic-probe]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.panic-probe]
 version = "0.3"
 features = ["print-defmt"]
 optional = true
 
 # alternative rtt target with panic printing
-[target.thumbv7em-none-eabihf.dependencies.rtt-target]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.rtt-target]
 version = "0.3"
 optional = true
 features = ["cortex-m"]
 
-[target.thumbv7em-none-eabihf.dependencies.panic-rtt-target]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.panic-rtt-target]
 version = "0.1"
 optional = true
 features = ["cortex-m"]
 
-[target.thumbv7em-none-eabihf.dependencies.imxrt1010evk-fcb]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.imxrt1010evk-fcb]
 version = "0.1"
 optional = true
 
-[target.thumbv7em-none-eabihf.dependencies.imxrt1060evk-fcb]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.imxrt1060evk-fcb]
 version = "0.1"
 optional = true
 
-[target.thumbv7em-none-eabihf.dependencies.imxrt1170evk-fcb]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.imxrt1170evk-fcb]
+version = "0.1"
+optional = true
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.imxrt1180evk-fcb]
 version = "0.1"
 optional = true
 
@@ -123,6 +127,14 @@ imxrt1170evk-cm7 = [
     "defmt-rtt",
     "panic-probe",
     "imxrt-log",
+]
+imxrt1180evk-cm33 = [
+    "imxrt-iomuxc/imxrt1180",
+    "imxrt-ral/imxrt1189_cm33",
+    "imxrt-hal/imxrt1180",
+    "imxrt1180evk-fcb",
+    "defmt-rtt",
+    "panic-probe",
 ]
 logging-defmt = ["imxrt-log/defmt"]
 

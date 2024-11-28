@@ -35,9 +35,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "imxrt1010evk",
             "imxrt1170evk-cm7",
             "imxrt1060evk",
+            "imxrt1180evk-cm33",
         ],
     );
-    emit_cfg_checks("chip", ["imxrt1010", "imxrt1060", "imxrt1170"]);
+    emit_cfg_checks("chip", ["imxrt1010", "imxrt1060", "imxrt1170", "imxrt1180"]);
 
     let features = extract_features();
     for feature in features {
@@ -83,6 +84,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1170evk-cm7\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
+            }
+            "imxrt1180evk_cm33" => {
+                imxrt_rt::RuntimeBuilder::from_flexspi(
+                    imxrt_rt::Family::Imxrt1180,
+                    16 * 1024 * 1024,
+                )
+                .rodata(imxrt_rt::Memory::Dtcm)
+                .build()?;
+                println!("cargo:rustc-cfg=board=\"imxrt1180evk-cm33\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1180\"");
             }
             _ => continue,
         }

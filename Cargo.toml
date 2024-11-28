@@ -115,7 +115,7 @@ imxrt-log = { path = "logging", default-features = false, features = [
     "usbd",
 ] }
 imxrt-ral = "0.6"
-imxrt-rt = "0.1"
+imxrt-rt = "0.1.5"
 imxrt-usbd = "0.3"
 
 [workspace.package]

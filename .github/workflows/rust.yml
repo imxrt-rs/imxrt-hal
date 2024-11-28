@@ -101,6 +101,19 @@ jobs:
     - name: Build examples
       run: cargo build ${{ matrix.config }} --target=thumbv7em-none-eabihf --release
 
+  # For now, we let the 1180EVK examples build with warnings. It's very WIP.
+  examples-1180-evk:
+    needs: lint-hal
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install a stable toolchain for the MCU target
+      run: rustup toolchain install stable --no-self-update --profile minimal --target thumbv8m.main-none-eabihf
+    - name: Build examples
+      run: >
+        cargo build --features=board/imxrt1180evk-cm33 --target=thumbv8m.main-none-eabihf --release
+        --example=hal_led
+
   # Run unit, integration tests.
   #
   # Select just one compatible RAL feature to pair with the HAL. The goal is to
