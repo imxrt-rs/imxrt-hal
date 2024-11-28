@@ -38,7 +38,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
     );
     emit_cfg_checks("chip", ["imxrt1010", "imxrt1060", "imxrt1170"]);
-    emit_cfg_checks("family", ["imxrt10xx", "imxrt11xx"]);
 
     let features = extract_features();
     for feature in features {
@@ -50,7 +49,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"teensy4\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1060\"");
-                println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
             }
             "imxrt1010evk" => {
                 RuntimeBuilder::from_flexspi(Family::Imxrt1010, 16 * 1024 * 1024)
@@ -64,7 +62,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1010evk\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1010\"");
-                println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
             }
             "imxrt1060evk" => {
                 RuntimeBuilder::from_flexspi(Family::Imxrt1060, 8 * 1024 * 1024)
@@ -73,7 +70,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1060evk\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1060\"");
-                println!("cargo:rustc-cfg=family=\"imxrt10xx\"");
             }
             // Dashes replaced by underscores when signaled through
             // environment variables.
@@ -87,7 +83,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build()?;
                 println!("cargo:rustc-cfg=board=\"imxrt1170evk-cm7\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
-                println!("cargo:rustc-cfg=family=\"imxrt11xx\"");
             }
             _ => continue,
         }

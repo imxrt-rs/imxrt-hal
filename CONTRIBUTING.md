@@ -125,10 +125,6 @@ includes the following processors:
 - i.MX RT 1061
 - i.MX RT 1062
 
-We try to use the term "family" to describe related chips across RMs. The 10xx
-family is for all i.MX RT 10xx MCUs, and the 11xx family is for the bigger,
-faster MCUs.
-
 ## Running hardware tests
 
 Our CI system ensures that the HAL build for all processor variants. But, we
@@ -142,12 +138,12 @@ Adding a new board lets you easily develop and test i.MX RT hardware
 peripherals, and makes it easier for others to contribute. If you run into
 issues, reach out to the imxrt-rs team.
 
-If the HAL doesn't yet support your chip (family), you'll first need to add
+If the HAL doesn't yet support your chip, you'll first need to add
 support for it. See the design section of this document for
 guidance. Essentially, you'll define a new chip configuration module under
 `chip`. Use the existing configuration modules as your guide.
 
-Once the HAL has a feature for a chip (family), you're ready to add a
+Once the HAL has a feature for a chip, you're ready to add a
 board. Here's the `board` files of interest:
 
 - `board/build.rs` will need a new mapping to a runtime configuration. See the
@@ -183,9 +179,8 @@ feature. Add this to your `.vscode/settings.json` at the repo root:
 
 ```
 
-Change the board feature when you're ready to work on a different chip
-(family). If there's no board for your chip (family), replace that feature with
-a RAL feature.
+Change the board feature when you're ready to work on a different chip.
+If there's no board for your chip, replace that feature with a RAL feature.
 
 ## Resources
 
@@ -196,7 +191,7 @@ For more resources, consult the resources section in [the imxrt-rs book]
 
 Here's a brief design overview of `imxrt-hal` (HAL). For more details, see
 comments in the source files. This section might help if you're adding new
-driver or chip family support.
+driver or chip support.
 
 The HAL tries to provide a consistent API for drivers across all i.MX RT
 chips. The best way to do that is to write a common driver. These drivers are
@@ -210,7 +205,7 @@ feature. If this isn't possible, split your modules across `common` and `chip`,
 and tie them together in the crate root.
 
 Modules under `chip` require both a RAL and a HAL feature. These modules
-implement chip and family features, which could be a single function or an entire
+implement chip features, which could be a single function or an entire
 driver. Modules under `chip` are allowed to use conditional compilation. Modules
 under `chip` are also allowed to reference the special chip configuration
 modules.
@@ -225,8 +220,8 @@ this madness (which we're looking to assess with this design):
   `#[cfg(...)]` to include a given chip configuration module. Then, separate
   modules -- possibly shared across different families -- are linked into this
   configuration module.
-- The approach consolidates the minimum set of behaviors needed for any chip
-  (family). To bring up a new chip (family), implement its configuration
+- The approach consolidates the minimum set of behaviors needed for any chip.
+  To bring up a new chip, implement its configuration
   module. There's no hard spec of what goes here, so what's expected of that
   configuration module is demonstrated by the existing configuration modules.
 

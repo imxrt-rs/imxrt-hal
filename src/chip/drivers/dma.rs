@@ -58,7 +58,7 @@ pub fn channels(_: ral::dma::DMA, _: ral::dmamux::DMAMUX) -> [Option<Channel>; C
 //
 use crate::dma::peripheral;
 
-#[cfg(family = "imxrt10xx")]
+#[cfg(any(chip = "imxrt1010", chip = "imxrt1020", chip = "imxrt1060"))]
 mod mappings {
     pub(super) const LPUART_DMA_RX_MAPPING: [u32; 8] = [3, 67, 5, 69, 7, 71, 9, 73];
     pub(super) const LPUART_DMA_TX_MAPPING: [u32; 8] = [2, 66, 4, 68, 6, 70, 8, 72];
@@ -68,7 +68,7 @@ mod mappings {
 
     pub(super) const ADC_DMA_RX_MAPPING: [u32; 2] = [24, 88];
 }
-#[cfg(family = "imxrt11xx")]
+#[cfg(chip = "imxrt1170")]
 mod mappings {
     pub(super) const LPUART_DMA_RX_MAPPING: [u32; 12] =
         [9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31];
@@ -248,10 +248,10 @@ impl<P, const N: u8> lpspi::Lpspi<P, N> {
 }
 
 // ADC
-#[cfg(family = "imxrt10xx")]
+#[cfg(any(chip = "imxrt1010", chip = "imxrt1020", chip = "imxrt1060"))]
 use crate::adc;
 
-#[cfg(family = "imxrt10xx")]
+#[cfg(any(chip = "imxrt1010", chip = "imxrt1020", chip = "imxrt1060"))]
 // Safety: an ADC source adapter points to a static register that's always valid
 // for reads.
 unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N> {

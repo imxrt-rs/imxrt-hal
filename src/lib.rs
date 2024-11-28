@@ -199,7 +199,7 @@ pub mod ccm {
 ///
 /// For examples of using DMA with a peripheral, see the peripheral's documentation.
 pub mod dma {
-    #[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
+    #[cfg_attr(chip = "none", allow(unused_imports))] // Nothing to export in this build.
     pub use crate::chip::dma::*;
     pub use crate::common::dma::*;
 }
@@ -293,12 +293,12 @@ pub mod usbd {
 /// [`Pads`](crate::iomuxc::pads::Pads) exposes all pads as individual, owned objects. Use [`configure`](crate::iomuxc::configure)
 /// to specify any pad configurations. Then use the pad object(s) to construct your driver.
 pub mod iomuxc {
-    #[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
+    #[cfg_attr(chip = "none", allow(unused_imports))] // Nothing to export in this build.
     pub use crate::chip::iomuxc::*;
     pub use imxrt_iomuxc::prelude::*;
 }
 
-#[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
+#[cfg_attr(chip = "none", allow(unused_imports))] // Nothing to export in this build.
 pub use crate::chip::*;
 
 /// Simply spin on the future.

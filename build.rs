@@ -57,7 +57,6 @@ fn main() {
         "chip",
         feat_chip.iter().chain(std::iter::once(&"none".into())),
     );
-    emit_cfg_checks("family", ["none", "imxrt10xx", "imxrt11xx"]);
 
     let enabled_chip: Vec<_> = all_features.intersection(&feat_chip).collect();
     assert!(
@@ -67,23 +66,8 @@ fn main() {
     );
 
     if let Some(chip) = enabled_chip.first() {
-        let feat_10xx = features_10xx();
-        let feat_11xx = features_11xx();
-
-        let family = if feat_10xx.contains(*chip) {
-            assert!(!feat_11xx.contains(*chip));
-            "imxrt10xx"
-        } else if feat_11xx.contains(*chip) {
-            assert!(!feat_10xx.contains(*chip));
-            "imxrt11xx"
-        } else {
-            "none"
-        };
-
-        println!("cargo:rustc-cfg=family=\"{family}\"");
         println!("cargo:rustc-cfg=chip=\"{chip}\"");
     } else {
-        println!("cargo:rustc-cfg=family=\"none\"");
         println!("cargo:rustc-cfg=chip=\"none\"");
     }
 }

@@ -212,9 +212,9 @@ mod usb1 {
 
 use usb1::*;
 
-#[cfg(family = "imxrt10xx")]
+#[cfg(any(chip = "imxrt1010", chip = "imxrt1060"))]
 type Pit = crate::ral::pit::PIT;
-#[cfg(family = "imxrt11xx")]
+#[cfg(chip = "imxrt1170")]
 type Pit = crate::ral::pit::PIT1;
 
 /// Board interrupts.
