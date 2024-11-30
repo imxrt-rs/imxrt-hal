@@ -28,6 +28,11 @@ pub(crate) mod reexports {
     pub use super::{adc, dcdc, tempmon, trng};
 }
 
+pub(crate) mod drivers {
+    #[allow(unused)] // Not entirely sure how to work around this. Could use some help here!
+    pub use super::config::drivers::*;
+}
+
 pub(crate) mod iomuxc {
     pub use super::config::pads;
     use crate::ral;

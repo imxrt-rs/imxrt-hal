@@ -302,6 +302,11 @@ pub mod iomuxc {
     pub use imxrt_iomuxc::prelude::*;
 }
 
+/// Chip-specific drivers
+#[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
+#[allow(unused)] // Not entirely sure how to work around this. Could use some help here!
+pub use crate::chip::drivers::*;
+
 #[cfg_attr(family = "none", allow(unused_imports))] // Nothing to export in this build.
 pub use crate::chip::reexports::*;
 
