@@ -282,6 +282,20 @@ pub mod blocking {
     }
 }
 
+pub struct PanickingDelay(());
+
+impl PanickingDelay {
+    pub fn new() -> Self {
+        Self(())
+    }
+}
+
+impl eh1::delay::DelayNs for PanickingDelay {
+    fn delay_ns(&mut self, _: u32) {
+        unimplemented!()
+    }
+}
+
 /// Configurations for the logger.
 ///
 /// If your board is ready to support the logging infrastructure,

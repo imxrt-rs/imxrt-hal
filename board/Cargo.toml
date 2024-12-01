@@ -8,6 +8,10 @@ publish = false
 [dependencies.defmt]
 version = "0.3"
 
+[dependencies.eh1]
+package = "embedded-hal"
+version = "1.0"
+
 [dependencies.imxrt-hal]
 workspace = true
 

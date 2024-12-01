@@ -60,26 +60,26 @@ mod app {
             // size and bit order, use this sequence to evaluate how
             // the driver packs your transfer elements.
             {
-                use eh02::blocking::spi::Write;
+                use eh1::spi::SpiDevice;
                 use hal::lpspi::BitOrder::{self, *};
 
                 const BIT_ORDERS: [BitOrder; 2] = [Msb, Lsb];
 
                 const U32_WORDS: [u32; 2] = [0xDEADBEEFu32, 0xAD1CAC1D];
                 for bit_order in BIT_ORDERS {
-                    spi.set_bit_order(bit_order);
+                    spi.bus_mut().set_bit_order(bit_order);
                     spi.write(&U32_WORDS).unwrap();
                 }
 
                 const U8_WORDS: [u8; 7] = [0xDEu8, 0xAD, 0xBE, 0xEF, 0x12, 0x34, 0x56];
                 for bit_order in BIT_ORDERS {
-                    spi.set_bit_order(bit_order);
+                    spi.bus_mut().set_bit_order(bit_order);
                     spi.write(&U8_WORDS).unwrap();
                 }
 
                 const U16_WORDS: [u16; 3] = [0xDEADu16, 0xBEEF, 0x1234];
                 for bit_order in BIT_ORDERS {
-                    spi.set_bit_order(bit_order);
+                    spi.bus_mut().set_bit_order(bit_order);
                     spi.write(&U16_WORDS).unwrap();
                 }
 
@@ -88,12 +88,12 @@ mod app {
 
             // Change me to explore bit order behavors in the
             // remaining write / loopback transfer tests.
-            spi.set_bit_order(hal::lpspi::BitOrder::Msb);
+            spi.bus_mut().set_bit_order(hal::lpspi::BitOrder::Msb);
 
             // Make sure concatenated elements look correct on the wire.
             // Make sure we can read those elements.
             {
-                use eh02::blocking::spi::Transfer;
+                use eh1::spi::SpiDevice;
                 use hal::lpspi::BitOrder;
 
                 macro_rules! transfer_test {
@@ -103,9 +103,9 @@ mod app {
                             BitOrder::Lsb => "LSB",
                         };
 
-                        spi.set_bit_order($bit_order);
+                        spi.bus_mut().set_bit_order($bit_order);
                         let mut buffer = $arr;
-                        spi.transfer(&mut buffer).unwrap();
+                        spi.transfer_in_place(&mut buffer).unwrap();
                         defmt::assert_eq!(buffer, $arr, "Bit Order {}", bit_order_name);
                     };
                 }
@@ -137,12 +137,12 @@ mod app {
                 transfer_test!([0x01020304u32, 0x05060708, 0x090A0B0C], BitOrder::Msb);
                 transfer_test!([0x01020304u32, 0x05060708, 0x090A0B0C], BitOrder::Lsb);
 
-                spi.set_bit_order(BitOrder::Msb);
+                spi.bus_mut().set_bit_order(BitOrder::Msb);
                 delay();
             }
 
             {
-                use eh02::blocking::spi::{Transfer, Write};
+                use eh1::spi::SpiDevice;
 
                 // Change me to test different Elem sizes, buffer sizes,
                 // bit patterns.
@@ -153,10 +153,8 @@ mod app {
                 // Simple loopback transfer. Easy to find with your
                 // scope.
                 let mut buffer = BUFFER;
-                spi.transfer(&mut buffer).unwrap();
-                if buffer != BUFFER {
-                    defmt::error!("Simple transfer buffer mismatch!");
-                }
+                spi.transfer_in_place(&mut buffer).unwrap();
+                defmt::assert_eq!(buffer, BUFFER);
 
                 delay();
 
@@ -167,7 +165,7 @@ mod app {
                 for idx in 0u32..16 {
                     buffer.fill(SENTINEL.rotate_right(idx));
                     let expected = buffer;
-                    spi.transfer(&mut buffer).unwrap();
+                    spi.transfer_in_place(&mut buffer).unwrap();
                     error |= buffer != expected;
                 }
                 if error {
@@ -191,6 +189,31 @@ mod app {
                     buffer.fill(SENTINEL.rotate_right(idx));
                     spi.write(&buffer).unwrap();
                 }
+
+                delay();
+            }
+
+            {
+                use eh1::spi::{
+                    Operation::{Read, TransferInPlace, Write},
+                    SpiDevice,
+                };
+
+                let mut read = [0u8; 7];
+                let mut xfer = [0u8; 10];
+                for idx in 0..xfer.len() {
+                    xfer[idx] = idx as u8;
+                }
+
+                spi.transaction(&mut [
+                    TransferInPlace(&mut xfer),
+                    Read(&mut read),
+                    Write(&[0xA5; 13][..]),
+                ])
+                .unwrap();
+
+                assert_eq!(read, [0xff; 7]);
+                assert_eq!(xfer, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
                 delay();
             }
