@@ -118,6 +118,24 @@ jobs:
     - name: Run unit, integration tests
       run: cargo test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
 
+  # Make sure our unit tests can pass (some recent version of) miri.
+  miri:
+    needs: tests
+    strategy:
+      matrix:
+        chips:
+        - imxrt-ral/imxrt1011,imxrt1010
+        - imxrt-ral/imxrt1021,imxrt1020
+        - imxrt-ral/imxrt1062,imxrt1060
+        - imxrt-ral/imxrt1176_cm7,imxrt1170
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install a nightly toolchain with miri
+      run: rustup toolchain install nightly --no-self-update --profile minimal --component miri
+    - name: Run unit, integration tests with miri
+      run: cargo +nightly miri test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log --config "profile.dev.opt-level = 0"
+
   # Ensures that documentation builds, and that links are valid
   docs:
     needs: format
