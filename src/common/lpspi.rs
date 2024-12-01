@@ -359,7 +359,7 @@ impl Transaction {
 /// Sets the clock speed parameters.
 ///
 /// This should only happen when the LPSPI peripheral is disabled.
-fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::RegisterBlock) {
+fn compute_spi_clock(source_clock_hz: u32, spi_clock_hz: u32) -> ClockConfigs {
     // Round up, so we always get a resulting SPI clock that is
     // equal or less than the requested frequency.
     let half_div =
@@ -372,16 +372,16 @@ fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::Regi
     // Because half_div is in range [3,128], sckdiv is in range [4, 254].
     let sckdiv = 2 * (half_div - 1);
 
-    ral::write_reg!(ral::lpspi, reg, CCR,
+    ClockConfigs {
         // Delay between two clock transitions of two consecutive transfers
         // is exactly sckdiv/2, which causes the transfer to be seamless.
-        DBT: half_div - 1,
+        dbt: (half_div - 1) as u8,
         // Add one sckdiv/2 setup and hold time before and after the transfer,
         // to make sure the signal is stable at sample time
-        PCSSCK: half_div - 1,
-        SCKPCS: half_div - 1,
-        SCKDIV: sckdiv
-    );
+        pcssck: (half_div - 1) as u8,
+        sckpcs: (half_div - 1) as u8,
+        sckdiv: sckdiv as u8,
+    }
 }
 
 /// LPSPI clock configurations.
@@ -416,6 +416,47 @@ pub struct ClockConfigs {
     pub sckdiv: u8,
 }
 
+impl ClockConfigs {
+    const fn as_raw(self) -> u32 {
+        use ral::lpspi::CCR;
+        (self.sckpcs as u32) << CCR::SCKPCS::offset
+            | (self.pcssck as u32) << CCR::PCSSCK::offset
+            | (self.dbt as u32) << CCR::DBT::offset
+            | (self.sckdiv as u32) << CCR::SCKDIV::offset
+    }
+}
+
+/// In-memory clock configuration register values.
+///
+/// Newer LPSPI IP blocks, like those found on the 1180, have `CCR[DBT]`
+/// and `CCR[SCKDIV]` fields that are WO/RAZ. RAZ is incompatible
+/// with older IP blocks, like those found on all the other MCUs.
+///
+/// If we cache these values, all RMW on CCR will behave as if we
+/// read those values through the register.
+struct CcrCache {
+    dbt: u8,
+    sckdiv: u8,
+}
+
+impl CcrCache {
+    /// Reac the clock configuration values, considering the cached values.
+    fn read_ccr(&self, lpspi: &ral::lpspi::RegisterBlock) -> ClockConfigs {
+        let (sckpcs, pcssck) = ral::read_reg!(ral::lpspi, lpspi, CCR, SCKPCS, PCSSCK);
+        ClockConfigs {
+            sckpcs: sckpcs as u8,
+            pcssck: pcssck as u8,
+            dbt: self.dbt,
+            sckdiv: self.sckdiv,
+        }
+    }
+    /// Update the cached values.
+    fn update(&mut self, clock_configs: ClockConfigs) {
+        self.dbt = clock_configs.dbt;
+        self.sckdiv = clock_configs.sckdiv;
+    }
+}
+
 /// An LPSPI driver.
 ///
 /// The driver exposes low-level methods for coordinating
@@ -432,6 +473,7 @@ pub struct Lpspi<P, const N: u8> {
     pins: P,
     bit_order: BitOrder,
     mode: Mode,
+    ccr_cache: CcrCache,
 }
 
 /// Pins for a LPSPI device.
@@ -505,6 +547,8 @@ impl<P, const N: u8> Lpspi<P, N> {
             pins,
             bit_order: BitOrder::default(),
             mode: MODE_0,
+            // Once we issue a reset, below, these are zero.
+            ccr_cache: CcrCache { dbt: 0, sckdiv: 0 },
         };
 
         // Reset and disable
@@ -593,7 +637,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
-        let mut disabled = Disabled::new(&mut self.lpspi);
+        let mut disabled = Disabled::new(&mut self.lpspi, &mut self.ccr_cache);
         func(&mut disabled)
     }
 
@@ -945,7 +989,7 @@ impl<P, const N: u8> Lpspi<P, N> {
         let cfgr1 = ral::read_reg!(ral::lpspi, self.lpspi, CFGR1);
         let dmr0 = ral::read_reg!(ral::lpspi, self.lpspi, DMR0);
         let dmr1 = ral::read_reg!(ral::lpspi, self.lpspi, DMR1);
-        let ccr = ral::read_reg!(ral::lpspi, self.lpspi, CCR);
+        let ccr = self.clock_configs().as_raw();
         let fcr = ral::read_reg!(ral::lpspi, self.lpspi, FCR);
 
         // Backup enabled state
@@ -1002,14 +1046,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// These values are decided by calls to [`set_clock_hz`](Disabled::set_clock_hz)
     /// and [`set_clock_configs`](Disabled::set_clock_configs).
     pub fn clock_configs(&self) -> ClockConfigs {
-        let (sckpcs, pcssck, dbt, sckdiv) =
-            ral::read_reg!(ral::lpspi, self.lpspi, CCR, SCKPCS, PCSSCK, DBT, SCKDIV);
-        ClockConfigs {
-            sckpcs: sckpcs as u8,
-            pcssck: pcssck as u8,
-            dbt: dbt as u8,
-            sckdiv: sckdiv as u8,
-        }
+        self.ccr_cache.read_ccr(&self.lpspi)
     }
 
     /// Produce a transaction that considers bus-managed software state.
@@ -1175,10 +1212,11 @@ fn set_watermark(lpspi: &ral::lpspi::RegisterBlock, direction: Direction, waterm
 pub struct Disabled<'a, const N: u8> {
     lpspi: &'a ral::lpspi::Instance<N>,
     men: bool,
+    ccr_cache: &'a mut CcrCache,
 }
 
 impl<'a, const N: u8> Disabled<'a, N> {
-    fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
+    fn new(lpspi: &'a mut ral::lpspi::Instance<N>, ccr_cache: &'a mut CcrCache) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
 
         // Request disable
@@ -1186,7 +1224,11 @@ impl<'a, const N: u8> Disabled<'a, N> {
         // Wait for the driver to finish its current transfer
         // and enter disabled state
         while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
-        Self { lpspi, men }
+        Self {
+            lpspi,
+            men,
+            ccr_cache,
+        }
     }
 
     /// Set the LPSPI clock speed (Hz).
@@ -1194,7 +1236,8 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
     pub fn set_clock_hz(&mut self, source_clock_hz: u32, clock_hz: u32) {
-        set_spi_clock(source_clock_hz, clock_hz, self.lpspi);
+        let clock_configs = compute_spi_clock(source_clock_hz, clock_hz);
+        self.set_clock_configs(clock_configs);
     }
 
     /// Set LPSPI timing configurations.
@@ -1202,6 +1245,7 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// If you're not sure how to select these timing values, prefer
     /// [`set_clock_hz`](Self::set_clock_hz).
     pub fn set_clock_configs(&mut self, timing: ClockConfigs) {
+        self.ccr_cache.update(timing);
         ral::write_reg!(ral::lpspi, self.lpspi, CCR,
             SCKPCS: timing.sckpcs as u32,
             PCSSCK: timing.pcssck as u32,
