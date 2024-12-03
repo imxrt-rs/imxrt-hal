@@ -207,7 +207,7 @@ name = "hal_i2c_lcd1602"
 required-features = ["board/lcd1602"]
 
 [patch.crates-io.imxrt-ral]
-git = "https://github.com/mciantyre/imxrt-ral"
+git = "https://github.com/imxrt-rs/imxrt-ral"
 
 [patch.crates-io.imxrt-iomuxc]
 git = "https://github.com/imxrt-rs/imxrt-iomuxc"

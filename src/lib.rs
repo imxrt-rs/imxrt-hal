@@ -50,6 +50,7 @@
 //! | `"imxrt1060"`     | Enable features for the 1060 chips.                              |
 //! | `"imxrt1064"`     | Enable features for the 1064 chips.                              |
 //! | `"imxrt1170"`     | Enable features for the 1170 chips.                              |
+//! | `"imxrt1180"`     | Enable features for the 1180 chips.                              |
 //! | `"eh02-unproven"` | Enable implementations for embedded-hal 0.2 `"unproven"` traits. |
 //! | `"rand_core"`     | Allows the TRNG to be used with the `rand` package.              |
 //!

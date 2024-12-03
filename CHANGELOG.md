@@ -18,6 +18,17 @@
 
 **BREAKING** `LpspiError::{Busy, NoData}` are removed as possible LPSPI errors.
 
+**BREAKING** The following peripherals are not available on the 1180. Therefore,
+they are no longer considered common. However, their APIs are unchanged, and they
+are still exposed when building with a chip feature.
+
+- `gpio`
+- `pit`
+- `snvs`
+- `timer`
+
+Introduce an `imxrt1180` feature to support the RT1180 series.
+
 ## [0.5.9] 2024-11-24
 
 Correct LPSPI receive operations. Previously, `u8` and `u16` elements received
