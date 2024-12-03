@@ -48,7 +48,6 @@
 //!     sdo: pads.gpio_b0.p02,
 //!     sdi: pads.gpio_b0.p01,
 //!     sck: pads.gpio_b0.p03,
-//!     pcs0: pads.gpio_b0.p00,
 //! };
 //!
 //! let mut spi4 = unsafe { LPSPI4::instance() };
@@ -134,6 +133,45 @@ pub enum LpspiError {
     Fifo(Direction),
 }
 
+/// Peripheral chip select.
+///
+/// Use this in [`Transaction`] to select the hardware-managed
+/// chip select. Note that the hardware only uses the hardware-managed
+/// chip select if the pin is muxed for its PCS alternate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u32)]
+pub enum Pcs {
+    /// Use PCS0 (default) for the next transaction.
+    #[default]
+    Pcs0,
+    /// Use PCS1 for the next transaction.
+    Pcs1,
+    /// Use PCS2 for the next transaction.
+    Pcs2,
+    /// Use PCS3 for the next transaction.
+    Pcs3,
+}
+
+/// The hardware chip select polarity.
+///
+/// Use [`Disabled::set_chip_select_polarity`] to configure
+/// each chip select's polarity. Consult your peripheral's
+/// documentation to understand which polarity is expected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(u32)]
+pub enum PcsPolarity {
+    /// The chip select is active low.
+    ///
+    /// When idle, the chip select is high. This is
+    /// the default state.
+    #[default]
+    ActiveLow,
+    /// The chip select is active high.
+    ///
+    /// When idle, the chip select is low.
+    ActiveHigh,
+}
+
 /// An LPSPI transaction definition.
 ///
 /// The transaction defines how many bits the driver sends or recieves.
@@ -143,6 +181,7 @@ pub enum LpspiError {
 /// - bit order
 /// - transmit and receive masking
 /// - continuous and continuing transfers (default: both disabled)
+/// - the hardware-managed peripheral chip select, [`Pcs`]
 ///
 /// The LPSPI enqueues the transaction data into the transmit
 /// FIFO. When it pops the values from the FIFO, the values take
@@ -242,7 +281,14 @@ pub struct Transaction {
     /// `Transaction`, one that had [`continuous`](Self::continuous) set.
     /// The default value is `false`.
     pub continuing: bool,
-
+    /// The SPI mode for the transaction.
+    ///
+    /// By default, this is [`MODE_0`].
+    pub mode: Mode,
+    /// Selects the hardware-managed peripheral chip select for the transaction.
+    ///
+    /// See [`Pcs`] for more information.
+    pub pcs: Pcs,
     frame_size: u16,
 }
 
@@ -301,6 +347,8 @@ impl Transaction {
                 frame_size: frame_size - 1,
                 continuing: false,
                 continuous: false,
+                mode: MODE_0,
+                pcs: Default::default(),
             })
         } else {
             Err(LpspiError::FrameSize)
@@ -311,7 +359,7 @@ impl Transaction {
 /// Sets the clock speed parameters.
 ///
 /// This should only happen when the LPSPI peripheral is disabled.
-fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::RegisterBlock) {
+fn compute_spi_clock(source_clock_hz: u32, spi_clock_hz: u32) -> ClockConfigs {
     // Round up, so we always get a resulting SPI clock that is
     // equal or less than the requested frequency.
     let half_div =
@@ -324,16 +372,16 @@ fn set_spi_clock(source_clock_hz: u32, spi_clock_hz: u32, reg: &ral::lpspi::Regi
     // Because half_div is in range [3,128], sckdiv is in range [4, 254].
     let sckdiv = 2 * (half_div - 1);
 
-    ral::write_reg!(ral::lpspi, reg, CCR,
+    ClockConfigs {
         // Delay between two clock transitions of two consecutive transfers
         // is exactly sckdiv/2, which causes the transfer to be seamless.
-        DBT: half_div - 1,
+        dbt: (half_div - 1) as u8,
         // Add one sckdiv/2 setup and hold time before and after the transfer,
         // to make sure the signal is stable at sample time
-        PCSSCK: half_div - 1,
-        SCKPCS: half_div - 1,
-        SCKDIV: sckdiv
-    );
+        pcssck: (half_div - 1) as u8,
+        sckpcs: (half_div - 1) as u8,
+        sckdiv: sckdiv as u8,
+    }
 }
 
 /// LPSPI clock configurations.
@@ -368,6 +416,47 @@ pub struct ClockConfigs {
     pub sckdiv: u8,
 }
 
+impl ClockConfigs {
+    const fn as_raw(self) -> u32 {
+        use ral::lpspi::CCR;
+        (self.sckpcs as u32) << CCR::SCKPCS::offset
+            | (self.pcssck as u32) << CCR::PCSSCK::offset
+            | (self.dbt as u32) << CCR::DBT::offset
+            | (self.sckdiv as u32) << CCR::SCKDIV::offset
+    }
+}
+
+/// In-memory clock configuration register values.
+///
+/// Newer LPSPI IP blocks, like those found on the 1180, have `CCR[DBT]`
+/// and `CCR[SCKDIV]` fields that are WO/RAZ. RAZ is incompatible
+/// with older IP blocks, like those found on all the other MCUs.
+///
+/// If we cache these values, all RMW on CCR will behave as if we
+/// read those values through the register.
+struct CcrCache {
+    dbt: u8,
+    sckdiv: u8,
+}
+
+impl CcrCache {
+    /// Reac the clock configuration values, considering the cached values.
+    fn read_ccr(&self, lpspi: &ral::lpspi::RegisterBlock) -> ClockConfigs {
+        let (sckpcs, pcssck) = ral::read_reg!(ral::lpspi, lpspi, CCR, SCKPCS, PCSSCK);
+        ClockConfigs {
+            sckpcs: sckpcs as u8,
+            pcssck: pcssck as u8,
+            dbt: self.dbt,
+            sckdiv: self.sckdiv,
+        }
+    }
+    /// Update the cached values.
+    fn update(&mut self, clock_configs: ClockConfigs) {
+        self.dbt = clock_configs.dbt;
+        self.sckdiv = clock_configs.sckdiv;
+    }
+}
+
 /// An LPSPI driver.
 ///
 /// The driver exposes low-level methods for coordinating
@@ -384,6 +473,7 @@ pub struct Lpspi<P, const N: u8> {
     pins: P,
     bit_order: BitOrder,
     mode: Mode,
+    ccr_cache: CcrCache,
 }
 
 /// Pins for a LPSPI device.
@@ -399,13 +489,12 @@ pub struct Lpspi<P, const N: u8> {
 ///     GPIO_B0_02,
 ///     GPIO_B0_01,
 ///     GPIO_B0_03,
-///     GPIO_B0_00,
 /// >;
 ///
 /// // Helper type for your SPI peripheral
 /// type Lpspi<const N: u8> = hal::lpspi::Lpspi<LpspiPins, N>;
 /// ```
-pub struct Pins<SDO, SDI, SCK, PCS0> {
+pub struct Pins<SDO, SDI, SCK> {
     /// Serial data out
     ///
     /// Data travels from the SPI host controller to the SPI device.
@@ -416,29 +505,23 @@ pub struct Pins<SDO, SDI, SCK, PCS0> {
     pub sdi: SDI,
     /// Serial clock
     pub sck: SCK,
-    /// Chip select 0
-    ///
-    /// (PCSx) convention matches the hardware.
-    pub pcs0: PCS0,
 }
 
-impl<SDO, SDI, SCK, PCS0, const N: u8> Lpspi<Pins<SDO, SDI, SCK, PCS0>, N>
+impl<SDO, SDI, SCK, const N: u8> Lpspi<Pins<SDO, SDI, SCK>, N>
 where
     SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
     SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
     SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-    PCS0: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Pcs0>,
 {
     /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
     /// When this call returns, the LPSPI pins are configured for their function.
     /// The peripheral is enabled after reset. The LPSPI clock speed is unspecified.
     /// The mode is [`MODE_0`]. The sample point is [`SamplePoint::DelayedEdge`].
-    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK, PCS0>) -> Self {
+    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK>) -> Self {
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
-        lpspi::prepare(&mut pins.pcs0);
         Self::init(lpspi, pins)
     }
 }
@@ -464,6 +547,8 @@ impl<P, const N: u8> Lpspi<P, N> {
             pins,
             bit_order: BitOrder::default(),
             mode: MODE_0,
+            // Once we issue a reset, below, these are zero.
+            ccr_cache: CcrCache { dbt: 0, sckdiv: 0 },
         };
 
         // Reset and disable
@@ -552,7 +637,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
     pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
-        let mut disabled = Disabled::new(&mut self.lpspi);
+        let mut disabled = Disabled::new(&mut self.lpspi, &mut self.ccr_cache);
         func(&mut disabled)
     }
 
@@ -736,10 +821,10 @@ impl<P, const N: u8> Lpspi<P, N> {
     ///
     /// You're responsible for making sure there's space in the transmit
     /// FIFO for this transaction command.
-    pub fn enqueue_transaction(&mut self, transaction: &Transaction) {
+    pub fn enqueue_transaction(&self, transaction: &Transaction) {
         ral::write_reg!(ral::lpspi, self.lpspi, TCR,
-            CPOL: if self.mode.polarity == Polarity::IdleHigh { CPOL_1 } else { CPOL_0 },
-            CPHA: if self.mode.phase == Phase::CaptureOnSecondTransition { CPHA_1 } else { CPHA_0 },
+            CPOL: if transaction.mode.polarity == Polarity::IdleHigh { CPOL_1 } else { CPOL_0 },
+            CPHA: if transaction.mode.phase == Phase::CaptureOnSecondTransition { CPHA_1 } else { CPHA_0 },
             PRESCALE: PRESCALE_0,
             PCS: PCS_0,
             WIDTH: WIDTH_0,
@@ -749,7 +834,8 @@ impl<P, const N: u8> Lpspi<P, N> {
             TXMSK: transaction.transmit_data_mask as u32,
             FRAMESZ: transaction.frame_size as u32,
             CONT: transaction.continuous as u32,
-            CONTC: transaction.continuing as u32
+            CONTC: transaction.continuing as u32,
+            PCS: transaction.pcs as u32
         );
     }
 
@@ -789,8 +875,7 @@ impl<P, const N: u8> Lpspi<P, N> {
             return Ok(());
         }
 
-        let mut transaction = Transaction::new_words(data)?;
-        transaction.bit_order = self.bit_order();
+        let transaction = self.bus_transaction(data)?;
 
         self.wait_for_transmit_fifo_space()?;
         self.enqueue_transaction(&transaction);
@@ -814,9 +899,8 @@ impl<P, const N: u8> Lpspi<P, N> {
             return Ok(());
         }
 
-        let mut transaction = Transaction::new_words(data)?;
+        let mut transaction = self.bus_transaction(data)?;
         transaction.receive_data_mask = true;
-        transaction.bit_order = self.bit_order();
 
         self.wait_for_transmit_fifo_space()?;
         self.enqueue_transaction(&transaction);
@@ -905,7 +989,7 @@ impl<P, const N: u8> Lpspi<P, N> {
         let cfgr1 = ral::read_reg!(ral::lpspi, self.lpspi, CFGR1);
         let dmr0 = ral::read_reg!(ral::lpspi, self.lpspi, DMR0);
         let dmr1 = ral::read_reg!(ral::lpspi, self.lpspi, DMR1);
-        let ccr = ral::read_reg!(ral::lpspi, self.lpspi, CCR);
+        let ccr = self.clock_configs().as_raw();
         let fcr = ral::read_reg!(ral::lpspi, self.lpspi, FCR);
 
         // Backup enabled state
@@ -962,14 +1046,15 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// These values are decided by calls to [`set_clock_hz`](Disabled::set_clock_hz)
     /// and [`set_clock_configs`](Disabled::set_clock_configs).
     pub fn clock_configs(&self) -> ClockConfigs {
-        let (sckpcs, pcssck, dbt, sckdiv) =
-            ral::read_reg!(ral::lpspi, self.lpspi, CCR, SCKPCS, PCSSCK, DBT, SCKDIV);
-        ClockConfigs {
-            sckpcs: sckpcs as u8,
-            pcssck: pcssck as u8,
-            dbt: dbt as u8,
-            sckdiv: sckdiv as u8,
-        }
+        self.ccr_cache.read_ccr(&self.lpspi)
+    }
+
+    /// Produce a transaction that considers bus-managed software state.
+    pub(crate) fn bus_transaction<W>(&self, words: &[W]) -> Result<Transaction, LpspiError> {
+        let mut transaction = Transaction::new_words(words)?;
+        transaction.bit_order = self.bit_order();
+        transaction.mode = self.mode;
+        Ok(transaction)
     }
 }
 
@@ -1127,10 +1212,11 @@ fn set_watermark(lpspi: &ral::lpspi::RegisterBlock, direction: Direction, waterm
 pub struct Disabled<'a, const N: u8> {
     lpspi: &'a ral::lpspi::Instance<N>,
     men: bool,
+    ccr_cache: &'a mut CcrCache,
 }
 
 impl<'a, const N: u8> Disabled<'a, N> {
-    fn new(lpspi: &'a mut ral::lpspi::Instance<N>) -> Self {
+    fn new(lpspi: &'a mut ral::lpspi::Instance<N>, ccr_cache: &'a mut CcrCache) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
 
         // Request disable
@@ -1138,7 +1224,11 @@ impl<'a, const N: u8> Disabled<'a, N> {
         // Wait for the driver to finish its current transfer
         // and enter disabled state
         while ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1) {}
-        Self { lpspi, men }
+        Self {
+            lpspi,
+            men,
+            ccr_cache,
+        }
     }
 
     /// Set the LPSPI clock speed (Hz).
@@ -1146,7 +1236,8 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// `source_clock_hz` is the LPSPI peripheral clock speed. To specify the
     /// peripheral clock, see the [`ccm::lpspi_clk`](crate::ccm::lpspi_clk) documentation.
     pub fn set_clock_hz(&mut self, source_clock_hz: u32, clock_hz: u32) {
-        set_spi_clock(source_clock_hz, clock_hz, self.lpspi);
+        let clock_configs = compute_spi_clock(source_clock_hz, clock_hz);
+        self.set_clock_configs(clock_configs);
     }
 
     /// Set LPSPI timing configurations.
@@ -1154,6 +1245,7 @@ impl<'a, const N: u8> Disabled<'a, N> {
     /// If you're not sure how to select these timing values, prefer
     /// [`set_clock_hz`](Self::set_clock_hz).
     pub fn set_clock_configs(&mut self, timing: ClockConfigs) {
+        self.ccr_cache.update(timing);
         ral::write_reg!(ral::lpspi, self.lpspi, CCR,
             SCKPCS: timing.sckpcs as u32,
             PCSSCK: timing.pcssck as u32,
@@ -1185,6 +1277,21 @@ impl<'a, const N: u8> Disabled<'a, N> {
     #[inline]
     pub fn set_peripheral_enable(&mut self, enable: bool) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, MASTER: !enable as u32);
+    }
+
+    /// Set the polarity for the `pcs` hardware chip select.
+    ///
+    /// By default, all polarities are active low.
+    #[inline]
+    pub fn set_chip_select_polarity(&mut self, pcs: Pcs, polarity: PcsPolarity) {
+        let pcspol = ral::read_reg!(ral::lpspi, self.lpspi, CFGR1, PCSPOL);
+        let mask = 1 << pcs as u32;
+        let pcspol = if polarity == PcsPolarity::ActiveHigh {
+            pcspol | mask
+        } else {
+            pcspol & !mask
+        };
+        ral::modify_reg!(ral::lpspi, self.lpspi, CFGR1, PCSPOL: pcspol);
     }
 }
 
