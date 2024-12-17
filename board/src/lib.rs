@@ -21,7 +21,7 @@ mod ral_shim;
 /// and power settings for these variants. They're
 /// typically follow the recommendations in the
 /// data sheet.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
 #[non_exhaustive]
 pub enum RunMode {
     /// The fastest, highest-power mode.

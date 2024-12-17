@@ -59,6 +59,7 @@
 use crate::ral::{self, ccm::CCM};
 
 /// A clock gate setting.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Setting {
@@ -87,6 +88,7 @@ impl Setting {
 }
 
 /// Clock gating register.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
@@ -104,6 +106,7 @@ enum Register {
 use Register::*;
 
 /// Clock gate.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 #[repr(u8)]
@@ -141,6 +144,7 @@ impl Gate {
 ///
 /// These are reachable through the various function
 /// provided in this module.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Locator {
     register: Register,

@@ -37,6 +37,7 @@ pub(crate) mod config {
         pub(crate) mod clko {
             /// CLKO1 output clock selections.
             #[repr(u32)]
+            #[cfg_attr(feature = "defmt", derive(defmt::Format))]
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             pub enum Clko1Selection {
                 /// 48MHz RC oscillator, divided by 2.
@@ -59,6 +60,7 @@ pub(crate) mod config {
 
             /// CLKO2 output clock selections.
             #[repr(u32)]
+            #[cfg_attr(feature = "defmt", derive(defmt::Format))]
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             pub enum Clko2Selection {
                 /// 48MHz RC oscillator, divided by 2.

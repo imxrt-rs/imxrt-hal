@@ -37,6 +37,7 @@ use eh02::adc::{Channel, OneShot};
 
 /// The clock input for an ADC
 #[allow(non_camel_case_types)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ClockSelect {
     /// IPG clock
@@ -49,6 +50,7 @@ pub enum ClockSelect {
 }
 
 /// How much to divide the clock input
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ClockDivision {
     /// Input clock / 1
@@ -63,6 +65,7 @@ pub enum ClockDivision {
 }
 
 /// Conversion speeds done by clock cycles
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConversionSpeed {
     /// 25 ADC clock cycles (24 on imxrt102x)
@@ -76,6 +79,7 @@ pub enum ConversionSpeed {
 }
 
 /// Denotes how much hardware averaging to do
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AveragingCount {
     /// 1 sample average.
@@ -91,6 +95,7 @@ pub enum AveragingCount {
 }
 
 /// Specifies the resolution the ADC
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolutionBits {
     /// 8 bit resolution.

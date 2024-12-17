@@ -30,6 +30,7 @@ pub fn divider(ccm: &CCM) -> u32 {
 }
 
 /// Peripheral clock selection.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Selection {

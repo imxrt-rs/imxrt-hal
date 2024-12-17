@@ -50,6 +50,7 @@ pub mod perclk_clk {
     use crate::ral::{self, ccm::CCM};
 
     /// PERCLK clock selection.
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u32)]
     pub enum Selection {
@@ -136,6 +137,7 @@ pub(crate) fn wait_handshake(ccm: &crate::ral::ccm::CCM) {
 ///
 /// Practically, this affects the processor behavior when you use WFI, WFE, or enter another
 /// low-power state. Low-power settings that aren't "run" halt the ARM SYSTICK peripheral.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum LowPowerMode {
@@ -216,6 +218,7 @@ pub mod uart_clk {
     }
 
     /// UART clock selection.
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u32)]
     pub enum Selection {
@@ -293,6 +296,7 @@ pub mod lpi2c_clk {
     }
 
     /// LPI2C clock selections.
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u32)]
     pub enum Selection {
@@ -372,6 +376,7 @@ pub mod lpspi_clk {
     }
 
     /// LPSPI clock selections.
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u32)]
     pub enum Selection {
@@ -458,7 +463,7 @@ macro_rules! ccm_flexio {
             }
 
             #[doc = concat!($desc, " clock selections.")]
-            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            #[cfg_attr(feature = "defmt", derive(defmt::Format))] #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             #[repr(u32)]
             pub enum Selection {
                 /// Derive from PLL4.

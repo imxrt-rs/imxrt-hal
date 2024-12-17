@@ -90,6 +90,7 @@ pub struct Lpuart<P, const N: u8> {
 }
 
 /// Serial direction.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     /// Transfer direction (leaving the peripheral).
@@ -531,6 +532,7 @@ impl<'a, const N: u8> Disabled<'a, N> {
 /// const UART_CLOCK_HZ: u32 = 24_000_000;
 /// const BAUD: Baud = Baud::compute(UART_CLOCK_HZ, 115200);
 /// ```
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Baud {
     /// Oversampling rate.
@@ -621,6 +623,7 @@ impl Baud {
 /// [`Lpuart::parity`](crate::lpuart::Lpuart::parity) for more information.
 /// Consider using the associated constants to quickly specify
 /// parity bits.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Parity {
@@ -722,6 +725,7 @@ impl Interrupts {
 /// The data contains flags, which may indicate errors
 /// in the received data. If the flags indicate value data,
 /// use `u8::from` to convert the data into its raw byte.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct ReadData(u32);
@@ -876,6 +880,7 @@ impl Status {
 ///
 /// See [`Lpuart::enable_fifo`](crate::lpuart::Disabled::enable_fifo) for more
 /// information.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy)]
 pub struct Watermark {
     direction: Direction,

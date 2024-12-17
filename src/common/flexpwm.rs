@@ -504,6 +504,7 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
 /// PWM clock prescaler.
 ///
 /// Affects all timing, except for the glitch filters.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub enum Prescaler {
@@ -533,6 +534,7 @@ impl Prescaler {
 }
 
 /// Describes how PWM channels A and B operate.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub enum PairOperation {
@@ -543,6 +545,7 @@ pub enum PairOperation {
 }
 
 /// PWM input clock selection.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub enum ClockSelect {
@@ -563,6 +566,7 @@ pub enum ClockSelect {
 ///
 /// Use the associated methods to simply define `ReloadCycle`
 /// values.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoadMode {
     /// Reload on the next cycle after `LDOK` is set.
@@ -673,6 +677,7 @@ bitflags::bitflags! {
 /// These value registers describe when PWM counters reset, and when outputs
 /// turn on and off. Consider using more descriptive constants, enums, and
 /// const functions to describe these values.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueRegister {
     /// The [`HALF_RELOAD_VALUE_REGISTER`].
@@ -723,6 +728,7 @@ pub const fn turn_off(channel: Channel) -> ValueRegister {
 }
 
 /// PWM channels.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
     /// Channel A.

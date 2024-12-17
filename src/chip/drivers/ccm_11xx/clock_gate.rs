@@ -7,6 +7,7 @@
 use crate::ral::{self, ccm::CCM};
 
 /// A clock gate setting.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Setting {
@@ -32,6 +33,7 @@ impl Setting {
 }
 
 /// A clock gate locator.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Locator {
     offset: usize,

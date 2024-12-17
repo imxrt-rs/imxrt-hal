@@ -119,12 +119,14 @@ pub(crate) mod config {
         pub(crate) mod clko {
             /// CLKO1 output clock selections.
             // #[repr(u32)]
+            #[cfg_attr(feature = "defmt", derive(defmt::Format))]
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
             pub enum Clko1Selection {}
 
             /// CLKO2 output clock selections.
             // #[repr(u32)]
+            #[cfg_attr(feature = "defmt", derive(defmt::Format))]
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
             pub enum Clko2Selection {}

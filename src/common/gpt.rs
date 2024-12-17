@@ -122,6 +122,7 @@ pub type Gpt1 = Gpt<1>;
 pub type Gpt2 = Gpt<2>;
 
 /// GPT clock source.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum ClockSource {
@@ -140,6 +141,7 @@ pub enum ClockSource {
 }
 
 /// An output compare register (OCR).
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(usize)]
 pub enum OutputCompareRegister {
@@ -151,6 +153,7 @@ pub enum OutputCompareRegister {
     OCR3 = 2,
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Possible modes of the GPT.
 pub enum Mode {

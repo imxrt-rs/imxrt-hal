@@ -64,6 +64,7 @@ pub mod clko1 {
     /// The CLKO1 output *pin* can represent either CLKO1 or CLKO2.
     /// Use [`set_output`] to set this configuration.
     #[repr(u32)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Output {
         /// Use CLKO1's selection.

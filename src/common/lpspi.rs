@@ -94,6 +94,7 @@ use crate::ral;
 pub use eh02::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 
 /// Data direction.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     /// Transmit direction (leaving the peripheral).
@@ -103,6 +104,7 @@ pub enum Direction {
 }
 
 /// Bit order.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum BitOrder {
@@ -114,6 +116,7 @@ pub enum BitOrder {
 }
 
 /// Receive sample point behavior.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SamplePoint {
     /// Input data is sampled on SCK edge.
@@ -123,6 +126,7 @@ pub enum SamplePoint {
 }
 
 /// Possible errors when interfacing the LPSPI.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LpspiError {
     /// The transaction frame size is incorrect.
@@ -1046,6 +1050,7 @@ impl Status {
 }
 
 /// The number of words in each FIFO.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FifoStatus {
     /// Number of words in the receive FIFO.

@@ -54,6 +54,7 @@ use crate::ral::trng;
 use crate::ral::{modify_reg, read_reg, write_reg};
 
 /// TRNG sampling mode
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u32)]
 pub enum SampleMode {
@@ -96,12 +97,20 @@ impl fmt::Debug for Trng {
     }
 }
 
+#[cfg(feature = "defmt")]
+impl defmt::Format for Trng {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(f, "Trng {{ block: {}, index: {} }}", self.block, self.index)
+    }
+}
+
 /// The number of retry attempts.
 ///
 /// Describes the number of times to retry
 /// after a test failure before an error is declared. Valid
 /// range `1..=15`. The default retry count is the largest
 /// possible value.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RetryCount(u32);
 
@@ -332,11 +341,13 @@ impl rand_core::RngCore for RngCoreWrapper {
 }
 
 /// A TRNG error occurred, such as a statistical test failing.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Error(pub ErrorFlags);
 
 bitflags::bitflags! {
     /// Specific errors that may occur during entropy generation
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub struct ErrorFlags : u32 {
         // STATUS register starts here (automatically set from bits)
         /// 1-bit run sampling 0s test failed

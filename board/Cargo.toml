@@ -10,6 +10,7 @@ version = "0.3"
 
 [dependencies.imxrt-hal]
 workspace = true
+features = ["defmt"]
 
 [dependencies.imxrt-iomuxc]
 workspace = true

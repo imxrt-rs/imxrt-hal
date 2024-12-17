@@ -90,6 +90,7 @@ impl Disabled {
 }
 
 /// Indicates the result of the `try_enable` method
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug)]
 pub enum EnabledState {
     /// The SRTC was already enabled, and it's currently counting from `seconds`
@@ -222,5 +223,12 @@ impl fmt::Debug for Srtc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SRTC").finish()
         // very basic, just to prevent compile errors if user puts it in a struct
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for Srtc {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(f, "SRTC {{ ... }}")
     }
 }

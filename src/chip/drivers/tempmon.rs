@@ -99,6 +99,7 @@ use crate::ral;
 ///
 /// If you receive this error, `power_up()` the temperature monitor first,
 /// and try again.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PowerDownError(());
 
@@ -140,6 +141,19 @@ impl core::fmt::Debug for TempMon {
             .field("hot_count", &format_args!("{}", self.hot_count))
             .field("hot_temp", &format_args!("{}", self.hot_temp))
             .finish()
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for TempMon {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(
+            f,
+            "TempMon {{ scaler: {}, hot_count: {}, hot_temp: {} }}",
+            self.scaler,
+            self.hot_count,
+            self.hot_temp,
+        )
     }
 }
 

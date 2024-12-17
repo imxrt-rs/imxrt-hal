@@ -183,6 +183,7 @@ pub struct Input<P> {
 unsafe impl<P: Send> Send for Input<P> {}
 
 /// Input interrupt triggers.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Trigger {

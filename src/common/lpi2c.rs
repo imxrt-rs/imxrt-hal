@@ -61,6 +61,7 @@ use crate::ral;
 use eh02::blocking::i2c as blocking;
 
 /// Data direction.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     /// Transmit direction (leaving the peripheral).
@@ -330,6 +331,7 @@ impl<P, const N: u8> Lpi2c<P, N> {
 }
 
 /// The number of words in each FIFO.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ControllerFifoStatus {
     /// Number of words in the receive FIFO.
@@ -543,6 +545,7 @@ bitflags::bitflags! {
 }
 
 /// (N)ACK responses.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Response {
     /// Response is acknowledge.
@@ -552,6 +555,7 @@ pub enum Response {
 }
 
 /// LPI2C controller commands.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ControllerCommand {
@@ -909,6 +913,7 @@ mod transaction {
 /// less than eight bits are truncated by the implementation. You're
 /// responsible for making sure that these parameters meet their timing
 /// parameter restrictions.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClockConfiguration {
     /// Clock high period.
@@ -946,6 +951,7 @@ pub struct ClockConfiguration {
 /// Source clock prescaler.
 ///
 /// Affects all timing, except for the glitch filters.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Prescaler {
@@ -980,6 +986,7 @@ const _: () = assert!(Prescaler::Prescaler1.divider() == 1);
 const _: () = assert!(Prescaler::Prescaler128.divider() == 128);
 
 /// Clock speed.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Clone, Copy, Debug)]
 pub enum ClockSpeed {
     /// 100 KHz.
@@ -1006,6 +1013,7 @@ impl ClockSpeed {
 /// but you can override this after construction.
 ///
 /// The simplest way to construct a `Timing` is to use [`ideal()`](Timing::ideal).
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timing {
     clock_configuration: ClockConfiguration,
