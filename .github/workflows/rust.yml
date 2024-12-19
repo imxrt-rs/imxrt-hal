@@ -41,7 +41,7 @@ jobs:
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-hal
-      run: cargo clippy --features=${{ matrix.chips }} --package=imxrt-hal -- -D warnings
+      run: cargo clippy --features=${{ matrix.chips }} --features=defmt --package=imxrt-hal -- -D warnings
 
   # Indirectly checks & lints the HAL with the HAL's chip feature, and also
   # checks & lints the imxrt-log package.
@@ -63,7 +63,7 @@ jobs:
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-log
-      run: cargo clippy --features=${{ matrix.chips }} --package=imxrt-log --package=imxrt-hal -- -D warnings
+      run: cargo clippy --features=${{ matrix.chips }} --features=defmt --package=imxrt-log --package=imxrt-hal -- -D warnings
   
   # Lint and build examples for boards.
   examples:
@@ -136,7 +136,7 @@ jobs:
     - name: Install a stable toolchain
       run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run unit, integration tests
-      run: cargo test --features=${{ matrix.chips }} --tests --package=imxrt-hal --package=imxrt-log
+      run: cargo test --features=${{ matrix.chips }} --features=defmt --tests --package=imxrt-hal --package=imxrt-log
 
   # Ensures that documentation builds, and that links are valid
   docs:

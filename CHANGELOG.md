@@ -29,6 +29,9 @@ are still exposed when building with a chip feature.
 
 Introduce an `imxrt1180` feature to support the RT1180 series.
 
+Add a `defmt` feature targeting version 0.3. When enabled, select imxrt-hal
+types can be formatted with `defmt`.
+
 ## [0.5.9] 2024-11-24
 
 Correct LPSPI receive operations. Previously, `u8` and `u16` elements received
