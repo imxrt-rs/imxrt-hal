@@ -1,4 +1,4 @@
-pub use drivers::rgpio;
+pub use drivers::{ccm_118x as ccm, rgpio};
 
 pub(crate) mod iomuxc {
     pub use super::config::pads;
@@ -13,16 +13,13 @@ pub(crate) mod iomuxc {
     }
 }
 
-pub mod ccm {
-    pub use crate::common::ccm::*;
-}
-
 pub mod dma {
     #[doc(hidden)]
     pub struct __PretendUsed(());
 }
 
 mod drivers {
+    pub mod ccm_118x;
     pub mod rgpio;
 }
 
