@@ -62,8 +62,9 @@ pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_sd_b0::GPIO_SD_B0_02, // SDO, J24_4
     iomuxc::gpio_sd_b0::GPIO_SD_B0_03, // SDI, J24_5
     iomuxc::gpio_sd_b0::GPIO_SD_B0_00, // SCK, J24_6
-    iomuxc::gpio_sd_b0::GPIO_SD_B0_01, // PCS0, J24_3
 >;
+/// SPI PCS0 (J24_3).
+pub type SpiPcs0 = iomuxc::gpio_sd_b0::GPIO_SD_B0_01;
 
 #[cfg(not(feature = "spi"))]
 /// Activate the `"spi"` feature to configure the SPI peripheral.
@@ -180,8 +181,11 @@ impl Specifics {
                 sdo: iomuxc.gpio_sd_b0.p02,
                 sdi: iomuxc.gpio_sd_b0.p03,
                 sck: iomuxc.gpio_sd_b0.p00,
-                pcs0: iomuxc.gpio_sd_b0.p01,
             };
+            crate::iomuxc::lpspi::prepare({
+                let pcs0: &mut SpiPcs0 = &mut iomuxc.gpio_sd_b0.p01;
+                pcs0
+            });
             let mut spi = Spi::new(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
