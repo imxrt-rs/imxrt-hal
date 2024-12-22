@@ -701,10 +701,13 @@ impl<P, const N: u8> Lpspi<P, N> {
     /// Returns the FIFO status.
     #[inline]
     pub fn fifo_status(&self) -> FifoStatus {
+        let (rxcap, txcap) = ral::read_reg!(ral::lpspi, self.lpspi, PARAM, RXFIFO, TXFIFO);
         let (rxcount, txcount) = ral::read_reg!(ral::lpspi, self.lpspi, FSR, RXCOUNT, TXCOUNT);
         FifoStatus {
             rxcount: rxcount as u16,
             txcount: txcount as u16,
+            rxcap: rxcap as u16,
+            txcap: txcap as u16,
         }
     }
 
@@ -1137,24 +1140,26 @@ impl Status {
 /// The number of words in each FIFO.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct FifoStatus {
     /// Number of words in the receive FIFO.
     pub rxcount: u16,
     /// Number of words in the transmit FIFO.
     pub txcount: u16,
+    /// The capacity of the receive FIFO.
+    pub rxcap: u16,
+    /// The capacity of the transmit FIFO.
+    pub txcap: u16,
 }
 
 impl FifoStatus {
     /// Indicates if the FIFO is full for the given direction.
     #[inline]
     pub const fn is_full(self, direction: Direction) -> bool {
-        /// See PARAM register docs.
-        const MAX_FIFO_SIZE: u16 = 16;
-        let count = match direction {
-            Direction::Tx => self.txcount,
-            Direction::Rx => self.rxcount,
-        };
-        count >= MAX_FIFO_SIZE
+        match direction {
+            Direction::Tx => self.txcount >= self.txcap,
+            Direction::Rx => self.rxcount >= self.rxcap,
+        }
     }
     /// Indicates if the FIFO is empty for the given direction.
     #[inline]
