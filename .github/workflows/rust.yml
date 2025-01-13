@@ -41,6 +41,8 @@ jobs:
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-hal
+      run: cargo clippy --features=${{ matrix.chips }} --package=imxrt-hal -- -D warnings
+    - name: Lint imxrt-hal with defmt
       run: cargo clippy --features=${{ matrix.chips }} --features=defmt --package=imxrt-hal -- -D warnings
 
   # Indirectly checks & lints the HAL with the HAL's chip feature, and also
