@@ -1633,6 +1633,7 @@ pub mod clockroot {
     }
 
     /// Inspect clock root registers and print out values via `defmt`
+    #[cfg(feature = "defmt")]
     pub fn inspect<T: Clockroot>(ccm: &mut CCM) {
         let val = read_reg!(
             ral::ccm::clockroot,
@@ -1681,28 +1682,22 @@ pub fn init(
     // - C codegen from clock tool does this
     // - BootROM does this when running from flash
     // Doing the same thing for the sake of completeness.
-    defmt::debug!("init osc rc 400m");
     osc_rc_400m::init(anadig_osc);
-    defmt::debug!("switch M33 to osc rc 400m");
     clockroot::configure(ccm, clockroot::M33::FromOscRc400M, 2);
 
     // Prerequisite for running a core with frequency > 200MHz
-    defmt::debug!("set vdd1p0 to 1.1V");
     dcdc::set_vdd1p0_buckmode_target_voltage(dcdc, dcdc::Vdd1P0TargetVoltage::V1100);
 
-    defmt::debug!("init osc 24m");
     osc_24m::init(anadig_osc);
 
-    defmt::debug!("init syspll3");
     syspll3::init(anadig_pll, phy_ldo, anadig_pmu);
 
-    defmt::debug!("switch M33 to syspll3");
     clockroot::configure(ccm, clockroot::M33::FromSysPll3Out, 2); // 480/2 -> 240MHz
 
-    defmt::debug!("switch FlexSpi1 to syspll3pfd0");
     clockroot::configure(ccm, clockroot::Flexspi1::FromSysPll3Pfd0, 5); // 480*18/13/5 -> ~133MHz // Restoring BootROM configuration
 }
 
+#[cfg(feature = "defmt")]
 pub mod diag {
     //! Clock diagnostics module
 
