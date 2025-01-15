@@ -29,12 +29,31 @@ pub struct Specifics {
 
 impl Specifics {
     pub(crate) fn new(_: &mut crate::Common) -> Self {
-        let iomuxc = unsafe { ral::iomuxc::IOMUXC::instance() };
-        let iomuxc_aon = unsafe { ral::iomuxc_aon::IOMUXC_AON::instance() };
-        let pads = imxrt_hal::iomuxc::into_pads(iomuxc, iomuxc_aon);
+        let ral::Instances {
+            IOMUXC,
+            IOMUXC_AON,
+            RGPIO4,
+            mut ANADIG_OSC,
+            mut ANADIG_PLL,
+            mut ANADIG_PMU,
+            mut CCM,
+            mut DCDC,
+            mut PHY_LDO,
+            ..
+        } = unsafe { ral::Instances::instances() };
 
-        let gpio4 = unsafe { ral::rgpio::RGPIO4::instance() };
-        let mut gpio4 = imxrt_hal::rgpio::Port::new(gpio4);
+        imxrt_hal::ccm::init(
+            &mut ANADIG_OSC,
+            &mut ANADIG_PLL,
+            &mut ANADIG_PMU,
+            &mut CCM,
+            &mut DCDC,
+            &mut PHY_LDO,
+        );
+
+        let pads = imxrt_hal::iomuxc::into_pads(IOMUXC, IOMUXC_AON);
+
+        let mut gpio4 = imxrt_hal::rgpio::Port::new(RGPIO4);
         let led = gpio4.output(pads.gpio_ad.p27);
 
         Specifics { led }
