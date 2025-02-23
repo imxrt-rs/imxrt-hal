@@ -228,7 +228,7 @@
 //! Note:
 //!
 //! - `IMXRT_LOG_USB_*` are always permitted. If `usbd` is disabled, then `IMXRT_LOG_USB_*`
-//!    configurations do nothing.
+//!   configurations do nothing.
 //! - If `IMXRT_LOG_USB_SPEED=FULL`, then `IMXRT_LOG_USB_BULK_MPS` cannot be 512. On the other hand,
 //!   if `IMXRT_LOG_USB_SPEED=HIGH`, then `IMXRT_LOG_USB_BULK_MPS` must be 512.
 //! - Both `IMXRT_LOG_USB_BULK_MPS` and `IMXRT_LOG_BUFFER_SIZE` affect internally-managed buffer

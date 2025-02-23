@@ -423,10 +423,10 @@ pub struct ClockConfigs {
 impl ClockConfigs {
     const fn as_raw(self) -> u32 {
         use ral::lpspi::CCR;
-        (self.sckpcs as u32) << CCR::SCKPCS::offset
-            | (self.pcssck as u32) << CCR::PCSSCK::offset
-            | (self.dbt as u32) << CCR::DBT::offset
-            | (self.sckdiv as u32) << CCR::SCKDIV::offset
+        ((self.sckpcs as u32) << CCR::SCKPCS::offset)
+            | ((self.pcssck as u32) << CCR::PCSSCK::offset)
+            | ((self.dbt as u32) << CCR::DBT::offset)
+            | ((self.sckdiv as u32) << CCR::SCKDIV::offset)
     }
 }
 
