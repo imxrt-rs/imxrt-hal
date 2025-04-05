@@ -1426,7 +1426,7 @@ where
     fn next_read(&mut self) -> Option<W> {
         // Safety: read the next word only if we're in bounds.
         unsafe {
-            (self.ptr != self.end).then(|| {
+            (!core::ptr::eq(self.ptr, self.end)).then(|| {
                 let word = self.ptr.read();
                 self.ptr = self.ptr.add(1);
                 word
@@ -1483,7 +1483,7 @@ where
         // Words are primitive types; we don't need to execute
         // a drop when we overwrite a value in memory.
         unsafe {
-            if self.ptr.cast_const() != self.end {
+            if !core::ptr::eq(self.ptr.cast_const(), self.end) {
                 self.ptr.write(elem);
                 self.ptr = self.ptr.add(1);
             }
