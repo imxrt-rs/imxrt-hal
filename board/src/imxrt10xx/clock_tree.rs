@@ -117,6 +117,26 @@ pub const fn lpi2c_frequency(run_mode: RunMode) -> u32 {
 
 const _: () = assert!(lpi2c_frequency(RunMode::Overdrive) == 8_000_000); // Max is 66MHz.
 
+// const fn can_divider(run_mode: RunMode) -> u32 {
+//     match run_mode {
+//         RunMode::Overdrive => 1,
+//     }
+// }
+
+// const fn can_selection(run_mode: RunMode) -> lpi2c_clk::Selection {
+//     match run_mode {
+//         RunMode::Overdrive => can_clk::Selection::Oscillator,
+//     }
+// }
+
+// /// Returns the CAN clock frequency for the run mode
+// pub const fn can_frequency(run_mode: RunMode) -> u32 {
+//     let hz = match run_mode {
+//         RunMode::Overdrive => XTAL_OSCILLATOR_HZ,
+//     };
+//     hz / can_divider(run_mode)
+// }
+
 /// Configure the PERCLK root clock.
 ///
 /// When this call returns, the PERCLK clock frequency match the values

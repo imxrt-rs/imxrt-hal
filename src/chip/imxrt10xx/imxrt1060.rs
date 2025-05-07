@@ -5,6 +5,13 @@
 
 pub use imxrt_iomuxc::imxrt1060 as pads;
 
+// mod can;
+/// Drivers available for this chip
+#[path = "drivers"]
+pub(crate) mod drivers {
+    pub mod can;
+}
+
 #[path = "ccm"]
 pub(crate) mod ccm {
     pub mod arm_divider;
@@ -26,10 +33,14 @@ pub(crate) mod ccm {
         pub mod pll7;
     }
 
+    /// FlexCAN clock
+    pub mod can_clk;
+
     /// Re-exported by the common clock_gate module.
     pub(crate) mod clock_gate {
         use crate::chip::ccm::clock_gate;
-
+        mod can;
+        pub use can::{can, can_pe};
         /// All clock gates downstream of the PERCLK root clock.
         pub const PERCLK_CLOCK_GATES: &[clock_gate::Locator] = &[
             clock_gate::pit(),
@@ -65,6 +76,14 @@ pub(crate) mod ccm {
             clock_gate::lpi2c::<2>(),
             clock_gate::lpi2c::<3>(),
             clock_gate::lpi2c::<4>(),
+        ];
+
+        /// All clock gates downstream of the flexcan root clock
+        pub const FLEXCAN_CLOCK_GATES: &[clock_gate::Locator] = &[
+            can::can::<1>(),
+            can::can::<2>(),
+            can::can_pe::<1>(),
+            can::can_pe::<2>(),
         ];
 
         /// All clock gates downstream of the IPG root clock.
