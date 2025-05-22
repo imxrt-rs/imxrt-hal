@@ -42,7 +42,7 @@ where
 {
     let quoted: Vec<String> = values
         .into_iter()
-        .map(|value| format!("\"{}\"", value))
+        .map(|value| format!("\"{value}\""))
         .collect();
     let joined = quoted.join(", ");
     // Single ":" permitted for backwards compatibility.
@@ -59,8 +59,7 @@ fn main() {
     let enabled_chip: Vec<_> = all_features.intersection(&feat_chip).collect();
     assert!(
         enabled_chip.len() < 2,
-        "Too many chip features! Select one of {:?}",
-        enabled_chip
+        "Too many chip features! Select one of {enabled_chip:?}",
     );
 
     if let Some(chip) = enabled_chip.first() {
