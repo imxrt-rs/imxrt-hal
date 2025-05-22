@@ -16,7 +16,7 @@ where
 {
     let quoted: Vec<String> = values
         .into_iter()
-        .map(|value| format!("\"{}\"", value))
+        .map(|value| format!("\"{value}\""))
         .collect();
     let joined = quoted.join(", ");
     // Single ":" permitted for backwards compatibility.
