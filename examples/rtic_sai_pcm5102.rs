@@ -81,6 +81,7 @@ mod app {
     use imxrt_hal::{self as hal};
 
     type SaiTx = hal::sai::Tx<1, 16, 2, hal::sai::PackingNone>;
+    type SaiRx = hal::sai::Rx<1, 16, 2, hal::sai::PackingNone>;
 
     //
     // End configurations.
@@ -102,6 +103,7 @@ mod app {
     struct Shared {
         /// Serial audio interface
         sai1_tx: SaiTx,
+        sai1_rx: SaiRx,
         poller: board::logging::Poller,
     }
 
@@ -140,13 +142,15 @@ mod app {
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         let poller = board::logging::init(FRONTEND, BACKEND, console, dma_a, usbd);
 
-        let (Some(sai1_tx), Some(_sai1_rx)) =
-            sai1.split(&hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8)))
-        else {
+        let mut sai_config = hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8));
+        sai_config.sync_mode = hal::sai::SyncMode::TxFollowRx;
+        sai_config.bclk_src_swap = true;
+        let (Some(sai1_tx), Some(sai1_rx)) = sai1.split(&sai_config) else {
             panic!("Unexpected return from sai split");
         };
 
         let mut sai1_tx: SaiTx = sai1_tx;
+        let mut sai1_rx: SaiRx = sai1_rx;
 
         let regs = sai1_tx.reg_dump();
         defmt::println!(
@@ -177,9 +181,14 @@ mod app {
             hal::sai::Interrupts::FIFO_WARNING | hal::sai::Interrupts::FIFO_REQUEST,
         );
         sai1_tx.set_enable(true);
+        sai1_rx.set_enable(true);
 
         (
-            Shared { sai1_tx, poller },
+            Shared {
+                sai1_tx,
+                sai1_rx,
+                poller,
+            },
             Local {
                 led,
                 poll_log,
@@ -189,7 +198,7 @@ mod app {
         )
     }
 
-    #[task(binds = BOARD_SAI1, shared = [sai1_tx], local = [counter, led], priority = 2)]
+    #[task(binds = BOARD_SAI1, shared = [sai1_tx, sai1_rx], local = [counter, led], priority = 2)]
     fn sai1_interrupt(mut cx: sai1_interrupt::Context) {
         let sai1_interrupt::LocalResources { counter, led, .. } = cx.local;
 
@@ -220,7 +229,7 @@ mod app {
         cx.shared.poller.lock(|poller| poller.poll());
     }
 
-    #[task(binds = BOARD_PIT, shared = [sai1_tx], local = [audio_pit, poll_log], priority = 1)]
+    #[task(binds = BOARD_PIT, shared = [sai1_tx, sai1_rx], local = [audio_pit, poll_log], priority = 1)]
     fn pit_interrupt(mut cx: pit_interrupt::Context) {
         let pit_interrupt::LocalResources {
             audio_pit,
@@ -240,6 +249,21 @@ mod app {
 
         log::info!(
             "Audio synthesis tx status {:#x}, fifo underrun? {}, word start? {}, write pos {}, read pos {}",
+            status.bits(),
+            status.contains(hal::sai::Status::FIFO_ERROR),
+            status.contains(hal::sai::Status::WORD_START),
+            write_pos,
+            read_pos,
+        );
+
+        let (status, write_pos, read_pos) = cx.shared.sai1_rx.lock(|sai1_rx| {
+            let status = sai1_rx.status();
+            let (write_pos, read_pos) = sai1_rx.fifo_position(0);
+            (status, write_pos, read_pos)
+        });
+
+        log::info!(
+            "Audio synthesis rx status {:#x}, fifo underrun? {}, word start? {}, write pos {}, read pos {}",
             status.bits(),
             status.contains(hal::sai::Status::FIFO_ERROR),
             status.contains(hal::sai::Status::WORD_START),
