@@ -165,6 +165,7 @@ pin-utils = "0.1"
 usb-device = { version = "0.3", features = ["test-class-high-speed"] }
 usbd-serial = "0.2"
 usbd-hid = "0.8"
+wm8960 = "0.1.2"
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dev-dependencies]
 board = { path = "board" }
@@ -211,6 +212,14 @@ name = "rtic_defmt_rtt"
 [[example]]
 name = "hal_i2c_lcd1602"
 required-features = ["board/lcd1602"]
+
+[[example]]
+name = "rtic_sai_wm8960"
+required-features = ["board/imxrt-log","board/sai"]
+
+[[example]]
+name = "rtic_sai_pcm5102"
+required-features = ["board/imxrt-log","board/sai"]
 
 [patch.crates-io.imxrt-ral]
 git = "https://github.com/imxrt-rs/imxrt-ral"
