@@ -65,8 +65,8 @@ jobs:
       matrix:
         config:
         # Boards that support all examples, and should build with additional drivers.
-        - --examples --features=board/teensy4,board/lcd1602
-        - --examples --features=board/imxrt1010evk,board/lcd1602
+        - --examples --features=board/teensy4,board/lcd1602,board/sai
+        - --examples --features=board/imxrt1010evk,board/lcd1602,board/sai
         - --examples --features=board/imxrt1060evk,board/lcd1602
         # SPI examples (might break other examples)
         - --example=rtic_spi_blocking --example=rtic_spi_controller --example=rtic_spi_peripheral --example=rtic_spi --example=async_dma_spi --features=board/teensy4,board/spi
