@@ -32,11 +32,11 @@ pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;
 /// LED output repurposed for SPI SCLK.
 pub type Led = ();
 
-/// The board's "button" on pin 7.
+/// The board's "button" on pin 0.
 ///
-/// Connect a normally-open switch from pin 7 to GND.
-pub type Button = hal::gpio::Input<iomuxc::gpio_b1::GPIO_B1_01>;
-type ButtonPad = iomuxc::gpio_b1::GPIO_B1_01;
+/// Connect a normally-open switch from pin 0 to GND.
+pub type Button = hal::gpio::Input<ButtonPad>;
+type ButtonPad = iomuxc::gpio_ad_b0::GPIO_AD_B0_03;
 
 /// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart<ConsolePins, 2>;
@@ -93,13 +93,13 @@ pub struct Pwm {
 ///
 /// Exposes methods to configure your board's GPIOs.
 pub struct GpioPorts {
-    gpio2: hal::gpio::Port<2>,
+    gpio1: hal::gpio::Port<1>,
 }
 
 impl GpioPorts {
     /// Returns the GPIO port for the button.
-    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<2> {
-        &mut self.gpio2
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<1> {
+        &mut self.gpio1
     }
 }
 
@@ -122,15 +122,19 @@ impl Specifics {
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);
 
-        let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
-        let mut gpio2 = hal::gpio::Port::new(gpio2);
+        let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
+        let mut gpio1 = hal::gpio::Port::new(gpio1);
 
         #[cfg(not(feature = "spi"))]
-        let led = gpio2.output(iomuxc.gpio_b0.p03);
+        let led = {
+            let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
+            let mut gpio2 = hal::gpio::Port::new(gpio2);
+            gpio2.output(iomuxc.gpio_b0.p03)
+        };
         #[cfg(feature = "spi")]
         let led = ();
 
-        let button = gpio2.input(iomuxc.gpio_b1.p01);
+        let button = gpio1.input(iomuxc.gpio_ad_b0.p03);
 
         let lpuart2 = unsafe { ral::lpuart::LPUART2::instance() };
         let mut console = hal::lpuart::Lpuart::new(
@@ -199,7 +203,7 @@ impl Specifics {
         Self {
             led,
             button,
-            ports: GpioPorts { gpio2 },
+            ports: GpioPorts { gpio1 },
             console,
             spi,
             i2c,
@@ -228,8 +232,8 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
 /// set alternates here.
 fn configure_pins(
     super::Pads {
+        ref mut gpio_ad_b0,
         ref mut gpio_ad_b1,
-        ref mut gpio_b1,
         ref mut gpio_b0,
         ..
     }: &mut super::Pads,
@@ -251,7 +255,7 @@ fn configure_pins(
         .set_pull_keeper(Some(iomuxc::PullKeeper::Pullup100k))
         .set_hysteresis(iomuxc::Hysteresis::Enabled);
 
-    let button: &mut ButtonPad = &mut gpio_b1.p01;
+    let button: &mut ButtonPad = &mut gpio_ad_b0.p03;
     iomuxc::configure(button, BUTTON_CONFIG);
 
     const SPI_PIN_CONFIG: iomuxc::Config = iomuxc::Config::zero()
