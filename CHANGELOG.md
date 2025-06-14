@@ -39,6 +39,14 @@ Introduce an `imxrt1180` feature to support the RT1180 series.
 Add a `defmt` feature targeting version 0.3. When enabled, select imxrt-hal
 types can be formatted with `defmt`.
 
+Export the SAI driver for 1170 MCUs.
+
+## [0.5.10] 2025-06-14
+
+Add SAI driver, supporting audio transmit, for 1000 series MCUs. 1170 support
+is unavailable without an imxrt-ral breaking change. Additionally, there are
+no SAI clock gates implemented for the 1020.
+
 ## [0.5.9] 2024-11-24
 
 Correct LPSPI receive operations. Previously, `u8` and `u16` elements received
@@ -374,6 +382,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.8...main
+[0.5.10]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.9...0.5.10
 [0.5.9]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.8...0.5.9
 [0.5.8]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.7...0.5.8
 [0.5.7]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.6...0.5.7
