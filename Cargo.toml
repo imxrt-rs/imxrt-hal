@@ -212,7 +212,11 @@ required-features = ["board/imxrt-log","board/sai"]
 
 [[example]]
 name = "rtic_sai_pcm5102"
-required-features = ["board/imxrt-log","board/sai"]
+required-features = ["board/imxrt-log","board/sai","board/teensy4"]
+
+[[example]]
+name = "rtic_sai_sgtl5000"
+required-features = ["board/imxrt-log","board/sai","board/teensy4"]
 
 [patch.crates-io.usbd-hid-macros]
 git = "https://github.com/imxrt-rs/usbd-hid.git"
