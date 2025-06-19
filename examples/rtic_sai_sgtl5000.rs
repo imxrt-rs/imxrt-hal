@@ -1,7 +1,7 @@
 //! Audio playback using sai peripheral and imxrt-hal.
 //!
 //! Plays back a simple 440Hz (A note) simple square wave tone with the SAI peripheral
-//! to a PCM5102 codec. Tested with Teensy 4.1.
+//! to an SGTL5000 codec. Tested with Teensy 4.1 and its own audio board (rev D).
 //!
 //! The audio stream itself is expected to be a 48000Hz 16bit stereo signal.
 //!
@@ -11,8 +11,11 @@
 //! GND          GND
 //! 3.3V         VIN
 //! Pin7         DIN
-//! Pin26        BCK
-//! Pin27        LRCK
+//! Pin18        SDA
+//! Pin19        SCL
+//! Pin20        LRCK
+//! Pin21        BCK
+//! Pin23        MCLK
 //!
 
 #![no_main]
@@ -78,10 +81,16 @@ mod app {
     const AUDIO_POLL_MS: u32 = 1000 * (board::PIT_FREQUENCY / 1_000);
 
     use crate::{sine, square};
+    use eh1::i2c::I2c;
     use imxrt_hal::{self as hal};
-
     type SaiTx = hal::sai::Tx<1, 16, 2, hal::sai::PackingNone>;
     type SaiRx = hal::sai::Rx<1, 16, 2, hal::sai::PackingNone>;
+
+    //     type I2cScl = iomuxc::gpio_ad_b1::GPIO_AD_B1_00; // P19
+    // type I2cSda = iomuxc::gpio_ad_b1::GPIO_AD_B1_01; // P18
+    // pub type I2cPins = hal::lpi2c::Pins<I2cScl, I2cSda>;
+
+    // pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 1>;
 
     //
     // End configurations.
@@ -97,6 +106,7 @@ mod app {
 
         /// Sample counter for the wave generation
         counter: u32,
+        dac_cp: Sgtl5000<board::I2c>,
     }
 
     #[shared]
@@ -121,7 +131,11 @@ mod app {
                 ..
             },
             board::Specifics {
-                led, sai1, console, ..
+                led,
+                sai1,
+                console,
+                mut i2c,
+                ..
             },
         ) = board::new();
 
@@ -180,8 +194,15 @@ mod app {
         sai1_tx.set_interrupts(
             hal::sai::Interrupts::FIFO_WARNING | hal::sai::Interrupts::FIFO_REQUEST,
         );
+
         sai1_tx.set_enable(true);
         sai1_rx.set_enable(true);
+
+        i2c.set_controller_enable(true);
+
+        let mut dac_cp = Sgtl5000::new(i2c, 0x0A);
+        _ = dac_cp.enable();
+        _ = dac_cp.unmute();
 
         (
             Shared {
@@ -193,6 +214,7 @@ mod app {
                 led,
                 poll_log,
                 audio_pit,
+                dac_cp,
                 counter,
             },
         )
@@ -203,6 +225,7 @@ mod app {
         let sai1_interrupt::LocalResources { counter, led, .. } = cx.local;
 
         cx.shared.sai1_tx.lock(|sai1_tx| {
+            sai1_tx.clear_status(hal::sai::Status::FIFO_ERROR); //TODO: figure out why FIFO error happens
             while sai1_tx.status().contains(hal::sai::Status::FIFO_REQUEST) {
                 sai1_tx.write_frame(0, [sine(*counter), square(*counter)]);
                 *counter = (*counter).wrapping_add(1);
@@ -229,11 +252,12 @@ mod app {
         cx.shared.poller.lock(|poller| poller.poll());
     }
 
-    #[task(binds = BOARD_PIT, shared = [sai1_tx, sai1_rx], local = [audio_pit, poll_log], priority = 1)]
+    #[task(binds = BOARD_PIT, shared = [sai1_tx, sai1_rx], local = [audio_pit, poll_log, dac_cp], priority = 1)]
     fn pit_interrupt(mut cx: pit_interrupt::Context) {
         let pit_interrupt::LocalResources {
             audio_pit,
             poll_log,
+            //dac_cp,
             ..
         } = cx.local;
 
@@ -278,6 +302,91 @@ mod app {
                 poll_log.clear_elapsed();
             }
             poll_logger::spawn().unwrap();
+        }
+    }
+
+    use eh1::i2c::SevenBitAddress;
+    pub struct Sgtl5000<I2C> {
+        i2c: I2C,
+        address: u8,
+    }
+    const CHIP_DIG_POWER: u16 = 0x0002;
+    const CHIP_CLK_CTRL: u16 = 0x0004;
+    const CHIP_I2S_CTRL: u16 = 0x0006;
+    const CHIP_SSS_CTRL: u16 = 0x000A;
+    const CHIP_ADCDAC_CTRL: u16 = 0x000E;
+    const CHIP_DAC_VOL: u16 = 0x0010;
+    const CHIP_ANA_HP_CTRL: u16 = 0x0022;
+    const CHIP_ANA_CTRL: u16 = 0x0024;
+    const CHIP_LINREG_CTRL: u16 = 0x0026;
+    const CHIP_REF_CTRL: u16 = 0x0028;
+    const CHIP_LINE_OUT_VOL: u16 = 0x002C;
+    const CHIP_ANA_POWER: u16 = 0x0030;
+    const CHIP_SHORT_CTRL: u16 = 0x003C;
+
+    const MUTE_HP_MASK: u16 = 1 << 4;
+
+    impl<I2C, E> Sgtl5000<I2C>
+    where
+        I2C: I2c<SevenBitAddress, Error = E>,
+    {
+        pub fn new(i2c: I2C, address: u8) -> Self {
+            Self { i2c, address }
+        }
+
+        /// Low-level: write 16-bit to register
+        pub fn write_register(&mut self, reg: u16, val: u16) -> Result<(), E> {
+            let buf = [(reg >> 8) as u8, reg as u8, (val >> 8) as u8, val as u8];
+            self.i2c.write(self.address, &buf)
+        }
+
+        /// Low-level: read 16-bit register
+        pub fn read_register(&mut self, reg: u16) -> Result<u16, E> {
+            let reg_buf = [(reg >> 8) as u8, reg as u8];
+            let mut val_buf = [0u8; 2];
+            self.i2c.write_read(self.address, &reg_buf, &mut val_buf)?;
+            Ok(((val_buf[0] as u16) << 8) | val_buf[1] as u16)
+        }
+
+        pub fn enable(&mut self) -> Result<(), E> {
+            // Init sequence based on the C++ driver: https://github.com/PaulStoffregen/Audio/blob/master/control_sgtl5000.cpp
+            self.write_register(CHIP_LINREG_CTRL, 0x006C)?;
+            self.write_register(CHIP_REF_CTRL, 0x01f2)?;
+            self.write_register(CHIP_LINE_OUT_VOL, 0x0F22)?;
+            self.write_register(CHIP_SHORT_CTRL, 0x4446)?;
+            self.write_register(CHIP_ANA_CTRL, 0x0137)?;
+            self.write_register(CHIP_ANA_POWER, 0x40ff)?;
+            self.write_register(CHIP_DIG_POWER, 0x0073)?;
+            self.write_register(CHIP_LINE_OUT_VOL, 0x1D1D)?;
+
+            self.write_register(CHIP_CLK_CTRL, 0x0008)?; // 48.0 kHz, 256*Fs
+            self.write_register(CHIP_I2S_CTRL, 0x0030)?; // SCLK=64*Fs, 16bit, I2S format
+
+            self.write_register(CHIP_SSS_CTRL, 0x0010)?; // ADC->I2S, I2S->DAC
+            self.write_register(CHIP_ADCDAC_CTRL, 0x0000)?; // disable dac mute
+            self.write_register(CHIP_DAC_VOL, 0x3C3C)?; // digital gain, 0dB
+            self.write_register(CHIP_ANA_HP_CTRL, 0x7F7F)?; // set volume (lowest level)
+            self.write_register(CHIP_ANA_CTRL, 0x0036)?; // enable zero cross detectors
+            Ok(())
+        }
+
+        pub fn mute(&mut self) -> Result<(), E> {
+            let current = self.read_register(CHIP_ANA_CTRL)?;
+            let new = current | MUTE_HP_MASK;
+            self.write_register(CHIP_ANA_CTRL, new)
+        }
+
+        pub fn unmute(&mut self) -> Result<(), E> {
+            let current = self.read_register(CHIP_ANA_CTRL)?;
+            let new = current & !MUTE_HP_MASK;
+            self.write_register(CHIP_ANA_CTRL, new)
+        }
+
+        pub fn set_volume(&mut self, vol: f32) -> Result<(), E> {
+            let clamped = vol.clamp(0.0, 1.0);
+            let raw = (clamped * 0x3F as f32) as u8;
+            let vol16 = ((raw as u16) << 8) | raw as u16;
+            self.write_register(CHIP_ANA_HP_CTRL, vol16)
         }
     }
 }
