@@ -238,24 +238,42 @@ pub struct Pins<Sync, Bclk, Data> {
 /// Configuration for SAI peripheral
 #[derive(Default)]
 pub struct SaiConfig {
-    mclk_source: MclkSource,
-    tx_fifo_wm: u32,
-    tx_stop_en: bool,
-    tx_debug_en: bool,
-    tx_bclk_div: u32,
-    rx_fifo_wm: u32,
-    rx_stop_en: bool,
-    rx_debug_en: bool,
-    rx_bclk_div: u32,
-    byte_order: ByteOrder,
-    mode: Mode,
-    sync_width: SyncWidth,
-    sync_early: bool,
-    sync_polarity: ClockPolarity,
-    sync_mode: SyncMode,
-    bclk_src_swap: bool,
-    bclk_input_delay: bool,
-    bclk_polarity: ClockPolarity,
+    /// MCLK source
+    pub mclk_source: MclkSource,
+    /// TX fifo watermark
+    pub tx_fifo_wm: u32,
+    /// TX stop enable
+    pub tx_stop_en: bool,
+    /// TX debug enable
+    pub tx_debug_en: bool,
+    /// TX BCLK divider
+    pub tx_bclk_div: u32,
+    /// RX FIFO watermark
+    pub rx_fifo_wm: u32,
+    /// RX stop enable
+    pub rx_stop_en: bool,
+    /// RX debug enable
+    pub rx_debug_en: bool,
+    /// RX BCLK divider
+    pub rx_bclk_div: u32,
+    /// Byte order
+    pub byte_order: ByteOrder,
+    /// Mode
+    pub mode: Mode,
+    /// Sync width
+    pub sync_width: SyncWidth,
+    /// Sync early
+    pub sync_early: bool,
+    /// Sync polarity
+    pub sync_polarity: ClockPolarity,
+    /// Sync mode
+    pub sync_mode: SyncMode,
+    /// BCLK source swap
+    pub bclk_src_swap: bool,
+    /// BCLK input delay
+    pub bclk_input_delay: bool,
+    /// BCLK polarity
+    pub bclk_polarity: ClockPolarity,
 }
 
 const MIN_BCLK_DIV: u32 = 2;
@@ -462,8 +480,106 @@ pub struct Rx<
     const FRAME_SIZE: usize,
     PACKING: Packing<WORD_SIZE>,
 > {
-    _sai: ral::sai::Instance<N>,
+    sai: ral::sai::Instance<N>,
     _packing: PhantomData<PACKING>,
+}
+
+impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing<WORD_SIZE>>
+    Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>
+{
+    /// Enable/Disable transmission
+    pub fn set_enable(&mut self, en: bool) {
+        let mut rcsr = ral::read_reg!(ral::sai, self.sai, RCSR) & !Status::W1C.bits();
+        if en {
+            rcsr |= ral::sai::RCSR::RE::mask
+        } else {
+            rcsr &= !ral::sai::RCSR::RE::mask
+        }
+        ral::write_reg!(ral::sai, self.sai, RCSR, rcsr);
+        self.clear_status(Status::W1C);
+    }
+
+    /// Return the interrupt flags.
+    ///
+    /// The interrupt flags indicate the reasons that this peripheral may generate an interrupt.
+    pub fn interrupts(&self) -> Interrupts {
+        let rcsr = ral::read_reg!(ral::sai, self.sai, RCSR);
+        Interrupts::from_bits_truncate(rcsr)
+    }
+
+    /// Set the interrupt flags for this SAI transmitter.
+    pub fn set_interrupts(&mut self, interrutps: Interrupts) {
+        ral::modify_reg!(ral::sai, self.sai, RCSR, |rcsr| {
+            let rcsr = rcsr & !Interrupts::all().bits();
+            rcsr | interrutps.bits()
+        })
+    }
+
+    /// Get the status register of the transmitter, this can be used in conjunction with
+    /// status field masks to determine the state of the SAI peripheral.
+    pub fn status(&mut self) -> Status {
+        let rcsr = ral::read_reg!(ral::sai, self.sai, RCSR);
+        Status::from_bits_truncate(rcsr)
+    }
+
+    /// Clear status error flags
+    pub fn clear_status(&mut self, flags: Status) {
+        let flags = flags & Status::W1C;
+        ral::modify_reg!(ral::sai, self.sai, RCSR, |rcsr| { rcsr | flags.bits() });
+    }
+
+    /// Get a dump of the Rx configuration registers
+    pub fn reg_dump(&mut self) -> [u32; 6] {
+        [
+            ral::read_reg!(ral::sai, self.sai, RCR1),
+            ral::read_reg!(ral::sai, self.sai, RCR2),
+            ral::read_reg!(ral::sai, self.sai, RCR3),
+            ral::read_reg!(ral::sai, self.sai, RCR4),
+            ral::read_reg!(ral::sai, self.sai, RCR5),
+            ral::read_reg!(ral::sai, self.sai, RCSR),
+        ]
+    }
+
+    /// Get the FIFO write and read position
+    ///
+    /// ```no_run
+    /// use imxrt_ral::sai::{SAI1, RCSR};
+    /// use imxrt_hal::sai::{Rx, PackingNone, Sai, SaiConfig};
+    /// let sai = Sai::without_pins(unsafe { SAI1::instance() }, 0, 0);
+    /// let (Some(mut sai_rx), None) = sai.split::<16, 2, PackingNone>(&SaiConfig::i2s(8)) else { panic!() };
+    ///
+    /// let (write_pos, read_pos) = sai_rx.fifo_position(0);
+    /// ```
+    pub fn fifo_position(&mut self, chan: usize) -> (u32, u32) {
+        ral::read_reg!(ral::sai, self.sai, RFR[chan], WFP, RFP)
+    }
+}
+
+impl<const N: u8, const FRAME_SIZE: usize> Rx<N, 32, FRAME_SIZE, PackingNone> {
+    /// Read without checks or blocking a single audio frame from channels FIFO
+    pub fn read_frame(&mut self, chan: usize, frame: &mut [u32; FRAME_SIZE]) {
+        for sample in frame {
+            *sample = ral::read_reg!(ral::sai, self.sai, RDR[chan]);
+        }
+    }
+}
+
+impl<const N: u8, const FRAME_SIZE: usize> Rx<N, 16, FRAME_SIZE, PackingNone> {
+    /// Read without checks or blocking a single audio frame from channels FIFO
+    pub fn read_frame(&mut self, chan: usize, frame: &mut [u16; FRAME_SIZE]) {
+        for sample in frame {
+            *sample = ral::read_reg!(ral::sai, self.sai, RDR[chan]) as u16;
+        }
+    }
+}
+
+impl<const N: u8, const FRAME_SIZE: usize> Rx<N, 8, FRAME_SIZE, PackingNone> {
+    /// Read without checks or blocking a single audio frame from channels FIFO
+    pub fn read_frame(&mut self, chan: usize, frame: &mut [u8; FRAME_SIZE]) {
+        for sample in frame {
+            *sample = ral::read_reg!(ral::sai, self.sai, RDR[chan]) as u8;
+        }
+    }
 }
 
 impl<const N: u8, Chan, Mclk, TxSync, TxBclk, TxData> Sai<N, Mclk, Pins<TxSync, TxBclk, TxData>, ()>
@@ -578,7 +694,7 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
 
         let rx = self.rx_pins.map(|_| Rx {
             // Safety: create instance
-            _sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },
+            sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },
             _packing: PhantomData::<PACKING>,
         });
 
@@ -638,7 +754,7 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
             ral::write_reg!(ral::sai, self.sai, RCR4, FRSZ: ((FRAME_SIZE - 1) as u32),
                 FPACK: PACKING::FPACK, SYWD: (sync_width - 1), MF: cfg.byte_order as u32,
                 FSE: cfg.sync_early as u32, FSP: cfg.sync_polarity as u32, FSD: frame_sync_dir);
-            ral::write_reg!(ral::sai, self.sai, RCR5, W0W: ((WORD_SIZE - 1) as u32), WNW: ((WORD_SIZE - 1) as u32));
+            ral::write_reg!(ral::sai, self.sai, RCR5, W0W: ((WORD_SIZE - 1) as u32), WNW: ((WORD_SIZE - 1) as u32), FBT: (WORD_SIZE - 1) as u32);
             ral::write_reg!(ral::sai, self.sai, RCSR, RE: 0, STOPE: cfg.rx_stop_en as u32,
                 DBGE: cfg.rx_debug_en as u32, BCE: 1, WSF: 1, SEF: 1, FEF: 1, FWF: 0, FRF: 0,
                 WSIE: 0, SEIE: 0, FEIE: 0, FWIE: 0, FWDE: 0, FRDE: 0);
