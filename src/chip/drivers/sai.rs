@@ -754,7 +754,7 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
             ral::write_reg!(ral::sai, self.sai, RCR4, FRSZ: ((FRAME_SIZE - 1) as u32),
                 FPACK: PACKING::FPACK, SYWD: (sync_width - 1), MF: cfg.byte_order as u32,
                 FSE: cfg.sync_early as u32, FSP: cfg.sync_polarity as u32, FSD: frame_sync_dir);
-            ral::write_reg!(ral::sai, self.sai, RCR5, W0W: ((WORD_SIZE - 1) as u32), WNW: ((WORD_SIZE - 1) as u32));
+            ral::write_reg!(ral::sai, self.sai, RCR5, W0W: ((WORD_SIZE - 1) as u32), WNW: ((WORD_SIZE - 1) as u32), FBT: (WORD_SIZE - 1) as u32);
             ral::write_reg!(ral::sai, self.sai, RCSR, RE: 0, STOPE: cfg.rx_stop_en as u32,
                 DBGE: cfg.rx_debug_en as u32, BCE: 1, WSF: 1, SEF: 1, FEF: 1, FWF: 0, FRF: 0,
                 WSIE: 0, SEIE: 0, FEIE: 0, FWIE: 0, FWDE: 0, FRDE: 0);
