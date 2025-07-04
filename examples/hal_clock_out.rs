@@ -115,13 +115,13 @@ impl fmt::Write for Ctx {
 fn info(console: &mut Writer, ccm: &mut CCM) -> fmt::Result {
     writeln!(console, "CLKO1 (divider = {})...", clko1::divider(ccm))?;
     for (idx, clock_selection) in CLKO1_SELECTIONS.iter().enumerate() {
-        writeln!(console, "\t{} => {:?}", idx, clock_selection)?;
+        writeln!(console, "\t{idx} => {clock_selection:?}")?;
     }
     writeln!(console)?;
 
     writeln!(console, "CLKO2 (divider = {})...", clko2::divider(ccm))?;
     for (idx, clock_selection) in CLKO2_SELECTIONS.iter().enumerate() {
-        writeln!(console, "\t{} => {:?}", idx, clock_selection)?;
+        writeln!(console, "\t{idx} => {clock_selection:?}")?;
     }
     writeln!(console)?;
     Ok(())
@@ -140,7 +140,7 @@ fn set_divider(output: &str, divider: &str, console: &mut Writer, ccm: &mut CCM)
     let output = match parse_output(output) {
         Ok(output) => output,
         Err(msg) => {
-            return writeln!(console, "{}", msg);
+            return writeln!(console, "{msg}");
         }
     };
     let divider: u32 = match divider.parse() {
@@ -149,7 +149,7 @@ fn set_divider(output: &str, divider: &str, console: &mut Writer, ccm: &mut CCM)
             return writeln!(console, "divider must be between 1 and MAX_DIVIDER_VALUE");
         }
         Err(err) => {
-            return writeln!(console, "{}", err);
+            return writeln!(console, "{err}");
         }
     };
     if 1 == output {
@@ -157,7 +157,7 @@ fn set_divider(output: &str, divider: &str, console: &mut Writer, ccm: &mut CCM)
     } else {
         clko2::set_divider(ccm, divider);
     }
-    writeln!(console, "Set CLKO{} divider to {}", output, divider)?;
+    writeln!(console, "Set CLKO{output} divider to {divider}")?;
     Ok(())
 }
 
@@ -165,7 +165,7 @@ fn set_clock(output: &str, sel: &str, console: &mut Writer, ccm: &mut CCM) -> fm
     let output = match parse_output(output) {
         Ok(output) => output,
         Err(msg) => {
-            return writeln!(console, "{}", msg);
+            return writeln!(console, "{msg}");
         }
     };
     let selection_len = if output == 1 {
@@ -175,8 +175,8 @@ fn set_clock(output: &str, sel: &str, console: &mut Writer, ccm: &mut CCM) -> fm
     };
     let selection: usize = match sel.parse() {
         Ok(sel) if sel < selection_len => sel,
-        Ok(_) => return writeln!(console, "selection must be less than {}", selection_len),
-        Err(err) => return writeln!(console, "{}", err),
+        Ok(_) => return writeln!(console, "selection must be less than {selection_len}"),
+        Err(err) => return writeln!(console, "{err}"),
     };
     if 1 == output {
         clko1::set_selection(ccm, CLKO1_SELECTIONS[selection]);

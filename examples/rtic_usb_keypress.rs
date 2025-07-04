@@ -201,7 +201,7 @@ mod app {
             }
             b' ' => simple_kr(0, [0x2c, 0, 0, 0, 0, 0]),
             _ => {
-                log::error!("Unsupported character '{}'", ch);
+                log::error!("Unsupported character '{ch}'");
                 None
             }
         }
