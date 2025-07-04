@@ -161,7 +161,7 @@ mod app {
                         );
                     }
                     Err(usb_device::UsbError::WouldBlock) => {}
-                    Err(err) => log::error!("{:?}", err),
+                    Err(err) => log::error!("{err:?}"),
                 }
             } else {
                 *configured = false;
