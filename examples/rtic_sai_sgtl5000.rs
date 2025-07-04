@@ -5,17 +5,8 @@
 //!
 //! The audio stream itself is expected to be a 48000Hz 16bit stereo signal.
 //!
-//! Pinout:
-//! Teensy       PCM5102
-//! --------------------
-//! GND          GND
-//! 3.3V         VIN
-//! Pin7         DIN
-//! Pin18        SDA
-//! Pin19        SCL
-//! Pin20        LRCK
-//! Pin21        BCK
-//! Pin23        MCLK
+//! Please refer to the original pinout (e.g. solder the audio board on top of Teensy):
+//! https://www.pjrc.com/store/teensy3_audio.html
 //!
 
 #![no_main]
