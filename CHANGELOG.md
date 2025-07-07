@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.11] 2025-07-07
+
+Add receive functions to the SAI driver.
+
 The SAI driver would overwrite other configurations in an IOMUXC\_GPR register,
 and it would fail to configure clock directions for SAI instances other than
 SAI1. This release removes this IOMUXC\_GPR interaction. Users should directly
@@ -348,6 +352,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.8...main
+[0.5.11]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.10...0.5.11
 [0.5.10]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.9...0.5.10
 [0.5.9]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.8...0.5.9
 [0.5.8]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.7...0.5.8
