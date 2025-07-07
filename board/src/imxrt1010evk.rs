@@ -177,6 +177,9 @@ impl Specifics {
         let mut iomuxc = super::convert_iomuxc(iomuxc);
         configure_pins(&mut iomuxc);
 
+        let iomuxc_gpr = unsafe { ral::iomuxc_gpr::IOMUXC_GPR::instance() };
+        ral::modify_reg!(ral::iomuxc_gpr, iomuxc_gpr, GPR1, SAI1_MCLK_DIR: 1);
+
         let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
         let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
