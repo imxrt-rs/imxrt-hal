@@ -14,6 +14,11 @@
 //!
 //! The configuration of the SAI is encoded in configuration structure that can be used with a singular
 //! configure method.
+//!
+//! ## Clock configuration
+//!
+//! Make sure to configure your clocks before using the audio interface. Note that there may be
+//! additional clock settings in `IOMUXC_GPR`.
 
 use crate::iomuxc::{consts, sai};
 use crate::ral;
@@ -678,14 +683,6 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
         Option<Tx<N, WORD_SIZE, FRAME_SIZE, PACKING>>,
         Option<Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>>,
     ) {
-        // Safety: set the mclk pin to be an output
-        unsafe {
-            #[cfg(chip = "imxrt1170")]
-            ral::write_reg!(ral::iomuxc_gpr, ral::iomuxc_gpr::IOMUXC_GPR::instance(), GPR0, SAI1_MCLK_DIR: 1);
-            #[cfg(not(chip = "imxrt1170"))]
-            ral::write_reg!(ral::iomuxc_gpr, ral::iomuxc_gpr::IOMUXC_GPR::instance(), GPR1, SAI1_MCLK_DIR: 1);
-        }
-
         let tx = self.tx_pins.map(|_| Tx {
             // Safety: create instance
             sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },

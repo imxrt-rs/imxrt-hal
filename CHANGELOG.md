@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+The SAI driver would overwrite other configurations in an IOMUXC\_GPR register,
+and it would fail to configure clock directions for SAI instances other than
+SAI1. This release removes this IOMUXC\_GPR interaction. Users should directly
+use the IOMUXC\_GPR to configure their own clocks.
+
 ## [0.5.10] 2025-06-14
 
 Add SAI driver, supporting audio transmit, for 1000 series MCUs. 1170 support
