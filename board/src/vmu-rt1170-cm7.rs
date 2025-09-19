@@ -114,32 +114,23 @@ const PWM_INSTANCE: u8 = 2;
 #[cfg(not(feature = "spi"))]
 pub mod pwm {
     use super::iomuxc;
-    use super::PWM_INSTANCE;
     use crate::hal::flexpwm;
 
-    pub type Peripheral = flexpwm::Pwm<{ PWM_INSTANCE }>;
-    pub type Submodule = flexpwm::Submodule<{ PWM_INSTANCE }, 2>;
-    pub type Outputs = (
-        flexpwm::Output<iomuxc::gpio_ad::GPIO_AD_28>, // A, J9_8
-        flexpwm::Output<iomuxc::gpio_ad::GPIO_AD_29>, // B, J9_12
-    );
+    pub use flexpwm::Pwm;
+
+    pub(super) const N: u8 = super::PWM_INSTANCE;
+    pub const SM: flexpwm::SM = flexpwm::SM::SM2;
+
+    pub use flexpwm::Channel::*;
+
+    pub(super) type PinA = iomuxc::gpio_ad::GPIO_AD_28; // J9_8
+    pub(super) type PinB = iomuxc::gpio_ad::GPIO_AD_29; // J9_12
 }
 
 #[cfg(feature = "spi")]
 pub mod pwm {
-    pub type Peripheral = ();
-    pub type Submodule = ();
-    pub type Outputs = ();
-}
-
-/// The board's PWM components.
-pub struct Pwm {
-    /// Core PWM peripheral.
-    pub module: pwm::Peripheral,
-    /// PWM submodule control registers.
-    pub submodule: pwm::Submodule,
-    /// The output pairs (tupler of A, B outputs).
-    pub outputs: pwm::Outputs,
+    /// PWM disabled when SPI is enabled.
+    pub type Pwm = ();
 }
 
 pub struct GpioPorts {
@@ -160,7 +151,7 @@ pub struct Specifics {
     pub tp1002: Tp1002,
     pub tp1003: Tp1003,
     pub spi: Spi,
-    pub pwm: Pwm,
+    pub pwm: pwm::Pwm,
     pub i2c: I2c,
 }
 
@@ -222,23 +213,16 @@ impl Specifics {
         #[cfg(not(feature = "spi"))]
         let pwm = {
             let flexpwm = unsafe { ral::pwm::PWM2::instance() };
-            let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm);
-
-            let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_ad.p28);
-            let out_b = hal::flexpwm::Output::new_b(iomuxc.gpio_ad.p29);
-
-            super::Pwm {
-                module: pwm,
-                submodule: sm,
-                outputs: (out_a, out_b),
-            }
+            let pwm = pwm::Pwm::new::<{ pwm::N }>(flexpwm);
+            let mut pin_a: pwm::PinA = iomuxc.gpio_ad.p28;
+            let mut pin_b: pwm::PinB = iomuxc.gpio_ad.p29;
+            crate::iomuxc::flexpwm::prepare(&mut pin_a);
+            crate::iomuxc::flexpwm::prepare(&mut pin_b);
+            pwm
         };
         #[cfg(feature = "spi")]
-        let pwm = Pwm {
-            module: (),
-            submodule: (),
-            outputs: (),
-        };
+        #[allow(clippy::let_unit_value)]
+        let pwm = ();
         let i2c = {
             let lpi2c5 = unsafe { ral::lpi2c::LPI2C5::instance() };
             I2c::new(

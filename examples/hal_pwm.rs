@@ -20,47 +20,39 @@ const PWM_B_DUTY: u32 = PWM_A_DUTY / 2;
 
 #[imxrt_rt::entry]
 fn main() -> ! {
-    let (board::Common { mut pit, .. }, board::Specifics { led, pwm, .. }) = board::new();
+    let (board::Common { mut pit, .. }, board::Specifics { led, mut pwm, .. }) = board::new();
     pit.0.set_load_timer_value(PIT_DELAY_MS);
     pit.0.enable();
 
-    let board::Pwm {
-        mut module,
-        mut submodule,
-        outputs: (out_a, out_b),
-    } = pwm;
-
-    submodule.set_debug_enable(true);
-    submodule.set_wait_enable(true);
-    submodule.set_clock_select(hal::flexpwm::ClockSelect::Ipg);
-    submodule.set_prescaler(board::PWM_PRESCALER);
-    submodule.set_pair_operation(hal::flexpwm::PairOperation::Independent);
-    submodule.set_load_mode(hal::flexpwm::LoadMode::reload_full());
-    submodule.set_load_frequency(1);
-    submodule.set_initial_count(&module, SWITCHING_FREQ / -2i16);
-    submodule.set_value(
+    pwm.set_debug_enable(board::pwm::SM, true);
+    pwm.set_wait_enable(board::pwm::SM, true);
+    pwm.set_clock_select(board::pwm::SM, hal::flexpwm::ClockSelect::Ipg);
+    pwm.set_prescaler(board::pwm::SM, board::PWM_PRESCALER);
+    pwm.set_pair_operation(board::pwm::SM, hal::flexpwm::PairOperation::Independent);
+    pwm.set_load_mode(board::pwm::SM, hal::flexpwm::LoadMode::reload_full());
+    pwm.set_load_frequency(board::pwm::SM, 1);
+    pwm.set_initial_count(board::pwm::SM, SWITCHING_FREQ / -2i16);
+    pwm.set_value(
+        board::pwm::SM,
         hal::flexpwm::FULL_RELOAD_VALUE_REGISTER,
         SWITCHING_FREQ / 2i16,
     );
 
-    out_a.set_turn_on(&submodule, PWM_A_DUTY as i16 / -2i16);
-    out_a.set_turn_off(&submodule, PWM_A_DUTY as i16 / 2i16);
+    pwm.set_turn_on(board::pwm::SM, board::pwm::A, PWM_A_DUTY as i16 / -2i16);
+    pwm.set_turn_off(board::pwm::SM, board::pwm::A, PWM_A_DUTY as i16 / 2i16);
 
-    out_b.set_turn_on(&submodule, PWM_B_DUTY as i16 / -2i16);
-    out_b.set_turn_off(&submodule, PWM_B_DUTY as i16 / 2i16);
+    pwm.set_turn_on(board::pwm::SM, board::pwm::B, PWM_B_DUTY as i16 / -2i16);
+    pwm.set_turn_off(board::pwm::SM, board::pwm::B, PWM_B_DUTY as i16 / 2i16);
 
-    out_a.set_output_enable(&mut module, true);
-    out_b.set_output_enable(&mut module, true);
-    submodule.set_load_ok(&mut module);
-    submodule.set_running(&mut module, true);
+    pwm.set_output_enable(board::pwm::SM.mask(), board::pwm::A);
+    pwm.set_output_enable(board::pwm::SM.mask(), board::pwm::B);
+
+    pwm.set_load_ok(board::pwm::SM.mask());
+    pwm.set_run(board::pwm::SM.mask());
 
     loop {
         while !pit.0.is_elapsed() {}
         pit.0.clear_elapsed();
         led.toggle();
-
-        let enabled = out_a.output_enable(&module);
-        out_a.set_output_enable(&mut module, !enabled);
-        out_b.set_output_enable(&mut module, !enabled);
     }
 }

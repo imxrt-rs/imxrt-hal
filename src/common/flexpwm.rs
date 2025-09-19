@@ -1,15 +1,12 @@
 //! Pulse width modulation.
 //!
-//! Each PWM peripheral, [`Pwm`], interacts with four submodules, [`Submodule`].
+//! Each PWM peripheral, [`Pwm`], interacts with four submodules.
 //! Each submodule acts as a timer with multiple compare registers, called
 //! [`ValueRegister`]s. A comparison event
 //!
-//! - is signaled through a [`Status`] flag (see [`Submodule::status`]).
-//! - can generate an interrupt (see [`Submodule::interrupts`]).
-//! - sets a PWM [`Output`] high or low, depending on the turn on / off values.
-//!
-//! > Note: PWM outputs can also be manipulated directly with [`Submodule`], without
-//! > using [`Output`].
+//! - is signaled through a [`Status`] flag (see [`Pwm::status`]).
+//! - can generate an interrupt (see [`Pwm::interrupts`]).
+//! - sets a PWM output high or low, depending on the turn on / off values.
 //!
 //! The PWM driver does not implement any of the embedded-hal PWM traits. You should
 //! use these APIs to create your own PWM implementation that satisfies your driver.
@@ -24,69 +21,65 @@
 //! use imxrt_hal as hal;
 //! use imxrt_ral as ral;
 //!
-//! use hal::flexpwm;
+//! use hal::flexpwm::{self, Pwm, SM::SM2, Channel::{A, B}};
 //!
 //! # || -> Option<()> {
 //! let pwm2 = unsafe { ral::pwm::PWM2::instance() };
-//! let (mut pwm, (_, _, mut sm2, _)) = flexpwm::new(pwm2);
+//! let mut pwm = Pwm::new::<2>(pwm2);
 //!
 //! // Keep running in wait, debug modes.
-//! sm2.set_debug_enable(true);
-//! sm2.set_wait_enable(true);
+//! pwm.set_debug_enable(SM2, true);
+//! pwm.set_wait_enable(SM2, true);
 //! // Run on the IPG clock.
-//! sm2.set_clock_select(flexpwm::ClockSelect::Ipg);
+//! pwm.set_clock_select(SM2, flexpwm::ClockSelect::Ipg);
 //! // Divide the IPG clock by 1.
-//! sm2.set_prescaler(flexpwm::Prescaler::Prescaler1);
+//! pwm.set_prescaler(SM2, flexpwm::Prescaler::Prescaler1);
 //! // Allow PWM outputs to operate independently.
-//! sm2.set_pair_operation(flexpwm::PairOperation::Independent);
+//! pwm.set_pair_operation(SM2, flexpwm::PairOperation::Independent);
 //!
 //! // Reload every time the full reload value register compares.
-//! sm2.set_load_mode(flexpwm::LoadMode::reload_full());
-//! sm2.set_load_frequency(1);
+//! pwm.set_load_mode(SM2, flexpwm::LoadMode::reload_full());
+//! pwm.set_load_frequency(SM2, 1);
 //! // Count over the full range of i16 values.
-//! sm2.set_initial_count(&pwm, i16::MIN);
-//! sm2.set_value(flexpwm::FULL_RELOAD_VALUE_REGISTER, i16::MAX);
+//! pwm.set_initial_count(SM2, i16::MIN);
+//! pwm.set_value(SM2, flexpwm::FULL_RELOAD_VALUE_REGISTER, i16::MAX);
 //!
-//! let gpio_b0_10 = // Handle to the pad
+//! let mut gpio_b0_10 = // Handle to the pad, channel A
 //!     # unsafe { imxrt_iomuxc::imxrt1060::gpio_b0::GPIO_B0_10::new() };
-//! let gpio_b0_11 = // Handle to the pad
+//! let mut gpio_b0_11 = // Handle to the pad, channel B
 //!     # unsafe { imxrt_iomuxc::imxrt1060::gpio_b0::GPIO_B0_11::new() };
-//! let output_a = flexpwm::Output::new_a(gpio_b0_10);
-//! let output_b = flexpwm::Output::new_b(gpio_b0_11);
+//! imxrt_iomuxc::flexpwm::prepare(&mut gpio_b0_10);
+//! imxrt_iomuxc::flexpwm::prepare(&mut gpio_b0_11);
+//!
 //! // Set the turn on / off count values.
-//! output_a.set_turn_on(&sm2, i16::MIN / 2);
-//! output_a.set_turn_off(&sm2, i16::MAX / 2);
+//! pwm.set_turn_on(SM2, A, i16::MIN / 2);
+//! pwm.set_turn_off(SM2, A, i16::MAX / 2);
 //! // Output B generates the same duty cycle as A
 //! // with a lagging phase shift of 5000 counts.
-//! output_b.set_turn_on(&sm2, output_a.turn_on(&sm2) + 5000);
-//! output_b.set_turn_off(&sm2, output_a.turn_off(&sm2) + 5000);
+//! pwm.set_turn_on(SM2, B, pwm.turn_on(SM2, A) + 5000);
+//! pwm.set_turn_off(SM2, B, pwm.turn_off(SM2, A) + 5000);
 //!
-//! // Enable the PWM output.
-//! output_a.set_output_enable(&mut pwm, true);
-//! output_b.set_output_enable(&mut pwm, true);
+//! // Enable the PWM outputs.
+//! pwm.set_output_enable(SM2.mask(), A);
+//! pwm.set_output_enable(SM2.mask(), B);
 //! // Load the values into the PWM registers.
-//! sm2.set_load_ok(&mut pwm);
+//! pwm.set_load_ok(SM2.mask());
 //! // Start running.
-//! sm2.set_running(&mut pwm, true);
+//! pwm.set_run(SM2.mask());
 //! # Some(())}();
 //! ```
 
-mod output;
-mod ral;
-
-pub use self::ral::{Submodule, Submodules};
 use crate::ral::pwm;
-pub use output::Output;
+
+/// Any of the PWM peripheral instances.
+type AnyPwmInstance = crate::AnyInstance<pwm::RegisterBlock>;
 
 /// A PWM peripheral.
 ///
-/// The PWM peripheral provides access to peripheral-wide registers,
-/// or registers that cannot be owned by any one [`Submodule`].
-/// Use a `Pwm` to synchronously control submodules and pin outputs.
-///
-/// For a simpler interface, prefer `Submodule` and / or [`Output`].
-pub struct Pwm<const N: u8> {
-    pwm: pwm::Instance<N>,
+/// The PWM peripheral provides access to peripheral-wide registers
+/// and methods to control submodules and pin outputs.
+pub struct Pwm {
+    pwm: AnyPwmInstance,
 }
 
 bitflags::bitflags! {
@@ -95,8 +88,7 @@ bitflags::bitflags! {
     /// `Mask` is used throughout the PWM API. The interpretation of the
     /// bits depends on the function.
     ///
-    /// If you have a [`Submodule`], use
-    /// `MASK` or `mask()` to easily obtain its bitmask.
+    /// If you have an [`SM`], use [`SM::mask()`] to easily obtain its bitmask.
     pub struct Mask : u8 {
         /// Submodule 0.
         const SM0 = 1 << 0;
@@ -109,9 +101,11 @@ bitflags::bitflags! {
     }
 }
 
-impl<const N: u8> Pwm<N> {
-    /// The peripheral instance.
-    pub const N: u8 = N;
+impl Pwm {
+    /// Create a new PWM driver from a peripheral instance.
+    pub fn new<const N: u8>(pwm: pwm::Instance<N>) -> Self {
+        self::new(crate::into_any(pwm))
+    }
 
     // TODO: MCTRL should be byte accessible (unlike other PWM modules, which are explicitly
     // documented as "not bye accessible"). If we could load and store directly from the low
@@ -162,69 +156,47 @@ impl<const N: u8> Pwm<N> {
     /// Set a PWM channel's output enable.
     ///
     /// A high bit indicates the channel is enabled. A low bit disables the channel.
-    pub fn set_output_enable(&mut self, channel: Channel, mask: Mask) {
+    pub fn set_output_enable(&mut self, mask: Mask, channel: Channel) {
         let mask = mask.bits() as u16;
         match channel {
             Channel::A => crate::ral::modify_reg!(crate::ral::pwm, self.pwm, OUTEN, PWMA_EN: mask),
             Channel::B => crate::ral::modify_reg!(crate::ral::pwm, self.pwm, OUTEN, PWMB_EN: mask),
         }
     }
-
-    fn rmw_outen(&mut self, channel: Channel, mask: Mask, enable: bool) {
-        let mut outen = self.output_enable(channel);
-        outen.set(mask, enable);
-        self.set_output_enable(channel, outen);
-    }
 }
 
-/// Create a PWM peripheral with its submodules.
-pub fn new<const N: u8>(pwm: pwm::Instance<N>) -> (Pwm<N>, Submodules<N>) {
-    // Clear fault levels.
-    crate::ral::write_reg!(crate::ral::pwm, pwm, FCTRL0, FLVL: 0xF);
-    // Clear fault flags.
-    crate::ral::write_reg!(crate::ral::pwm, pwm, FSTS0, FFLAG: 0xF);
-
-    let submodules = self::ral::submodules(&pwm);
-    (Pwm { pwm }, submodules)
-}
-
-impl<const N: u8, const M: u8> Submodule<N, M> {
-    /// The mask for this submodule.
-    pub const MASK: Mask = Mask::from_bits_truncate(1 << M);
-
-    /// Returns the mask for this submodule.
-    pub const fn mask(&self) -> Mask {
-        Self::MASK
+/// Methods that operate on submodules.
+impl Pwm {
+    fn submodule(&self, sm: SM) -> &pwm::sm::RegisterBlock {
+        &self.pwm.SM[sm as usize]
     }
 
-    /// Read the counter register.
-    pub fn count(&self) -> i16 {
-        crate::ral::read_reg!(self::ral, self, SMCNT)
+    /// Read the submodule's counter register.
+    pub fn sm_count(&self, sm: SM) -> i16 {
+        crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCNT) as _
     }
 
-    /// Read the initial counter register.
+    /// Read a submodule's initial count register.
     ///
     /// This is the value loaded into the submodule counter
     /// when a reload event happens. Note: this reads the
     /// buffered value set with `set_initial_counter` when
     /// the hardware is waiting to load the value.
-    pub fn initial_count(&self) -> i16 {
-        crate::ral::read_reg!(self::ral, self, SMINIT)
+    pub fn initial_count(&self, sm: SM) -> i16 {
+        crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMINIT) as _
     }
 
-    /// Set the initial counter register.
+    /// Set the submodule initial counter register.
     ///
     /// Note: this value is buffered. It is not reloaded
     /// until the LDOK signal is set and the reload cycle
     /// happens. You cannot write the value when LDOK is
     /// set.
-    pub fn set_initial_count(&self, pwm: &Pwm<N>, counter: i16) {
-        if !self.load_ok(pwm) {
-            crate::ral::write_reg!(self::ral, self, SMINIT, counter);
-        }
+    pub fn set_initial_count(&self, sm: SM, counter: i16) {
+        crate::ral::write_reg!(pwm::sm, self.submodule(sm), SMINIT, counter as _);
     }
 
-    /// Returns the load frequency.
+    /// Returns submodule the load frequency.
     ///
     /// The load frequency describes how many PWM "opportuntities" it will take
     /// before the hardware loads buffered register values into their registers.
@@ -234,27 +206,27 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     ///
     /// - a full cycle reload (VAL1 matches), if full reload is set.
     /// - a half cycle reload (VAL0 matches), if half reload is set.
-    pub fn load_frequency(&self) -> u16 {
-        crate::ral::read_reg!(self::ral, self, SMCTRL, LDFQ) + 1
+    pub fn load_frequency(&self, sm: SM) -> u16 {
+        crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL, LDFQ) + 1
     }
 
-    /// Set the load frequency.
+    /// Set the submodule load frequency.
     ///
-    /// See [`load_frequency`](crate::flexpwm::Submodule::load_frequency) for a
+    /// See [`load_frequency`](crate::flexpwm::Pwm::load_frequency) for a
     /// description of load frequency. The implementation clamps the values
     /// between 1 and 16.
-    pub fn set_load_frequency(&mut self, ldfq: u16) {
+    pub fn set_load_frequency(&mut self, sm: SM, ldfq: u16) {
         let ldfq = ldfq.clamp(1, 16) - 1;
-        crate::ral::modify_reg!(self::ral, self, SMCTRL, LDFQ: ldfq);
+        crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL, LDFQ: ldfq);
     }
 
-    /// Returns the prescaler value.
-    pub fn prescaler(&self) -> Prescaler {
-        let prescaler = crate::ral::read_reg!(self::ral, self, SMCTRL, PRSC);
+    /// Returns the submodule prescaler value.
+    pub fn prescaler(&self, sm: SM) -> Prescaler {
+        let prescaler = crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL, PRSC);
 
         #[allow(clippy::assertions_on_constants)]
         {
-            use self::ral::SMCTRL;
+            use pwm::sm::SMCTRL;
             const _: () = assert!(SMCTRL::PRSC::mask >> SMCTRL::PRSC::offset == 7u16);
             const _: () = assert!(Prescaler::Prescaler128 as u16 == 7u16);
         }
@@ -264,18 +236,18 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
         unsafe { core::mem::transmute(prescaler) }
     }
 
-    /// Set the PWM clock prescaler.
-    pub fn set_prescaler(&mut self, prescaler: Prescaler) {
-        crate::ral::modify_reg!(self::ral, self, SMCTRL, PRSC: prescaler as u16)
+    /// Set the PWM submodule clock prescaler.
+    pub fn set_prescaler(&mut self, sm: SM, prescaler: Prescaler) {
+        crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL, PRSC: prescaler as u16)
     }
 
     /// Returns the pair operation setting.
-    pub fn pair_operation(&self) -> PairOperation {
-        let indep = crate::ral::read_reg!(self::ral, self, SMCTRL2, INDEP);
+    pub fn pair_operation(&self, sm: SM) -> PairOperation {
+        let indep = crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL2, INDEP);
 
         #[allow(clippy::assertions_on_constants)]
         {
-            use self::ral::SMCTRL2;
+            use pwm::sm::SMCTRL2;
             const _: () = assert!(SMCTRL2::INDEP::mask >> SMCTRL2::INDEP::offset == 1u16);
         }
 
@@ -285,49 +257,49 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     }
 
     /// Set the pair operation setting.
-    pub fn set_pair_operation(&mut self, pair_operation: PairOperation) {
-        crate::ral::modify_reg!(self::ral, self, SMCTRL2, INDEP: pair_operation as u16);
+    pub fn set_pair_operation(&mut self, sm: SM, pair_operation: PairOperation) {
+        crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL2, INDEP: pair_operation as u16);
     }
 
     /// Returns `true` if debug enable is set.
     ///
     /// When set, the PWM continues to run when in debug mode. When clear, the
     /// PWM stops in debug mode, and restarts when debug mode exits.
-    pub fn debug_enable(&self) -> bool {
-        crate::ral::read_reg!(self::ral, self, SMCTRL2, DBGEN == 1)
+    pub fn debug_enable(&self, sm: SM) -> bool {
+        crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL2, DBGEN == 1)
     }
 
     /// Set debug enable.
     ///
-    /// See [`debug_enable`](Submodule::debug_enable) for more information on debug
+    /// See [`debug_enable`](Self::debug_enable) for more information on debug
     /// enable.
-    pub fn set_debug_enable(&mut self, enable: bool) {
-        crate::ral::modify_reg!(self::ral, self, SMCTRL2, DBGEN: enable as u16);
+    pub fn set_debug_enable(&mut self, sm: SM, enable: bool) {
+        crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL2, DBGEN: enable as u16);
     }
 
     /// Returns `true` if wait enable is set.
     ///
     /// When set, the PWM continues to run when in wait mode. When clear, the PWM
     /// stops in wait mode, and restarts when wait mode exits.
-    pub fn wait_enable(&self) -> bool {
-        crate::ral::read_reg!(self::ral, self, SMCTRL2, WAITEN == 1)
+    pub fn wait_enable(&self, sm: SM) -> bool {
+        crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL2, WAITEN == 1)
     }
 
     /// Set wait enable.
     ///
-    /// See [`wait_enable`](Submodule::wait_enable) for more information on debug
+    /// See [`wait_enable`](Self::wait_enable) for more information on wait
     /// enable.
-    pub fn set_wait_enable(&mut self, enable: bool) {
-        crate::ral::modify_reg!(self::ral, self, SMCTRL2, WAITEN: enable as u16);
+    pub fn set_wait_enable(&mut self, sm: SM, enable: bool) {
+        crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL2, WAITEN: enable as u16);
     }
 
     /// Returns the clock selection.
-    pub fn clock_select(&self) -> ClockSelect {
+    pub fn clock_select(&self, sm: SM) -> ClockSelect {
         const IPG: u16 = ClockSelect::Ipg as u16;
         const EXT: u16 = ClockSelect::External as u16;
         const SM0: u16 = ClockSelect::Submodule0 as u16;
 
-        match crate::ral::read_reg!(self::ral, self, SMCTRL2, CLK_SEL) {
+        match crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL2, CLK_SEL) {
             IPG => ClockSelect::Ipg,
             EXT => ClockSelect::External,
             SM0 => ClockSelect::Submodule0,
@@ -337,19 +309,23 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
 
     /// Set the clock selection.
     ///
+    /// Note that you cannot use submodule 0's clock as the submodule 0
+    /// source clock. Despite that caveat, this call does not check this
+    /// possible configuration.
+    ///
     /// # Panics
     ///
     /// You cannot use submodule 0's clock for submodule 0. If the submodule 0 clock
     /// is selected for submodule 0, this call panics.
-    pub fn set_clock_select(&mut self, clock_select: ClockSelect) {
-        assert!(0 != M || clock_select != ClockSelect::Submodule0);
-        crate::ral::modify_reg!(self::ral, self, SMCTRL2, CLK_SEL: clock_select as u16);
+    pub fn set_clock_select(&mut self, sm: SM, clock_select: ClockSelect) {
+        assert!(SM::SM0 != sm || clock_select != ClockSelect::Submodule0);
+        crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL2, CLK_SEL: clock_select as u16);
     }
 
     /// Returns the load mode.
-    pub fn load_mode(&self) -> LoadMode {
+    pub fn load_mode(&self, sm: SM) -> LoadMode {
         let (immediate, full, half) =
-            crate::ral::read_reg!(self::ral, self, SMCTRL, LDMOD, FULL, HALF);
+            crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMCTRL, LDMOD, FULL, HALF);
         if immediate != 0 {
             LoadMode::Immediate
         } else {
@@ -366,22 +342,24 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     ///
     /// Panics if the load mode is reload cycle, yet neither `full` nor `half` is set.
     /// Use the [`LoadMode`] helper methods to ensure one of these flags are set.
-    pub fn set_load_mode(&mut self, load_mode: LoadMode) {
+    pub fn set_load_mode(&mut self, sm: SM, load_mode: LoadMode) {
         match load_mode {
-            LoadMode::Immediate => crate::ral::modify_reg!(self::ral, self, SMCTRL, LDMOD: 1),
+            LoadMode::Immediate => {
+                crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL, LDMOD: 1)
+            }
             LoadMode::ReloadCycle { full, half } => {
                 assert!(
                     full || half,
                     "LoadMode::ReloadCycle must set at least full or half"
                 );
-                crate::ral::modify_reg!(self::ral, self, SMCTRL, LDMOD: 0, FULL: full as u16, HALF: half as u16)
+                crate::ral::modify_reg!(pwm::sm, self.submodule(sm), SMCTRL, LDMOD: 0, FULL: full as u16, HALF: half as u16)
             }
         }
     }
 
     /// Read the status flags.
-    pub fn status(&self) -> Status {
-        let sts = crate::ral::read_reg!(self::ral, self, SMSTS);
+    pub fn status(&self, sm: SM) -> Status {
+        let sts = crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMSTS);
         Status::from_bits_truncate(sts)
     }
 
@@ -389,61 +367,64 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     ///
     /// The high bits are cleared. The implementation will clear the non-W1C bits,
     /// so it's safe to call this with [`Status::all()`].
-    pub fn clear_status(&self, status: Status) {
+    pub fn clear_status(&self, sm: SM, status: Status) {
         let sts = status & Status::W1C;
-        crate::ral::write_reg!(self::ral, self, SMSTS, sts.bits())
+        crate::ral::write_reg!(pwm::sm, self.submodule(sm), SMSTS, sts.bits())
     }
 
     /// Read the interrupt flags.
-    pub fn interrupts(&self) -> Interrupts {
-        let inten = crate::ral::read_reg!(self::ral, self, SMINTEN);
+    pub fn interrupts(&self, sm: SM) -> Interrupts {
+        let inten = crate::ral::read_reg!(pwm::sm, self.submodule(sm), SMINTEN);
         Interrupts::from_bits_truncate(inten)
     }
 
     /// Set the interrupt flags.
-    pub fn set_interrupts(&self, interrupts: Interrupts) {
-        crate::ral::write_reg!(self::ral, self, SMINTEN, interrupts.bits());
+    pub fn set_interrupts(&self, sm: SM, interrupts: Interrupts) {
+        crate::ral::write_reg!(pwm::sm, self.submodule(sm), SMINTEN, interrupts.bits());
     }
 
     /// Read one of the six value registers.
     ///
     /// The return indicates the count value that will cause a comparison.
-    pub fn value(&self, value_register: ValueRegister) -> i16 {
-        match value_register {
-            ValueRegister::Val0 => crate::ral::read_reg!(self::ral, self, SMVAL0),
-            ValueRegister::Val1 => crate::ral::read_reg!(self::ral, self, SMVAL1),
-            ValueRegister::Val2 => crate::ral::read_reg!(self::ral, self, SMVAL2),
-            ValueRegister::Val3 => crate::ral::read_reg!(self::ral, self, SMVAL3),
-            ValueRegister::Val4 => crate::ral::read_reg!(self::ral, self, SMVAL4),
-            ValueRegister::Val5 => crate::ral::read_reg!(self::ral, self, SMVAL5),
-        }
+    pub fn value(&self, sm: SM, value_register: ValueRegister) -> i16 {
+        let sm = self.submodule(sm);
+        (match value_register {
+            ValueRegister::Val0 => crate::ral::read_reg!(pwm::sm, sm, SMVAL0),
+            ValueRegister::Val1 => crate::ral::read_reg!(pwm::sm, sm, SMVAL1),
+            ValueRegister::Val2 => crate::ral::read_reg!(pwm::sm, sm, SMVAL2),
+            ValueRegister::Val3 => crate::ral::read_reg!(pwm::sm, sm, SMVAL3),
+            ValueRegister::Val4 => crate::ral::read_reg!(pwm::sm, sm, SMVAL4),
+            ValueRegister::Val5 => crate::ral::read_reg!(pwm::sm, sm, SMVAL5),
+        }) as _
     }
 
     /// Get the turn on value for a channel.
     ///
     /// This is the same as using [`turn_on()`] to produce a value register, then
     /// calling [`value()`](Self::value) with that result.
-    pub fn turn_on(&self, channel: Channel) -> i16 {
-        self.value(turn_on(channel))
+    pub fn turn_on(&self, sm: SM, channel: Channel) -> i16 {
+        self.value(sm, turn_on(channel))
     }
 
     /// Get the turn off value for a channel.
     ///
     /// This is the same as using [`turn_off()`] to produce a value register, then
     /// calling [`value()`](Self::value) with that result.
-    pub fn turn_off(&self, channel: Channel) -> i16 {
-        self.value(turn_off(channel))
+    pub fn turn_off(&self, sm: SM, channel: Channel) -> i16 {
+        self.value(sm, turn_off(channel))
     }
 
     /// Set one of the six value registers to compare at `value`.
-    pub fn set_value(&self, value_register: ValueRegister, value: i16) {
+    pub fn set_value(&self, sm: SM, value_register: ValueRegister, value: i16) {
+        let value = value as u16;
+        let sm = self.submodule(sm);
         match value_register {
-            ValueRegister::Val0 => crate::ral::write_reg!(self::ral, self, SMVAL0, value),
-            ValueRegister::Val1 => crate::ral::write_reg!(self::ral, self, SMVAL1, value),
-            ValueRegister::Val2 => crate::ral::write_reg!(self::ral, self, SMVAL2, value),
-            ValueRegister::Val3 => crate::ral::write_reg!(self::ral, self, SMVAL3, value),
-            ValueRegister::Val4 => crate::ral::write_reg!(self::ral, self, SMVAL4, value),
-            ValueRegister::Val5 => crate::ral::write_reg!(self::ral, self, SMVAL5, value),
+            ValueRegister::Val0 => crate::ral::write_reg!(pwm::sm, sm, SMVAL0, value),
+            ValueRegister::Val1 => crate::ral::write_reg!(pwm::sm, sm, SMVAL1, value),
+            ValueRegister::Val2 => crate::ral::write_reg!(pwm::sm, sm, SMVAL2, value),
+            ValueRegister::Val3 => crate::ral::write_reg!(pwm::sm, sm, SMVAL3, value),
+            ValueRegister::Val4 => crate::ral::write_reg!(pwm::sm, sm, SMVAL4, value),
+            ValueRegister::Val5 => crate::ral::write_reg!(pwm::sm, sm, SMVAL5, value),
         }
     }
 
@@ -451,53 +432,79 @@ impl<const N: u8, const M: u8> Submodule<N, M> {
     ///
     /// This is the same as using [`turn_on()`] to produce a value register, then
     /// calling [`set_value()`](Self::set_value) with that result.
-    pub fn set_turn_on(&self, channel: Channel, compare: i16) {
-        self.set_value(turn_on(channel), compare);
+    pub fn set_turn_on(&self, sm: SM, channel: Channel, compare: i16) {
+        self.set_value(sm, turn_on(channel), compare);
     }
 
     /// Set the turn off compare for a channel.
     ///
     /// This is the same as using [`turn_off()`] to produce a value register, then
     /// calling [`set_value()`](Self::set_value) with that result.
-    pub fn set_turn_off(&self, channel: Channel, compare: i16) {
-        self.set_value(turn_off(channel), compare);
+    pub fn set_turn_off(&self, sm: SM, channel: Channel, compare: i16) {
+        self.set_value(sm, turn_off(channel), compare);
     }
+}
 
-    /// Returns `true` if this submodule's `LDOK` bit is set.
-    pub fn load_ok(&self, pwm: &Pwm<N>) -> bool {
-        pwm.load_ok().intersects(Self::MASK)
+#[inline(never)]
+fn new(pwm: AnyPwmInstance) -> Pwm {
+    // Clear fault levels.
+    crate::ral::write_reg!(crate::ral::pwm, pwm, FCTRL0, FLVL: 0xF);
+    // Clear fault flags.
+    crate::ral::write_reg!(crate::ral::pwm, pwm, FSTS0, FFLAG: 0xF);
+
+    Pwm { pwm }
+}
+
+/// Index for submodule access.
+#[repr(usize)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SM {
+    /// Submodule 0.
+    SM0 = 0,
+    /// Submodule 1.
+    SM1 = 1,
+    /// Submodule 2.
+    SM2 = 2,
+    /// Submodule 3.
+    SM3 = 3,
+}
+
+impl SM {
+    /// Return this submodule's bitmask.
+    #[inline]
+    pub const fn mask(self) -> Mask {
+        Mask::from_bits_truncate(1 << (self as u8))
     }
+}
 
-    /// Set the `LDOK` bit for this submodule.
-    pub fn set_load_ok(&self, pwm: &mut Pwm<N>) {
-        pwm.set_load_ok(Self::MASK);
+impl From<SM> for Mask {
+    #[inline]
+    fn from(value: SM) -> Self {
+        value.mask()
     }
+}
 
-    /// Clear the `LDOK` bit for this submodule.
-    pub fn clear_load_ok(&self, pwm: &mut Pwm<N>) {
-        pwm.clear_load_ok(Self::MASK);
+impl core::ops::BitOr for SM {
+    type Output = Mask;
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        self.mask() | rhs.mask()
     }
+}
 
-    /// Returns `true` if the submodule is running.
-    pub fn is_running(&self, pwm: &Pwm<N>) -> bool {
-        pwm.run().intersects(Self::MASK)
+impl core::ops::BitOr<Mask> for SM {
+    type Output = Mask;
+    #[inline]
+    fn bitor(self, rhs: Mask) -> Self::Output {
+        self.mask() | rhs
     }
+}
 
-    /// Indicates if a PWM output channel is enabled.
-    pub fn output_enable(&self, pwm: &Pwm<N>, channel: Channel) -> bool {
-        pwm.output_enable(channel).intersects(Self::MASK)
-    }
-
-    /// Enable or disable an output channel.
-    pub fn set_output_enable(&self, pwm: &mut Pwm<N>, channel: Channel, enable: bool) {
-        pwm.rmw_outen(channel, Self::MASK, enable);
-    }
-
-    /// Set or clear the running bit for this submodule.
-    pub fn set_running(&self, pwm: &mut Pwm<N>, run: bool) {
-        let mut mask = pwm.run();
-        mask.set(Self::MASK, run);
-        pwm.set_run(mask);
+impl core::ops::BitOr<SM> for Mask {
+    type Output = Mask;
+    #[inline]
+    fn bitor(self, rhs: SM) -> Self::Output {
+        self | rhs.mask()
     }
 }
 

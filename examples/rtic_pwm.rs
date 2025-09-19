@@ -22,46 +22,39 @@ mod app {
     #[local]
     struct Local {
         led: board::Led,
-        submodule: board::pwm::Submodule,
+        pwm: board::pwm::Pwm,
     }
 
     #[init]
     fn init(_: init::Context) -> (Shared, Local) {
-        let (
-            _,
-            board::Specifics {
-                led,
-                pwm:
-                    board::Pwm {
-                        mut module,
-                        mut submodule,
-                        ..
-                    },
-                ..
-            },
-        ) = board::new();
+        let (_, board::Specifics { led, mut pwm, .. }) = board::new();
 
-        submodule.set_debug_enable(true);
-        submodule.set_wait_enable(true);
-        submodule.set_clock_select(hal::flexpwm::ClockSelect::Ipg);
-        submodule.set_prescaler(board::PWM_PRESCALER);
-        submodule.set_pair_operation(hal::flexpwm::PairOperation::Independent);
-        submodule.set_load_mode(hal::flexpwm::LoadMode::reload_full());
-        submodule.set_load_frequency(1);
-        submodule.set_initial_count(&module, i16::MIN);
-        submodule.set_value(hal::flexpwm::ValueRegister::Val1, i16::MIN + SWITCHING_FREQ);
-        submodule.set_interrupts(hal::flexpwm::Interrupts::COMPARE_VAL1);
-        submodule.set_load_ok(&mut module);
-        submodule.set_running(&mut module, true);
+        pwm.set_debug_enable(board::pwm::SM, true);
+        pwm.set_wait_enable(board::pwm::SM, true);
+        pwm.set_clock_select(board::pwm::SM, hal::flexpwm::ClockSelect::Ipg);
+        pwm.set_prescaler(board::pwm::SM, board::PWM_PRESCALER);
+        pwm.set_pair_operation(board::pwm::SM, hal::flexpwm::PairOperation::Independent);
+        pwm.set_load_mode(board::pwm::SM, hal::flexpwm::LoadMode::reload_full());
+        pwm.set_load_frequency(board::pwm::SM, 1);
+        pwm.set_initial_count(board::pwm::SM, i16::MIN);
+        pwm.set_value(
+            board::pwm::SM,
+            hal::flexpwm::ValueRegister::Val1,
+            i16::MIN + SWITCHING_FREQ,
+        );
+        pwm.set_interrupts(board::pwm::SM, hal::flexpwm::Interrupts::COMPARE_VAL1);
+        pwm.set_load_ok(board::pwm::SM.mask());
+        pwm.set_run(board::pwm::SM.mask());
 
-        (Shared {}, Local { led, submodule })
+        (Shared {}, Local { led, pwm })
     }
 
-    #[task(binds = BOARD_PWM, local = [led, submodule, counter: u32 = 0])]
+    #[task(binds = BOARD_PWM, local = [led, pwm, counter: u32 = 0])]
     fn toggle_led(cx: toggle_led::Context) {
         use hal::flexpwm::Status;
-        while cx.local.submodule.status().intersects(Status::COMPARE_VAL1) {
-            cx.local.submodule.clear_status(Status::COMPARE_VAL1);
+        let pwm = cx.local.pwm;
+        while pwm.status(board::pwm::SM).intersects(Status::COMPARE_VAL1) {
+            pwm.clear_status(board::pwm::SM, Status::COMPARE_VAL1);
         }
 
         *cx.local.counter += 1;

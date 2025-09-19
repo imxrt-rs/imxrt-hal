@@ -316,3 +316,24 @@ fn spin_on<F: core::future::Future>(future: F) -> F::Output {
         }
     }
 }
+
+/// The peripheral instance for when we don't care.
+const HAL_INST: u8 = 0xff;
+
+/// Any peripheral instance acquired by
+/// our drivers, without the instance
+/// number.
+type AnyInstance<T> = imxrt_ral::Instance<T, HAL_INST>;
+
+/// Discard the instance number.
+fn into_any<T, const N: u8>(inst: imxrt_ral::Instance<T, N>) -> AnyInstance<T> {
+    // Safety: the user who made inst claims that it
+    // points to static MMIO. We're the new owner of
+    // that MMIO, and we choose to discard type info.
+    // We'll never reveal this instance back to the
+    // user.
+    unsafe {
+        let block: *const T = &*inst;
+        AnyInstance::new(block)
+    }
+}

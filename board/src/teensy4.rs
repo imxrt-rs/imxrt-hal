@@ -89,22 +89,15 @@ pub mod pwm {
     use super::iomuxc;
     use crate::hal::flexpwm;
 
-    pub type Peripheral = flexpwm::Pwm<2>;
-    pub type Submodule = flexpwm::Submodule<{ Peripheral::N }, 2>;
-    pub type Outputs = (
-        flexpwm::Output<iomuxc::gpio_b0::GPIO_B0_10>, // A, P6
-        flexpwm::Output<iomuxc::gpio_b0::GPIO_B0_11>, // B, P9
-    );
-}
+    pub use flexpwm::Pwm;
 
-/// The board's PWM components.
-pub struct Pwm {
-    /// Core PWM peripheral.
-    pub module: pwm::Peripheral,
-    /// PWM submodule control registers.
-    pub submodule: pwm::Submodule,
-    /// The output pairs (tuple of A, B outputs).
-    pub outputs: pwm::Outputs,
+    pub(super) const N: u8 = 2;
+    pub const SM: flexpwm::SM = flexpwm::SM::SM2;
+
+    pub use flexpwm::Channel::*;
+
+    pub(super) type Pin6 = iomuxc::gpio_b0::GPIO_B0_10;
+    pub(super) type Pin9 = iomuxc::gpio_b0::GPIO_B0_11;
 }
 
 /// Opaque structure for managing GPIO ports.
@@ -130,7 +123,7 @@ pub struct Specifics {
     pub spi: Spi,
     pub i2c: I2c,
     pub sai1: Sai1,
-    pub pwm: Pwm,
+    pub pwm: pwm::Pwm,
     pub trng: hal::trng::Trng,
     pub tempmon: hal::tempmon::TempMon,
 }
@@ -221,16 +214,12 @@ impl Specifics {
 
         let flexpwm2 = unsafe { ral::pwm::PWM2::instance() };
         let pwm = {
-            let (pwm, (_, _, sm, _)) = hal::flexpwm::new(flexpwm2);
-
-            let out_a = hal::flexpwm::Output::new_a(iomuxc.gpio_b0.p10);
-            let out_b = hal::flexpwm::Output::new_b(iomuxc.gpio_b0.p11);
-
-            Pwm {
-                module: pwm,
-                submodule: sm,
-                outputs: (out_a, out_b),
-            }
+            let pwm = pwm::Pwm::new::<{ pwm::N }>(flexpwm2);
+            let mut pin6: pwm::Pin6 = iomuxc.gpio_b0.p10;
+            let mut pin9: pwm::Pin9 = iomuxc.gpio_b0.p11;
+            crate::iomuxc::flexpwm::prepare(&mut pin6);
+            crate::iomuxc::flexpwm::prepare(&mut pin9);
+            pwm
         };
         let trng = hal::trng::Trng::new(
             unsafe { ral::trng::TRNG::instance() },
@@ -266,7 +255,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2c::N }>(),
-    clock_gate::flexpwm::<{ pwm::Peripheral::N }>(),
+    clock_gate::flexpwm::<{ pwm::N }>(),
 ];
 
 /// Configure board pins.
