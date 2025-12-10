@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.12] 2025-12-10
+
+Add uSDHC clock gates for 10xx and 11xx MCUs.
+
 ## [0.5.11] 2025-07-07
 
 Add receive functions to the SAI driver.
@@ -352,6 +356,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.8...main
+[0.5.12]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.11...0.5.12
 [0.5.11]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.10...0.5.11
 [0.5.10]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.9...0.5.10
 [0.5.9]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.8...0.5.9
