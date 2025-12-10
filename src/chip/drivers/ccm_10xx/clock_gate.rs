@@ -366,6 +366,16 @@ pub const fn usb() -> Locator {
     locator(CCGR6, CG0)
 }
 
+/// Returns the USDHC clock gate locator.
+#[cfg(not(feature = "imxrt1010"))]
+#[inline(always)]
+pub const fn usdhc<const N: u8>() -> Locator
+where
+    ral::usdhc::Instance<N>: ral::Valid,
+{
+    [locator(CCGR6, CG1), locator(CCGR6, CG2)][N as usize - 1]
+}
+
 /// Returns the ADC clock gate locators.
 #[inline(always)]
 pub const fn adc<const N: u8>() -> Locator

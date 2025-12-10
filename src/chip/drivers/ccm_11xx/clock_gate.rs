@@ -201,3 +201,14 @@ where
     // FlexIO2 -> LPCG54
     Locator::new(N as usize + 52)
 }
+
+/// Returns the USDHC clock gate locator.
+#[inline]
+pub const fn usdhc<const N: u8>() -> Locator
+where
+    ral::usdhc::Instance<N>: ral::Valid,
+{
+    // USDHC1 -> LPCG117
+    // USDHC2 -> LPCG118
+    Locator::new(N as usize + 116)
+}
