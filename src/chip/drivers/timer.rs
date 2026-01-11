@@ -105,13 +105,13 @@ impl<const L: u8, const R: u8> HardwareTimer for pit::Chained<L, R> {
 /// The GPT OCR used for timers implementations.
 const GPT_OCR: gpt::OutputCompareRegister = gpt::OutputCompareRegister::OCR1;
 
-impl<const N: u8> HardwareTimer for gpt::Gpt<N> {
+impl HardwareTimer for gpt::Gpt {
     type Ticks = u32;
     fn is_elapsed(&self) -> bool {
         self.is_elapsed(GPT_OCR)
     }
     fn clear_elapsed(&mut self) {
-        gpt::Gpt::<N>::clear_elapsed(self, GPT_OCR);
+        gpt::Gpt::clear_elapsed(self, GPT_OCR);
     }
     fn set_ticks(&mut self, ticks: Self::Ticks) {
         self.set_output_compare_count(GPT_OCR, ticks);
@@ -362,7 +362,7 @@ fn prepare_pit_chained<const L: u8, const R: u8>(chain: &mut pit::Chained<L, R>)
 }
 
 /// Prepares a GPT to be adapted by blocking / count down adapters.
-fn prepare_gpt<const N: u8>(gpt: &mut gpt::Gpt<N>) {
+fn prepare_gpt(gpt: &mut gpt::Gpt) {
     gpt.disable();
     gpt.clear_rollover();
     gpt.set_rollover_interrupt_enable(false);
@@ -375,7 +375,7 @@ fn prepare_gpt<const N: u8>(gpt: &mut gpt::Gpt<N>) {
 
     use gpt::OutputCompareRegister::*;
     for ocr in [OCR1, OCR2, OCR3] {
-        gpt::Gpt::<N>::clear_elapsed(gpt, ocr);
+        gpt::Gpt::clear_elapsed(gpt, ocr);
         gpt.set_output_interrupt_on_compare(ocr, false);
     }
 }
@@ -404,11 +404,11 @@ impl<const L: u8, const R: u8, const HZ: u32> BlockingPitChain<L, R, HZ> {
 }
 
 /// A GPT that acts as a blocking timer.
-pub type BlockingGpt<const N: u8, const HZ: u32> = Blocking<gpt::Gpt<N>, HZ>;
+pub type BlockingGpt<const HZ: u32> = Blocking<gpt::Gpt, HZ>;
 
-impl<const N: u8, const HZ: u32> BlockingGpt<N, HZ> {
+impl<const HZ: u32> BlockingGpt<HZ> {
     /// Create a blocking adapter from a GPT.
-    pub fn from_gpt(mut gpt: gpt::Gpt<N>) -> Self {
+    pub fn from_gpt(mut gpt: gpt::Gpt) -> Self {
         prepare_gpt(&mut gpt);
         Self::new(gpt)
     }
@@ -532,11 +532,11 @@ impl<const L: u8, const R: u8> RawCountDownPitChain<L, R> {
 }
 
 /// A count down timer over a GPT.
-pub type RawCountDownGpt<const N: u8> = RawCountDown<gpt::Gpt<N>>;
+pub type RawCountDownGpt = RawCountDown<gpt::Gpt>;
 
-impl<const N: u8> RawCountDownGpt<N> {
+impl RawCountDownGpt {
     /// Create a count down timer from a GPT.
-    pub fn from_gpt(mut gpt: gpt::Gpt<N>) -> Self {
+    pub fn from_gpt(mut gpt: gpt::Gpt) -> Self {
         prepare_gpt(&mut gpt);
         Self::new(gpt)
     }

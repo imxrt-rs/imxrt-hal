@@ -74,17 +74,17 @@
 //!
 //! ```no_run
 //! use imxrt_ral::gpt::GPT1;
-//! use imxrt_hal::gpt;
+//! use imxrt_hal::gpt::{Gpt, ClockSource, Mode, OutputCompareRegister};
 //!
-//! let mut gpt = gpt::Gpt::new(unsafe { GPT1::instance() });
-//! gpt.set_clock_source(gpt::ClockSource::HighFrequencyReferenceClock);
+//! let mut gpt = Gpt::new(unsafe { GPT1::instance() });
+//! gpt.set_clock_source(ClockSource::HighFrequencyReferenceClock);
 //! gpt.set_divider(16);
-//! gpt.set_mode(gpt::Mode::FreeRunning);
+//! gpt.set_mode(Mode::FreeRunning);
 //! gpt.enable();
 //!
 //! // Later...
 //!
-//! const OCR: gpt::OutputCompareRegister = gpt::OutputCompareRegister::OCR1;
+//! const OCR: OutputCompareRegister = OutputCompareRegister::OCR1;
 //! gpt.clear_elapsed(OCR);
 //! let count = gpt.count();
 //! let ticks_to_wait = gpt.count().wrapping_add(40_000);
@@ -105,21 +105,19 @@
 
 use crate::ral;
 
+/// Any GPT instance.
+type AnyGptInstance = crate::AnyInstance<ral::gpt::RegisterBlock>;
+
 /// A general purpose timer
 ///
 /// The timers support three output compare registers. When a compare register
 /// matches the value of the counter, the GPT may trigger an interrupt.
 ///
 /// By default, the timer runs in wait mode.
-pub struct Gpt<const N: u8> {
+pub struct Gpt {
     /// Registers for this GPT instance
-    gpt: ral::gpt::Instance<N>,
+    gpt: AnyGptInstance,
 }
-
-/// GPT1 alias.
-pub type Gpt1 = Gpt<1>;
-/// GPT2 alias.
-pub type Gpt2 = Gpt<2>;
 
 /// GPT clock source.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -169,19 +167,12 @@ pub enum Mode {
     FreeRunning,
 }
 
-impl<const N: u8> Gpt<N> {
+impl Gpt {
     /// Create a GPT timer from the RAL's GPT instance.
     ///
     /// When `new` returns, the GPT is reset and disabled.
-    pub fn new(gpt: ral::gpt::Instance<N>) -> Self {
-        // Disable the timer.
-        ral::modify_reg!(ral::gpt, gpt, CR, EN: 0);
-        // Software reset
-        ral::modify_reg!(ral::gpt, gpt, CR, SWR: 1);
-        while ral::read_reg!(ral::gpt, gpt, CR, SWR == 1) {}
-        // Clear all status registers.
-        ral::write_reg!(ral::gpt, gpt, SR, 0b11_1111);
-        Self { gpt }
+    pub fn new<const N: u8>(gpt: ral::gpt::Instance<N>) -> Self {
+        new(crate::into_any(gpt))
     }
 
     /// Returns the clock divider value.
@@ -396,14 +387,15 @@ impl<const N: u8> Gpt<N> {
         ral::modify_reg!(ral::gpt, self.gpt, CR, SWR: 1);
         while ral::read_reg!(ral::gpt, self.gpt, CR, SWR == SWR_1) {}
     }
+}
 
-    /// Release the peripheral instance.
-    ///
-    /// This does not change any peripheral state; it simply releases
-    /// the instance as-is. If you need to return the registers in a known,
-    /// good state, consider calling [`reset()`](Self::reset) and
-    /// [`disable()`](Self::disable) before this call.
-    pub fn release(self) -> ral::gpt::Instance<N> {
-        self.gpt
-    }
+fn new(gpt: AnyGptInstance) -> Gpt {
+    // Disable the timer.
+    ral::modify_reg!(ral::gpt, gpt, CR, EN: 0);
+    // Software reset
+    ral::modify_reg!(ral::gpt, gpt, CR, SWR: 1);
+    while ral::read_reg!(ral::gpt, gpt, CR, SWR == 1) {}
+    // Clear all status registers.
+    ral::write_reg!(ral::gpt, gpt, SR, 0b11_1111);
+    Gpt { gpt }
 }

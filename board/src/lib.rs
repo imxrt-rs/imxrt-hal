@@ -73,11 +73,11 @@ pub struct Common {
     /// GPT1 timer.
     ///
     /// Use [`GPT1_FREQUENCY`] to understand its frequency.
-    pub gpt1: hal::gpt::Gpt<1>,
+    pub gpt1: hal::gpt::Gpt,
     /// GPT2 timer.
     ///
     /// Use [`GPT2_FREQUENCY`] to understand its frequency.
-    pub gpt2: hal::gpt::Gpt<2>,
+    pub gpt2: hal::gpt::Gpt,
     /// DMA channels.
     pub dma: [Option<hal::dma::channel::Channel>; hal::dma::CHANNEL_COUNT],
     /// Secure real-time counter.
@@ -208,10 +208,7 @@ fn convert_iomuxc(_: ral::iomuxc::IOMUXC) -> Pads {
     unsafe { Pads::new() }
 }
 
-fn configure_gpt<const N: u8>(gpt: ral::gpt::Instance<N>, divider: u32) -> hal::gpt::Gpt<N>
-where
-    ral::gpt::Instance<N>: ral::Valid,
-{
+fn configure_gpt<const N: u8>(gpt: ral::gpt::Instance<N>, divider: u32) -> hal::gpt::Gpt {
     let mut gpt = hal::gpt::Gpt::new(gpt);
     gpt.disable();
     gpt.set_wait_mode_enable(true);

@@ -21,11 +21,11 @@ mod app {
     #[shared]
     struct Shared {
         led: board::Led,
-        gpt1: hal::gpt::Gpt1,
-        gpt2: hal::gpt::Gpt2,
+        gpt1: hal::gpt::Gpt,
+        gpt2: hal::gpt::Gpt,
     }
 
-    fn init_gpt<const N: u8>(gpt: &mut hal::gpt::Gpt<N>, delay_ticks: u32) {
+    fn init_gpt(gpt: &mut hal::gpt::Gpt, delay_ticks: u32) {
         gpt.set_output_compare_count(OCR, delay_ticks);
         gpt.set_mode(hal::gpt::Mode::Restart);
         gpt.set_reset_on_enable(true);

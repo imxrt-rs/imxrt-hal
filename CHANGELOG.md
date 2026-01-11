@@ -5,6 +5,7 @@
 **BREAKING** Remove type states from the following drivers:
 
 - FlexPWM
+- GPT
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using

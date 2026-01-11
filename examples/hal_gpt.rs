@@ -29,7 +29,7 @@ fn main() -> ! {
     }
 }
 
-fn use_gpt<const N: u8>(led: board::Led, mut gpt: hal::gpt::Gpt<N>, delay_ticks: u32) -> ! {
+fn use_gpt(led: board::Led, mut gpt: hal::gpt::Gpt, delay_ticks: u32) -> ! {
     gpt.set_output_compare_count(OCR, delay_ticks);
     // When OCR1 compares, restart the counter.
     gpt.set_mode(hal::gpt::Mode::Restart);
