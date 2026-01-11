@@ -90,7 +90,8 @@ pub type I2cPins = hal::lpi2c::Pins<
     iomuxc::gpio::GPIO_01, // SDA, J57_18
 >;
 
-pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 1>;
+const I2C_INSTANCE: u8 = 1;
+pub type I2c = hal::lpi2c::Lpi2c;
 
 /// PWM components.
 #[cfg(not(feature = "spi"))]
@@ -227,7 +228,7 @@ impl Specifics {
         let spi = ();
 
         let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };
-        let i2c = I2c::new(
+        let i2c = I2c::with_pins(
             lpi2c1,
             I2cPins {
                 scl: iomuxc.gpio.p02,
@@ -285,7 +286,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpuart::<{ Console::N }>(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
-    clock_gate::lpi2c::<{ I2c::N }>(),
+    clock_gate::lpi2c::<{ I2C_INSTANCE }>(),
     #[cfg(not(feature = "spi"))]
     clock_gate::flexpwm::<{ pwm::N }>(),
 ];

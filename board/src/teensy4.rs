@@ -82,7 +82,8 @@ type I2cScl = iomuxc::gpio_ad_b1::GPIO_AD_B1_00; // P19
 type I2cSda = iomuxc::gpio_ad_b1::GPIO_AD_B1_01; // P18
 pub type I2cPins = hal::lpi2c::Pins<I2cScl, I2cSda>;
 
-pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 1>;
+const I2C_INSTANCE: u8 = 1;
+pub type I2c = hal::lpi2c::Lpi2c;
 
 /// PWM components.
 pub mod pwm {
@@ -203,7 +204,7 @@ impl Specifics {
         let spi = ();
 
         let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };
-        let i2c = I2c::new(
+        let i2c = I2c::with_pins(
             lpi2c1,
             I2cPins {
                 scl: iomuxc.gpio_ad_b1.p00,
@@ -254,7 +255,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpuart::<{ Console::N }>(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
-    clock_gate::lpi2c::<{ I2c::N }>(),
+    clock_gate::lpi2c::<{ I2C_INSTANCE }>(),
     clock_gate::flexpwm::<{ pwm::N }>(),
 ];
 

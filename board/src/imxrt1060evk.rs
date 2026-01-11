@@ -78,6 +78,8 @@ type I2cScl = iomuxc::gpio_ad_b1::GPIO_AD_B1_00; // J24_10
 type I2cSda = iomuxc::gpio_ad_b1::GPIO_AD_B1_01; // J24_9
 pub type I2cPins = hal::lpi2c::Pins<I2cScl, I2cSda>;
 
+const I2C_INSTANCE: u8 = 1;
+
 /// I2C peripheral.
 ///
 /// Routed to numerous places on this board:
@@ -87,7 +89,7 @@ pub type I2cPins = hal::lpi2c::Pins<I2cScl, I2cSda>;
 /// - LCD touch interface.
 /// - FXOS8700 (typically DNP).
 /// - CSI camera interface.
-pub type I2c = hal::lpi2c::Lpi2c<I2cPins, 1>;
+pub type I2c = hal::lpi2c::Lpi2c;
 
 /// PWM components.
 pub mod pwm {
@@ -190,7 +192,7 @@ impl Specifics {
         let spi = ();
 
         let lpi2c1 = unsafe { ral::lpi2c::LPI2C1::instance() };
-        let i2c = I2c::new(
+        let i2c = I2c::with_pins(
             lpi2c1,
             I2cPins {
                 scl: iomuxc.gpio_ad_b1.p00,
@@ -240,7 +242,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::lpuart::<{ Console::N }>(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
-    clock_gate::lpi2c::<{ I2c::N }>(),
+    clock_gate::lpi2c::<{ I2C_INSTANCE }>(),
     clock_gate::flexpwm::<{ pwm::N }>(),
 ];
 

@@ -108,7 +108,7 @@ pub type I2cPins = hal::lpi2c::Pins<
 >;
 
 const I2C_INSTANCE: u8 = 5;
-pub type I2c = hal::lpi2c::Lpi2c<I2cPins, { I2C_INSTANCE }>;
+pub type I2c = hal::lpi2c::Lpi2c;
 
 const PWM_INSTANCE: u8 = 2;
 
@@ -229,7 +229,7 @@ impl Specifics {
         let pwm = ();
         let i2c = {
             let lpi2c5 = unsafe { ral::lpi2c::LPI2C5::instance() };
-            I2c::new(
+            I2c::with_pins(
                 lpi2c5,
                 I2cPins {
                     scl: iomuxc.gpio_lpsr.p05,
