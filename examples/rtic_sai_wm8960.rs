@@ -64,6 +64,9 @@ mod app {
 
     use crate::{sine, square};
     use imxrt_hal as hal;
+    use imxrt_hal::pit::Channel;
+
+    const PIT_CHANNEL: Channel = Channel::Chan2;
     use wm8960::WM8960;
 
     type SaiTx = hal::sai::Tx<1, 16, 2, hal::sai::PackingNone>;
@@ -80,8 +83,8 @@ mod app {
         /// i2c for codec
         _wm8960: WM8960<board::I2c>,
 
-        /// This timer tells us how frequently work on audio.
-        audio_pit: hal::pit::Pit<2>,
+        /// The PIT peripheral for timing operations.
+        pit: hal::pit::Pit,
 
         /// Sample counter for the wave generation
         counter: u32,
@@ -96,13 +99,7 @@ mod app {
     #[init]
     fn init(cx: init::Context) -> (Shared, Local) {
         let mut cortex_m = cx.core;
-        let (
-            board::Common {
-                pit: (_, _, mut audio_pit, _),
-                ..
-            },
-            board::Specifics { led, sai1, i2c, .. },
-        ) = board::new();
+        let (board::Common { mut pit, .. }, board::Specifics { led, sai1, i2c, .. }) = board::new();
         let (Some(sai1_tx), None) = sai1.split(&hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8)))
         else {
             panic!("Unexpected return from sai split");
@@ -124,9 +121,9 @@ mod app {
         cortex_m::peripheral::DWT::unlock();
         cortex_m.DWT.enable_cycle_counter();
 
-        audio_pit.set_load_timer_value(AUDIO_POLL_MS);
-        audio_pit.set_interrupt_enable(true);
-        audio_pit.enable();
+        pit.set_load_timer_value(PIT_CHANNEL, AUDIO_POLL_MS);
+        pit.set_interrupt_enable(PIT_CHANNEL, true);
+        pit.enable(PIT_CHANNEL);
 
         let codec_cfg = wm8960::Config {
             master: false,
@@ -160,7 +157,7 @@ mod app {
             Local {
                 _led: led,
                 _wm8960: wm8960,
-                audio_pit,
+                pit,
                 counter,
             },
         )
@@ -178,13 +175,13 @@ mod app {
         });
     }
 
-    #[task(binds = BOARD_PIT, shared = [sai1_tx], local = [audio_pit], priority = 1)]
+    #[task(binds = BOARD_PIT, shared = [sai1_tx], local = [pit], priority = 1)]
     fn pit_interrupt(mut cx: pit_interrupt::Context) {
-        let pit_interrupt::LocalResources { audio_pit, .. } = cx.local;
+        let pit_interrupt::LocalResources { pit, .. } = cx.local;
 
         //led.toggle();
-        while audio_pit.is_elapsed() {
-            audio_pit.clear_elapsed();
+        while pit.is_elapsed(PIT_CHANNEL) {
+            pit.clear_elapsed(PIT_CHANNEL);
         }
 
         let (status, write_pos, read_pos) = cx.shared.sai1_tx.lock(|sai1_tx| {

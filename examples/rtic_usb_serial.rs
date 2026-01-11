@@ -30,6 +30,9 @@
 mod app {
     use hal::usbd::{BusAdapter, EndpointMemory, EndpointState, Speed};
     use imxrt_hal as hal;
+    use imxrt_hal::pit::Channel;
+
+    const PIT_CHANNEL: Channel = Channel::Chan0;
 
     use usb_device::{
         bus::UsbBusAllocator,
@@ -67,7 +70,7 @@ mod app {
         device: UsbDevice<'static, Bus>,
         led: board::Led,
         poller: board::logging::Poller,
-        timer: hal::pit::Pit<0>,
+        pit: hal::pit::Pit,
     }
 
     #[shared]
@@ -77,7 +80,7 @@ mod app {
     fn init(ctx: init::Context) -> (Shared, Local) {
         let (
             board::Common {
-                pit: (mut timer, _, _, _),
+                mut pit,
                 usb1,
                 usbnc1,
                 usbphy1,
@@ -86,9 +89,9 @@ mod app {
             },
             board::Specifics { led, console, .. },
         ) = board::new();
-        timer.set_load_timer_value(LPUART_POLL_INTERVAL_MS);
-        timer.set_interrupt_enable(true);
-        timer.enable();
+        pit.set_load_timer_value(PIT_CHANNEL, LPUART_POLL_INTERVAL_MS);
+        pit.set_interrupt_enable(PIT_CHANNEL, true);
+        pit.enable(PIT_CHANNEL);
 
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         let poller = board::logging::lpuart(FRONTEND, console, dma_a);
@@ -119,16 +122,16 @@ mod app {
                 device,
                 led,
                 poller,
-                timer,
+                pit,
             },
         )
     }
 
     /// Occasionally try to poll the logger.
-    #[task(binds = BOARD_PIT, local = [poller, timer], priority = 1)]
+    #[task(binds = BOARD_PIT, local = [poller, pit], priority = 1)]
     fn pit_interrupt(ctx: pit_interrupt::Context) {
-        while ctx.local.timer.is_elapsed() {
-            ctx.local.timer.clear_elapsed();
+        while ctx.local.pit.is_elapsed(PIT_CHANNEL) {
+            ctx.local.pit.clear_elapsed(PIT_CHANNEL);
         }
         ctx.local.poller.poll();
     }

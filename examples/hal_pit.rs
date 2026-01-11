@@ -5,18 +5,20 @@
 #![no_std]
 #![no_main]
 
+use imxrt_hal::pit::Channel;
+
 const DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
 #[imxrt_rt::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, .. }) = board::new();
 
-    pit.0.set_load_timer_value(DELAY_MS);
-    pit.0.enable();
+    pit.set_load_timer_value(Channel::Chan0, DELAY_MS);
+    pit.enable(Channel::Chan0);
 
     loop {
-        while !pit.0.is_elapsed() {}
-        pit.0.clear_elapsed();
+        while !pit.is_elapsed(Channel::Chan0) {}
+        pit.clear_elapsed(Channel::Chan0);
         led.toggle();
     }
 }

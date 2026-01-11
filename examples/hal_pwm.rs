@@ -9,6 +9,7 @@
 #![no_main]
 
 use imxrt_hal as hal;
+use imxrt_hal::pit::Channel;
 
 const PIT_DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
@@ -21,8 +22,8 @@ const PWM_B_DUTY: u32 = PWM_A_DUTY / 2;
 #[imxrt_rt::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, mut pwm, .. }) = board::new();
-    pit.0.set_load_timer_value(PIT_DELAY_MS);
-    pit.0.enable();
+    pit.set_load_timer_value(Channel::Chan0, PIT_DELAY_MS);
+    pit.enable(Channel::Chan0);
 
     pwm.set_debug_enable(board::pwm::SM, true);
     pwm.set_wait_enable(board::pwm::SM, true);
@@ -51,8 +52,8 @@ fn main() -> ! {
     pwm.set_run(board::pwm::SM.mask());
 
     loop {
-        while !pit.0.is_elapsed() {}
-        pit.0.clear_elapsed();
+        while !pit.is_elapsed(Channel::Chan0) {}
+        pit.clear_elapsed(Channel::Chan0);
         led.toggle();
     }
 }

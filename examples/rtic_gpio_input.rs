@@ -9,7 +9,7 @@
 
 #[rtic::app(device = board, peripherals = false)]
 mod app {
-    use hal::{gpio::Trigger, timer::BlockingPit};
+    use hal::{gpio::Trigger, pit::Channel, timer::BlockingPit};
     use imxrt_hal as hal;
 
     #[shared]
@@ -19,16 +19,13 @@ mod app {
     struct Local {
         led: board::Led,
         button: board::Button,
-        delay: BlockingPit<2, { board::PIT_FREQUENCY }>,
+        delay: BlockingPit<{ board::PIT_FREQUENCY }>,
     }
 
     #[init]
     fn init(_: init::Context) -> (Shared, Local) {
         let (
-            board::Common {
-                pit: (_, _, pit, _),
-                ..
-            },
+            board::Common { pit, .. },
             board::Specifics {
                 led,
                 button,
@@ -37,7 +34,7 @@ mod app {
             },
         ) = board::new();
         led.set();
-        let delay = BlockingPit::from_pit(pit);
+        let delay = BlockingPit::from_pit(pit, Channel::Chan2);
         let button_port = ports.button_mut();
         button_port.set_interrupt(&button, Some(Trigger::FallingEdge));
         (Shared {}, Local { led, button, delay })

@@ -68,22 +68,18 @@ where
     Ok(out[0] == WHO_AM_I_RESP)
 }
 
+use imxrt_hal::pit::Channel;
+
 #[imxrt_rt::entry]
 fn main() -> ! {
-    let (
-        board::Common {
-            pit: (mut pit, _, _, _),
-            ..
-        },
-        board::Specifics { led, mut i2c, .. },
-    ) = board::new();
+    let (board::Common { mut pit, .. }, board::Specifics { led, mut i2c, .. }) = board::new();
 
     // Delay for scope set up / pin settle time.
-    pit.set_load_timer_value(board::PIT_FREQUENCY);
-    pit.enable();
-    while !pit.is_elapsed() {}
-    pit.clear_elapsed();
-    pit.disable();
+    pit.set_load_timer_value(Channel::Chan0, board::PIT_FREQUENCY);
+    pit.enable(Channel::Chan0);
+    while !pit.is_elapsed(Channel::Chan0) {}
+    pit.clear_elapsed(Channel::Chan0);
+    pit.disable(Channel::Chan0);
 
     led.set();
     loop {

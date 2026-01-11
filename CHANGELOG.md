@@ -6,6 +6,7 @@
 
 - FlexPWM
 - GPT
+- PIT
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using
@@ -13,6 +14,9 @@ To type check peripheral instances against pins, construct types using
 
 **BREAKING** The FlexPWM refactor removes dedicated types for `Submodules` and
 `Outputs`. Users should program directly against the `Pwm` type.
+
+**BREAKING** The PIT driver no longer models channels as dedicated objects.
+Users should program directly against the `Pit` type.
 
 **BREAKING** Update `imxrt-usbd` to 0.3. Users are required to update to
 `usb-device` 0.3 and its compatible dependencies.

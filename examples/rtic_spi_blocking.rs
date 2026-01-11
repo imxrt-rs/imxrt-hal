@@ -13,13 +13,15 @@
 mod app {
 
     use imxrt_hal as hal;
+    use imxrt_hal::pit::Channel;
 
+    const PIT_CHANNEL: Channel = Channel::Chan2;
     const PIT_DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
     #[local]
     struct Local {
         spi: board::Spi,
-        pit: hal::pit::Pit<2>,
+        pit: hal::pit::Pit,
     }
 
     #[shared]
@@ -27,26 +29,20 @@ mod app {
 
     #[init]
     fn init(_: init::Context) -> (Shared, Local) {
-        let (
-            board::Common {
-                pit: (_, _, pit, _),
-                ..
-            },
-            board::Specifics { spi, .. },
-        ) = board::new();
+        let (board::Common { pit, .. }, board::Specifics { spi, .. }) = board::new();
         (Shared {}, Local { spi, pit })
     }
 
     #[idle(local = [spi, pit])]
     fn idle(cx: idle::Context) -> ! {
         let idle::LocalResources { spi, pit, .. } = cx.local;
-        pit.set_load_timer_value(PIT_DELAY_MS);
+        pit.set_load_timer_value(PIT_CHANNEL, PIT_DELAY_MS);
 
         let mut delay = move || {
-            pit.enable();
-            while !pit.is_elapsed() {}
-            pit.clear_elapsed();
-            pit.disable();
+            pit.enable(PIT_CHANNEL);
+            while !pit.is_elapsed(PIT_CHANNEL) {}
+            pit.clear_elapsed(PIT_CHANNEL);
+            pit.disable(PIT_CHANNEL);
         };
 
         loop {

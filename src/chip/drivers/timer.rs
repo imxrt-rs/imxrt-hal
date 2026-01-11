@@ -62,42 +62,48 @@ pub trait HardwareTimer {
     fn set_enable(&mut self, enable: bool);
 }
 
-impl<const N: u8> HardwareTimer for pit::Pit<N> {
-    type Ticks = u32;
-    fn is_elapsed(&self) -> bool {
-        pit::Pit::<N>::is_elapsed(self)
+/// A PIT channel bound to a specific channel for use with timer adapters.
+///
+/// This wraps a [`Pit`](pit::Pit) driver and a [`Channel`](pit::Channel),
+/// allowing it to be used with [`Blocking`] and [`RawCountDown`] adapters.
+pub struct PitChannel {
+    pit: pit::Pit,
+    channel: pit::Channel,
+}
+
+impl PitChannel {
+    /// Create a new PIT channel wrapper.
+    pub fn new(pit: pit::Pit, channel: pit::Channel) -> Self {
+        Self { pit, channel }
     }
-    fn clear_elapsed(&mut self) {
-        pit::Pit::<N>::clear_elapsed(self);
+
+    /// Release the PIT driver and channel.
+    pub fn release(self) -> (pit::Pit, pit::Channel) {
+        (self.pit, self.channel)
     }
-    fn set_ticks(&mut self, ticks: Self::Ticks) {
-        self.set_load_timer_value(ticks);
-    }
-    fn set_enable(&mut self, enable: bool) {
-        if enable {
-            self.enable();
-        } else {
-            self.disable();
-        }
+
+    /// Returns the channel this wrapper is bound to.
+    pub fn channel(&self) -> pit::Channel {
+        self.channel
     }
 }
 
-impl<const L: u8, const R: u8> HardwareTimer for pit::Chained<L, R> {
-    type Ticks = u64;
+impl HardwareTimer for PitChannel {
+    type Ticks = u32;
     fn is_elapsed(&self) -> bool {
-        pit::Chained::<L, R>::is_elapsed(self)
+        self.pit.is_elapsed(self.channel)
     }
     fn clear_elapsed(&mut self) {
-        pit::Chained::<L, R>::clear_elapsed(self);
+        self.pit.clear_elapsed(self.channel);
     }
     fn set_ticks(&mut self, ticks: Self::Ticks) {
-        self.set_load_timer_value(ticks);
+        self.pit.set_load_timer_value(self.channel, ticks);
     }
     fn set_enable(&mut self, enable: bool) {
         if enable {
-            self.enable();
+            self.pit.enable(self.channel);
         } else {
-            self.disable();
+            self.pit.disable(self.channel);
         }
     }
 }
@@ -207,10 +213,9 @@ impl<const HZ: u32> TimerDurationExt for fugit::TimerDurationU64<HZ> {
 /// // clock frequency.
 /// const PIT_FREQUENCY_HZ: u32 = PERCLK_CLK_FREQUENCY_HZ;
 ///
-/// let pit = unsafe { ral::pit::PIT::instance() };
-/// let (pit0, _, _, _) = hal::pit::new(pit);
+/// let pit = hal::pit::Pit::new(unsafe { ral::pit::PIT::instance() });
 ///
-/// let mut blocking = BlockingPit::<0, PIT_FREQUENCY_HZ>::from_pit(pit0);
+/// let mut blocking = BlockingPit::<PIT_FREQUENCY_HZ>::from_pit(pit, hal::pit::Channel::Chan0);
 /// // Block for milliseconds:
 /// blocking.block_ms(1000);
 /// // Block for microseconds:
@@ -264,8 +269,8 @@ where
     ///
     /// ```compile_fail
     /// // See struct-level documentation for configuration...
-    /// # let pit0 = unsafe { imxrt_hal::pit::Pit::<0>::new(&imxrt_ral::pit::PIT::instance()) };
-    /// # let mut blocking = imxrt_hal::timer::BlockingPit::<0, PIT_FREQUENCY_HZ>::from_pit(pit0);
+    /// # let pit = imxrt_hal::pit::Pit::new(unsafe { imxrt_ral::pit::PIT::instance() });
+    /// # let mut blocking = imxrt_hal::timer::BlockingPit::<PIT_FREQUENCY_HZ>::from_pit(pit, imxrt_hal::pit::Channel::Chan0);
     /// # const PIT_FREQUENCY_HZ: u32 = 75000000;
     /// // 99 seconds, expressed in microseconds, cannot fit within a u32 counter
     /// // that counts at PIT_FREQUENCY_HZ. This fails to compile:
@@ -275,8 +280,8 @@ where
     /// ```
     ///
     /// ```no_run
-    /// # let pit0 = unsafe { imxrt_hal::pit::Pit::<0>::new(&imxrt_ral::pit::PIT::instance()) };
-    /// # let mut blocking = imxrt_hal::timer::BlockingPit::<0, PIT_FREQUENCY_HZ>::from_pit(pit0);
+    /// # let pit = imxrt_hal::pit::Pit::new(unsafe { imxrt_ral::pit::PIT::instance() });
+    /// # let mut blocking = imxrt_hal::timer::BlockingPit::<PIT_FREQUENCY_HZ>::from_pit(pit, imxrt_hal::pit::Channel::Chan0);
     /// # const PIT_FREQUENCY_HZ: u32 = 75000000;
     /// // However, 99 milliseconds, expressed in microseconds, can fit within a u32
     /// // counter that counts at PIT_FREQENCY_HZ.
@@ -346,19 +351,12 @@ where
 
 /// Prepares a PIT channel to be adapted by blocking / count down
 /// adapters.
-fn prepare_pit<const N: u8>(pit: &mut pit::Pit<N>) {
-    pit.disable();
-    pit.clear_elapsed();
-    pit.set_chained(false);
-    pit.set_interrupt_enable(false);
-}
-
-/// Prepares a PIT chain to be adapted by blocking / count down
-/// adapters.
-fn prepare_pit_chained<const L: u8, const R: u8>(chain: &mut pit::Chained<L, R>) {
-    chain.disable();
-    chain.clear_elapsed();
-    chain.set_interrupt_enable(false);
+fn prepare_pit_channel(pit_channel: &mut PitChannel) {
+    let channel = pit_channel.channel;
+    pit_channel.pit.disable(channel);
+    pit_channel.pit.clear_elapsed(channel);
+    let _ = pit_channel.pit.disable_chaining(channel);
+    pit_channel.pit.set_interrupt_enable(channel, false);
 }
 
 /// Prepares a GPT to be adapted by blocking / count down adapters.
@@ -380,26 +378,15 @@ fn prepare_gpt(gpt: &mut gpt::Gpt) {
     }
 }
 
-/// A single PIT channel that acts as a blocking timer.
-pub type BlockingPit<const N: u8, const HZ: u32> = Blocking<pit::Pit<N>, HZ>;
+/// A PIT channel that acts as a blocking timer.
+pub type BlockingPit<const HZ: u32> = Blocking<PitChannel, HZ>;
 
-impl<const N: u8, const HZ: u32> BlockingPit<N, HZ> {
-    /// Create a blocking adapter from a PIT channel.
-    pub fn from_pit(mut pit: pit::Pit<N>) -> Self {
-        prepare_pit(&mut pit);
-        Self::new(pit)
-    }
-}
-
-/// A chain of PIT channels that act as a blocking timer.
-pub type BlockingPitChain<const L: u8, const R: u8, const HZ: u32> =
-    Blocking<pit::Chained<L, R>, HZ>;
-
-impl<const L: u8, const R: u8, const HZ: u32> BlockingPitChain<L, R, HZ> {
-    /// Create a blocking adapter from chained PIT channels.
-    pub fn from_pit_chained(mut chain: pit::Chained<L, R>) -> Self {
-        prepare_pit_chained(&mut chain);
-        Self::new(chain)
+impl<const HZ: u32> BlockingPit<HZ> {
+    /// Create a blocking adapter from a PIT and channel.
+    pub fn from_pit(pit: pit::Pit, channel: pit::Channel) -> Self {
+        let mut pit_channel = PitChannel::new(pit, channel);
+        prepare_pit_channel(&mut pit_channel);
+        Self::new(pit_channel)
     }
 }
 
@@ -510,24 +497,14 @@ where
 }
 
 /// A count down timer over a PIT channel.
-pub type RawCountDownPit<const N: u8> = RawCountDown<pit::Pit<N>>;
+pub type RawCountDownPit = RawCountDown<PitChannel>;
 
-impl<const N: u8> RawCountDownPit<N> {
-    /// Create a count down timer from a PIT channel.
-    pub fn from_pit(mut pit: pit::Pit<N>) -> Self {
-        prepare_pit(&mut pit);
-        Self::new(pit)
-    }
-}
-
-/// A count down timer over two chained PIT channels.
-pub type RawCountDownPitChain<const L: u8, const R: u8> = RawCountDown<pit::Chained<L, R>>;
-
-impl<const L: u8, const R: u8> RawCountDownPitChain<L, R> {
-    /// Create a count down timer from a PIT chain.
-    pub fn from_pit_chained(mut chain: pit::Chained<L, R>) -> Self {
-        prepare_pit_chained(&mut chain);
-        Self::new(chain)
+impl RawCountDownPit {
+    /// Create a count down timer from a PIT and channel.
+    pub fn from_pit(pit: pit::Pit, channel: pit::Channel) -> Self {
+        let mut pit_channel = PitChannel::new(pit, channel);
+        prepare_pit_channel(&mut pit_channel);
+        Self::new(pit_channel)
     }
 }
 

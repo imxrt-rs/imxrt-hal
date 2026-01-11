@@ -42,18 +42,17 @@ mod app {
     //
 
     use imxrt_hal as hal;
+    use imxrt_hal::pit::Channel;
+
+    const POLL_LOG_CHANNEL: Channel = Channel::Chan1;
+    const MAKE_LOG_CHANNEL: Channel = Channel::Chan2;
 
     #[local]
     struct Local {
         /// Toggle when we make a log.
         led: board::Led,
-        /// This timer tells us how frequently to poll
-        /// for logs. It's only used with the LPUART
-        /// logging backend.
-        poll_log: hal::pit::Pit<1>,
-        /// This timer tells us how frequently to generate
-        /// logs. It's always used.
-        make_log: hal::pit::Pit<2>,
+        /// The PIT peripheral for timing operations.
+        pit: hal::pit::Pit,
     }
 
     #[shared]
@@ -67,7 +66,7 @@ mod app {
         let mut cortex_m = cx.core;
         let (
             board::Common {
-                pit: (_, mut poll_log, mut make_log, _),
+                mut pit,
                 usb1,
                 usbnc1,
                 usbphy1,
@@ -85,16 +84,16 @@ mod app {
         // The USBD backend uses the USB peripheral's internal timer to
         // track time for us.
         if BACKEND == board::logging::Backend::Lpuart {
-            poll_log.set_load_timer_value(LPUART_POLL_INTERVAL_MS);
-            poll_log.set_interrupt_enable(true);
-            poll_log.enable();
+            pit.set_load_timer_value(POLL_LOG_CHANNEL, LPUART_POLL_INTERVAL_MS);
+            pit.set_interrupt_enable(POLL_LOG_CHANNEL, true);
+            pit.enable(POLL_LOG_CHANNEL);
         } else {
-            poll_log.disable();
+            pit.disable(POLL_LOG_CHANNEL);
         }
 
-        make_log.set_load_timer_value(MAKE_LOG_INTERVAL_MS);
-        make_log.set_interrupt_enable(true);
-        make_log.enable();
+        pit.set_load_timer_value(MAKE_LOG_CHANNEL, MAKE_LOG_INTERVAL_MS);
+        pit.set_interrupt_enable(MAKE_LOG_CHANNEL, true);
+        pit.enable(MAKE_LOG_CHANNEL);
 
         let usbd = hal::usbd::Instances {
             usb: usb1,
@@ -105,14 +104,7 @@ mod app {
         let dma_a = dma[board::BOARD_DMA_A_INDEX].take().unwrap();
         let poller = board::logging::init(FRONTEND, BACKEND, console, dma_a, usbd);
 
-        (
-            Shared { poller },
-            Local {
-                led,
-                poll_log,
-                make_log,
-            },
-        )
+        (Shared { poller }, Local { led, pit })
     }
 
     /// This interrupt fires
@@ -144,30 +136,26 @@ mod app {
         cx.shared.poller.lock(|poller| poller.poll());
     }
 
-    #[task(binds = BOARD_PIT, local = [led, poll_log, make_log, counter: u32 = 0], priority = 1)]
+    #[task(binds = BOARD_PIT, local = [led, pit, counter: u32 = 0], priority = 1)]
     fn pit_interrupt(cx: pit_interrupt::Context) {
         let pit_interrupt::LocalResources {
-            poll_log,
-            make_log,
-            led,
-            counter,
-            ..
+            pit, led, counter, ..
         } = cx.local;
 
         // Is it time for us to poll the logger?
         // This only happens for the LPUART backend.
-        if poll_log.is_elapsed() {
-            while poll_log.is_elapsed() {
-                poll_log.clear_elapsed();
+        if pit.is_elapsed(POLL_LOG_CHANNEL) {
+            while pit.is_elapsed(POLL_LOG_CHANNEL) {
+                pit.clear_elapsed(POLL_LOG_CHANNEL);
             }
             poll_logger::spawn().unwrap();
         }
 
         // Is it time for us to send a new log message?
-        if make_log.is_elapsed() {
+        if pit.is_elapsed(MAKE_LOG_CHANNEL) {
             led.toggle();
-            while make_log.is_elapsed() {
-                make_log.clear_elapsed();
+            while pit.is_elapsed(MAKE_LOG_CHANNEL) {
+                pit.clear_elapsed(MAKE_LOG_CHANNEL);
             }
 
             let count = cycles(|| {

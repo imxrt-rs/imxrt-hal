@@ -22,13 +22,15 @@ mod app {
 
     use hal::lpspi::BitOrder;
     use imxrt_hal as hal;
+    use imxrt_hal::pit::Channel;
 
+    const PIT_CHANNEL: Channel = Channel::Chan2;
     const BIT_ORDER: BitOrder = BitOrder::Msb;
 
     #[local]
     struct Local {
         spi: board::Spi,
-        pit: hal::pit::Pit<2>,
+        pit: hal::pit::Pit,
     }
 
     #[shared]
@@ -38,17 +40,11 @@ mod app {
 
     #[init]
     fn init(_: init::Context) -> (Shared, Local) {
-        let (
-            board::Common {
-                pit: (_, _, mut pit, _),
-                ..
-            },
-            board::Specifics { mut spi, .. },
-        ) = board::new();
+        let (board::Common { mut pit, .. }, board::Specifics { mut spi, .. }) = board::new();
 
-        pit.set_interrupt_enable(true);
-        pit.set_load_timer_value(board::PIT_FREQUENCY);
-        pit.enable();
+        pit.set_interrupt_enable(PIT_CHANNEL, true);
+        pit.set_load_timer_value(PIT_CHANNEL, board::PIT_FREQUENCY);
+        pit.enable(PIT_CHANNEL);
 
         spi.set_bit_order(BIT_ORDER);
         (
@@ -86,8 +82,8 @@ mod app {
     fn report_errors(cx: report_errors::Context) {
         let report_errors::LocalResources { pit, count, .. } = cx.local;
 
-        while pit.is_elapsed() {
-            pit.clear_elapsed();
+        while pit.is_elapsed(PIT_CHANNEL) {
+            pit.clear_elapsed(PIT_CHANNEL);
         }
 
         *count = count.wrapping_add(1);

@@ -34,13 +34,16 @@ const MAKE_LOG_INTERVAL_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 // End configurations.
 //
 
+use hal::pit::Channel;
 use imxrt_hal as hal;
+
+const PIT_CHANNEL: Channel = Channel::Chan2;
 
 #[imxrt_rt::entry]
 fn main() -> ! {
     let (
         board::Common {
-            pit: (_, _, mut make_log, _),
+            mut pit,
             usb1,
             usbnc1,
             usbphy1,
@@ -52,9 +55,9 @@ fn main() -> ! {
     ) = board::new();
 
     // When should we generate a log message?
-    make_log.set_load_timer_value(MAKE_LOG_INTERVAL_MS);
-    make_log.set_interrupt_enable(false);
-    make_log.enable();
+    pit.set_load_timer_value(PIT_CHANNEL, MAKE_LOG_INTERVAL_MS);
+    pit.set_interrupt_enable(PIT_CHANNEL, false);
+    pit.enable(PIT_CHANNEL);
 
     let usbd = hal::usbd::Instances {
         usb: usb1,
@@ -68,10 +71,10 @@ fn main() -> ! {
     let mut counter = 0;
     loop {
         poller.poll();
-        if make_log.is_elapsed() {
+        if pit.is_elapsed(PIT_CHANNEL) {
             led.toggle();
-            while make_log.is_elapsed() {
-                make_log.clear_elapsed();
+            while pit.is_elapsed(PIT_CHANNEL) {
+                pit.clear_elapsed(PIT_CHANNEL);
             }
             log::info!("Hello from the log framework over {BACKEND:?}! The count is {counter}");
             defmt::println!(

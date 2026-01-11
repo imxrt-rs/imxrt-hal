@@ -1,12 +1,19 @@
 //! Periodic interrupt timers.
 //!
-//! PITs are countdown timers that run on the PERCLK clock root.
-//! When the timer elapses, it automatically restarts from the load value.
-//! There are four PIT channels for independent time tracking. The four
-//! channels share an interrupt.
+//! Each PIT has four channels, all running at the same frequency.
+//! PIT channels count down to zero from a starting load value.
+//! When a channel elapses, it automatically restarts from the load value.
+//! All four channels share an interrupt.
 //!
-//! You can chain channels together by using [`Chained`](Chained).
-//! This doubles the width of the timer.
+//! You can chain channels together using [`Pit::enable_chaining`].
+//! This increases the width of the timer by having a channel count down
+//! each time the previous channel expires. You can chain more than two
+//! channels together. Keep in mind that you'll need to handle cases of
+//! timer overflow in software.
+//!
+//! When channel 0 and 1 are chained together, the lifetime register is
+//! enabled. Reads from the lifetime registers will automatically handle
+//! overflow without a software loop.
 //!
 //! # Example
 //!
@@ -14,165 +21,106 @@
 //! clock gates, or PERCLK. For more information, see [the CCM peripheral clock
 //! module](crate::ccm::perclk_clk).
 //!
-//! Acquire the four PIT timer channels:
+//! Acquire the PIT driver:
 //!
 //! ```no_run
-//! use imxrt_hal::pit;
+//! use imxrt_hal::pit::{Pit, Channel};
 //! use imxrt_ral::pit::PIT;
 //!
-//! let (mut pit0, mut pit1, _, _) = pit::new(unsafe { PIT::instance() });
+//! let mut pit = Pit::new(unsafe { PIT::instance() });
 //! ```
 //!
-//! Use `pit0` to implement a blocking delay:
+//! Use channel 0 to implement a blocking delay:
 //!
 //! ```no_run
-//! # use imxrt_hal::pit;
+//! # use imxrt_hal::pit::{Pit, Channel};
 //! # use imxrt_ral::pit::PIT;
-//! # let (mut pit0, pit1, _, _) = pit::new(unsafe { PIT::instance() });
+//! # let mut pit = Pit::new(unsafe { PIT::instance() });
 //! # const DELAY_MS: u32 = 1;
-//! pit0.set_load_timer_value(DELAY_MS);
-//! pit0.enable();
+//! pit.set_load_timer_value(Channel::Chan0, DELAY_MS);
+//! pit.enable(Channel::Chan0);
 //!
 //! loop {
-//!     while !pit0.is_elapsed() {}
-//!     pit0.clear_elapsed();
+//!     while !pit.is_elapsed(Channel::Chan0) {}
+//!     pit.clear_elapsed(Channel::Chan0);
 //!     // Do work...
 //! }
 //! ```
 //!
-//! Chain the channels together to form a larger timer:
+//! Chain channels 0 and 1 together for a 64-bit timer:
 //!
 //! ```no_run
-//! # use imxrt_hal::pit;
+//! # use imxrt_hal::pit::{Pit, Channel};
 //! # use imxrt_ral::pit::PIT;
-//! # let (pit0, pit1, _, _) = pit::new(unsafe { PIT::instance() });
-//!
-//! let chained = pit::Chained01::new(pit0, pit1);
+//! # let mut pit = Pit::new(unsafe { PIT::instance() });
+//! // Channel 1 will decrement when Channel 0 expires.
+//! pit.enable_chaining(Channel::Chan1).unwrap();
 //! ```
 
-/// Channel 0.
-pub type Pit0 = Pit<0>;
-/// Channel 1.
-pub type Pit1 = Pit<1>;
-/// Channel 2.
-pub type Pit2 = Pit<2>;
-/// Channel 3.
-pub type Pit3 = Pit<3>;
+use crate::ral;
 
-/// All four channels.
-pub type Channels = (Pit0, Pit1, Pit2, Pit3);
+/// Any PIT instance.
+type AnyPitInstance = crate::AnyInstance<ral::pit::RegisterBlock>;
 
-/// A periodic interrupt timer (PIT) channel.
-pub struct Pit<const CHAN: u8> {
-    instance: &'static crate::ral::pit::RegisterBlock,
+/// A PIT channel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[repr(usize)]
+pub enum Channel {
+    /// Channel 0.
+    Chan0 = 0,
+    /// Channel 1.
+    Chan1 = 1,
+    /// Channel 2.
+    Chan2 = 2,
+    /// Channel 3.
+    Chan3 = 3,
 }
 
-/// Convert the PIT peripheral instances into four timer channels.
+/// Error returned when a channel cannot be chained.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct CannotChainError(());
+
+/// A periodic interrupt timer (PIT) driver.
 ///
-/// `new` will reset all timer control registers before returning
-/// the channels. It is is guaranteed to not touch the `FRZ` bit
-/// in `MCR`.
-pub fn new<const N: u8>(pit: crate::ral::pit::Instance<N>) -> Channels {
-    crate::ral::modify_reg!(crate::ral::pit, pit, MCR, MDIS: MDIS_0);
-    // Reset all PIT channels
-    //
-    // PIT channels may be used by a systems boot ROM, or another
-    // user. Set them to a known, good state.
-    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[0], TCTRL, 0);
-    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[1], TCTRL, 0);
-    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[2], TCTRL, 0);
-    crate::ral::write_reg!(crate::ral::pit::timer, &pit.TIMER[3], TCTRL, 0);
-
-    // Safety: we own the larger PIT peripheral instance. The caller
-    // (or the user who fabricated the larger PIT instance) ensures
-    // that we're not aliasing that peripheral.
-    unsafe {
-        (
-            Pit::new(&pit),
-            Pit::new(&pit),
-            Pit::new(&pit),
-            Pit::new(&pit),
-        )
-    }
+/// The PIT has four independent timer channels that share a single
+/// interrupt. Use the [`Channel`] enum to select which channel to operate on.
+pub struct Pit {
+    pit: AnyPitInstance,
 }
 
-mod private {
-    #[allow(dead_code)]
-    pub trait Sealed {}
-}
-/// Describes a valid PIT channel.
-pub trait Valid {}
-/// Type-level constant for PIT channels.
-///
-/// When combined with [`Valid`], this can constrain an API to accept
-/// only valid PIT channel constants. See [`Pit::new()`](crate::pit::Pit::new)
-/// for an example.
-pub enum Const<const N: u8> {}
-impl private::Sealed for Const<0> {}
-impl private::Sealed for Const<1> {}
-impl private::Sealed for Const<2> {}
-impl private::Sealed for Const<3> {}
-impl Valid for Const<0> {}
-impl Valid for Const<1> {}
-impl Valid for Const<2> {}
-impl Valid for Const<3> {}
-
-impl<const CHAN: u8> Pit<CHAN> {
-    /// Fabricate a PIT channel instance.
+impl Pit {
+    /// Create a new PIT driver from the RAL's PIT instance.
     ///
-    /// # Safety
-    ///
-    /// This allows you to produce multiple PIT channels that mutably
-    /// reference the same memory. You must ensure that writes to the
-    /// peripheral memory are synchronized across instances.
-    ///
-    /// Use the free function [`new()`](crate::pit::new) to safely
-    /// acquire the four PIT channels.
-    pub unsafe fn new<const N: u8>(instance: &crate::ral::pit::Instance<N>) -> Self
-    where
-        Const<CHAN>: Valid,
-    {
-        let register_block: &'_ crate::ral::pit::RegisterBlock = instance;
-        // Safety: extending lifetime when we know that the register block has
-        // static lifetime.
-        let register_block: &'static _ = unsafe { core::mem::transmute(register_block) };
-        Self {
-            instance: register_block,
-        }
+    /// When `new` returns, all channels are disabled and reset.
+    /// The `FRZ` bit in `MCR` is not modified.
+    pub fn new<const N: u8>(pit: ral::pit::Instance<N>) -> Self {
+        new(crate::into_any(pit))
     }
 
-    /// Enable (true) or disable (false) interrupt generation.
-    pub fn set_interrupt_enable(&mut self, enable: bool) {
-        crate::ral::modify_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            TCTRL,
-            TIE: enable as u32
-        )
+    fn timer(&self, channel: Channel) -> &ral::pit::timer::RegisterBlock {
+        &self.pit.TIMER[channel as usize]
+    }
+
+    /// Enable (true) or disable (false) interrupt generation for a channel.
+    pub fn set_interrupt_enable(&mut self, channel: Channel, enable: bool) {
+        ral::modify_reg!(ral::pit::timer, self.timer(channel), TCTRL, TIE: enable as u32);
     }
 
     /// Indicates if timeouts will (true) or will not (false) generate interrupts.
-    pub fn is_interrupt_enabled(&self) -> bool {
-        crate::ral::read_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            TCTRL,
-            TIE == 1
-        )
+    pub fn is_interrupt_enabled(&self, channel: Channel) -> bool {
+        ral::read_reg!(ral::pit::timer, self.timer(channel), TCTRL, TIE == 1)
     }
 
-    /// Reads the current time value, in clock ticks.
+    /// Reads the current timer value, in clock ticks.
     ///
-    /// Returns `0` if the timer is disabled.
-    pub fn current_timer_value(&self) -> u32 {
-        if self.is_enabled() {
+    /// Returns `0` if the channel is disabled.
+    pub fn current_timer_value(&self, channel: Channel) -> u32 {
+        if self.is_enabled(channel) {
             // Note in CVAL register docs: don't read CVAL if the timer
-            // is disable "because the value is unreliable."
-            crate::ral::read_reg!(
-                crate::ral::pit::timer,
-                &self.instance.TIMER[CHAN as usize],
-                CVAL
-            )
+            // is disabled "because the value is unreliable."
+            ral::read_reg!(ral::pit::timer, self.timer(channel), CVAL)
         } else {
             0
         }
@@ -181,275 +129,159 @@ impl<const CHAN: u8> Pit<CHAN> {
     /// Loads the timer value for the next timer run.
     ///
     /// `ticks` is in clock ticks.
-    pub fn set_load_timer_value(&self, ticks: u32) {
-        crate::ral::write_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
+    pub fn set_load_timer_value(&self, channel: Channel, ticks: u32) {
+        ral::write_reg!(
+            ral::pit::timer,
+            self.timer(channel),
             LDVAL,
             ticks.saturating_sub(1)
         );
     }
 
     /// Returns the load timer value for the next timer run, in clock ticks.
-    pub fn load_timer_value(&self) -> u32 {
-        crate::ral::read_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            LDVAL
-        )
-        .saturating_add(1)
+    pub fn load_timer_value(&self, channel: Channel) -> u32 {
+        ral::read_reg!(ral::pit::timer, self.timer(channel), LDVAL).saturating_add(1)
     }
 
-    /// Enable the timer.
-    pub fn enable(&mut self) {
-        crate::ral::modify_reg!(crate::ral::pit::timer, &self.instance.TIMER[CHAN as usize], TCTRL, TEN: 1);
+    /// Enable a timer channel.
+    pub fn enable(&mut self, channel: Channel) {
+        ral::modify_reg!(ral::pit::timer, self.timer(channel), TCTRL, TEN: 1);
     }
 
-    /// Disable the timer.
-    pub fn disable(&mut self) {
-        crate::ral::modify_reg!(crate::ral::pit::timer, &self.instance.TIMER[CHAN as usize], TCTRL, TEN: 0);
+    /// Disable a timer channel.
+    pub fn disable(&mut self, channel: Channel) {
+        ral::modify_reg!(ral::pit::timer, self.timer(channel), TCTRL, TEN: 0);
     }
 
-    /// Returns `true` if the PIT channel is enabled.
-    pub fn is_enabled(&self) -> bool {
-        crate::ral::read_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            TCTRL,
-            TEN == 1
-        )
+    /// Returns `true` if the channel is enabled.
+    pub fn is_enabled(&self, channel: Channel) -> bool {
+        ral::read_reg!(ral::pit::timer, self.timer(channel), TCTRL, TEN == 1)
     }
 
     /// Returns `true` if the timer has elapsed.
-    pub fn is_elapsed(&self) -> bool {
-        crate::ral::read_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            TFLG,
-            TIF == 1
-        )
+    pub fn is_elapsed(&self, channel: Channel) -> bool {
+        ral::read_reg!(ral::pit::timer, self.timer(channel), TFLG, TIF == 1)
     }
 
     /// Clear the elapsed flag.
-    pub fn clear_elapsed(&self) {
-        crate::ral::write_reg!(crate::ral::pit::timer, &self.instance.TIMER[CHAN as usize], TFLG, TIF: 1)
+    pub fn clear_elapsed(&self, channel: Channel) {
+        ral::write_reg!(ral::pit::timer, self.timer(channel), TFLG, TIF: 1);
     }
 
-    /// Specify that this channel is chained to the previous channel.
+    /// Chain adjacent channels together, forming a larger timer.
     ///
-    /// This affects how the timer counts. If you're looking to chain timers
-    /// easily, see [`Chained`](crate::pit::Chained).
-    pub fn set_chained(&mut self, chained: bool) {
-        crate::ral::modify_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            TCTRL,
-            CHN: chained as u32
-        );
-    }
-
-    /// Returns true if this channel is chained to the previous channel.
-    pub fn is_chained(&self) -> bool {
-        crate::ral::read_reg!(
-            crate::ral::pit::timer,
-            &self.instance.TIMER[CHAN as usize],
-            TCTRL,
-            CHN == 1
-        )
-    }
-}
-
-// Safety: reference to static MMIO can be moved across execution contexts.
-// Study of this module reveals that the safe API splits the larger PIT
-// peripheral instance into separate, non-aliasing channels.
-unsafe impl<const CHAN: u8> Send for Pit<CHAN> {}
-
-/// Two chained PIT timer channels.
-///
-/// When the low timer counts down to zero, the high timer is decremented
-/// by one. This doubles the width of the timer.
-///
-/// Timers must be chained in sequence. For example, timer 2 (high) can be
-/// chained to timer 1 (low). But, timer 3 cannot be chained to timer 1.
-///
-/// Chaining channel 1 and 0 enables the lifetime register. The lifetime
-/// register allows us to read two 32-bit registers without rollover.
-/// Otherwise, the implementation handles rollovers in software with a small
-/// loop and comparison.
-pub struct Chained<const L: u8, const H: u8> {
-    low: Pit<L>,
-    high: Pit<H>,
-}
-
-/// Chained channels 0 and 1.
-pub type Chained01 = Chained<0, 1>;
-/// Chained channels 1 and 2.
-pub type Chained12 = Chained<1, 2>;
-/// Chained channels 2 and 3.
-pub type Chained23 = Chained<2, 3>;
-
-impl Chained<0, 1> {
-    /// Chain together channels 0 and 1.
+    /// A chained timer will decrement by one each time the previous channel
+    /// expires. The previous channel is the channel with a lower number.
     ///
-    /// This creates the lifetime timer.
-    pub fn new(low: Pit<0>, high: Pit<1>) -> Self {
-        chain(low, high)
+    /// For example, to chain `Chan2` to `Chan1`, supply `Chan2` as an argument.
+    /// Then, every time `Chan1` expires, `Chan2` decrements by one.
+    ///
+    /// You may chain multiple channels together, forming 96-bit and 128-bit
+    /// timers. When reading the timer values, take care to handle overflows.
+    ///
+    /// If you're generating interrupts from a chained timer, the channel with
+    /// the larger number should generate that interrupt.
+    ///
+    /// When querying for the time tracked by chained timers, make sure you
+    /// account for rollover in software. Keep in mind that the lifetime timer
+    /// will handle rollover automatically; see [`lifetime_value`](Self::lifetime_value)
+    /// for more information.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CannotChainError`] if `channel` is `Chan0`, since there is
+    /// no previous channel to chain to.
+    pub fn enable_chaining(&mut self, channel: Channel) -> Result<(), CannotChainError> {
+        if channel == Channel::Chan0 {
+            return Err(CannotChainError(()));
+        }
+        ral::modify_reg!(ral::pit::timer, self.timer(channel), TCTRL, CHN: 1);
+        Ok(())
+    }
+
+    /// Disable chaining for a channel.
+    ///
+    /// See [`enable_chaining`](Self::enable_chaining) for more information.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CannotChainError`] if `channel` is `Chan0`, since `Chan0`
+    /// cannot be chained.
+    pub fn disable_chaining(&mut self, channel: Channel) -> Result<(), CannotChainError> {
+        if channel == Channel::Chan0 {
+            return Err(CannotChainError(()));
+        }
+        ral::modify_reg!(ral::pit::timer, self.timer(channel), TCTRL, CHN: 0);
+        Ok(())
+    }
+
+    /// Returns `true` if a channel is chained to the previous channel.
+    ///
+    /// See [`enable_chaining`](Self::enable_chaining) for more information.
+    ///
+    /// Always returns `false` for `Chan0`.
+    pub fn is_chained(&self, channel: Channel) -> bool {
+        if channel == Channel::Chan0 {
+            return false;
+        }
+        ral::read_reg!(ral::pit::timer, self.timer(channel), TCTRL, CHN == 1)
     }
 
     /// Read the lifetime register value.
     ///
-    /// This is only supported when chaining channels 0 and
-    /// channel 1. Returns `0` if the timer is disabled. The
-    /// lifetime registers account for rollover possibility
-    /// in hardware.
+    /// The lifetime register is a 64-bit register that combines channels 0 and 1.
+    /// It is only valid when channel 1 is chained to channel 0.
     ///
-    /// This method implements the recommended fix for
-    /// errata ERR050130.
+    /// The method assumes that channel 1 is chained to channel 0. See
+    /// [`enable_chaining`](Self::enable_chaining) for more information. Additionally,
+    /// the method assumes both channels 0 and 1 are enabled.
+    ///
+    /// Given the hardware support, this call does not require a loop to account for
+    /// rollover.
+    ///
+    /// This method implements the recommended fix for errata ERR050130.
     pub fn lifetime_value(&self) -> u64 {
-        if !self.is_enabled() {
-            return 0;
-        }
+        let mut high = self.pit.LTMR64H.read();
+        let mut low = self.pit.LTMR64L.read();
 
-        // Safety: there can only be one (safe) instance of this chained timer.
-        // We effectively own these registers. These addresses are valid MMIO
-        // registers.
-        let mut high = self.low.instance.LTMR64H.read();
-        let mut low = self.low.instance.LTMR64L.read();
-
-        let ldval0 = self.low.load_timer_value();
+        let ldval0 = self.pit.TIMER[0].LDVAL.read();
         if low == ldval0 {
-            high = self.low.instance.LTMR64H.read();
-            low = self.low.instance.LTMR64L.read();
+            high = self.pit.LTMR64H.read();
+            low = self.pit.LTMR64L.read();
         }
 
         (u64::from(high) << 32) + u64::from(low)
     }
 }
 
-impl Chained<1, 2> {
-    /// Chain together channels 1 and 2.
-    pub fn new(low: Pit<1>, high: Pit<2>) -> Self {
-        chain(low, high)
-    }
-}
+fn new(pit: AnyPitInstance) -> Pit {
+    ral::modify_reg!(ral::pit, pit, MCR, MDIS: MDIS_0);
+    // Reset all PIT channels
+    //
+    // PIT channels may be used by a system's boot ROM, or another
+    // user. Set them to a known, good state.
+    ral::write_reg!(ral::pit::timer, &pit.TIMER[0], TCTRL, 0);
+    ral::write_reg!(ral::pit::timer, &pit.TIMER[1], TCTRL, 0);
+    ral::write_reg!(ral::pit::timer, &pit.TIMER[2], TCTRL, 0);
+    ral::write_reg!(ral::pit::timer, &pit.TIMER[3], TCTRL, 0);
 
-impl Chained<2, 3> {
-    /// Chain together channels 2 and 3.
-    pub fn new(low: Pit<2>, high: Pit<3>) -> Self {
-        chain(low, high)
-    }
-}
-
-/// Chain the low and high timers together.
-///
-/// This has no type safety to ensure valid channel chaining.
-fn chain<const L: u8, const H: u8>(mut low: Pit<L>, mut high: Pit<H>) -> Chained<L, H> {
-    low.disable();
-    high.disable();
-
-    low.clear_elapsed();
-    high.clear_elapsed();
-
-    low.set_chained(false);
-    low.set_interrupt_enable(false);
-    high.set_chained(true);
-    Chained { low, high }
-}
-
-impl<const L: u8, const H: u8> Chained<L, H> {
-    /// Release the chained timers.
-    ///
-    /// When `release` returns, the timer chain is disabled, and the
-    /// timer channels are disabled.
-    pub fn release(mut self) -> (Pit<L>, Pit<H>) {
-        self.low.disable();
-        self.high.disable();
-
-        self.high.set_chained(false);
-        self.high.set_interrupt_enable(false);
-        (self.low, self.high)
-    }
-
-    /// Enable (true) or disable (false) interrupt generation when
-    /// the chained timer expires.
-    pub fn set_interrupt_enable(&mut self, enable: bool) {
-        self.high.set_interrupt_enable(enable);
-    }
-
-    /// Indicates if timeouts will (true) or will not (false) generate interrupts.
-    pub fn is_interrupt_enabled(&self) -> bool {
-        self.high.is_interrupt_enabled()
-    }
-
-    /// Loads the timer value for the next timer run.
-    ///
-    /// `ticks` is in clock ticks.
-    pub fn set_load_timer_value(&mut self, ticks: u64) {
-        self.low.set_load_timer_value((ticks & 0xFFFF_FFFF) as u32);
-        self.high.set_load_timer_value((ticks >> 32) as u32);
-    }
-
-    /// Returns the load timer value for the next timer run, in ticks.
-    pub fn load_timer_value(&self) -> u64 {
-        let low = self.low.load_timer_value();
-        let high = self.high.load_timer_value();
-        (u64::from(high) << 32) + u64::from(low)
-    }
-
-    /// Reads the current timer value, in clock ticks.
-    ///
-    /// Returns `0` if the timer is disabled.
-    pub fn current_timer_value(&self) -> u64 {
-        if !self.is_enabled() {
-            return 0;
-        }
-
-        loop {
-            let tmp = self.high.current_timer_value();
-            let low = self.low.current_timer_value();
-            let high = self.high.current_timer_value();
-            if high == tmp {
-                // No rollover.
-                return (u64::from(high) << 32) + u64::from(low);
-            }
-        }
-    }
-
-    /// Enable the chained timer.
-    pub fn enable(&mut self) {
-        self.high.enable();
-        self.low.enable();
-    }
-
-    /// Disable the chained timer.
-    pub fn disable(&mut self) {
-        self.low.disable();
-        self.high.disable();
-    }
-
-    /// Returns `true` if the chained timer is enabled.
-    pub fn is_enabled(&self) -> bool {
-        self.high.is_enabled()
-    }
-
-    /// Returns `true` if the chained timer has elapsed.
-    pub fn is_elapsed(&self) -> bool {
-        self.high.is_elapsed()
-    }
-
-    /// Clear the elapsed flag.
-    pub fn clear_elapsed(&mut self) {
-        self.high.clear_elapsed();
-        self.low.clear_elapsed(); // Is this necessary?
-    }
+    Pit { pit }
 }
 
 /// ```compile_fail
-/// use imxrt_ral as ral;
-/// use imxrt_hal as hal;
-/// use hal::pit::Pit;
+/// use imxrt_hal::pit::Pit;
+/// fn not_sync<T: Sync>() {}
 ///
-/// let p: Pit<4> = unsafe { Pit::new(&ral::pit::PIT::instance()) };
+/// not_sync::<Pit>();
 /// ```
 #[cfg(doctest)]
-struct InvalidChannel;
+struct PitNotSync;
+
+/// ```send
+/// use imxrt_hal::pit::Pit;
+/// fn is_send<T: Send>() {}
+///
+/// is_send::<Pit>();
+/// ```
+#[cfg(doctest)]
+struct PitSend;

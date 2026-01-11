@@ -68,8 +68,8 @@ pub use board_impl::*;
 /// that don't necessarily depend on a pinout.
 #[cfg(any(chip = "imxrt1010", chip = "imxrt1060", chip = "imxrt1170"))]
 pub struct Common {
-    /// PIT channels.
-    pub pit: hal::pit::Channels,
+    /// PIT timer.
+    pub pit: hal::pit::Pit,
     /// GPT1 timer.
     ///
     /// Use [`GPT1_FREQUENCY`] to understand its frequency.
@@ -102,10 +102,10 @@ pub struct Common {
 impl Common {
     /// Prepares common resources.
     fn new() -> Self {
-        let pit: Pit = unsafe { Pit::instance() };
+        let pit_inst: Pit = unsafe { Pit::instance() };
         // Stop timers in debug mode.
-        ral::modify_reg!(ral::pit, pit, MCR, FRZ: FRZ_1);
-        let pit = hal::pit::new(pit);
+        ral::modify_reg!(ral::pit, pit_inst, MCR, FRZ: FRZ_1);
+        let pit = hal::pit::Pit::new(pit_inst);
 
         let gpt1 = configure_gpt(unsafe { ral::gpt::GPT1::instance() }, GPT1_DIVIDER);
         let gpt2 = configure_gpt(unsafe { ral::gpt::GPT2::instance() }, GPT2_DIVIDER);

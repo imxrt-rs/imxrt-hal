@@ -12,6 +12,7 @@
 #![no_std]
 
 use hal::ocotp::FuseAddress;
+use hal::pit::Channel::Chan0;
 use imxrt_hal as hal;
 
 const FUSE_ADDRESS: FuseAddress = FuseAddress::new(0x1300).unwrap();
@@ -34,14 +35,14 @@ fn main() -> ! {
         board::Specifics { led, .. },
     ) = board::new();
 
-    pit.0.set_load_timer_value(DELAY_MS);
-    pit.0.enable();
+    pit.set_load_timer_value(Chan0, DELAY_MS);
+    pit.enable(Chan0);
 
     let mut write_delays = 50;
     let mut fuse_written = false;
     loop {
-        while !pit.0.is_elapsed() {}
-        pit.0.clear_elapsed();
+        while !pit.is_elapsed(Chan0) {}
+        pit.clear_elapsed(Chan0);
         led.toggle();
 
         defmt::println!("Reading fuse {}...", FUSE_ADDRESS);
