@@ -50,7 +50,8 @@ pub type Button = hal::gpio::Input<ButtonPad>;
 type ButtonPad = iomuxc::gpio_sd::GPIO_SD_05;
 
 /// The UART console. Baud specified in lib.rs.
-pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
+pub type Console = hal::lpuart::Lpuart;
+const CONSOLE_INSTANCE: u8 = 1;
 
 /// The debug serial console's pins.
 ///
@@ -182,7 +183,7 @@ impl Specifics {
         let button = gpio2.input(iomuxc.gpio_sd.p05);
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
-        let mut console = hal::lpuart::Lpuart::new(
+        let mut console = hal::lpuart::Lpuart::with_pins(
             lpuart1,
             hal::lpuart::Pins {
                 tx: iomuxc.gpio.p10,
@@ -283,7 +284,7 @@ use hal::ccm::clock_gate;
 /// The clock gates for this board's peripherals.
 pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<1>(),
-    clock_gate::lpuart::<{ Console::N }>(),
+    clock_gate::lpuart::<CONSOLE_INSTANCE>(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2C_INSTANCE }>(),

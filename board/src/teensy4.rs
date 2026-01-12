@@ -39,7 +39,8 @@ pub type Button = hal::gpio::Input<ButtonPad>;
 type ButtonPad = iomuxc::gpio_ad_b0::GPIO_AD_B0_03;
 
 /// The UART console. Baud specified in lib.rs.
-pub type Console = hal::lpuart::Lpuart<ConsolePins, 2>;
+pub type Console = hal::lpuart::Lpuart;
+const CONSOLE_INSTANCE: u8 = 2;
 pub type ConsolePins = hal::lpuart::Pins<
     iomuxc::gpio_ad_b1::GPIO_AD_B1_02, // TX, P14
     iomuxc::gpio_ad_b1::GPIO_AD_B1_03, // RX, P15
@@ -153,7 +154,7 @@ impl Specifics {
         let button = gpio1.input(iomuxc.gpio_ad_b0.p03);
 
         let lpuart2 = unsafe { ral::lpuart::LPUART2::instance() };
-        let mut console = hal::lpuart::Lpuart::new(
+        let mut console = hal::lpuart::Lpuart::with_pins(
             lpuart2,
             hal::lpuart::Pins {
                 tx: iomuxc.gpio_ad_b1.p02,
@@ -252,7 +253,7 @@ use hal::ccm::clock_gate;
 pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<1>(),
     clock_gate::gpio::<2>(),
-    clock_gate::lpuart::<{ Console::N }>(),
+    clock_gate::lpuart::<CONSOLE_INSTANCE>(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2C_INSTANCE }>(),

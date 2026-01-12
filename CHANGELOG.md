@@ -8,6 +8,7 @@
 - GPT
 - PIT
 - LPI2C
+- LPUART
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using

@@ -92,9 +92,9 @@ use crate::lpuart;
 
 // Safety: a LPUART can support writes from a DMA engine into its data register.
 // The peripheral is static, so it's always a valid target for memory writes.
-unsafe impl<P, const N: u8> peripheral::Destination<u8> for lpuart::Lpuart<P, N> {
+unsafe impl peripheral::Destination<u8> for lpuart::Lpuart {
     fn destination_signal(&self) -> u32 {
-        LPUART_DMA_TX_MAPPING[N as usize - 1]
+        LPUART_DMA_TX_MAPPING[self.instance() as usize - 1]
     }
     fn destination_address(&self) -> *const u8 {
         self.data().cast()
@@ -109,9 +109,9 @@ unsafe impl<P, const N: u8> peripheral::Destination<u8> for lpuart::Lpuart<P, N>
 
 // Safety: a LPUART can support reads performed by a DMA engine from its data
 // register. The peripheral is static and always valid for reading.
-unsafe impl<P, const N: u8> peripheral::Source<u8> for lpuart::Lpuart<P, N> {
+unsafe impl peripheral::Source<u8> for lpuart::Lpuart {
     fn source_signal(&self) -> u32 {
-        LPUART_DMA_RX_MAPPING[N as usize - 1]
+        LPUART_DMA_RX_MAPPING[self.instance() as usize - 1]
     }
     fn source_address(&self) -> *const u8 {
         self.data().cast()
@@ -124,7 +124,14 @@ unsafe impl<P, const N: u8> peripheral::Source<u8> for lpuart::Lpuart<P, N> {
     }
 }
 
-impl<P, const N: u8> lpuart::Lpuart<P, N> {
+impl lpuart::Lpuart {
+    /// Returns the instance number for this LPUART peripheral.
+    ///
+    /// This is used by chip-specific code for DMA signal mapping.
+    fn instance(&self) -> u8 {
+        ral::lpuart::number(&*self.lpuart).unwrap()
+    }
+
     /// Use a DMA channel to write data to the UART peripheral
     ///
     /// Completes when all data in `buffer` has been written to the UART

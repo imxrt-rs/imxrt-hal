@@ -126,12 +126,12 @@ pub fn usbd<P: imxrt_usbd::Peripherals>(
 ///
 /// See the crate-level documentation to understand how the LPUART backend works.
 #[cfg(feature = "lpuart")]
-pub fn lpuart_with_config<P, const LPUART: u8>(
-    lpuart: Lpuart<P, LPUART>,
+pub fn lpuart_with_config(
+    lpuart: Lpuart,
     dma_channel: Channel,
     interrupts: crate::Interrupts,
     frontend_config: &LoggingConfig,
-) -> Result<Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
+) -> Result<Poller, crate::AlreadySetError<(Lpuart, Channel)>> {
     let (producer, consumer) = match BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),
@@ -151,10 +151,10 @@ pub fn lpuart_with_config<P, const LPUART: u8>(
 /// This function uses default configurations for the frontend.
 /// See the crate-level documentation to understand how the LPUART backend works.
 #[cfg(feature = "lpuart")]
-pub fn lpuart<P, const LPUART: u8>(
-    lpuart: Lpuart<P, LPUART>,
+pub fn lpuart(
+    lpuart: Lpuart,
     dma_channel: Channel,
     interrupts: crate::Interrupts,
-) -> Result<Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
+) -> Result<Poller, crate::AlreadySetError<(Lpuart, Channel)>> {
     lpuart_with_config(lpuart, dma_channel, interrupts, &LoggingConfig::default())
 }

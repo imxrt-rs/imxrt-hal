@@ -112,8 +112,8 @@ impl Backend {
 /// # Panics
 ///
 /// Panics if called more than once.
-pub(crate) fn init<P, const LPUART: u8>(
-    mut lpuart: Lpuart<P, LPUART>,
+pub(crate) fn init(
+    mut lpuart: Lpuart,
     mut channel: channel::Channel,
     consumer: crate::Consumer,
     interrupts: crate::Interrupts,

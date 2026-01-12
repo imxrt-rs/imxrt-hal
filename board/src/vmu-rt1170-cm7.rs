@@ -77,7 +77,7 @@ pub type ConsolePins = hal::lpuart::Pins<
     iomuxc::gpio_disp_b1::GPIO_DISP_B1_03, // RX, interfaced with debug chip
 >;
 const CONSOLE_INSTANCE: u8 = 1;
-pub type Console = hal::lpuart::Lpuart<ConsolePins, { CONSOLE_INSTANCE }>;
+pub type Console = hal::lpuart::Lpuart;
 
 /// Test point 1002.
 ///
@@ -178,7 +178,7 @@ impl Specifics {
         let led = gpio1.output(iomuxc.gpio_emc_b1.p13);
 
         let console = unsafe { ral::lpuart::Instance::<{ CONSOLE_INSTANCE }>::instance() };
-        let mut console = hal::lpuart::Lpuart::new(
+        let mut console = hal::lpuart::Lpuart::with_pins(
             console,
             ConsolePins {
                 tx: iomuxc.gpio_disp_b1.p02,

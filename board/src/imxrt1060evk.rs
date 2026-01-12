@@ -44,7 +44,8 @@ pub type Led = hal::gpio::Output<iomuxc::gpio_ad_b0::GPIO_AD_B0_09>;
 pub type Button = hal::gpio::Input<()>;
 
 /// The UART console. Baud specified in lib.rs.
-pub type Console = hal::lpuart::Lpuart<ConsolePins, 1>;
+pub type Console = hal::lpuart::Lpuart;
+const CONSOLE_INSTANCE: u8 = 1;
 
 /// The debug serial console's pins.
 ///
@@ -157,7 +158,7 @@ impl Specifics {
         let button = hal::gpio::Input::without_pin(&mut gpio5, 0);
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
-        let mut console = hal::lpuart::Lpuart::new(
+        let mut console = hal::lpuart::Lpuart::with_pins(
             lpuart1,
             hal::lpuart::Pins {
                 tx: iomuxc.gpio_ad_b0.p12,
@@ -239,7 +240,7 @@ use hal::ccm::clock_gate;
 pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<1>(),
     clock_gate::gpio::<5>(),
-    clock_gate::lpuart::<{ Console::N }>(),
+    clock_gate::lpuart::<CONSOLE_INSTANCE>(),
     #[cfg(feature = "spi")]
     clock_gate::lpspi::<{ Spi::N }>(),
     clock_gate::lpi2c::<{ I2C_INSTANCE }>(),

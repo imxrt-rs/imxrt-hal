@@ -215,11 +215,11 @@ pub fn usbd<P: imxrt_usbd::Peripherals>(
 ///
 /// See the crate-level documentation to understand how the LPUART backend works.
 #[cfg(feature = "lpuart")]
-pub fn lpuart<P, const LPUART: u8>(
-    lpuart: Lpuart<P, LPUART>,
+pub fn lpuart(
+    lpuart: Lpuart,
     dma_channel: Channel,
     interrupts: crate::Interrupts,
-) -> Result<crate::Poller, crate::AlreadySetError<(Lpuart<P, LPUART>, Channel)>> {
+) -> Result<crate::Poller, crate::AlreadySetError<(Lpuart, Channel)>> {
     let (producer, consumer) = match crate::BUFFER.try_split() {
         Ok((prod, cons)) => (prod, cons),
         Err(_) => return Err(crate::AlreadySetError::new((lpuart, dma_channel))),

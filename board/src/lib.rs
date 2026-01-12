@@ -339,10 +339,10 @@ pub mod logging {
     }
 
     /// Initialize the logger.
-    pub fn init<P, const LPUART: u8, const USBD: u8>(
+    pub fn init<const USBD: u8>(
         frontend: Frontend,
         backend: Backend,
-        lpuart: Lpuart<P, LPUART>,
+        lpuart: Lpuart,
         dma: Channel,
         usbd: Instances<USBD>,
     ) -> imxrt_log::Poller {
@@ -374,11 +374,7 @@ pub mod logging {
     ///
     /// This always enables interrupts. If you don't want interrupts to active,
     /// then don't unmask them.
-    pub fn lpuart<P, const LPUART: u8>(
-        frontend: Frontend,
-        lpuart: Lpuart<P, LPUART>,
-        dma_channel: Channel,
-    ) -> imxrt_log::Poller {
+    pub fn lpuart(frontend: Frontend, lpuart: Lpuart, dma_channel: Channel) -> imxrt_log::Poller {
         match frontend {
             Frontend::Log => {
                 imxrt_log::log::lpuart(lpuart, dma_channel, imxrt_log::Interrupts::Enabled).unwrap()
