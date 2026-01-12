@@ -50,8 +50,8 @@
 //!     sck: pads.gpio_b0.p03,
 //! };
 //!
-//! let mut spi4 = unsafe { LPSPI4::instance() };
-//! let mut spi = Lpspi::new(
+//! let spi4 = unsafe { LPSPI4::instance() };
+//! let mut spi = Lpspi::with_pins(
 //!     spi4,
 //!     spi_pins,
 //! );
@@ -64,11 +64,6 @@
 //!
 //! let mut buffer: [u8; 3] = [1, 2, 3];
 //! spi.transfer(&mut buffer).ok()?;
-//!
-//! let (spi4, pins) = spi.release();
-//!
-//! // Re-construct without pins:
-//! let mut spi = Lpspi::without_pins(spi4);
 //! # Some(()) }();
 //! ```
 //!
@@ -89,6 +84,9 @@ use core::task::Poll;
 
 use crate::iomuxc::{consts, lpspi};
 use crate::ral;
+
+/// Any LPSPI instance.
+type AnyInstance = crate::AnyInstance<ral::lpspi::RegisterBlock>;
 
 pub use eh02::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
 
@@ -472,9 +470,8 @@ impl CcrCache {
 ///
 /// See the [module-level documentation](crate::lpspi) for an example
 /// of how to construct this driver.
-pub struct Lpspi<P, const N: u8> {
-    lpspi: ral::lpspi::Instance<N>,
-    pins: P,
+pub struct Lpspi {
+    pub(crate) lpspi: AnyInstance,
     bit_order: BitOrder,
     mode: Mode,
     ccr_cache: CcrCache,
@@ -494,9 +491,6 @@ pub struct Lpspi<P, const N: u8> {
 ///     GPIO_B0_01,
 ///     GPIO_B0_03,
 /// >;
-///
-/// // Helper type for your SPI peripheral
-/// type Lpspi<const N: u8> = hal::lpspi::Lpspi<LpspiPins, N>;
 /// ```
 pub struct Pins<SDO, SDI, SCK> {
     /// Serial data out
@@ -511,44 +505,43 @@ pub struct Pins<SDO, SDI, SCK> {
     pub sck: SCK,
 }
 
-impl<SDO, SDI, SCK, const N: u8> Lpspi<Pins<SDO, SDI, SCK>, N>
-where
-    SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
-    SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
-    SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
-{
+impl Lpspi {
     /// Create a new LPSPI driver from the RAL LPSPI instance and a set of pins.
     ///
     /// When this call returns, the LPSPI pins are configured for their function.
     /// The peripheral is enabled after reset. The LPSPI clock speed is unspecified.
     /// The mode is [`MODE_0`]. The sample point is [`SamplePoint::DelayedEdge`].
-    pub fn new(lpspi: ral::lpspi::Instance<N>, mut pins: Pins<SDO, SDI, SCK>) -> Self {
+    ///
+    /// The pins are consumed to ensure they're properly configured, but they
+    /// are not stored in the driver.
+    pub fn with_pins<SDO, SDI, SCK, const N: u8>(
+        lpspi: ral::lpspi::Instance<N>,
+        mut pins: Pins<SDO, SDI, SCK>,
+    ) -> Self
+    where
+        SDO: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdo>,
+        SDI: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sdi>,
+        SCK: lpspi::Pin<Module = consts::Const<N>, Signal = lpspi::Sck>,
+    {
         lpspi::prepare(&mut pins.sdo);
         lpspi::prepare(&mut pins.sdi);
         lpspi::prepare(&mut pins.sck);
-        Self::init(lpspi, pins)
+        Self::init(lpspi)
     }
-}
 
-impl<const N: u8> Lpspi<(), N> {
     /// Create a new LPSPI driver from the RAL LPSPI instance.
     ///
-    /// This is similar to [`new()`](Self::new), but it does not configure
+    /// This is similar to [`with_pins()`](Self::with_pins), but it does not configure
     /// pins. You're responsible for configuring pins, and for making sure
     /// the pin configuration doesn't change while this driver is in use.
-    pub fn without_pins(lpspi: ral::lpspi::Instance<N>) -> Self {
-        Self::init(lpspi, ())
+    pub fn without_pins<const N: u8>(lpspi: ral::lpspi::Instance<N>) -> Self {
+        Self::init(lpspi)
     }
-}
 
-impl<P, const N: u8> Lpspi<P, N> {
-    /// The peripheral instance.
-    pub const N: u8 = N;
-
-    fn init(lpspi: ral::lpspi::Instance<N>, pins: P) -> Self {
+    fn init<const N: u8>(lpspi: ral::lpspi::Instance<N>) -> Self {
+        let lpspi: AnyInstance = crate::into_any(lpspi);
         let spi = Lpspi {
             lpspi,
-            pins,
             bit_order: BitOrder::default(),
             mode: MODE_0,
             // Once we issue a reset, below, these are zero.
@@ -610,15 +603,6 @@ impl<P, const N: u8> Lpspi<P, N> {
         }
     }
 
-    /// Release the SPI driver components.
-    ///
-    /// This does not change any component state; it releases the components as-is.
-    /// If you need to obtain the registers in a known, good state, consider calling
-    /// methods like [`reset()`](Self::reset) before releasing the registers.
-    pub fn release(self) -> (ral::lpspi::Instance<N>, P) {
-        (self.lpspi, self.pins)
-    }
-
     /// Returns the bit order configuration.
     ///
     /// See notes in [`set_bit_order`](Lpspi::set_bit_order) to
@@ -640,7 +624,7 @@ impl<P, const N: u8> Lpspi<P, N> {
     ///
     /// The handle to a [`Disabled`](crate::lpspi::Disabled) driver lets you modify
     /// LPSPI settings that require a fully disabled peripheral.
-    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled<N>) -> R) -> R {
+    pub fn disabled<R>(&mut self, func: impl FnOnce(&mut Disabled) -> R) -> R {
         let mut disabled = Disabled::new(&mut self.lpspi, &mut self.ccr_cache);
         func(&mut disabled)
     }
@@ -1219,14 +1203,14 @@ fn set_watermark(lpspi: &ral::lpspi::RegisterBlock, direction: Direction, waterm
 }
 
 /// An LPSPI peripheral which is temporarily disabled.
-pub struct Disabled<'a, const N: u8> {
-    lpspi: &'a ral::lpspi::Instance<N>,
+pub struct Disabled<'a> {
+    lpspi: &'a mut AnyInstance,
     men: bool,
     ccr_cache: &'a mut CcrCache,
 }
 
-impl<'a, const N: u8> Disabled<'a, N> {
-    fn new(lpspi: &'a mut ral::lpspi::Instance<N>, ccr_cache: &'a mut CcrCache) -> Self {
+impl<'a> Disabled<'a> {
+    fn new(lpspi: &'a mut AnyInstance, ccr_cache: &'a mut CcrCache) -> Self {
         let men = ral::read_reg!(ral::lpspi, lpspi, CR, MEN == MEN_1);
 
         // Request disable
@@ -1305,13 +1289,13 @@ impl<'a, const N: u8> Disabled<'a, N> {
     }
 }
 
-impl<const N: u8> Drop for Disabled<'_, N> {
+impl Drop for Disabled<'_> {
     fn drop(&mut self) {
         ral::modify_reg!(ral::lpspi, self.lpspi, CR, MEN: self.men as u32);
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for Lpspi<P, N> {
+impl eh02::blocking::spi::Transfer<u8> for Lpspi {
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u8]) -> Result<&'a [u8], Self::Error> {
@@ -1320,7 +1304,7 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u8> for Lpspi<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for Lpspi<P, N> {
+impl eh02::blocking::spi::Transfer<u16> for Lpspi {
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u16]) -> Result<&'a [u16], Self::Error> {
@@ -1329,7 +1313,7 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u16> for Lpspi<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for Lpspi<P, N> {
+impl eh02::blocking::spi::Transfer<u32> for Lpspi {
     type Error = LpspiError;
 
     fn transfer<'a>(&mut self, words: &'a mut [u32]) -> Result<&'a [u32], Self::Error> {
@@ -1338,7 +1322,7 @@ impl<P, const N: u8> eh02::blocking::spi::Transfer<u32> for Lpspi<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u8> for Lpspi<P, N> {
+impl eh02::blocking::spi::Write<u8> for Lpspi {
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
@@ -1346,7 +1330,7 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u8> for Lpspi<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u16> for Lpspi<P, N> {
+impl eh02::blocking::spi::Write<u16> for Lpspi {
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u16]) -> Result<(), Self::Error> {
@@ -1354,7 +1338,7 @@ impl<P, const N: u8> eh02::blocking::spi::Write<u16> for Lpspi<P, N> {
     }
 }
 
-impl<P, const N: u8> eh02::blocking::spi::Write<u32> for Lpspi<P, N> {
+impl eh02::blocking::spi::Write<u32> for Lpspi {
     type Error = LpspiError;
 
     fn write(&mut self, words: &[u32]) -> Result<(), Self::Error> {

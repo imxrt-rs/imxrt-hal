@@ -81,7 +81,9 @@ pub type SpiPins = hal::lpspi::Pins<
 pub type SpiPcs0 = iomuxc::gpio_ad::GPIO_AD_05;
 
 #[cfg(feature = "spi")]
-pub type Spi = hal::lpspi::Lpspi<SpiPins, 1>;
+pub type Spi = hal::lpspi::Lpspi;
+#[cfg(feature = "spi")]
+const SPI_INSTANCE: u8 = 1;
 
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
@@ -217,7 +219,7 @@ impl Specifics {
                 let pcs0: &mut SpiPcs0 = &mut iomuxc.gpio_ad.p05;
                 pcs0
             });
-            let mut spi = Spi::new(lpspi1, pins);
+            let mut spi = Spi::with_pins(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(super::LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
@@ -286,7 +288,7 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
     clock_gate::gpio::<1>(),
     clock_gate::lpuart::<CONSOLE_INSTANCE>(),
     #[cfg(feature = "spi")]
-    clock_gate::lpspi::<{ Spi::N }>(),
+    clock_gate::lpspi::<SPI_INSTANCE>(),
     clock_gate::lpi2c::<{ I2C_INSTANCE }>(),
     #[cfg(not(feature = "spi"))]
     clock_gate::flexpwm::<{ pwm::N }>(),

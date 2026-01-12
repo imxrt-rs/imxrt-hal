@@ -161,9 +161,9 @@ use crate::lpspi;
 
 // Safety: a LPSPI can provide data for a DMA transfer. Its receive data register
 // points to static memory.
-unsafe impl<P, const N: u8> peripheral::Source<u32> for lpspi::Lpspi<P, N> {
+unsafe impl peripheral::Source<u32> for lpspi::Lpspi {
     fn source_signal(&self) -> u32 {
-        LPSPI_DMA_RX_MAPPING[N as usize - 1]
+        LPSPI_DMA_RX_MAPPING[self.instance() as usize - 1]
     }
     fn source_address(&self) -> *const u32 {
         self.rdr().cast()
@@ -178,9 +178,9 @@ unsafe impl<P, const N: u8> peripheral::Source<u32> for lpspi::Lpspi<P, N> {
 
 // Safety: a LPSPI can receive data for a DMA transfer. Its transmit data register
 // points to static memory.
-unsafe impl<P, const N: u8> peripheral::Destination<u32> for lpspi::Lpspi<P, N> {
+unsafe impl peripheral::Destination<u32> for lpspi::Lpspi {
     fn destination_signal(&self) -> u32 {
-        LPSPI_DMA_TX_MAPPING[N as usize - 1]
+        LPSPI_DMA_TX_MAPPING[self.instance() as usize - 1]
     }
     fn destination_address(&self) -> *const u32 {
         self.tdr().cast()
@@ -195,9 +195,15 @@ unsafe impl<P, const N: u8> peripheral::Destination<u32> for lpspi::Lpspi<P, N> 
 
 // Safety: a LPSPI can perform bi-directional I/O from a single buffer. Reads from
 // the buffer are always performed before writes.
-unsafe impl<P, const N: u8> peripheral::Bidirectional<u32> for lpspi::Lpspi<P, N> {}
+unsafe impl peripheral::Bidirectional<u32> for lpspi::Lpspi {}
 
-impl<P, const N: u8> lpspi::Lpspi<P, N> {
+impl lpspi::Lpspi {
+    /// Returns the instance number for this LPSPI peripheral.
+    ///
+    /// This is used by chip-specific code for DMA signal mapping.
+    fn instance(&self) -> u8 {
+        ral::lpspi::number(&*self.lpspi).unwrap()
+    }
     /// Use a DMA channel to write data to the LPSPI peripheral.
     ///
     /// The future completes when all data in `buffer` has been written to the

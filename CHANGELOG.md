@@ -9,6 +9,7 @@
 - PIT
 - LPI2C
 - LPUART
+- LPSPI
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using

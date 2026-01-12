@@ -97,7 +97,7 @@ pub type SpiPins = hal::lpspi::Pins<
 const SPI_INSTANCE: u8 = 1;
 
 #[cfg(feature = "spi")]
-pub type Spi = hal::lpspi::Lpspi<SpiPins, { SPI_INSTANCE }>;
+pub type Spi = hal::lpspi::Lpspi;
 #[cfg(not(feature = "spi"))]
 pub type Spi = ();
 
@@ -200,7 +200,7 @@ impl Specifics {
                 sck: iomuxc.gpio_ad.p28,
                 pcs0: iomuxc.gpio_ad.p29,
             };
-            let mut spi = Spi::new(lpspi1, pins);
+            let mut spi = Spi::with_pins(lpspi1, pins);
             spi.disabled(|spi| {
                 spi.set_clock_hz(LPSPI_CLK_FREQUENCY, super::SPI_BAUD_RATE_FREQUENCY);
             });
