@@ -12,7 +12,7 @@
 - LPSPI
 - ADC (10xx)
 - SAI
-- GPIO
+- GPIO, RGPIO
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using

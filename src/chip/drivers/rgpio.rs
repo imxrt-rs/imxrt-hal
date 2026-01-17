@@ -23,77 +23,89 @@
 //! let gpio_b0_04 = // Handle to GPIO_B0_04 IOMUXC pin, provided by BSP or higher-level HAL...
 //!     # unsafe { imxrt_iomuxc::imxrt1060::gpio_b0::GPIO_B0_04::new() };
 //!
-//! let output = gpio2.output(gpio_b0_04);
+//! let output = gpio2.output(gpio_b0_04).unwrap();
 //! output.set();
 //! output.clear();
 //! output.toggle();
-//!
-//! let input = gpio2.input(output.release());
-//! assert!(input.is_set());
 //! ```
 
 use crate::{iomuxc, ral};
 
+/// Any RGPIO instance.
+type AnyInstance = crate::AnyInstance<ral::rgpio::RegisterBlock>;
+
+/// Error returned when a pin is not compatible with a GPIO port.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PinPortIncompatibleError(());
+
 /// GPIO ports.
-pub struct Port<const N: u8> {
-    gpio: ral::rgpio::Instance<N>,
+pub struct Port {
+    gpio: AnyInstance,
 }
 
-impl<const N: u8> Port<N> {
+impl Port {
     /// Create a GPIO port that can allocate and convert GPIOs.
-    pub fn new(gpio: ral::rgpio::Instance<N>) -> Self {
+    pub fn new<const N: u8>(gpio: ral::rgpio::Instance<N>) -> Self {
+        let gpio: AnyInstance = crate::into_any(gpio);
         Self { gpio }
     }
 
-    fn register_block(&self) -> &'static ral::rgpio::RegisterBlock {
-        let register_block: &ral::rgpio::RegisterBlock = &self.gpio;
-        // Safety: points to peripheral memory, which is static.
-        // Gpio implementation guarantees that memory which needs
-        // mutable access to shared GPIO registers passes through
-        // the Port type.
-        let register_block: &'static ral::rgpio::RegisterBlock =
-            unsafe { core::mem::transmute(register_block) };
-        register_block
+    fn instance(&self) -> u8 {
+        ral::rgpio::number(&*self.gpio).unwrap()
+    }
+
+    fn duplicate_instance(&self) -> AnyInstance {
+        // SAFETY: We're creating an alias to the same register block.
+        // Output and Input only perform atomic register accesses.
+        unsafe { AnyInstance::new(&*self.gpio) }
     }
 
     /// Allocate an output GPIO.
-    pub fn output<P>(&mut self, mut pin: P) -> Output<P>
+    ///
+    /// Returns an error if the pin is not compatible with this GPIO port
+    /// (i.e., the pin's GPIO module number does not match the port's instance).
+    pub fn output<P, const N: u8>(&mut self, mut pin: P) -> Result<Output, PinPortIncompatibleError>
     where
         P: iomuxc::gpio::Pin<N>,
     {
+        if N != self.instance() {
+            return Err(PinPortIncompatibleError(()));
+        }
         iomuxc::gpio::prepare(&mut pin);
-        Output::new(pin, self.register_block(), P::OFFSET)
+        Ok(Output::new(self.duplicate_instance(), P::OFFSET))
     }
 
     /// Allocate an input GPIO.
-    pub fn input<P>(&mut self, mut pin: P) -> Input<P>
+    ///
+    /// Returns an error if the pin is not compatible with this GPIO port
+    /// (i.e., the pin's GPIO module number does not match the port's instance).
+    pub fn input<P, const N: u8>(&mut self, mut pin: P) -> Result<Input, PinPortIncompatibleError>
     where
         P: iomuxc::gpio::Pin<N>,
     {
+        if N != self.instance() {
+            return Err(PinPortIncompatibleError(()));
+        }
         iomuxc::gpio::prepare(&mut pin);
-        Input::new(pin, self.register_block(), P::OFFSET)
+        Ok(Input::new(self.duplicate_instance(), P::OFFSET))
     }
 }
 
 /// An output GPIO.
-pub struct Output<P> {
-    pin: P,
+pub struct Output {
     // Logical ownership:
     // - PDOR: read only
     // - PDIR: read only
     // - PSOR, PCOR, PTOR: write 1 to set value in PDOR
-    gpio: &'static ral::rgpio::RegisterBlock,
+    gpio: AnyInstance,
     offset: u32,
 }
 
-// Safety: an output pin is safe to send across execution contexts,
-// because it points to static memory.
-unsafe impl<P: Send> Send for Output<P> {}
-
-impl<P> Output<P> {
-    fn new(pin: P, gpio: &'static ral::rgpio::RegisterBlock, offset: u32) -> Self {
-        let output = Self { pin, gpio, offset };
-        ral::modify_reg!(ral::rgpio, gpio, PDDR, |gdir| gdir | output.mask());
+impl Output {
+    fn new(gpio: AnyInstance, offset: u32) -> Self {
+        let output = Self { gpio, offset };
+        ral::modify_reg!(ral::rgpio, output.gpio, PDDR, |gdir| gdir | output.mask());
         output
     }
 
@@ -134,26 +146,9 @@ impl<P> Output<P> {
         ral::read_reg!(ral::rgpio, self.gpio, PDIR) & self.mask() != 0
     }
 
-    /// Release the underlying pin object.
-    pub fn release(self) -> P {
-        self.pin
-    }
-
-    /// Access the underlying pin.
-    pub fn pin(&self) -> &P {
-        &self.pin
-    }
-
-    /// Mutably access the underling pin.
-    pub fn pin_mut(&mut self) -> &mut P {
-        &mut self.pin
-    }
-}
-
-impl Output<()> {
     /// Allocate an output GPIO without a pin.
     ///
-    /// Prefer using [`Port::output`](Port::output) to create a GPIO ouptut with a
+    /// Prefer using [`Port::output`](Port::output) to create a GPIO output with a
     /// pin resource. That method ensures that pin resources are managed throughout
     /// your program, and that the pin is configured to operate as a GPIO output.
     ///
@@ -163,24 +158,20 @@ impl Output<()> {
     ///
     /// If you use this constructor, you're responsible for configuring the IOMUX
     /// multiplexer register.
-    pub fn without_pin<const N: u8>(port: &mut Port<N>, offset: u32) -> Self {
-        Self::new((), port.register_block(), offset)
+    pub fn without_pin(port: &mut Port, offset: u32) -> Self {
+        Self::new(port.duplicate_instance(), offset)
     }
 }
 
 /// An input GPIO.
-pub struct Input<P> {
-    pin: P,
+pub struct Input {
     // Logical ownership:
     // - PDIR: read only
     // - ICR[offset]: read/write
     // - ISFRx: read, W1C
-    gpio: &'static ral::rgpio::RegisterBlock,
+    gpio: AnyInstance,
     offset: u32,
 }
-
-// Safety: see impl Send for Output.
-unsafe impl<P: Send> Send for Input<P> {}
 
 /// Input interrupt triggers.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -199,10 +190,10 @@ pub enum Trigger {
     EitherEdge = 4,
 }
 
-impl<P> Input<P> {
-    fn new(pin: P, gpio: &'static ral::rgpio::RegisterBlock, offset: u32) -> Self {
-        let input = Self { pin, gpio, offset };
-        ral::modify_reg!(ral::rgpio, gpio, PDDR, |gdir| gdir & !input.mask());
+impl Input {
+    fn new(gpio: AnyInstance, offset: u32) -> Self {
+        let input = Self { gpio, offset };
+        ral::modify_reg!(ral::rgpio, input.gpio, PDDR, |gdir| gdir & !input.mask());
         input
     }
 
@@ -227,21 +218,6 @@ impl<P> Input<P> {
         ral::write_reg!(ral::rgpio, self.gpio, ICR[self.offset as usize], ISF: ISF1);
     }
 
-    /// Release the underlying pin object.
-    pub fn release(self) -> P {
-        self.pin
-    }
-
-    /// Access the underlying pin.
-    pub fn pin(&self) -> &P {
-        &self.pin
-    }
-
-    /// Mutably access the underling pin.
-    pub fn pin_mut(&mut self) -> &mut P {
-        &mut self.pin
-    }
-
     /// Enable or disable GPIO input interrupts.
     ///
     /// Specify `None` to disable interrupts. Or, provide a trigger
@@ -258,12 +234,10 @@ impl<P> Input<P> {
             }
         )
     }
-}
 
-impl Input<()> {
     /// Allocate an input GPIO without a pin.
     ///
-    /// Prefer using [`Port::input`](Port::input) to create a GPIO ouptut with a
+    /// Prefer using [`Port::input`](Port::input) to create a GPIO input with a
     /// pin resource. That method ensures that pin resources are managed throughout
     /// your program, and that the pin is configured to operate as a GPIO input.
     ///
@@ -274,12 +248,12 @@ impl Input<()> {
     ///
     /// If you use this constructor, you're responsible for configuring the IOMUX
     /// multiplexer register.
-    pub fn without_pin<const N: u8>(port: &mut Port<N>, offset: u32) -> Self {
-        Self::new((), port.register_block(), offset)
+    pub fn without_pin(port: &mut Port, offset: u32) -> Self {
+        Self::new(port.duplicate_instance(), offset)
     }
 }
 
-impl<P> eh02::digital::v2::OutputPin for Output<P> {
+impl eh02::digital::v2::OutputPin for Output {
     type Error = core::convert::Infallible;
 
     fn set_high(&mut self) -> Result<(), Self::Error> {
@@ -293,7 +267,7 @@ impl<P> eh02::digital::v2::OutputPin for Output<P> {
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P> eh02::digital::v2::StatefulOutputPin for Output<P> {
+impl eh02::digital::v2::StatefulOutputPin for Output {
     fn is_set_high(&self) -> Result<bool, Self::Error> {
         Ok(self.is_set())
     }
@@ -303,17 +277,17 @@ impl<P> eh02::digital::v2::StatefulOutputPin for Output<P> {
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P> eh02::digital::v2::ToggleableOutputPin for Output<P> {
+impl eh02::digital::v2::ToggleableOutputPin for Output {
     type Error = core::convert::Infallible;
 
     fn toggle(&mut self) -> Result<(), Self::Error> {
-        Output::<P>::toggle(self);
+        Output::toggle(self);
         Ok(())
     }
 }
 
 #[cfg(feature = "eh02-unproven")]
-impl<P> eh02::digital::v2::InputPin for Input<P> {
+impl eh02::digital::v2::InputPin for Input {
     type Error = core::convert::Infallible;
 
     fn is_high(&self) -> Result<bool, Self::Error> {
@@ -324,11 +298,11 @@ impl<P> eh02::digital::v2::InputPin for Input<P> {
     }
 }
 
-impl<P> eh1::digital::ErrorType for Output<P> {
+impl eh1::digital::ErrorType for Output {
     type Error = core::convert::Infallible;
 }
 
-impl<P> eh1::digital::OutputPin for Output<P> {
+impl eh1::digital::OutputPin for Output {
     fn set_high(&mut self) -> Result<(), Self::Error> {
         Output::set(self);
         Ok(())
@@ -339,7 +313,7 @@ impl<P> eh1::digital::OutputPin for Output<P> {
     }
 }
 
-impl<P> eh1::digital::StatefulOutputPin for Output<P> {
+impl eh1::digital::StatefulOutputPin for Output {
     fn is_set_high(&mut self) -> Result<bool, Self::Error> {
         Ok(Output::is_set(self))
     }
@@ -356,7 +330,7 @@ impl<P> eh1::digital::StatefulOutputPin for Output<P> {
 
 // For open drain or simply reading back the actual state
 // of the pin.
-impl<P> eh1::digital::InputPin for Output<P> {
+impl eh1::digital::InputPin for Output {
     fn is_high(&mut self) -> Result<bool, Self::Error> {
         Ok(Output::is_pad_high(self))
     }
@@ -366,11 +340,11 @@ impl<P> eh1::digital::InputPin for Output<P> {
     }
 }
 
-impl<P> eh1::digital::ErrorType for Input<P> {
+impl eh1::digital::ErrorType for Input {
     type Error = core::convert::Infallible;
 }
 
-impl<P> eh1::digital::InputPin for Input<P> {
+impl eh1::digital::InputPin for Input {
     fn is_high(&mut self) -> Result<bool, Self::Error> {
         Ok(Input::is_set(self))
     }
