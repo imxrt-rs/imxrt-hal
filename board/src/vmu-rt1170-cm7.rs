@@ -67,10 +67,10 @@ pub const PWM_PRESCALER: hal::flexpwm::Prescaler = hal::flexpwm::Prescaler::Pres
 pub const PWM_FREQUENCY: u32 = clock_tree::bus_frequency(RUN_MODE) / PWM_PRESCALER.divider();
 
 /// Blue LED
-pub type Led = hal::gpio::Output<iomuxc::gpio_emc_b1::GPIO_EMC_B1_13>;
+pub type Led = hal::gpio::Output;
 
 /// SW7, the "CPU wakeup" button.
-pub type Button = hal::gpio::Input<()>;
+pub type Button = hal::gpio::Input;
 
 pub type ConsolePins = hal::lpuart::Pins<
     iomuxc::gpio_disp_b1::GPIO_DISP_B1_02, // TX, interfaced with debug chip
@@ -134,11 +134,11 @@ pub mod pwm {
 }
 
 pub struct GpioPorts {
-    gpio13: hal::gpio::Port<13>,
+    gpio13: hal::gpio::Port,
 }
 
 impl GpioPorts {
-    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<13> {
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port {
         &mut self.gpio13
     }
 }
@@ -175,7 +175,7 @@ impl Specifics {
 
         let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
-        let led = gpio1.output(iomuxc.gpio_emc_b1.p13);
+        let led = gpio1.output::<_, 1>(iomuxc.gpio_emc_b1.p13).unwrap();
 
         let console = unsafe { ral::lpuart::Instance::<{ CONSOLE_INSTANCE }>::instance() };
         let mut console = hal::lpuart::Lpuart::with_pins(

@@ -27,7 +27,7 @@ pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::loggi
 
 #[cfg(not(feature = "spi"))]
 /// The board LED.
-pub type Led = hal::gpio::Output<iomuxc::gpio_b0::GPIO_B0_03>;
+pub type Led = hal::gpio::Output;
 #[cfg(feature = "spi")]
 /// LED output repurposed for SPI SCLK.
 pub type Led = ();
@@ -35,7 +35,7 @@ pub type Led = ();
 /// The board's "button" on pin 0.
 ///
 /// Connect a normally-open switch from pin 0 to GND.
-pub type Button = hal::gpio::Input<ButtonPad>;
+pub type Button = hal::gpio::Input;
 type ButtonPad = iomuxc::gpio_ad_b0::GPIO_AD_B0_03;
 
 /// The UART console. Baud specified in lib.rs.
@@ -108,12 +108,12 @@ pub mod pwm {
 ///
 /// Exposes methods to configure your board's GPIOs.
 pub struct GpioPorts {
-    gpio1: hal::gpio::Port<1>,
+    gpio1: hal::gpio::Port,
 }
 
 impl GpioPorts {
     /// Returns the GPIO port for the button.
-    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<1> {
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port {
         &mut self.gpio1
     }
 }
@@ -148,12 +148,12 @@ impl Specifics {
         let led = {
             let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
             let mut gpio2 = hal::gpio::Port::new(gpio2);
-            gpio2.output(iomuxc.gpio_b0.p03)
+            gpio2.output(iomuxc.gpio_b0.p03).unwrap()
         };
         #[cfg(feature = "spi")]
         let led = ();
 
-        let button = gpio1.input(iomuxc.gpio_ad_b0.p03);
+        let button = gpio1.input(iomuxc.gpio_ad_b0.p03).unwrap();
 
         let lpuart2 = unsafe { ral::lpuart::LPUART2::instance() };
         let mut console = hal::lpuart::Lpuart::with_pins(

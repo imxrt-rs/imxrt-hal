@@ -337,3 +337,11 @@ fn into_any<T, const N: u8>(inst: imxrt_ral::Instance<T, N>) -> AnyInstance<T> {
         AnyInstance::new(block)
     }
 }
+
+/// Returns `true` if these instances point to the same register block.
+#[allow(unused, reason = "Only needed in some chip-specific drivers")]
+fn is_same_instance<T>(left: &AnyInstance<T>, right: &AnyInstance<T>) -> bool {
+    let left: *const T = &**left;
+    let right: *const T = &**right;
+    core::ptr::eq(left, right)
+}

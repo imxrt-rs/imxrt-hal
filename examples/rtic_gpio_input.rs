@@ -36,7 +36,9 @@ mod app {
         led.set();
         let delay = BlockingPit::from_pit(pit, Channel::Chan2);
         let button_port = ports.button_mut();
-        button_port.set_interrupt(&button, Some(Trigger::FallingEdge));
+        button_port
+            .set_interrupt(&button, Some(Trigger::FallingEdge))
+            .unwrap();
         (Shared {}, Local { led, button, delay })
     }
 

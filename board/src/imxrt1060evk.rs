@@ -38,10 +38,10 @@ pub use imxrt10xx::clock::*;
 pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Lpuart;
 
 /// The board LED.
-pub type Led = hal::gpio::Output<iomuxc::gpio_ad_b0::GPIO_AD_B0_09>;
+pub type Led = hal::gpio::Output;
 
 /// The board's "user button". Could also be used as a wake up source.
-pub type Button = hal::gpio::Input<()>;
+pub type Button = hal::gpio::Input;
 
 /// The UART console. Baud specified in lib.rs.
 pub type Console = hal::lpuart::Lpuart;
@@ -114,12 +114,12 @@ pub mod pwm {
 ///
 /// Exposes methods to configure your board's GPIOs.
 pub struct GpioPorts {
-    gpio5: hal::gpio::Port<5>,
+    gpio5: hal::gpio::Port,
 }
 
 impl GpioPorts {
     /// Returns the GPIO port for the button.
-    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<5> {
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port {
         &mut self.gpio5
     }
 }
@@ -153,7 +153,7 @@ impl Specifics {
 
         let gpio1 = unsafe { ral::gpio::GPIO1::instance() };
         let mut gpio1 = hal::gpio::Port::new(gpio1);
-        let led = gpio1.output(iomuxc.gpio_ad_b0.p09);
+        let led = gpio1.output(iomuxc.gpio_ad_b0.p09).unwrap();
 
         let gpio5 = unsafe { ral::gpio::GPIO5::instance() };
         let mut gpio5 = hal::gpio::Port::new(gpio5);

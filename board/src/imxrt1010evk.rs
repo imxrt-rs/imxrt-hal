@@ -43,10 +43,10 @@ pub use imxrt10xx::{clock::*, power::*};
 pub(crate) const DEFAULT_LOGGING_BACKEND: crate::logging::Backend = crate::logging::Backend::Lpuart;
 
 /// The board LED.
-pub type Led = hal::gpio::Output<iomuxc::gpio::GPIO_11>;
+pub type Led = hal::gpio::Output;
 
 /// The SW4 "user" button.
-pub type Button = hal::gpio::Input<ButtonPad>;
+pub type Button = hal::gpio::Input;
 type ButtonPad = iomuxc::gpio_sd::GPIO_SD_05;
 
 /// The UART console. Baud specified in lib.rs.
@@ -141,12 +141,12 @@ pub type Tp31 = iomuxc::gpio_sd::GPIO_SD_01;
 ///
 /// Exposes methods to configure your board's specific GPIOs.
 pub struct GpioPorts {
-    gpio2: hal::gpio::Port<2>,
+    gpio2: hal::gpio::Port,
 }
 
 impl GpioPorts {
     /// Returns the GPIO port for the button.
-    pub fn button_mut(&mut self) -> &mut hal::gpio::Port<2> {
+    pub fn button_mut(&mut self) -> &mut hal::gpio::Port {
         &mut self.gpio2
     }
 }
@@ -181,8 +181,8 @@ impl Specifics {
         let gpio2 = unsafe { ral::gpio::GPIO2::instance() };
         let mut gpio2 = hal::gpio::Port::new(gpio2);
 
-        let led = gpio1.output(iomuxc.gpio.p11);
-        let button = gpio2.input(iomuxc.gpio_sd.p05);
+        let led = gpio1.output(iomuxc.gpio.p11).unwrap();
+        let button = gpio2.input(iomuxc.gpio_sd.p05).unwrap();
 
         let lpuart1 = unsafe { ral::lpuart::LPUART1::instance() };
         let mut console = hal::lpuart::Lpuart::with_pins(
