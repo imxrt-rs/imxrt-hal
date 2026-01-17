@@ -271,12 +271,13 @@ use crate::adc;
 #[cfg(any(chip = "imxrt1010", chip = "imxrt1020", chip = "imxrt1060"))]
 // Safety: an ADC source adapter points to a static register that's always valid
 // for reads.
-unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N> {
+unsafe impl peripheral::Source<u16> for adc::DmaSource {
     fn source_signal(&self) -> u32 {
-        ADC_DMA_RX_MAPPING[if N == ral::SOLE_INSTANCE {
-            N as usize
+        let n = self.instance();
+        ADC_DMA_RX_MAPPING[if n == ral::SOLE_INSTANCE {
+            n as usize
         } else {
-            N as usize - 1
+            n as usize - 1
         }]
     }
     fn source_address(&self) -> *const u16 {

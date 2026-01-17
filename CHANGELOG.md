@@ -10,6 +10,7 @@
 - LPI2C
 - LPUART
 - LPSPI
+- ADC (10xx)
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using
@@ -20,6 +21,8 @@ To type check peripheral instances against pins, construct types using
 
 **BREAKING** The PIT driver no longer models channels as dedicated objects.
 Users should program directly against the `Pit` type.
+
+**BREAKING** The ADC driver no longer supports unproven embedded-hal 0.2 traits.
 
 **BREAKING** Update `imxrt-usbd` to 0.3. Users are required to update to
 `usb-device` 0.3 and its compatible dependencies.

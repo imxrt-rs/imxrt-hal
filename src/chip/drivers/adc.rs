@@ -1,9 +1,5 @@
 //! Analog to digital converters.
 //!
-//! This ADC driver supports the 0.2 `embedded_hal`'s ADC traits.
-//! To enable the traits, activate this package's `"eh02-unproven"
-//! feature.
-//!
 //! # Example
 //!
 //! ```no_run
@@ -15,9 +11,12 @@
 //!     # unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
 //!
 //! # || -> Option<()> {
+//! // Read by allocating an analog input object:
 //! let adc1 = unsafe { ral::adc::ADC1::instance() };
 //! let mut adc1 = adc::Adc::new(adc1, adc::ClockSelect::ADACK, adc::ClockDivision::Div2);
-//! let mut a1 = adc::AnalogInput::new(pads.gpio_ad_b1.p02);
+//!
+//! // Specify the ADC instance (1) in the turbofish when the pin supports multiple ADCs.
+//! let mut a1 = adc1.input::<_, 1>(pads.gpio_ad_b1.p02).ok()?;
 //!
 //! let reading: u16 = adc1.read_blocking(&mut a1);
 //!
@@ -32,8 +31,8 @@
 use crate::iomuxc::adc::{prepare, Pin};
 use crate::ral;
 
-#[cfg(feature = "eh02-unproven")]
-use eh02::adc::{Channel, OneShot};
+/// Any ADC instance.
+type AnyInstance = crate::AnyInstance<ral::adc::RegisterBlock>;
 
 /// The clock input for an ADC
 #[allow(non_camel_case_types)]
@@ -106,37 +105,24 @@ pub enum ResolutionBits {
     Res12,
 }
 
-/// A pin representing an analog input for a particular ADC
-pub struct AnalogInput<P, const N: u8> {
-    pin: P,
+/// Error returned when a pin is not compatible with an ADC port.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PinPortIncompatibleError(());
+
+/// A pin representing an analog input for an ADC.
+///
+/// The analog input stores the ADC channel number at runtime.
+/// The pin is consumed during construction to ensure it's properly
+/// configured, but it is not stored in the driver.
+pub struct AnalogInput {
+    channel: u32,
 }
 
-#[cfg(feature = "eh02-unproven")]
-impl<P, const N: u8> Channel<Adc<N>> for AnalogInput<P, N>
-where
-    P: Pin<N>,
-{
-    type ID = u16;
-
-    fn channel() -> Self::ID {
-        <P as Pin<N>>::INPUT as u16
-    }
-}
-
-impl<P, const N: u8> AnalogInput<P, N>
-where
-    P: Pin<N>,
-{
-    /// Creates a new analog input pin
-    pub fn new(mut pin: P) -> Self {
-        prepare(&mut pin);
-        Self { pin }
-    }
-
-    /// Release the ADC input, returning the underlying hardware pin. This pin is in an
-    /// unspecified state
-    pub fn release(self) -> P {
-        self.pin
+impl AnalogInput {
+    /// Returns the ADC channel for this analog input.
+    pub fn channel(&self) -> u32 {
+        self.channel
     }
 }
 
@@ -145,13 +131,19 @@ where
 /// The ADC starts out with a default configuration of 4 hardware samples, a conversion speed of
 /// medium, a resolution of 10 bits, and low power mode disabled. It's also pre-calibrated using
 /// 32 averages and a slow conversion speed.
-pub struct Adc<const N: u8> {
-    reg: ral::adc::Instance<N>,
+pub struct Adc {
+    reg: AnyInstance,
 }
 
-impl<const N: u8> Adc<N> {
-    /// Constuct an ADC from a RAL ADC instance
-    pub fn new(reg: ral::adc::Instance<N>, clock: ClockSelect, division: ClockDivision) -> Self {
+impl Adc {
+    /// Construct an ADC from a RAL ADC instance.
+    pub fn new<const N: u8>(
+        reg: ral::adc::Instance<N>,
+        clock: ClockSelect,
+        division: ClockDivision,
+    ) -> Self {
+        let reg: AnyInstance = crate::into_any(reg);
+
         // Enable asynchronous clock if applicable
         ral::modify_reg!(ral::adc, reg, GC, ADACKEN: match clock {
             ClockSelect::ADACK => ADACKEN_1,
@@ -191,7 +183,28 @@ impl<const N: u8> Adc<N> {
         inst
     }
 
-    /// Sets the resolution that analog reads return, in bits
+    /// Returns the instance number for this ADC peripheral.
+    fn instance(&self) -> u8 {
+        ral::adc::number(&*self.reg).unwrap()
+    }
+
+    /// Creates a new analog input from a pin.
+    ///
+    /// The pin is consumed to ensure it's properly configured as an
+    /// ADC input. If the pin isn't compatible with this ADC bank,
+    /// the return is `None`.
+    pub fn input<P, const N: u8>(&self, mut pin: P) -> Result<AnalogInput, PinPortIncompatibleError>
+    where
+        P: Pin<N>,
+    {
+        if self.instance() != N {
+            return Err(PinPortIncompatibleError(()));
+        }
+        prepare(&mut pin);
+        Ok(AnalogInput { channel: P::INPUT })
+    }
+
+    /// Sets the resolution that analog reads return, in bits.
     pub fn set_resolution(&mut self, bits: ResolutionBits) {
         ral::modify_reg!(ral::adc, self.reg, CFG, MODE: match bits {
             ResolutionBits::Res8 => MODE_0,
@@ -200,7 +213,7 @@ impl<const N: u8> Adc<N> {
         });
     }
 
-    /// Sets the number of hardware averages taken by the ADC
+    /// Sets the number of hardware averages taken by the ADC.
     pub fn set_averaging(&mut self, avg: AveragingCount) {
         ral::modify_reg!(ral::adc, self.reg, GC, AVGE: match avg {
             AveragingCount::Avg1 => AVGE_0,
@@ -238,26 +251,26 @@ impl<const N: u8> Adc<N> {
         ral::modify_reg!(ral::adc, self.reg, CFG, ADLPC: if state { ADLPC_1 } else { ADLPC_0 });
     }
 
-    /// Calibrates the ADC, will wait for finish
+    /// Calibrates the ADC, will wait for finish.
     pub fn calibrate(&mut self) {
         ral::modify_reg!(ral::adc, self.reg, GC, CAL: 0b1);
         while (ral::read_reg!(ral::adc, self.reg, CAL, CAL_CODE) != 0) {}
     }
 
     /// Perform a blocking read for an ADC sample.
-    pub fn read_blocking<P>(&mut self, _: &mut AnalogInput<P, N>) -> u16
-    where
-        P: Pin<N>,
-    {
-        self.read_blocking_channel(P::INPUT)
+    ///
+    /// You're responsible for ensuring the analog input was created from
+    /// a pin compatible with this ADC instance.
+    pub fn read_blocking(&mut self, input: &mut AnalogInput) -> u16 {
+        self.read_blocking_channel(input.channel())
     }
 
     /// Perform a blocking read using the specified ADC channel.
     ///
-    /// Unlike [`read_blocking()`](Self::read_blocking), which ensures
-    /// that the pin is configured as an ADC input, you're responsible
-    /// for configuring the pin as an ADC input before using this method.
-    /// Otherwise, this method may not produce a (correct) value.
+    /// Unlike [`read_blocking()`](Self::read_blocking), which uses a
+    /// pre-configured analog input, you're responsible for configuring
+    /// the pin as an ADC input before using this method. Otherwise,
+    /// this method may not produce a (correct) value.
     ///
     /// # Panics
     ///
@@ -272,67 +285,36 @@ impl<const N: u8> Adc<N> {
 
         ral::read_reg!(ral::adc, self.reg, R0) as u16
     }
-
-    /// Release the ADC's register block.
-    ///
-    /// You can use this to re-construct the driver with new configurations.
-    pub fn release(self) -> ral::adc::Instance<N> {
-        self.reg
-    }
-}
-
-#[cfg(feature = "eh02-unproven")]
-impl<W, P, const N: u8> OneShot<Adc<N>, W, AnalogInput<P, N>> for Adc<N>
-where
-    W: From<u16>,
-    P: Pin<N>,
-{
-    type Error = core::convert::Infallible;
-
-    /// Read an ADC value from an AnalogInput.
-    fn read(&mut self, _pin: &mut AnalogInput<P, N>) -> nb::Result<W, Self::Error> {
-        Ok(Adc::<N>::read_blocking(self, _pin).into())
-    }
 }
 
 /// Adapter for using an ADC input as a DMA source.
 ///
 /// This adapter exposes the lower-level DMA interface. However, you may
 /// find it easier to use the interface available in [`dma`](crate::dma).
-pub struct DmaSource<P, const N: u8> {
-    adc: Adc<N>,
+pub struct DmaSource {
+    adc: Adc,
     channel: u32,
-    _pin: P,
 }
 
-impl<P, const N: u8> DmaSource<AnalogInput<P, N>, N>
-where
-    P: Pin<N>,
-{
+impl DmaSource {
     /// Create a new DMA source object for a DMA transfer.
-    pub fn new(adc: Adc<N>, pin: AnalogInput<P, N>) -> Self {
+    ///
+    /// The analog input is consumed to extract its channel, but is not
+    /// stored in the driver.
+    pub fn new(adc: Adc, input: AnalogInput) -> Self {
         Self {
             adc,
-            _pin: pin,
-            channel: P::INPUT,
+            channel: input.channel(),
         }
     }
-}
 
-impl<const N: u8> DmaSource<(), N> {
     /// Create an ADC DMA source without a configured ADC input.
     ///
     /// You're responsible for configuring the pin as an ADC input.
-    pub fn without_pin(adc: Adc<N>, channel: u32) -> Self {
-        Self {
-            adc,
-            _pin: (),
-            channel,
-        }
+    pub fn without_pin(adc: Adc, channel: u32) -> Self {
+        Self { adc, channel }
     }
-}
 
-impl<P, const N: u8> DmaSource<P, N> {
     /// Returns a pointer to the ADC's `R0` register.
     ///
     /// You should use this pointer when coordinating a DMA transfer.
@@ -357,52 +339,9 @@ impl<P, const N: u8> DmaSource<P, N> {
     pub fn disable_dma(&mut self) {
         ral::modify_reg!(ral::adc, self.adc.reg, GC, ADCO: 0, DMAEN: 0);
     }
+
+    /// Returns the instance number for this ADC peripheral.
+    pub(crate) fn instance(&self) -> u8 {
+        self.adc.instance()
+    }
 }
-
-/// ```compile_fail
-/// use imxrt_hal as hal;
-/// use imxrt_ral as ral;
-/// use hal::adc;
-///
-/// let mut pads = unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
-///
-/// let inst = unsafe { ral::adc::ADC1::instance() };
-/// let mut adc1 = adc::Adc::new(inst, Default::default(), Default::default());
-/// let mut adc2_pin = adc::AnalogInput::new(pads.gpio_ad_b1.p12);
-///
-/// let reading: u16 = adc1.read_blocking(&mut adc2_pin);
-/// ```
-#[cfg(doctest)]
-struct Adc1Pin2Mismatch;
-
-/// ```no_run
-/// use imxrt_hal as hal;
-/// use imxrt_ral as ral;
-/// use hal::adc;
-///
-/// let mut pads = unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
-///
-/// let inst = unsafe { ral::adc::ADC2::instance() };
-/// let mut adc2 = adc::Adc::new(inst, adc::ClockSelect::default(), adc::ClockDivision::default());
-/// let mut adc2_pin = adc::AnalogInput::new(pads.gpio_ad_b1.p12);
-///
-/// let reading: u16 = adc2.read_blocking(&mut adc2_pin);
-/// ```
-#[cfg(doctest)]
-struct Adc2Pin2;
-
-/// ```compile_fail
-/// use imxrt_hal as hal;
-/// use imxrt_ral as ral;
-/// use hal::adc;
-///
-/// let mut pads = unsafe { imxrt_iomuxc::imxrt1060::Pads::new() };
-///
-/// let inst = unsafe { ral::adc::ADC2::instance() };
-/// let mut adc2 = adc::Adc::new(inst, Default::default(), Default::default());
-/// let mut adc2_pin = adc::AnalogInput::new(pads.gpio_ad_b0.p13);
-///
-/// let reading: u16 = adc2.read_blocking(&mut adc2_pin);
-/// ```
-#[cfg(doctest)]
-struct Adc2Pin1Mismatch;
