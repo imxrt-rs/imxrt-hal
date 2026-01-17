@@ -11,6 +11,7 @@
 - LPUART
 - LPSPI
 - ADC (10xx)
+- SAI
 
 After construction, the type no longer tracks its pins or peripheral instances.
 To type check peripheral instances against pins, construct types using
@@ -61,7 +62,8 @@ Introduce an `imxrt1180` feature to support the RT1180 series.
 Add a `defmt` feature targeting version 0.3. When enabled, select imxrt-hal
 types can be formatted with `defmt`.
 
-Export the SAI driver for 1170 MCUs.
+Export the SAI driver for 1170 MCUs. Fix SAI FPACK enumerated values. Ensure
+SAI tracks configured pins, even if users prefer `without_pins`.
 
 Add SAI DMA support. DMA targets the lowest-numbered enabled data line for
 each direction; multiple data lines are not supported by DMA.

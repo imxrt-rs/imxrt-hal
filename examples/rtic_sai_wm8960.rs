@@ -69,7 +69,7 @@ mod app {
     const PIT_CHANNEL: Channel = Channel::Chan2;
     use wm8960::WM8960;
 
-    type SaiTx = hal::sai::Tx<1, 16, 2, hal::sai::PackingNone>;
+    type SaiTx = hal::sai::Tx;
 
     //
     // End configurations.
@@ -100,12 +100,14 @@ mod app {
     fn init(cx: init::Context) -> (Shared, Local) {
         let mut cortex_m = cx.core;
         let (board::Common { mut pit, .. }, board::Specifics { led, sai1, i2c, .. }) = board::new();
-        let (Some(sai1_tx), None) = sai1.split(&hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8)))
-        else {
+        let (Some(mut sai1_tx), None) = sai1.split(
+            16,
+            2,
+            hal::sai::Packing::None,
+            &hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8)),
+        ) else {
             panic!("Unexpected return from sai split");
         };
-
-        let mut sai1_tx: SaiTx = sai1_tx;
 
         let regs = sai1_tx.reg_dump();
         defmt::println!(
@@ -145,7 +147,7 @@ mod app {
 
         let mut counter: u32 = 0;
         for _i in 0..31 {
-            sai1_tx.write_frame(0, [sine(counter), square(counter)]);
+            sai1_tx.write_frame_u16(0, &[sine(counter), square(counter)]);
             counter += 1;
         }
         sai1_tx.set_interrupts(
@@ -169,7 +171,7 @@ mod app {
 
         cx.shared.sai1_tx.lock(|sai1_tx| {
             while sai1_tx.status().contains(hal::sai::Status::FIFO_REQUEST) {
-                sai1_tx.write_frame(0, [sine(*counter), square(*counter)]);
+                sai1_tx.write_frame_u16(0, &[sine(*counter), square(*counter)]);
                 *counter = (*counter).wrapping_add(1);
             }
         });

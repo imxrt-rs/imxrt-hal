@@ -68,7 +68,6 @@ mod mappings {
 
     pub(super) const ADC_DMA_RX_MAPPING: [u32; 2] = [24, 88];
 
-    // SAI DMA MUX source numbers: SAI1=19/20, SAI2=21/22, SAI3=83/84
     pub(super) const SAI_DMA_RX_MAPPING: [u32; 3] = [19, 21, 83];
     pub(super) const SAI_DMA_TX_MAPPING: [u32; 3] = [20, 22, 84];
 }
@@ -308,15 +307,10 @@ use crate::sai;
 ))]
 // Safety: a SAI transmitter can receive data for a DMA transfer. Its transmit
 // data register (TDR) points to static memory that's always valid for writes.
-unsafe impl<
-        const N: u8,
-        const WORD_SIZE: u8,
-        const FRAME_SIZE: usize,
-        PACKING: sai::Packing<WORD_SIZE>,
-    > peripheral::Destination<u32> for sai::Tx<N, WORD_SIZE, FRAME_SIZE, PACKING>
-{
+unsafe impl peripheral::Destination<u32> for sai::Tx {
     fn destination_signal(&self) -> u32 {
-        SAI_DMA_TX_MAPPING[N as usize - 1]
+        let instance = ral::sai::number(&*self.sai).unwrap();
+        SAI_DMA_TX_MAPPING[instance as usize - 1]
     }
     fn destination_address(&self) -> *const u32 {
         self.tdr(self.channel())
@@ -337,15 +331,10 @@ unsafe impl<
 ))]
 // Safety: a SAI receiver can provide data for a DMA transfer. Its receive
 // data register (RDR) points to static memory that's always valid for reads.
-unsafe impl<
-        const N: u8,
-        const WORD_SIZE: u8,
-        const FRAME_SIZE: usize,
-        PACKING: sai::Packing<WORD_SIZE>,
-    > peripheral::Source<u32> for sai::Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>
-{
+unsafe impl peripheral::Source<u32> for sai::Rx {
     fn source_signal(&self) -> u32 {
-        SAI_DMA_RX_MAPPING[N as usize - 1]
+        let instance = ral::sai::number(&*self.sai).unwrap();
+        SAI_DMA_RX_MAPPING[instance as usize - 1]
     }
     fn source_address(&self) -> *const u32 {
         self.rdr(self.channel())

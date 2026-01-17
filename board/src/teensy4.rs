@@ -60,7 +60,7 @@ pub type Sai1RxPins = hal::sai::Pins<
     iomuxc::gpio_b1::GPIO_B1_00,
 >;
 
-pub type Sai1 = hal::sai::Sai<1, Sai1MclkPin, Sai1TxPins, Sai1RxPins>;
+pub type Sai1 = hal::sai::Sai;
 
 pub type SpiPins = hal::lpspi::Pins<
     iomuxc::gpio_b0::GPIO_B0_02, // SDO, P11
@@ -181,7 +181,7 @@ impl Specifics {
                 bclk: iomuxc.gpio_ad_b1.p14,
                 data: iomuxc.gpio_b1.p01,
             };
-            Sai1::new(sai1, iomuxc.gpio_ad_b1.p09, txpins, rxpins)
+            hal::sai::Sai::new(sai1, iomuxc.gpio_ad_b1.p09, txpins, rxpins)
         };
 
         #[cfg(feature = "spi")]

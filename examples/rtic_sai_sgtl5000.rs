@@ -33,8 +33,8 @@ mod app {
 
     const POLL_LOG_CHANNEL: Channel = Channel::Chan1;
     const AUDIO_CHANNEL: Channel = Channel::Chan2;
-    type SaiTx = hal::sai::Tx<1, 16, 2, hal::sai::PackingNone>;
-    type SaiRx = hal::sai::Rx<1, 16, 2, hal::sai::PackingNone>;
+    type SaiTx = hal::sai::Tx;
+    type SaiRx = hal::sai::Rx;
 
     //
     // End configurations.
@@ -100,12 +100,11 @@ mod app {
 
         let mut sai_config = hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8));
         sai_config.sync_mode = hal::sai::SyncMode::RxFollowTx;
-        let (Some(sai1_tx), Some(sai1_rx)) = sai1.split(&sai_config) else {
+        let (Some(mut sai1_tx), Some(mut sai1_rx)) =
+            sai1.split(16, 2, hal::sai::Packing::None, &sai_config)
+        else {
             panic!("Unexpected return from sai split");
         };
-
-        let mut sai1_tx: SaiTx = sai1_tx;
-        let mut sai1_rx: SaiRx = sai1_rx;
 
         let regs = sai1_tx.reg_dump();
         defmt::println!(
@@ -128,7 +127,7 @@ mod app {
 
         let mut counter: u32 = 0;
         for _i in 0..31 {
-            sai1_tx.write_frame(0, [0, 0]);
+            sai1_tx.write_frame_u16(0, &[0, 0]);
             counter += 1;
         }
         sai1_tx.set_enable(true);
@@ -137,7 +136,7 @@ mod app {
         );
         for _i in 0..31 {
             let mut rx_data = [0u16; 2];
-            sai1_rx.read_frame(0, &mut rx_data);
+            sai1_rx.read_frame_u16(0, &mut rx_data);
         }
         sai1_rx.set_enable(true);
         sai1_rx.set_interrupts(
@@ -180,13 +179,13 @@ mod app {
         cx.shared.sai1_rx.lock(|sai1_rx| {
             sai1_rx.clear_status(hal::sai::Status::FIFO_ERROR | hal::sai::Status::WORD_START); //TODO: figure out why FIFO error happens
             while sai1_rx.status().contains(hal::sai::Status::FIFO_REQUEST) {
-                sai1_rx.read_frame(0, received);
+                sai1_rx.read_frame_u16(0, received);
             }
         });
         cx.shared.sai1_tx.lock(|sai1_tx| {
             sai1_tx.clear_status(hal::sai::Status::FIFO_ERROR | hal::sai::Status::WORD_START); //TODO: figure out why FIFO error happens
             while sai1_tx.status().contains(hal::sai::Status::FIFO_REQUEST) {
-                sai1_tx.write_frame(0, *received);
+                sai1_tx.write_frame_u16(0, received);
                 *counter = (*counter).wrapping_add(1);
             }
             if (*counter % 10000) == 0 {

@@ -30,7 +30,6 @@
 
 use crate::iomuxc::{consts, sai};
 use crate::ral;
-use core::marker::PhantomData;
 
 /// Audio word byte order
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
@@ -178,42 +177,29 @@ impl Status {
     );
 }
 
-mod private {
-    pub trait Sealed {}
+/// FIFO packing mode for audio words.
+///
+/// Packing allows multiple smaller audio words to be packed into a single
+/// 32-bit FIFO entry.
+#[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum Packing {
+    /// No packing of audio words into a single 32-bit FIFO word.
+    ///
+    /// Each audio word occupies one 32-bit FIFO entry.
+    #[default]
+    None = 0b00,
+    /// 8-bit audio words packed into a single 32-bit FIFO word.
+    ///
+    /// Four 8-bit audio words are packed per FIFO entry. Only valid when
+    /// word size is 8 bits.
+    Pack8bit = 0b10,
+    /// 16-bit audio words packed into a single 32-bit FIFO word.
+    ///
+    /// Two 16-bit audio words are packed per FIFO entry. Only valid when
+    /// word size is 16 bits.
+    Pack16bit = 0b11,
 }
-
-/// Packing is useful to have function variants over so is provided as a trait
-pub trait Packing<const WORD_SIZE: u8>: private::Sealed {
-    /// FPACK register field value to set the appropriate byte packing of the FIFO
-    const FPACK: u32;
-}
-
-/// Indicates No packing of audio words into a single 32bit FIFO word
-pub struct PackingNone;
-
-/// Indicates 8bit audio words packed into a single 32bit FIFO word
-pub struct Packing8bit;
-
-/// Indicates 16bit audio words packed into a single 32bit FIFO word
-pub struct Packing16bit;
-
-impl<const WORD_SIZE: u8> Packing<WORD_SIZE> for PackingNone {
-    const FPACK: u32 = 0b00;
-}
-
-impl private::Sealed for PackingNone {}
-
-impl Packing<8> for Packing8bit {
-    const FPACK: u32 = 0b01;
-}
-
-impl private::Sealed for Packing8bit {}
-
-impl Packing<16> for Packing16bit {
-    const FPACK: u32 = 0b10;
-}
-
-impl private::Sealed for Packing16bit {}
 
 #[allow(non_upper_case_globals)]
 impl BclkSource {
@@ -325,37 +311,35 @@ impl SaiConfig {
     }
 }
 
-/// A SAI peripheral instance
-pub struct Sai<const N: u8, MclkPin, TxPins, RxPins> {
-    pub(super) sai: ral::sai::Instance<N>,
-    _mclk_pin: MclkPin,
-    tx_pins: Option<TxPins>,
-    rx_pins: Option<RxPins>,
+type AnyInstance = crate::AnyInstance<ral::sai::RegisterBlock>;
+
+/// A SAI peripheral instance.
+pub struct Sai {
+    sai: AnyInstance,
     tx_chan_mask: u32,
     rx_chan_mask: u32,
 }
 
-impl<const N: u8, Chan, Mclk, TxSync, TxBclk, TxData, RxSync, RxBclk, RxData>
-    Sai<N, Mclk, Pins<TxSync, TxBclk, TxData>, Pins<RxSync, RxBclk, RxData>>
-where
-    Mclk: sai::Pin<consts::Const<N>, Signal = sai::Mclk>,
-    TxSync: sai::Pin<consts::Const<N>, Signal = sai::TxSync>,
-    TxBclk: sai::Pin<consts::Const<N>, Signal = sai::TxBclk>,
-    TxData: sai::Pin<consts::Const<N>>,
-    RxSync: sai::Pin<consts::Const<N>, Signal = sai::RxSync>,
-    RxBclk: sai::Pin<consts::Const<N>, Signal = sai::RxBclk>,
-    RxData: sai::Pin<consts::Const<N>>,
-    Chan: consts::Unsigned,
-    <TxData as sai::Pin<consts::Const<N>>>::Signal: sai::TxDataSignal<Index = Chan>,
-    <RxData as sai::Pin<consts::Const<N>>>::Signal: sai::RxDataSignal<Index = Chan>,
-{
+impl Sai {
     /// Creates SAI instance with single channel RX and TX.
-    pub fn new(
+    pub fn new<const N: u8, Chan, Mclk, TxSync, TxBclk, TxData, RxSync, RxBclk, RxData>(
         sai: ral::sai::Instance<N>,
         mut mclk_pin: Mclk,
         mut tx_pins: Pins<TxSync, TxBclk, TxData>,
         mut rx_pins: Pins<RxSync, RxBclk, RxData>,
-    ) -> Self {
+    ) -> Self
+    where
+        Mclk: sai::Pin<consts::Const<N>, Signal = sai::Mclk>,
+        TxSync: sai::Pin<consts::Const<N>, Signal = sai::TxSync>,
+        TxBclk: sai::Pin<consts::Const<N>, Signal = sai::TxBclk>,
+        TxData: sai::Pin<consts::Const<N>>,
+        RxSync: sai::Pin<consts::Const<N>, Signal = sai::RxSync>,
+        RxBclk: sai::Pin<consts::Const<N>, Signal = sai::RxBclk>,
+        RxData: sai::Pin<consts::Const<N>>,
+        Chan: consts::Unsigned,
+        <TxData as sai::Pin<consts::Const<N>>>::Signal: sai::TxDataSignal<Index = Chan>,
+        <RxData as sai::Pin<consts::Const<N>>>::Signal: sai::RxDataSignal<Index = Chan>,
+    {
         reset(&sai);
 
         sai::prepare(&mut mclk_pin);
@@ -367,32 +351,32 @@ where
         sai::prepare(&mut rx_pins.data);
 
         Self {
-            sai,
-            _mclk_pin: mclk_pin,
-            tx_pins: Some(tx_pins),
-            rx_pins: Some(rx_pins),
+            sai: crate::into_any(sai),
             tx_chan_mask: 1 << Chan::to_usize(),
             rx_chan_mask: 1 << Chan::to_usize(),
         }
     }
 }
 
-/// A SAI transmit half
-pub struct Tx<
-    const N: u8,
-    const WORD_SIZE: u8,
-    const FRAME_SIZE: usize,
-    PACKING: Packing<WORD_SIZE>,
-> {
-    sai: ral::sai::Instance<N>,
-    _packing: PhantomData<PACKING>,
-    /// The data channel index (0..3) used by this transmitter.
+/// A SAI transmit half.
+pub struct Tx {
+    pub(crate) sai: AnyInstance,
+    word_size: u8,
+    frame_size: usize,
     channel: usize,
 }
 
-impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing<WORD_SIZE>>
-    Tx<N, WORD_SIZE, FRAME_SIZE, PACKING>
-{
+impl Tx {
+    /// Returns the word size in bits.
+    pub fn word_size(&self) -> u8 {
+        self.word_size
+    }
+
+    /// Returns the frame size (number of words per frame).
+    pub fn frame_size(&self) -> usize {
+        self.frame_size
+    }
+
     /// Enable/Disable transmission
     pub fn set_enable(&mut self, en: bool) {
         let mut tcsr = ral::read_reg!(ral::sai, self.sai, TCSR) & !Status::W1C.bits();
@@ -414,10 +398,10 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
     }
 
     /// Set the interrupt flags for this SAI transmitter.
-    pub fn set_interrupts(&mut self, interrutps: Interrupts) {
+    pub fn set_interrupts(&mut self, interrupts: Interrupts) {
         ral::modify_reg!(ral::sai, self.sai, TCSR, |tcsr| {
             let tcsr = tcsr & !Interrupts::all().bits();
-            tcsr | interrutps.bits()
+            tcsr | interrupts.bits()
         })
     }
 
@@ -449,10 +433,10 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
     /// Get the FIFO write and read position
     ///
     /// ```no_run
-    /// use imxrt_ral::sai::{SAI1, TCSR};
-    /// use imxrt_hal::sai::{Tx, PackingNone, Sai, SaiConfig};
+    /// use imxrt_ral::sai::SAI1;
+    /// use imxrt_hal::sai::{Packing, Sai, SaiConfig};
     /// let sai = Sai::without_pins(unsafe { SAI1::instance() }, 0, 0);
-    /// let (Some(mut sai_tx), None) = sai.split::<16, 2, PackingNone>(&SaiConfig::i2s(8)) else { panic!() };
+    /// let (Some(mut sai_tx), None) = sai.split(16, 2, Packing::None, &SaiConfig::i2s(8)) else { panic!() };
     ///
     /// let (write_pos, read_pos) = sai_tx.fifo_position(0);
     /// ```
@@ -488,52 +472,67 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
             (tcsr & !Status::W1C.bits()) & !ral::sai::TCSR::FWDE::mask
         });
     }
-}
 
-impl<const N: u8, const FRAME_SIZE: usize> Tx<N, 32, FRAME_SIZE, PackingNone> {
-    /// Write without checks or blocking a single audio frame to channels FIFO
-    pub fn write_frame(&mut self, chan: usize, frame: [u32; FRAME_SIZE]) {
-        for sample in frame {
+    /// Write a single audio frame of 32-bit samples to a channel's FIFO.
+    ///
+    /// This writes samples without checks or blocking.
+    ///
+    /// Your slice is expected to be sized based on the configured frame size.
+    /// For example, if your frame size is 2, then your slice should be two
+    /// elements large.
+    pub fn write_frame_u32(&mut self, chan: usize, frame: &[u32]) {
+        for &sample in frame {
             ral::write_reg!(ral::sai, self.sai, TDR[chan], sample);
         }
     }
-}
 
-impl<const N: u8, const FRAME_SIZE: usize> Tx<N, 16, FRAME_SIZE, PackingNone> {
-    /// Write without checks or blocking a single audio frame to channels FIFO
-    pub fn write_frame(&mut self, chan: usize, frame: [u16; FRAME_SIZE]) {
-        for sample in frame {
+    /// Write a single audio frame of 16-bit samples to a channel's FIFO.
+    ///
+    /// This writes samples without checks or blocking.
+    ///
+    /// Your slice is expected to be sized based on the configured frame size.
+    /// For example, if your frame size is 2, then your slice should be two
+    /// elements large.
+    pub fn write_frame_u16(&mut self, chan: usize, frame: &[u16]) {
+        for &sample in frame {
+            ral::write_reg!(ral::sai, self.sai, TDR[chan], sample as u32);
+        }
+    }
+
+    /// Write a single audio frame of 8-bit samples to a channel's FIFO.
+    ///
+    /// This writes samples without checks or blocking.
+    ///
+    /// Your slice is expected to be sized based on the configured frame size.
+    /// For example, if your frame size is 2, then your slice should be two
+    /// elements large.
+    pub fn write_frame_u8(&mut self, chan: usize, frame: &[u8]) {
+        for &sample in frame {
             ral::write_reg!(ral::sai, self.sai, TDR[chan], sample as u32);
         }
     }
 }
 
-impl<const N: u8, const FRAME_SIZE: usize> Tx<N, 8, FRAME_SIZE, PackingNone> {
-    /// Write without checks or blocking a single audio frame to channels FIFO
-    pub fn write_frame(&mut self, chan: usize, frame: [u8; FRAME_SIZE]) {
-        for sample in frame {
-            ral::write_reg!(ral::sai, self.sai, TDR[chan], sample as u32);
-        }
-    }
-}
-
-/// A SAI receive half
-pub struct Rx<
-    const N: u8,
-    const WORD_SIZE: u8,
-    const FRAME_SIZE: usize,
-    PACKING: Packing<WORD_SIZE>,
-> {
-    sai: ral::sai::Instance<N>,
-    _packing: PhantomData<PACKING>,
-    /// The data channel index (0..3) used by this receiver.
+/// A SAI receive half.
+pub struct Rx {
+    pub(crate) sai: AnyInstance,
+    word_size: u8,
+    frame_size: usize,
     channel: usize,
 }
 
-impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing<WORD_SIZE>>
-    Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>
-{
-    /// Enable/Disable transmission
+impl Rx {
+    /// Returns the word size in bits.
+    pub fn word_size(&self) -> u8 {
+        self.word_size
+    }
+
+    /// Returns the frame size (number of words per frame).
+    pub fn frame_size(&self) -> usize {
+        self.frame_size
+    }
+
+    /// Enable/Disable reception.
     pub fn set_enable(&mut self, en: bool) {
         let mut rcsr = ral::read_reg!(ral::sai, self.sai, RCSR) & !Status::W1C.bits();
         if en {
@@ -553,15 +552,15 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
         Interrupts::from_bits_truncate(rcsr)
     }
 
-    /// Set the interrupt flags for this SAI transmitter.
-    pub fn set_interrupts(&mut self, interrutps: Interrupts) {
+    /// Set the interrupt flags for this SAI receiver.
+    pub fn set_interrupts(&mut self, interrupts: Interrupts) {
         ral::modify_reg!(ral::sai, self.sai, RCSR, |rcsr| {
             let rcsr = rcsr & !Interrupts::all().bits();
-            rcsr | interrutps.bits()
+            rcsr | interrupts.bits()
         })
     }
 
-    /// Get the status register of the transmitter, this can be used in conjunction with
+    /// Get the status register of the receiver, this can be used in conjunction with
     /// status field masks to determine the state of the SAI peripheral.
     pub fn status(&mut self) -> Status {
         let rcsr = ral::read_reg!(ral::sai, self.sai, RCSR);
@@ -589,10 +588,10 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
     /// Get the FIFO write and read position
     ///
     /// ```no_run
-    /// use imxrt_ral::sai::{SAI1, RCSR};
-    /// use imxrt_hal::sai::{Rx, PackingNone, Sai, SaiConfig};
+    /// use imxrt_ral::sai::SAI1;
+    /// use imxrt_hal::sai::{Packing, Sai, SaiConfig};
     /// let sai = Sai::without_pins(unsafe { SAI1::instance() }, 0, 0);
-    /// let (Some(mut sai_rx), None) = sai.split::<16, 2, PackingNone>(&SaiConfig::i2s(8)) else { panic!() };
+    /// let (None, Some(mut sai_rx)) = sai.split(16, 2, Packing::None, &SaiConfig::i2s(8)) else { panic!() };
     ///
     /// let (write_pos, read_pos) = sai_rx.fifo_position(0);
     /// ```
@@ -628,53 +627,62 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
             (rcsr & !Status::W1C.bits()) & !ral::sai::RCSR::FRDE::mask
         });
     }
-}
 
-impl<const N: u8, const FRAME_SIZE: usize> Rx<N, 32, FRAME_SIZE, PackingNone> {
-    /// Read without checks or blocking a single audio frame from channels FIFO
-    pub fn read_frame(&mut self, chan: usize, frame: &mut [u32; FRAME_SIZE]) {
+    /// Read a single audio frame of 32-bit samples from a channel's FIFO.
+    ///
+    /// This reads samples without checks or blocking.
+    ///
+    /// Your slice is expected to be sized based on the configured frame size.
+    /// For example, if your frame size is 2, then your slice should be two
+    /// elements large.
+    pub fn read_frame_u32(&mut self, chan: usize, frame: &mut [u32]) {
         for sample in frame {
             *sample = ral::read_reg!(ral::sai, self.sai, RDR[chan]);
         }
     }
-}
 
-impl<const N: u8, const FRAME_SIZE: usize> Rx<N, 16, FRAME_SIZE, PackingNone> {
-    /// Read without checks or blocking a single audio frame from channels FIFO
-    pub fn read_frame(&mut self, chan: usize, frame: &mut [u16; FRAME_SIZE]) {
+    /// Read a single audio frame of 16-bit samples from a channel's FIFO.
+    ///
+    /// This reads samples without checks or blocking.
+    ///
+    /// Your slice is expected to be sized based on the configured frame size.
+    /// For example, if your frame size is 2, then your slice should be two
+    /// elements large.
+    pub fn read_frame_u16(&mut self, chan: usize, frame: &mut [u16]) {
         for sample in frame {
             *sample = ral::read_reg!(ral::sai, self.sai, RDR[chan]) as u16;
         }
     }
-}
 
-impl<const N: u8, const FRAME_SIZE: usize> Rx<N, 8, FRAME_SIZE, PackingNone> {
-    /// Read without checks or blocking a single audio frame from channels FIFO
-    pub fn read_frame(&mut self, chan: usize, frame: &mut [u8; FRAME_SIZE]) {
+    /// Read a single audio frame of 8-bit samples from a channel's FIFO.
+    ///
+    /// This reads samples without checks or blocking.
+    ///
+    /// Your slice is expected to be sized based on the configured frame size.
+    /// For example, if your frame size is 2, then your slice should be two
+    /// elements large.
+    pub fn read_frame_u8(&mut self, chan: usize, frame: &mut [u8]) {
         for sample in frame {
             *sample = ral::read_reg!(ral::sai, self.sai, RDR[chan]) as u8;
         }
     }
 }
 
-impl<const N: u8, Chan, Mclk, TxSync, TxBclk, TxData> Sai<N, Mclk, Pins<TxSync, TxBclk, TxData>, ()>
-where
-    Mclk: sai::Pin<consts::Const<N>, Signal = sai::Mclk>,
-    TxSync: sai::Pin<consts::Const<N>, Signal = sai::TxSync>,
-    TxBclk: sai::Pin<consts::Const<N>, Signal = sai::TxBclk>,
-    TxData: sai::Pin<consts::Const<N>>,
-    Chan: consts::Unsigned,
-    <TxData as sai::Pin<consts::Const<N>>>::Signal: sai::TxDataSignal<Index = Chan>,
-{
-    /// The peripheral instance.
-    pub const N: u8 = N;
-
-    /// Create a Sai instance given a set of transmit pins
-    pub fn from_tx(
+impl Sai {
+    /// Create a Sai instance given a set of transmit pins.
+    pub fn from_tx<const N: u8, Chan, Mclk, TxSync, TxBclk, TxData>(
         sai: ral::sai::Instance<N>,
         mut mclk_pin: Mclk,
         mut tx_pins: Pins<TxSync, TxBclk, TxData>,
-    ) -> Self {
+    ) -> Self
+    where
+        Mclk: sai::Pin<consts::Const<N>, Signal = sai::Mclk>,
+        TxSync: sai::Pin<consts::Const<N>, Signal = sai::TxSync>,
+        TxBclk: sai::Pin<consts::Const<N>, Signal = sai::TxBclk>,
+        TxData: sai::Pin<consts::Const<N>>,
+        Chan: consts::Unsigned,
+        <TxData as sai::Pin<consts::Const<N>>>::Signal: sai::TxDataSignal<Index = Chan>,
+    {
         reset(&sai);
 
         sai::prepare(&mut mclk_pin);
@@ -683,31 +691,26 @@ where
         sai::prepare(&mut tx_pins.data);
 
         Sai {
-            sai,
-            _mclk_pin: mclk_pin,
-            tx_pins: Some(tx_pins),
-            rx_pins: None,
+            sai: crate::into_any(sai),
             tx_chan_mask: 1 << Chan::to_usize(),
             rx_chan_mask: 0,
         }
     }
-}
 
-impl<const N: u8, Chan, Mclk, RxSync, RxBclk, RxData> Sai<N, Mclk, (), Pins<RxSync, RxBclk, RxData>>
-where
-    Mclk: sai::Pin<consts::Const<N>, Signal = sai::Mclk>,
-    RxSync: sai::Pin<consts::Const<N>, Signal = sai::RxSync>,
-    RxBclk: sai::Pin<consts::Const<N>, Signal = sai::RxBclk>,
-    RxData: sai::Pin<consts::Const<N>>,
-    Chan: consts::Unsigned,
-    <RxData as sai::Pin<consts::Const<N>>>::Signal: sai::RxDataSignal<Index = Chan>,
-{
-    /// Create a Sai instance given a set of receive pins
-    pub fn from_rx(
+    /// Create a Sai instance given a set of receive pins.
+    pub fn from_rx<const N: u8, Chan, Mclk, RxSync, RxBclk, RxData>(
         sai: ral::sai::Instance<N>,
         mut mclk_pin: Mclk,
         mut rx_pins: Pins<RxSync, RxBclk, RxData>,
-    ) -> Self {
+    ) -> Self
+    where
+        Mclk: sai::Pin<consts::Const<N>, Signal = sai::Mclk>,
+        RxSync: sai::Pin<consts::Const<N>, Signal = sai::RxSync>,
+        RxBclk: sai::Pin<consts::Const<N>, Signal = sai::RxBclk>,
+        RxData: sai::Pin<consts::Const<N>>,
+        Chan: consts::Unsigned,
+        <RxData as sai::Pin<consts::Const<N>>>::Signal: sai::RxDataSignal<Index = Chan>,
+    {
         reset(&sai);
 
         sai::prepare(&mut mclk_pin);
@@ -716,57 +719,61 @@ where
         sai::prepare(&mut rx_pins.data);
 
         Sai {
-            sai,
-            _mclk_pin: mclk_pin,
-            tx_pins: None,
-            rx_pins: Some(rx_pins),
+            sai: crate::into_any(sai),
             tx_chan_mask: 0,
             rx_chan_mask: 1 << Chan::to_usize(),
         }
     }
-}
 
-impl<const N: u8> Sai<N, (), (), ()> {
     /// Create a new SAI driver from the RAL SAI instance.
     ///
     /// You're responsible for configuring pins, and for making sure
     /// the pin configuration doesn't change while this driver is in use.
-    /// Setting the channel mask is *also* your responsibility
-    pub fn without_pins(sai: ral::sai::Instance<N>, tx_chan_mask: u32, rx_chan_mask: u32) -> Self {
+    /// Setting the channel mask is *also* your responsibility.
+    pub fn without_pins<const N: u8>(
+        sai: ral::sai::Instance<N>,
+        tx_chan_mask: u32,
+        rx_chan_mask: u32,
+    ) -> Self {
         Sai {
-            sai,
-            _mclk_pin: (),
-            tx_pins: None,
-            rx_pins: None,
+            sai: crate::into_any(sai),
             tx_chan_mask,
             rx_chan_mask,
         }
     }
-}
 
-impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
-    /// Split the Tx/Rx pair from a SAI, with word, frame, and packing options as type parameters
-    pub fn split<const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing<WORD_SIZE>>(
+    /// Split the Tx/Rx pair from a SAI.
+    ///
+    /// # Arguments
+    ///
+    /// * `word_size` - Audio word size in bits (8-32)
+    /// * `frame_size` - Number of words per frame
+    /// * `packing` - FIFO packing mode
+    /// * `cfg` - SAI configuration
+    pub fn split(
         self,
+        word_size: u8,
+        frame_size: usize,
+        packing: Packing,
         cfg: &SaiConfig,
-    ) -> (
-        Option<Tx<N, WORD_SIZE, FRAME_SIZE, PACKING>>,
-        Option<Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>>,
-    ) {
+    ) -> (Option<Tx>, Option<Rx>) {
         let tx_channel = self.tx_chan_mask.trailing_zeros() as usize;
         let rx_channel = self.rx_chan_mask.trailing_zeros() as usize;
 
-        let tx = self.tx_pins.map(|_| Tx {
-            // Safety: create instance
-            sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },
-            _packing: PhantomData::<PACKING>,
+        let tx = (self.tx_chan_mask != 0).then(|| Tx {
+            // SAFETY: We're creating an alias to the same register block.
+            // Tx and Rx operate on different parts of the register block.
+            sai: unsafe { AnyInstance::new(&*self.sai) },
+            word_size,
+            frame_size,
             channel: tx_channel,
         });
-
-        let rx = self.rx_pins.map(|_| Rx {
-            // Safety: create instance
-            sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },
-            _packing: PhantomData::<PACKING>,
+        let rx = (self.rx_chan_mask != 0).then(|| Rx {
+            // SAFETY: We're creating an alias to the same register block.
+            // Tx and Rx operate on different parts of the register block.
+            sai: unsafe { AnyInstance::new(&*self.sai) },
+            word_size,
+            frame_size,
             channel: rx_channel,
         });
 
@@ -789,7 +796,7 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
         };
 
         let sync_width = match cfg.sync_width {
-            SyncWidth::WordSize => WORD_SIZE as u32,
+            SyncWidth::WordSize => word_size as u32,
         };
 
         if tx.is_some() {
@@ -803,10 +810,10 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
                 ral::modify_reg!(ral::sai, self.sai, TCR2, BCP: cfg.bclk_polarity as u32);
             }
             ral::modify_reg!(ral::sai, self.sai, TCR3, TCE: self.tx_chan_mask, WDFL: 0_u32);
-            ral::write_reg!(ral::sai, self.sai, TCR4, FRSZ: ((FRAME_SIZE - 1) as u32),
-                FPACK: 0_u32, SYWD: (sync_width - 1), MF: cfg.byte_order as u32,
+            ral::write_reg!(ral::sai, self.sai, TCR4, FRSZ: ((frame_size - 1) as u32),
+                FPACK: packing as u32, SYWD: (sync_width - 1), MF: cfg.byte_order as u32,
                 FSE: cfg.sync_early as u32, FSP: cfg.sync_polarity as u32, FSD: frame_sync_dir);
-            ral::write_reg!(ral::sai, self.sai, TCR5, W0W: ((WORD_SIZE - 1) as u32), WNW: ((WORD_SIZE - 1) as u32), FBT: (WORD_SIZE - 1) as u32);
+            ral::write_reg!(ral::sai, self.sai, TCR5, W0W: ((word_size - 1) as u32), WNW: ((word_size - 1) as u32), FBT: (word_size - 1) as u32);
             ral::write_reg!(ral::sai, self.sai, TCSR, TE: 0, STOPE: cfg.tx_stop_en as u32,
                 DBGE: cfg.tx_debug_en as u32, BCE: 1, WSF: 1, SEF: 1, FEF: 1, FWF: 0, FRF: 0,
                 WSIE: 0, SEIE: 0, FEIE: 0, FWIE: 0, FWDE: 0, FRDE: 0);
@@ -823,10 +830,10 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
                 ral::modify_reg!(ral::sai, self.sai, RCR2, BCP: cfg.bclk_polarity as u32);
             }
             ral::modify_reg!(ral::sai, self.sai, RCR3, RCE: self.rx_chan_mask);
-            ral::write_reg!(ral::sai, self.sai, RCR4, FRSZ: ((FRAME_SIZE - 1) as u32),
-                FPACK: PACKING::FPACK, SYWD: (sync_width - 1), MF: cfg.byte_order as u32,
+            ral::write_reg!(ral::sai, self.sai, RCR4, FRSZ: ((frame_size - 1) as u32),
+                FPACK: packing as u32, SYWD: (sync_width - 1), MF: cfg.byte_order as u32,
                 FSE: cfg.sync_early as u32, FSP: cfg.sync_polarity as u32, FSD: frame_sync_dir);
-            ral::write_reg!(ral::sai, self.sai, RCR5, W0W: ((WORD_SIZE - 1) as u32), WNW: ((WORD_SIZE - 1) as u32), FBT: (WORD_SIZE - 1) as u32);
+            ral::write_reg!(ral::sai, self.sai, RCR5, W0W: ((word_size - 1) as u32), WNW: ((word_size - 1) as u32), FBT: (word_size - 1) as u32);
             ral::write_reg!(ral::sai, self.sai, RCSR, RE: 0, STOPE: cfg.rx_stop_en as u32,
                 DBGE: cfg.rx_debug_en as u32, BCE: 1, WSF: 1, SEF: 1, FEF: 1, FWF: 0, FRF: 0,
                 WSIE: 0, SEIE: 0, FEIE: 0, FWIE: 0, FWDE: 0, FRDE: 0);
