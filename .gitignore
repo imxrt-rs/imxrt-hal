@@ -2,3 +2,5 @@ target
 .idea
 .vscode
 Cargo.lock
+*.hex
+/.claude

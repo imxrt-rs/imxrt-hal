@@ -67,6 +67,10 @@ mod mappings {
     pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 4] = [14, 78, 16, 80];
 
     pub(super) const ADC_DMA_RX_MAPPING: [u32; 2] = [24, 88];
+
+    // SAI DMA MUX source numbers: SAI1=19/20, SAI2=21/22, SAI3=83/84
+    pub(super) const SAI_DMA_RX_MAPPING: [u32; 3] = [19, 21, 83];
+    pub(super) const SAI_DMA_TX_MAPPING: [u32; 3] = [20, 22, 84];
 }
 #[cfg(chip = "imxrt1170")]
 mod mappings {
@@ -77,6 +81,9 @@ mod mappings {
 
     pub(super) const LPSPI_DMA_RX_MAPPING: [u32; 6] = [36, 38, 40, 42, 44, 46];
     pub(super) const LPSPI_DMA_TX_MAPPING: [u32; 6] = [37, 39, 41, 43, 45, 47];
+
+    pub(super) const SAI_DMA_RX_MAPPING: [u32; 4] = [54, 56, 58, 60];
+    pub(super) const SAI_DMA_TX_MAPPING: [u32; 4] = [55, 57, 59, 61];
 }
 use mappings::*;
 
@@ -267,5 +274,72 @@ unsafe impl<P, const N: u8> peripheral::Source<u16> for adc::DmaSource<P, N> {
     }
     fn disable_source(&mut self) {
         self.disable_dma();
+    }
+}
+
+// SAI
+#[cfg(any(
+    chip = "imxrt1010",
+    chip = "imxrt1020",
+    chip = "imxrt1060",
+    chip = "imxrt1170"
+))]
+use crate::sai;
+
+#[cfg(any(
+    chip = "imxrt1010",
+    chip = "imxrt1020",
+    chip = "imxrt1060",
+    chip = "imxrt1170"
+))]
+// Safety: a SAI transmitter can receive data for a DMA transfer. Its transmit
+// data register (TDR) points to static memory that's always valid for writes.
+unsafe impl<
+        const N: u8,
+        const WORD_SIZE: u8,
+        const FRAME_SIZE: usize,
+        PACKING: sai::Packing<WORD_SIZE>,
+    > peripheral::Destination<u32> for sai::Tx<N, WORD_SIZE, FRAME_SIZE, PACKING>
+{
+    fn destination_signal(&self) -> u32 {
+        SAI_DMA_TX_MAPPING[N as usize - 1]
+    }
+    fn destination_address(&self) -> *const u32 {
+        self.tdr(self.channel())
+    }
+    fn enable_destination(&mut self) {
+        self.enable_dma_transmit();
+    }
+    fn disable_destination(&mut self) {
+        self.disable_dma_transmit();
+    }
+}
+
+#[cfg(any(
+    chip = "imxrt1010",
+    chip = "imxrt1020",
+    chip = "imxrt1060",
+    chip = "imxrt1170"
+))]
+// Safety: a SAI receiver can provide data for a DMA transfer. Its receive
+// data register (RDR) points to static memory that's always valid for reads.
+unsafe impl<
+        const N: u8,
+        const WORD_SIZE: u8,
+        const FRAME_SIZE: usize,
+        PACKING: sai::Packing<WORD_SIZE>,
+    > peripheral::Source<u32> for sai::Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>
+{
+    fn source_signal(&self) -> u32 {
+        SAI_DMA_RX_MAPPING[N as usize - 1]
+    }
+    fn source_address(&self) -> *const u32 {
+        self.rdr(self.channel())
+    }
+    fn enable_source(&mut self) {
+        self.enable_dma_receive();
+    }
+    fn disable_source(&mut self) {
+        self.disable_dma_receive();
     }
 }

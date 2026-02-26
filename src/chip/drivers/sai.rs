@@ -15,6 +15,14 @@
 //! The configuration of the SAI is encoded in configuration structure that can be used with a singular
 //! configure method.
 //!
+//! ## DMA
+//!
+//! DMA transfers target the lowest-numbered enabled data line for each direction
+//! (TX/RX). Multi-channel frames (e.g. stereo) on a single data line work
+//! naturally, since frame words are interleaved through the same TDR/RDR by the
+//! hardware FIFO. However, multiple data lines are not supported by DMA — only
+//! the lowest-numbered enabled data line is used.
+//!
 //! ## Clock configuration
 //!
 //! Make sure to configure your clocks before using the audio interface. Note that there may be
@@ -378,6 +386,8 @@ pub struct Tx<
 > {
     sai: ral::sai::Instance<N>,
     _packing: PhantomData<PACKING>,
+    /// The data channel index (0..3) used by this transmitter.
+    channel: usize,
 }
 
 impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing<WORD_SIZE>>
@@ -449,6 +459,35 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
     pub fn fifo_position(&mut self, chan: usize) -> (u32, u32) {
         ral::read_reg!(ral::sai, self.sai, TFR[chan], WFP, RFP)
     }
+
+    /// Returns the data channel index used by this transmitter.
+    pub fn channel(&self) -> usize {
+        self.channel
+    }
+
+    /// Produces a pointer to the transmit data register for the given channel.
+    ///
+    /// Use this pointer when coordinating a DMA transfer.
+    pub fn tdr(&self, chan: usize) -> *const u32 {
+        core::ptr::addr_of!(self.sai.TDR[chan]).cast()
+    }
+
+    /// Enable DMA request on FIFO warning (FWDE bit in TCSR).
+    ///
+    /// When enabled, the transmit FIFO generates a DMA request whenever
+    /// the number of words in the FIFO falls to or below the watermark.
+    pub fn enable_dma_transmit(&mut self) {
+        ral::modify_reg!(ral::sai, self.sai, TCSR, |tcsr| {
+            (tcsr & !Status::W1C.bits()) | ral::sai::TCSR::FWDE::mask
+        });
+    }
+
+    /// Disable DMA request on FIFO warning (clear FWDE bit in TCSR).
+    pub fn disable_dma_transmit(&mut self) {
+        ral::modify_reg!(ral::sai, self.sai, TCSR, |tcsr| {
+            (tcsr & !Status::W1C.bits()) & !ral::sai::TCSR::FWDE::mask
+        });
+    }
 }
 
 impl<const N: u8, const FRAME_SIZE: usize> Tx<N, 32, FRAME_SIZE, PackingNone> {
@@ -487,6 +526,8 @@ pub struct Rx<
 > {
     sai: ral::sai::Instance<N>,
     _packing: PhantomData<PACKING>,
+    /// The data channel index (0..3) used by this receiver.
+    channel: usize,
 }
 
 impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing<WORD_SIZE>>
@@ -557,6 +598,35 @@ impl<const N: u8, const WORD_SIZE: u8, const FRAME_SIZE: usize, PACKING: Packing
     /// ```
     pub fn fifo_position(&mut self, chan: usize) -> (u32, u32) {
         ral::read_reg!(ral::sai, self.sai, RFR[chan], WFP, RFP)
+    }
+
+    /// Returns the data channel index used by this receiver.
+    pub fn channel(&self) -> usize {
+        self.channel
+    }
+
+    /// Produces a pointer to the receive data register for the given channel.
+    ///
+    /// Use this pointer when coordinating a DMA transfer.
+    pub fn rdr(&self, chan: usize) -> *const u32 {
+        core::ptr::addr_of!(self.sai.RDR[chan]).cast()
+    }
+
+    /// Enable DMA request on FIFO request (FRDE bit in RCSR).
+    ///
+    /// When enabled, the receive FIFO generates a DMA request whenever
+    /// the number of words in the FIFO reaches the watermark.
+    pub fn enable_dma_receive(&mut self) {
+        ral::modify_reg!(ral::sai, self.sai, RCSR, |rcsr| {
+            (rcsr & !Status::W1C.bits()) | ral::sai::RCSR::FRDE::mask
+        });
+    }
+
+    /// Disable DMA request on FIFO request (clear FRDE bit in RCSR).
+    pub fn disable_dma_receive(&mut self) {
+        ral::modify_reg!(ral::sai, self.sai, RCSR, |rcsr| {
+            (rcsr & !Status::W1C.bits()) & !ral::sai::RCSR::FRDE::mask
+        });
     }
 }
 
@@ -683,16 +753,21 @@ impl<const N: u8, Mclk, TxPins, RxPins> Sai<N, Mclk, TxPins, RxPins> {
         Option<Tx<N, WORD_SIZE, FRAME_SIZE, PACKING>>,
         Option<Rx<N, WORD_SIZE, FRAME_SIZE, PACKING>>,
     ) {
+        let tx_channel = self.tx_chan_mask.trailing_zeros() as usize;
+        let rx_channel = self.rx_chan_mask.trailing_zeros() as usize;
+
         let tx = self.tx_pins.map(|_| Tx {
             // Safety: create instance
             sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },
             _packing: PhantomData::<PACKING>,
+            channel: tx_channel,
         });
 
         let rx = self.rx_pins.map(|_| Rx {
             // Safety: create instance
             sai: unsafe { ral::sai::Instance::<N>::new(&*self.sai) },
             _packing: PhantomData::<PACKING>,
+            channel: rx_channel,
         });
 
         let frame_sync_dir = match cfg.mode {
