@@ -118,7 +118,7 @@ members = ["board", "logging", "tools"]
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
-imxrt-enet = { git = "https://github.com/mciantyre/imxrt-enet" }
+imxrt-enet = "0.1"
 imxrt-iomuxc = "0.3.0"
 imxrt-hal = { version = "0.6", path = "." }
 imxrt-log = { path = "logging", default-features = false, features = [
@@ -235,3 +235,6 @@ git = "https://github.com/imxrt-rs/imxrt-ral"
 
 [patch.crates-io.imxrt-iomuxc]
 git = "https://github.com/imxrt-rs/imxrt-iomuxc"
+
+[patch.crates-io.imxrt-enet]
+git = "https://github.com/mciantyre/imxrt-enet"
