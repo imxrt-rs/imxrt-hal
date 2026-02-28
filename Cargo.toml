@@ -71,6 +71,10 @@ optional = true
 # imxrt-rs dependencies
 #######################
 
+[dependencies.imxrt-enet]
+workspace = true
+optional = true
+
 [dependencies.imxrt-dma]
 workspace = true
 
@@ -95,10 +99,10 @@ features = ["imxrt-ral/imxrt1062", "imxrt1060"]
 [features]
 default = ["imxrt-usbd"]
 imxrt1010 = ["imxrt-iomuxc/imxrt1010"]
-imxrt1020 = ["imxrt-iomuxc/imxrt1020"]
-imxrt1060 = ["imxrt-iomuxc/imxrt1060"]
-imxrt1064 = ["imxrt-iomuxc/imxrt1060"]
-imxrt1170 = ["imxrt-iomuxc/imxrt1170"]
+imxrt1020 = ["imxrt-iomuxc/imxrt1020", "imxrt-enet"]
+imxrt1060 = ["imxrt-iomuxc/imxrt1060", "imxrt-enet"]
+imxrt1064 = ["imxrt-iomuxc/imxrt1060", "imxrt-enet"]
+imxrt1170 = ["imxrt-iomuxc/imxrt1170", "imxrt-enet"]
 imxrt1180 = ["imxrt-iomuxc/imxrt1180"]
 
 ################
@@ -110,10 +114,11 @@ imxrt1180 = ["imxrt-iomuxc/imxrt1180"]
 eh02-unproven = []
 
 [workspace]
-members = ["board", "logging"]
+members = ["board", "logging", "tools"]
 
 [workspace.dependencies]
 imxrt-dma = "0.1"
+imxrt-enet = "0.1"
 imxrt-iomuxc = "0.3.0"
 imxrt-hal = { version = "0.6", path = "." }
 imxrt-log = { path = "logging", default-features = false, features = [
@@ -230,3 +235,6 @@ git = "https://github.com/imxrt-rs/imxrt-ral"
 
 [patch.crates-io.imxrt-iomuxc]
 git = "https://github.com/imxrt-rs/imxrt-iomuxc"
+
+[patch.crates-io.imxrt-enet]
+git = "https://github.com/mciantyre/imxrt-enet"
