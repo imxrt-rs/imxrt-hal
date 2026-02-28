@@ -37,6 +37,7 @@ mod app {
 
     use smoltcp::iface::Config;
     use smoltcp::iface::Interface;
+    use smoltcp::iface::PollResult;
     use smoltcp::iface::SocketSet;
     use smoltcp::socket::dhcpv4;
     use smoltcp::socket::{tcp, udp};
@@ -177,7 +178,10 @@ mod app {
                 loop {
                     time += 10;
                     delay.block_ms(10);
-                    if iface.poll(Instant::from_millis(time), &mut dev, &mut sockets) {
+                    if matches!(
+                        iface.poll(Instant::from_millis(time), &mut dev, &mut sockets),
+                        PollResult::SocketStateChanged
+                    ) {
                         let tcp_socket: &mut tcp::Socket = sockets.get_mut(socket_handle);
                         let available = match tcp_socket.recv_slice(msg) {
                             Err(tcp::RecvError::InvalidState) => {
