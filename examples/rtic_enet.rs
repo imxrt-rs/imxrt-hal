@@ -5,6 +5,9 @@
 //! an IP address. Check the device defmt for information on the assigned IP, or
 //! check your router. The LED turns on once DHCP assignment completes.
 //!
+//! If you don't want DHCP, set the `RTIC_ENET_STATIC_IP` environment variable with
+//! a valid IP address. It's implicitly assumed to be a `/24`.
+//!
 //! The transport behaviors depend on the `SocketDemo` configuration you select.
 //! Change it depending on your desired demo:
 //!
@@ -138,20 +141,32 @@ mod app {
         let mut sockets = SocketSet::new(sockets.as_mut_slice());
         let dhcp_handle = sockets.add(dhcp_socket);
 
-        defmt::info!("Waiting for DHCP assignment...");
-        loop {
-            time += 100;
-            delay.block_ms(100);
-
-            iface.poll(Instant::from_millis(time), &mut dev, &mut sockets);
-            let dhcp_socket: &mut dhcpv4::Socket = sockets.get_mut(dhcp_handle);
-            if let Some(dhcpv4::Event::Configured(config)) = dhcp_socket.poll() {
-                led.set();
-                defmt::info!("Received IP assignment! Address is {:?}", config.address);
+        match option_env!("RTIC_ENET_STATIC_IP") {
+            Some(static_ip) => {
+                defmt::info!("Preferring static IP {} instead of DHCP", static_ip);
+                let static_ip: Ipv4Address = static_ip.parse().unwrap();
                 iface.update_ip_addrs(|ips| {
-                    ips.push(IpCidr::Ipv4(config.address)).unwrap();
+                    ips.push(IpCidr::new(IpAddress::Ipv4(static_ip), 24))
+                        .unwrap();
                 });
-                break;
+            }
+            None => {
+                defmt::info!("Waiting for DHCP assignment...");
+                loop {
+                    time += 100;
+                    delay.block_ms(100);
+
+                    iface.poll(Instant::from_millis(time), &mut dev, &mut sockets);
+                    let dhcp_socket: &mut dhcpv4::Socket = sockets.get_mut(dhcp_handle);
+                    if let Some(dhcpv4::Event::Configured(config)) = dhcp_socket.poll() {
+                        led.set();
+                        defmt::info!("Received IP assignment! Address is {:?}", config.address);
+                        iface.update_ip_addrs(|ips| {
+                            ips.push(IpCidr::Ipv4(config.address)).unwrap();
+                        });
+                        break;
+                    }
+                }
             }
         }
 
