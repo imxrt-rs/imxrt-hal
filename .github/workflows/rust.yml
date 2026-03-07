@@ -66,7 +66,21 @@ jobs:
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-log
       run: cargo clippy --features=${{ matrix.chips }} --features=defmt --package=imxrt-log --package=imxrt-hal -- -D warnings
-  
+
+  # Checks that imxrt-log builds with each backend feature in isolation.
+  lint-log-backends:
+    needs: lint-hal
+    strategy:
+      matrix:
+        backend: [lpuart, usbd]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install a stable toolchain with clippy
+      run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
+    - name: Lint imxrt-log with ${{ matrix.backend }} backend only
+      run: cargo clippy --no-default-features --features=imxrt-ral/imxrt1062,imxrt1060,${{ matrix.backend }},defmt --package=imxrt-log --package=imxrt-hal -- -D warnings
+
   # Lint and build examples for boards.
   examples:
     needs: lint-hal

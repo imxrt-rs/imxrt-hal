@@ -385,16 +385,20 @@ impl Poller {
 }
 
 enum Inner {
+    #[cfg(feature = "lpuart")]
     Lpuart(&'static mut lpuart::Backend),
+    #[cfg(feature = "usbd")]
     Usbd(&'static mut usbd::Backend),
 }
 
+#[cfg(feature = "lpuart")]
 impl From<&'static mut lpuart::Backend> for Inner {
     fn from(backend: &'static mut lpuart::Backend) -> Self {
         Inner::Lpuart(backend)
     }
 }
 
+#[cfg(feature = "usbd")]
 impl From<&'static mut usbd::Backend> for Inner {
     fn from(backend: &'static mut usbd::Backend) -> Self {
         Inner::Usbd(backend)
@@ -404,7 +408,9 @@ impl From<&'static mut usbd::Backend> for Inner {
 impl Inner {
     fn poll(&mut self) {
         match self {
+            #[cfg(feature = "lpuart")]
             Self::Lpuart(backend) => backend.poll(),
+            #[cfg(feature = "usbd")]
             Self::Usbd(backend) => backend.poll(),
         }
     }
