@@ -402,4 +402,17 @@ where
     [locator(CCGR6, CG1), locator(CCGR6, CG2)][N as usize - 1]
 }
 
+/// Returns the FlexSPI clock gate locator.
+#[inline(always)]
+pub const fn flexspi<const N: u8>() -> Locator
+where
+    ral::flexspi::Instance<N>: ral::Valid,
+{
+    [locator(CCGR6, CG5), locator(CCGR7, CG1)][if N == ral::SOLE_INSTANCE {
+        N as usize
+    } else {
+        N as usize - 1
+    }]
+}
+
 pub use crate::chip::config::ccm::clock_gate::*;
