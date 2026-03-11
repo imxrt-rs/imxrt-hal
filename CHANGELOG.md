@@ -44,6 +44,8 @@ Export the SAI driver for 1170 MCUs.
 Add SAI DMA support. DMA targets the lowest-numbered enabled data line for
 each direction; multiple data lines are not supported by DMA.
 
+Add FlexSPI clock(s) locator
+
 ## [0.5.11] 2025-07-07
 
 Add receive functions to the SAI driver.

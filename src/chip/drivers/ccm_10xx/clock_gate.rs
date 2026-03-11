@@ -389,6 +389,25 @@ where
     }]
 }
 
+/// Returns the FlexSPI clock gate locator.
+///
+/// FlexSPI1 (or the sole FlexSPI) is gated at CCGR6, CG5.
+/// FlexSPI2 (on 1060/1064 chips) is gated at CCGR7, CG1.
+#[inline(always)]
+pub const fn flexspi<const N: u8>() -> Locator
+where
+    ral::flexspi::Instance<N>: ral::Valid,
+{
+    [
+        locator(CCGR6, CG5), // SOLE_INSTANCE (N=0) or Instance<1> (N=1)
+        locator(CCGR7, CG1), // Instance<2> (N=2)
+    ][if N == ral::SOLE_INSTANCE {
+        N as usize
+    } else {
+        N as usize - 1
+    }]
+}
+
 /// Returns the SAI clock gate locators.
 #[inline(always)]
 pub const fn sai<const N: u8>() -> Locator
