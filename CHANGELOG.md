@@ -46,6 +46,8 @@ each direction; multiple data lines are not supported by DMA.
 
 Add OCOTP driver for reading and writing fuses.
 
+Add FlexSPI clock gate locator(s) for 10xx MCUs.
+
 ## [0.5.11] 2025-07-07
 
 Add receive functions to the SAI driver.
