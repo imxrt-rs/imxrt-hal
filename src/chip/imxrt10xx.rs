@@ -8,6 +8,8 @@ pub mod ccm;
 pub mod dcdc;
 #[path = "dma.rs"]
 pub mod dma;
+#[path = "ocotp.rs"]
+pub mod ocotp;
 pub mod sai;
 pub mod tempmon;
 pub mod trng;
@@ -26,7 +28,7 @@ cfg_if::cfg_if! {
 }
 
 pub(crate) mod reexports {
-    pub use super::{adc, dcdc, sai, tempmon, trng};
+    pub use super::{adc, dcdc, ocotp, sai, tempmon, trng};
 }
 
 pub(crate) mod iomuxc {
@@ -40,4 +42,26 @@ pub(crate) mod iomuxc {
         // assumed the unsafety.
         unsafe { pads::Pads::new() }
     }
+}
+
+impl ocotp::Ocotp {
+    #[inline(always)]
+    fn read_fuse_data(&self) -> u32 {
+        crate::ral::read_reg!(crate::ral::ocotp, self.ocotp, READ_FUSE_DATA)
+    }
+
+    /// There's no `OUT_STATUS` register on these parts, so
+    /// there's DED event to check.
+    #[inline(always)]
+    fn check_end_fuse_read(&mut self) -> Result<(), ocotp::Error> {
+        Ok(())
+    }
+
+    /// There's no `OUT_STATUS` register on these parts.
+    #[inline(always)]
+    fn check_end_fuse_write(&mut self) -> Result<(), ocotp::Error> {
+        Ok(())
+    }
+
+    const FUSE_ADDRESS_OFFSET: u16 = 0x400;
 }

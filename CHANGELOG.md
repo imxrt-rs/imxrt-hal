@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+Add OCOTP driver for reading and writing fuses.
+
 ## [0.5.12] 2025-12-10
 
 Add uSDHC clock gates for 10xx and 11xx MCUs.
