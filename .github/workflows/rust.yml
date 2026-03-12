@@ -106,6 +106,7 @@ jobs:
           --example=hal_clock_out
           --example=hal_pwm --example=rtic_pwm
           --example=hal_i2c_mpu9250 --example=hal_i2c_lcd1602
+          --example=hal_ocotp_fuse
           --example=rtic_usb_serial --example=rtic_usb_test_class --example=rtic_usb_keypress --example=rtic_usb_mouse
         # Some basic vmu rt1170 samples
         - --features=board/vmu-rt1170-cm7 --example=hal_led

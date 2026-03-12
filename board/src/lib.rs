@@ -94,6 +94,8 @@ pub struct Common {
     pub usbnc1: UsbNc1,
     /// USBPHY1 registers.
     pub usbphy1: UsbPhy1,
+    /// Fuse access through the on-chip one-time programmable controller (OCOTP).
+    pub ocotp: hal::ocotp::Ocotp,
 }
 
 #[cfg(any(chip = "imxrt1010", chip = "imxrt1060", chip = "imxrt1170"))]
@@ -122,6 +124,8 @@ impl Common {
             ..
         } = hal::snvs::new(unsafe { ral::snvs::SNVS::instance() });
 
+        let ocotp = hal::ocotp::Ocotp::new(unsafe { ral::ocotp::OCOTP::instance() });
+
         Self {
             pit,
             gpt1,
@@ -132,6 +136,7 @@ impl Common {
             usb1: unsafe { Usb1::instance() },
             usbnc1: unsafe { UsbNc1::instance() },
             usbphy1: unsafe { UsbPhy1::instance() },
+            ocotp,
         }
     }
 }
