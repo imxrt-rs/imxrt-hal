@@ -443,6 +443,66 @@ impl Pwm {
     pub fn set_turn_off(&self, sm: SM, channel: Channel, compare: i16) {
         self.set_value(sm, turn_off(channel), compare);
     }
+
+    /// Read the output masks for the PWM module.
+    pub fn output_masks(&self) -> OutputMasks {
+        // Masks are four bits wide. They fit within a u8.
+        let (pwm_a, pwm_b) = crate::ral::read_reg!(pwm, self.pwm, MASK, MASKA, MASKB);
+        OutputMasks {
+            pwm_a: Mask::from_bits_truncate(pwm_a as u8),
+            pwm_b: Mask::from_bits_truncate(pwm_b as u8),
+        }
+    }
+
+    /// Set the output masks for the PWM module.
+    ///
+    /// See [`OutputMasks`] to learn about output masking. The masking takes
+    /// effect at the next reload opportunity. (Although some MCUs might support
+    /// forced update, it's not standard across all MCUs, so it's not exported.)
+    ///
+    /// This call performs a single write. It does not read the existing mask
+    /// bits to maintain them. If you need to perform these incremental updates,
+    /// use [`output_masks`](Self::output_masks) to understand the prior state.
+    pub fn set_output_masks(&self, masks: OutputMasks) {
+        crate::ral::write_reg!(pwm, self.pwm, MASK,
+            MASKA: masks.pwm_a.bits() as u16,
+            MASKB: masks.pwm_b.bits() as u16,
+        );
+    }
+}
+
+/// The mask state of PWM outputs.
+///
+/// If a bit is high, the output is masked. Formally, it's diven to logic level 0
+/// in the IP block (before considering output polarity).
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive] // Leave option for pwm_x
+pub struct OutputMasks {
+    /// The PWM A outputs of a given submodule.
+    pub pwm_a: Mask,
+    /// The PWM B outputs of a given submodule.
+    pub pwm_b: Mask,
+}
+
+impl OutputMasks {
+    /// Returns a mask set with no outputs masked.
+    ///
+    /// After construction (in a constant context), you're free to manipulate
+    /// the mask bits.
+    pub const fn empty() -> Self {
+        Self {
+            pwm_a: Mask::empty(),
+            pwm_b: Mask::empty(),
+        }
+    }
+
+    /// Returns a mask set with all outputs masks.
+    pub const fn all() -> Self {
+        Self {
+            pwm_a: Mask::all(),
+            pwm_b: Mask::all(),
+        }
+    }
 }
 
 #[inline(never)]

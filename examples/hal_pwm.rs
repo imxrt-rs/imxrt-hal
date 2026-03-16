@@ -9,6 +9,7 @@
 #![no_main]
 
 use imxrt_hal as hal;
+use imxrt_hal::flexpwm::OutputMasks;
 use imxrt_hal::pit::Channel;
 
 const PIT_DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
@@ -52,8 +53,16 @@ fn main() -> ! {
     pwm.set_run(board::pwm::SM.mask());
 
     loop {
+        pwm.set_output_masks(OutputMasks::empty());
+        led.set();
+
         while !pit.is_elapsed(Channel::Chan0) {}
         pit.clear_elapsed(Channel::Chan0);
-        led.toggle();
+
+        pwm.set_output_masks(OutputMasks::all());
+        led.clear();
+
+        while !pit.is_elapsed(Channel::Chan0) {}
+        pit.clear_elapsed(Channel::Chan0);
     }
 }
