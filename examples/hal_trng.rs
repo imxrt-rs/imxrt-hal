@@ -1,6 +1,6 @@
 //! Demonstrates random numbers from the TRNG.
 //!
-//! Connect to the USB serial interface to observe log messages
+//! Connect your device's default logging BACKEND to observe log messages
 //! with random numbers.
 
 #![no_std]
