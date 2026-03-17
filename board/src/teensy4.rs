@@ -337,7 +337,7 @@ pub mod interrupt {
     use crate::ral::Interrupt;
 
     pub const BOARD_CONSOLE: Interrupt = Interrupt::LPUART2;
-    pub const BOARD_BUTTON: Interrupt = Interrupt::GPIO2_COMBINED_16_31;
+    pub const BOARD_BUTTON: Interrupt = Interrupt::GPIO1_COMBINED_0_15;
     pub const BOARD_SPI: Interrupt = Interrupt::LPSPI4;
     pub const BOARD_PWM: Interrupt = Interrupt::PWM2_2;
     pub const BOARD_DMA_A: Interrupt = Interrupt::DMA7_DMA23;
