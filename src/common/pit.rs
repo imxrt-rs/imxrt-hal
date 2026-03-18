@@ -316,7 +316,7 @@ impl Chained<0, 1> {
         let mut high = self.low.instance.LTMR64H.read();
         let mut low = self.low.instance.LTMR64L.read();
 
-        let ldval0 = self.low.load_timer_value();
+        let ldval0 = self.low.instance.TIMER[0].LDVAL.read();
         if low == ldval0 {
             high = self.low.instance.LTMR64H.read();
             low = self.low.instance.LTMR64L.read();

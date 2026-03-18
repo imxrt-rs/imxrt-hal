@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+Fix how the PIT driver corrects the lifetime value.
+
 ## [0.5.13] 2026-03-15
 
 Add OCOTP driver for reading and writing fuses.
