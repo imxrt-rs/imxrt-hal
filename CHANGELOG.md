@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.14] 2026-03-19
+
 Fix how the PIT driver corrects the lifetime value.
 
 ## [0.5.13] 2026-03-15
@@ -364,6 +366,7 @@ The release includes 0.3.1 fixes.
 Prior releases were not tracked with a changelog entry.
 
 [Unreleased]: https://github.com/imxrt-rs/imxrt-hal/compare/0.5.8...main
+[0.5.14]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.13...0.5.14
 [0.5.13]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.12...0.5.13
 [0.5.12]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.11...0.5.12
 [0.5.11]: https://github.com/imxrt-rs/imxrt-rs/compare/0.5.10...0.5.11
