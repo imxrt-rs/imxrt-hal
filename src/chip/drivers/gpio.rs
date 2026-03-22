@@ -34,13 +34,10 @@
 
 use crate::{iomuxc, ral};
 
+pub use crate::PinPortIncompatibleError;
+
 /// Any GPIO instance.
 type AnyInstance = crate::AnyInstance<ral::gpio::RegisterBlock>;
-
-/// Error returned when a pin is not compatible with a GPIO port.
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PinPortIncompatibleError(());
 
 /// GPIO ports.
 pub struct Port {
@@ -68,12 +65,16 @@ impl Port {
     ///
     /// Returns an error if the pin is not compatible with this GPIO port
     /// (i.e., the pin's GPIO module number does not match the port's instance).
-    pub fn output<P, const N: u8>(&mut self, mut pin: P) -> Result<Output, PinPortIncompatibleError>
+    /// The pin is returned inside the error so you can recover it.
+    pub fn output<P, const N: u8>(
+        &mut self,
+        mut pin: P,
+    ) -> Result<Output, PinPortIncompatibleError<P>>
     where
         P: iomuxc::gpio::Pin<N>,
     {
         if N != self.instance() {
-            return Err(PinPortIncompatibleError(()));
+            return Err(PinPortIncompatibleError(pin));
         }
         iomuxc::gpio::prepare(&mut pin);
         Ok(Output::new(self.duplicate_instance(), P::OFFSET))
@@ -83,12 +84,16 @@ impl Port {
     ///
     /// Returns an error if the pin is not compatible with this GPIO port
     /// (i.e., the pin's GPIO module number does not match the port's instance).
-    pub fn input<P, const N: u8>(&mut self, mut pin: P) -> Result<Input, PinPortIncompatibleError>
+    /// The pin is returned inside the error so you can recover it.
+    pub fn input<P, const N: u8>(
+        &mut self,
+        mut pin: P,
+    ) -> Result<Input, PinPortIncompatibleError<P>>
     where
         P: iomuxc::gpio::Pin<N>,
     {
         if N != self.instance() {
-            return Err(PinPortIncompatibleError(()));
+            return Err(PinPortIncompatibleError(pin));
         }
         iomuxc::gpio::prepare(&mut pin);
         Ok(Input::new(self.duplicate_instance(), P::OFFSET))
@@ -107,7 +112,7 @@ impl Port {
         &mut self,
         input: &Input,
         trigger: Option<Trigger>,
-    ) -> Result<(), PinPortIncompatibleError> {
+    ) -> Result<(), PinPortIncompatibleError<()>> {
         if !crate::is_same_instance(&self.gpio, &input.gpio) {
             return Err(PinPortIncompatibleError(()));
         }

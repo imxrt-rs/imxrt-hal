@@ -105,10 +105,7 @@ pub enum ResolutionBits {
     Res12,
 }
 
-/// Error returned when a pin is not compatible with an ADC port.
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PinPortIncompatibleError(());
+pub use crate::PinPortIncompatibleError;
 
 /// A pin representing an analog input for an ADC.
 ///
@@ -192,13 +189,16 @@ impl Adc {
     ///
     /// The pin is consumed to ensure it's properly configured as an
     /// ADC input. If the pin isn't compatible with this ADC bank,
-    /// the return is `None`.
-    pub fn input<P, const N: u8>(&self, mut pin: P) -> Result<AnalogInput, PinPortIncompatibleError>
+    /// the pin is returned inside the error so you can recover it.
+    pub fn input<P, const N: u8>(
+        &self,
+        mut pin: P,
+    ) -> Result<AnalogInput, PinPortIncompatibleError<P>>
     where
         P: Pin<N>,
     {
         if self.instance() != N {
-            return Err(PinPortIncompatibleError(()));
+            return Err(PinPortIncompatibleError(pin));
         }
         prepare(&mut pin);
         Ok(AnalogInput { channel: P::INPUT })

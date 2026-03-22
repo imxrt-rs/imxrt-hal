@@ -317,6 +317,31 @@ fn spin_on<F: core::future::Future>(future: F) -> F::Output {
     }
 }
 
+/// The wrapped pin is not compatible with this peripheral instance.
+///
+/// If `P` is `()`, it indicates that the caller's pin was incompatible with the
+/// peripheral, but the method did not take ownership of a pin.
+pub struct PinPortIncompatibleError<P>(P);
+impl<P> PinPortIncompatibleError<P> {
+    /// Acquire the pin from this error.
+    pub fn pin(self) -> P {
+        self.0
+    }
+}
+
+impl<P> core::fmt::Debug for PinPortIncompatibleError<P> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("PinPortIncompatibleError")
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl<P> defmt::Format for PinPortIncompatibleError<P> {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(f, "PinPortIncompatibleError")
+    }
+}
+
 /// The peripheral instance for when we don't care.
 const HAL_INST: u8 = 0xff;
 
