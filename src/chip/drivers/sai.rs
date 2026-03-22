@@ -33,6 +33,7 @@ use crate::ral;
 
 /// Audio word byte order
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ByteOrder {
     /// Least significant byte first
     #[default]
@@ -43,6 +44,7 @@ pub enum ByteOrder {
 
 /// Mode of operation for the SAI peripheral
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Mode {
     /// Master mode where all clocks are generated from the SAI
     #[default]
@@ -57,6 +59,7 @@ pub enum Mode {
 
 /// Clock Polarity Options for Bclk/Mclk
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockPolarity {
     /// Transmitted clock implies active high
     #[default]
@@ -75,6 +78,7 @@ impl ClockPolarity {
 
 /// Mclk source option
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum MclkSource {
     /// Mclk sourced from system clock
     #[default]
@@ -89,6 +93,7 @@ pub enum MclkSource {
 
 /// Frame sync mode between rx/tx
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SyncMode {
     /// Both tx/rx are setup as being independent of each other for frame sync
     #[default]
@@ -101,6 +106,7 @@ pub enum SyncMode {
 
 /// Frame Sync Width
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SyncWidth {
     /// Frame sync width is the size of the word
     #[default]
@@ -109,6 +115,7 @@ pub enum SyncWidth {
 
 /// Source for Bclk, check part datasheet for details
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BclkSource {
     /// Bus clock is the source of Bclk
     #[default]
@@ -182,6 +189,7 @@ impl Status {
 /// Packing allows multiple smaller audio words to be packed into a single
 /// 32-bit FIFO entry.
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u32)]
 pub enum Packing {
     /// No packing of audio words into a single 32-bit FIFO word.
@@ -199,6 +207,29 @@ pub enum Packing {
     /// Two 16-bit audio words are packed per FIFO entry. Only valid when
     /// word size is 16 bits.
     Pack16bit = 0b11,
+}
+
+impl Packing {
+    const fn is_valid_for_word_size(self, word_size: u8) -> bool {
+        match self {
+            Self::None => true,
+            Self::Pack8bit => word_size == 8,
+            Self::Pack16bit => word_size == 16,
+        }
+    }
+}
+
+/// Indicates an invalid word size and packing combination.
+///
+/// [`Packing::Pack8bit`] requires a word size of 8, and [`Packing::Pack16bit`]
+/// requires a word size of 16. [`Packing::None`] is valid for any word size.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct InvalidPackingError {
+    /// The word size that was requested.
+    pub word_size: u8,
+    /// The packing mode that was requested.
+    pub packing: Packing,
 }
 
 #[allow(non_upper_case_globals)]
@@ -236,6 +267,7 @@ pub struct Pins<Sync, Bclk, Data> {
 
 /// Configuration for SAI peripheral
 #[derive(Default)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct SaiConfig {
     /// MCLK source
     pub mclk_source: MclkSource,
@@ -436,7 +468,7 @@ impl Tx {
     /// use imxrt_ral::sai::SAI1;
     /// use imxrt_hal::sai::{Packing, Sai, SaiConfig};
     /// let sai = Sai::without_pins(unsafe { SAI1::instance() }, 0, 0);
-    /// let (Some(mut sai_tx), None) = sai.split(16, 2, Packing::None, &SaiConfig::i2s(8)) else { panic!() };
+    /// let (Some(mut sai_tx), None) = sai.split(16, 2, Packing::None, &SaiConfig::i2s(8)).unwrap() else { panic!() };
     ///
     /// let (write_pos, read_pos) = sai_tx.fifo_position(0);
     /// ```
@@ -591,7 +623,7 @@ impl Rx {
     /// use imxrt_ral::sai::SAI1;
     /// use imxrt_hal::sai::{Packing, Sai, SaiConfig};
     /// let sai = Sai::without_pins(unsafe { SAI1::instance() }, 0, 0);
-    /// let (None, Some(mut sai_rx)) = sai.split(16, 2, Packing::None, &SaiConfig::i2s(8)) else { panic!() };
+    /// let (None, Some(mut sai_rx)) = sai.split(16, 2, Packing::None, &SaiConfig::i2s(8)).unwrap() else { panic!() };
     ///
     /// let (write_pos, read_pos) = sai_rx.fifo_position(0);
     /// ```
@@ -756,7 +788,10 @@ impl Sai {
         frame_size: usize,
         packing: Packing,
         cfg: &SaiConfig,
-    ) -> (Option<Tx>, Option<Rx>) {
+    ) -> Result<(Option<Tx>, Option<Rx>), InvalidPackingError> {
+        if !packing.is_valid_for_word_size(word_size) {
+            return Err(InvalidPackingError { word_size, packing });
+        }
         let tx_channel = self.tx_chan_mask.trailing_zeros() as usize;
         let rx_channel = self.rx_chan_mask.trailing_zeros() as usize;
 
@@ -839,6 +874,6 @@ impl Sai {
                 WSIE: 0, SEIE: 0, FEIE: 0, FWIE: 0, FWDE: 0, FRDE: 0);
         }
 
-        (tx, rx)
+        Ok((tx, rx))
     }
 }

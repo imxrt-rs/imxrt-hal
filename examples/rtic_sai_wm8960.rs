@@ -100,12 +100,15 @@ mod app {
     fn init(cx: init::Context) -> (Shared, Local) {
         let mut cortex_m = cx.core;
         let (board::Common { mut pit, .. }, board::Specifics { led, sai1, i2c, .. }) = board::new();
-        let (Some(mut sai1_tx), None) = sai1.split(
-            16,
-            2,
-            hal::sai::Packing::None,
-            &hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8)),
-        ) else {
+        let (Some(mut sai1_tx), None) = sai1
+            .split(
+                16,
+                2,
+                hal::sai::Packing::None,
+                &hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8)),
+            )
+            .unwrap()
+        else {
             panic!("Unexpected return from sai split");
         };
 

@@ -100,8 +100,9 @@ mod app {
 
         let mut sai_config = hal::sai::SaiConfig::i2s(hal::sai::bclk_div(8));
         sai_config.sync_mode = hal::sai::SyncMode::RxFollowTx;
-        let (Some(mut sai1_tx), Some(mut sai1_rx)) =
-            sai1.split(16, 2, hal::sai::Packing::None, &sai_config)
+        let (Some(mut sai1_tx), Some(mut sai1_rx)) = sai1
+            .split(16, 2, hal::sai::Packing::None, &sai_config)
+            .unwrap()
         else {
             panic!("Unexpected return from sai split");
         };
