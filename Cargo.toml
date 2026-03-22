@@ -237,4 +237,4 @@ git = "https://github.com/imxrt-rs/imxrt-ral"
 git = "https://github.com/imxrt-rs/imxrt-iomuxc"
 
 [patch.crates-io.imxrt-enet]
-git = "https://github.com/mciantyre/imxrt-enet"
+git = "https://github.com/imxrt-rs/imxrt-enet"
