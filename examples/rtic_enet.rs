@@ -52,7 +52,7 @@ mod app {
     #[local]
     struct Local {
         /// For realizing blocking delays in the idle loop.
-        delay: hal::timer::BlockingGpt<1, { board::GPT1_FREQUENCY }>,
+        delay: hal::timer::BlockingGpt<{ board::GPT1_FREQUENCY }>,
         /// The ethernet instance.
         ///
         /// Taken by the idle task.

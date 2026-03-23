@@ -147,11 +147,13 @@ impl Common {
     /// This is a convenience for board-specific set up. Use this instead
     /// of manually configuring a timer.
     fn block_ms(&mut self, ms: u32) {
-        self.pit.0.set_load_timer_value(PIT_FREQUENCY / 1_000 * ms);
-        self.pit.0.enable();
-        while !self.pit.0.is_elapsed() {}
-        self.pit.0.clear_elapsed();
-        self.pit.0.disable();
+        let chan = hal::pit::Channel::Chan0;
+        self.pit
+            .set_load_timer_value(chan, PIT_FREQUENCY / 1_000 * ms);
+        self.pit.enable(chan);
+        while !self.pit.is_elapsed(chan) {}
+        self.pit.clear_elapsed(chan);
+        self.pit.disable(chan);
     }
 }
 
