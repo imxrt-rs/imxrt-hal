@@ -6,7 +6,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain with rustfmt
       run: rustup toolchain install stable --no-self-update --profile minimal --component rustfmt
     - name: Check formatting
@@ -37,7 +37,7 @@ jobs:
         - imxrt-ral/imxrt1189_cm7,imxrt1180
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-hal
@@ -61,7 +61,7 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-log
@@ -75,7 +75,7 @@ jobs:
         backend: [lpuart, usbd]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain with clippy
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy
     - name: Lint imxrt-log with ${{ matrix.backend }} backend only
@@ -113,7 +113,7 @@ jobs:
           --example=rtic_defmt_rtt        
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain, clippy, for the MCU target
       run: rustup toolchain install stable --no-self-update --profile minimal --component clippy --target thumbv7em-none-eabihf
     - name: Lint board and examples
@@ -126,7 +126,7 @@ jobs:
     needs: lint-hal
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain for the MCU target
       run: rustup toolchain install stable --no-self-update --profile minimal --target thumbv8m.main-none-eabihf
     - name: Build examples
@@ -152,7 +152,7 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain
       run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run unit, integration tests
@@ -170,7 +170,7 @@ jobs:
         - imxrt-ral/imxrt1176_cm7,imxrt1170
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a nightly toolchain with miri
       run: rustup toolchain install nightly --no-self-update --profile minimal --component miri
     - name: Run unit, integration tests with miri
@@ -183,7 +183,7 @@ jobs:
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install a stable toolchain
       run: rustup toolchain install stable --no-self-update --profile minimal
     - name: Run documentation tests
