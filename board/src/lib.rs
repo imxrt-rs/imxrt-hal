@@ -56,6 +56,8 @@ mod board_impl;
 
 #[cfg(feature = "lcd1602")]
 pub use lcd_1602_i2c as lcd1602;
+#[cfg(feature = "enet")]
+pub use smoltcp;
 
 // rustdoc doesn't like when this is named 'board'
 // since it happens to match the package name.
@@ -138,6 +140,20 @@ impl Common {
             usbphy1: unsafe { UsbPhy1::instance() },
             ocotp,
         }
+    }
+
+    /// Block execution for some milliseconds.
+    ///
+    /// This is a convenience for board-specific set up. Use this instead
+    /// of manually configuring a timer.
+    fn block_ms(&mut self, ms: u32) {
+        let chan = hal::pit::Channel::Chan0;
+        self.pit
+            .set_load_timer_value(chan, PIT_FREQUENCY / 1_000 * ms);
+        self.pit.enable(chan);
+        while !self.pit.is_elapsed(chan) {}
+        self.pit.clear_elapsed(chan);
+        self.pit.disable(chan);
     }
 }
 

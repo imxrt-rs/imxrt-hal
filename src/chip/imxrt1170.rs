@@ -1,6 +1,6 @@
 //! i.MX RT 1170 chip family features.
 
-pub use drivers::{ccm_11xx as ccm, dma, gpio, ocotp, pit, sai, snvs, timer, usbphy};
+pub use drivers::{ccm_11xx as ccm, dma, gpc, gpio, ocotp, pit, pmu, sai, snvs, timer, usbphy};
 
 pub(crate) mod iomuxc {
     pub use super::config::pads;
@@ -17,9 +17,11 @@ pub(crate) mod iomuxc {
 
 mod drivers {
     pub mod dma;
+    pub mod gpc;
     pub mod gpio;
     pub mod ocotp;
     pub mod pit;
+    pub mod pmu;
     pub mod sai;
     pub mod snvs;
     pub mod timer;

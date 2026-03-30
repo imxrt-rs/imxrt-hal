@@ -5,6 +5,9 @@ edition = { workspace = true }
 # Only for testing, documentation.
 publish = false
 
+[dependencies.bitflags]
+version = "1.2"
+
 [dependencies.defmt]
 version = "0.3"
 
@@ -54,6 +57,12 @@ version = "0.2"
 [dependencies.lcd_1602_i2c]
 version = "0.3"
 optional = true
+
+[dependencies.smoltcp]
+version = "0.13.0"
+optional = true
+default-features = false
+features = ["socket-tcp", "socket-udp", "socket-dhcpv4", "defmt"]
 
 # knurling-rs style defmt-rtt with panic-probe
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.defmt-rtt]
@@ -134,6 +143,7 @@ imxrt1170evk-cm7 = [
     "defmt-rtt",
     "panic-probe",
     "imxrt-log",
+    "enet",
 ]
 imxrt1180evk-cm33 = [
     "imxrt-iomuxc/imxrt1180",
@@ -163,6 +173,7 @@ logging-defmt = ["imxrt-log/defmt"]
 #
 # See board-specific documentation for its effects.
 spi = []
+enet = ["dep:smoltcp"]
 
 # Not all boards have a SAI peripheral set up.
 # Only enable this feature if your board supports
