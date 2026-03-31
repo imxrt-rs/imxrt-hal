@@ -58,6 +58,9 @@ are still exposed when building with a chip feature.
 - `snvs`
 - `timer`
 
+**BREAKING** Remove the `timer` module, including most embedded-hal 0.2 blocking
+delay implementations.
+
 Introduce an `imxrt1180` feature to support the RT1180 series.
 
 Add a `defmt` feature targeting version 0.3. When enabled, select imxrt-hal

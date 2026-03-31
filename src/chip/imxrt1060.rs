@@ -5,7 +5,7 @@
 
 pub use drivers::{
     adc, ccm_10xx as ccm, dcdc, dma, gpio, iomuxc_10xx as iomuxc, ocotp, pit, sai, snvs, tempmon,
-    timer, trng,
+    trng,
 };
 
 #[macro_use]
@@ -19,7 +19,6 @@ mod drivers {
     pub mod sai;
     pub mod snvs;
     pub mod tempmon;
-    pub mod timer;
     pub mod trng;
 
     #[macro_use]
