@@ -89,6 +89,7 @@ bitflags::bitflags! {
     /// bits depends on the function.
     ///
     /// If you have an [`SM`], use [`SM::mask()`] to easily obtain its bitmask.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Mask : u8 {
         /// Submodule 0.
         const SM0 = 1 << 0;
@@ -676,6 +677,7 @@ impl LoadMode {
 
 bitflags::bitflags! {
     /// Status register flags.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Status : u16 {
         /// Registers updated flag.
         ///
@@ -718,6 +720,7 @@ impl Status {
 
 bitflags::bitflags! {
     /// Interrupt flags.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Interrupts : u16 {
         /// Reload error interrupt enable.
         const RELOAD_ERROR = 1 << 13;

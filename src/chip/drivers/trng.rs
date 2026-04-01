@@ -333,7 +333,7 @@ impl rand_core::RngCore for RngCoreWrapper {
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
         // defer to Read implementation, converting error to rand_core's Error
         self.0.read(dest).map_err(|e| {
-            let code = e.0.bits | rand_core::Error::CUSTOM_START;
+            let code = e.0.bits() | rand_core::Error::CUSTOM_START;
             // Safety: Two highest bits always set.
             unsafe { core::num::NonZeroU32::new_unchecked(code).into() }
         })
@@ -347,7 +347,7 @@ pub struct Error(pub ErrorFlags);
 
 bitflags::bitflags! {
     /// Specific errors that may occur during entropy generation
-    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ErrorFlags : u32 {
         // STATUS register starts here (automatically set from bits)
         /// 1-bit run sampling 0s test failed
@@ -385,6 +385,13 @@ bitflags::bitflags! {
         // MCTL register starts here (set manually)
         /// Count taken during entropy generation was outside the defined range of FRQ_MIN to FRQ_MAX
         const FCT_FAIL = 1 << 16;
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for ErrorFlags {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(f, "ErrorFlags({=u32:#x})", self.bits());
     }
 }
 

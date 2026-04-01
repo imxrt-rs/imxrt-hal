@@ -1051,6 +1051,7 @@ impl Lpspi {
 
 bitflags::bitflags! {
     /// Status flags for the LPSPI interface.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Status : u32 {
         /// Module busy flag.
         ///
@@ -1160,6 +1161,7 @@ bitflags::bitflags! {
     ///
     /// A high bit indicates that the condition generates an interrupt.
     /// See the status bits for more information.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Interrupts : u32 {
         /// Data match interrupt enable.
         const DATA_MATCH = 1 << 13;

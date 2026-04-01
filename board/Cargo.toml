@@ -6,7 +6,7 @@ edition = { workspace = true }
 publish = false
 
 [dependencies.defmt]
-version = "0.3"
+workspace = true
 
 [dependencies.imxrt-hal]
 workspace = true
@@ -31,7 +31,7 @@ default-features = false
 
 [dependencies.imxrt-usbd]
 workspace = true
-features = ["defmt-03"]
+features = ["defmt"]
 
 [dependencies.cortex-m]
 version = "0.7"

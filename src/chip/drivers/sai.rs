@@ -132,6 +132,7 @@ bitflags::bitflags! {
     /// Interrupt settings.
     ///
     /// A set bit indicates that the interrupt is enabled.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Interrupts : u32 {
         /// Word Start Interrupt Enable.
         const WORD_START = 1 << 12;
@@ -148,6 +149,7 @@ bitflags::bitflags! {
 
 bitflags::bitflags! {
     /// Status flags.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Status : u32 {
         /// Word Start Flag.
         ///

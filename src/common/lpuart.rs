@@ -621,6 +621,7 @@ impl Parity {
 
 bitflags::bitflags! {
     /// Errors that may occur when reading data.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ReadFlags : u32 {
         /// Data was received with noise.
         const NOISY = 1 << 15;
@@ -644,6 +645,7 @@ bitflags::bitflags! {
     /// Interrupt settings.
     ///
     /// A set bit indicates that the interrupt is enabled.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Interrupts : u32 {
         /// Overrun interrupt enable.
         const OVERRUN = 1 << 27;
@@ -731,6 +733,7 @@ impl From<ReadData> for u8 {
 
 bitflags::bitflags! {
     /// Status flags.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Status : u32 {
         /// Receiver active flag.
         ///
@@ -839,11 +842,11 @@ impl Status {
     }
     /// Returns the FIFO bits that may be written to the FIFO register.
     const fn fifo_bits(self) -> u32 {
-        (self.bits & Self::fifo_mask().bits()) << Self::FIFO_SHIFT
+        (self.bits() & Self::fifo_mask().bits()) << Self::FIFO_SHIFT
     }
     /// Returns the STAT bits that may be writeen to the STAT register.
     const fn stat_bits(self) -> u32 {
-        self.bits & Self::stat_mask().bits()
+        self.bits() & Self::stat_mask().bits()
     }
     /// Compose status bitflags from raw STAT and FIFO register values.
     ///

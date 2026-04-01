@@ -16,7 +16,7 @@ static_cell = "2.1.0"
 
 [dependencies.defmt]
 optional = true
-version = "0.3"
+workspace = true
 
 [dependencies.log]
 optional = true

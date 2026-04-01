@@ -397,6 +397,7 @@ impl Drop for Disabled<'_> {
 
 bitflags::bitflags! {
     /// Status flags for the LPI2C controller.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct ControllerStatus : u32 {
         /// Bus busy flag.
         ///
@@ -488,6 +489,7 @@ bitflags::bitflags! {
     /// LPI2C interrupt settings.
     ///
     /// A set bit indicates that an interrupt is enabled.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Interrupts : u32 {
         /// Data match interrupt enable.
         const DATA_MATCH = 1 << 14;

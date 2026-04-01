@@ -34,6 +34,11 @@ and other class packages.
 
 - `imxrt-ral` 0.6
 - `iomxrt-iomuxc` 0.3
+- `imxrt-dma` 0.2
+
+Additionally, update third-party dependencies in the public API:
+
+- `bitflags` 2.11
 
 **BREAKING** Remove deprecated APIs
 
