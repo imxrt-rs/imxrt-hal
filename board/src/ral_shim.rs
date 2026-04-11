@@ -31,7 +31,7 @@ pub const BOARD_DMA_B_INDEX: usize = 11;
 /// Only safe when called from the imxrt-hal examples support crate.
 /// It might not even be safe there!
 pub(crate) unsafe fn shim_vectors() {
-    extern "C" {
+    unsafe extern "C" {
         // Defined in cortex-m-rt crate. Definitely not marked
         // 'mut', nor does it use UnsafeCell. YOLO.
         // (No one observes the __INTERRUPTS immutable static anyway.)
@@ -42,7 +42,7 @@ pub(crate) unsafe fn shim_vectors() {
 
     cortex_m::interrupt::free(|_| {
         for (nr, isr) in INTERRUPTS {
-            __INTERRUPTS[*nr as usize].get().write_volatile(*isr);
+            unsafe { __INTERRUPTS[*nr as usize].get().write_volatile(*isr) };
         }
 
         cortex_m::asm::dsb();

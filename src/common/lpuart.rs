@@ -553,18 +553,10 @@ impl Baud {
     /// is the intended baud rate.
     pub const fn compute(source_clock_hz: u32, baud: u32) -> Baud {
         const fn max(left: u32, right: u32) -> u32 {
-            if left > right {
-                left
-            } else {
-                right
-            }
+            if left > right { left } else { right }
         }
         const fn min(left: u32, right: u32) -> u32 {
-            if left < right {
-                left
-            } else {
-                right
-            }
+            if left < right { left } else { right }
         }
 
         let mut err = u32::MAX;
@@ -1112,8 +1104,10 @@ mod tests {
         assert_eq!(Status::stat_mask().stat_bits(), 0x01FF_0000);
         assert_eq!(Status::W1C.bits(), 0x001F_3000);
 
-        assert!(Status::from_registers(0, (1 << 17) | (1 << 16))
-            .contains(Status::TRANSMIT_OVERFLOW | Status::RECEIVE_UNDERFLOW));
+        assert!(
+            Status::from_registers(0, (1 << 17) | (1 << 16))
+                .contains(Status::TRANSMIT_OVERFLOW | Status::RECEIVE_UNDERFLOW)
+        );
         assert!(Status::from_registers(u32::MAX, 0).contains(Status::stat_mask()));
 
         assert!(Status::all().contains(Status::TRANSMIT_EMPTY));

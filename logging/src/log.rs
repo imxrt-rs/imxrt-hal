@@ -16,7 +16,7 @@ mod frontend;
 pub use filters::Filter;
 use filters::Filters;
 
-use crate::{Poller, BUFFER};
+use crate::{BUFFER, Poller};
 
 #[cfg(feature = "lpuart")]
 use imxrt_hal::{dma::channel::Channel, lpuart::Lpuart};

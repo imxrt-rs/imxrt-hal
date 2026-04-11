@@ -199,11 +199,7 @@ impl Lpi2c {
     #[inline]
     pub fn read_data_register(&self) -> Option<u8> {
         let (empty, data) = ral::read_reg!(ral::lpi2c, self.lpi2c, MRDR, RXEMPTY, DATA);
-        if empty != 0 {
-            None
-        } else {
-            Some(data as u8)
-        }
+        if empty != 0 { None } else { Some(data as u8) }
     }
 
     /// Temporarily disable the LPI2C peripheral.
@@ -598,7 +594,7 @@ impl ControllerCommand {
     /// Turn a command into its raw representation, permitting
     /// 32-bit writes to the transmit data register.
     const fn raw(self) -> u32 {
-        use crate::ral::lpi2c::MTDR::CMD::{offset as OFFSET, RW::*};
+        use crate::ral::lpi2c::MTDR::CMD::{RW::*, offset as OFFSET};
         match self {
             Self::Transmit { byte } => (CMD_0 << OFFSET) | byte as u32,
             Self::Receive { count } => (CMD_1 << OFFSET) | count.saturating_sub(1) as u32,
@@ -1019,11 +1015,7 @@ const fn line_latency_cycles(filter: u8, risetime: u8, prescaler: Prescaler) -> 
 const fn compute_clk(hz: u32, baud: ClockSpeed, prescaler: Prescaler, scl_latency: u8) -> u8 {
     let clk: u32 =
         (hz / prescaler.divider() as u32 / baud.frequency() - scl_latency as u32 - 2) / 3;
-    if clk > 0xFF {
-        0xFFu8
-    } else {
-        clk as u8
-    }
+    if clk > 0xFF { 0xFFu8 } else { clk as u8 }
 }
 
 impl Timing {
@@ -1132,11 +1124,7 @@ impl Timing {
     /// Define LPI2C timings by the clock configuration values, and a prescaler.
     pub const fn new(clock_configuration: ClockConfiguration, prescaler: Prescaler) -> Self {
         const fn max(left: u32, right: u32) -> u32 {
-            if left > right {
-                left
-            } else {
-                right
-            }
+            if left > right { left } else { right }
         }
         let busidle = max(
             (clock_configuration.clklo as u32 + clock_configuration.sethold as u32 + 2) * 2,

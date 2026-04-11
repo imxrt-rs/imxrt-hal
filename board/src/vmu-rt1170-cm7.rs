@@ -1,6 +1,6 @@
 //! VMU RT1170 board configuration, supporting CM7 applications.
 
-use crate::{hal, iomuxc::imxrt1170 as iomuxc, ral, GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE};
+use crate::{GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE, hal, iomuxc::imxrt1170 as iomuxc, ral};
 
 mod imxrt11xx {
     pub(super) mod clock_tree;
@@ -39,7 +39,7 @@ const CLOCK_GATES: &[clock_gate::Locator] = &[
 ];
 
 pub(crate) unsafe fn configure() {
-    let mut ccm = ral::ccm::CCM::instance();
+    let mut ccm = unsafe { ral::ccm::CCM::instance() };
 
     prepare_clock_tree(&mut ccm);
     CLOCK_GATES

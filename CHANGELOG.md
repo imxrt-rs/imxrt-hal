@@ -67,6 +67,8 @@ are still exposed when building with a chip feature.
 **BREAKING** Remove the `timer` module, including most embedded-hal 0.2 blocking
 delay implementations.
 
+**BREAKING** Upgrade to Rust 2024.
+
 Introduce an `imxrt1180` feature to support the RT1180 series.
 
 Add a `defmt` feature targeting version 0.3. When enabled, select imxrt-hal

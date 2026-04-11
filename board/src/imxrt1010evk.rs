@@ -300,9 +300,9 @@ pub(crate) const CLOCK_GATES: &[clock_gate::Locator] = &[
 /// set alternates here.
 fn configure_pins(
     super::Pads {
-        ref mut gpio,
-        ref mut gpio_sd,
-        ref mut gpio_ad,
+        gpio,
+        gpio_sd,
+        gpio_ad,
         ..
     }: &mut super::Pads,
 ) {

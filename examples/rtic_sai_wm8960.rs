@@ -45,11 +45,7 @@ fn sine(t: u32) -> u16 {
 
 /// Generate a square wave sample
 fn square(t: u32) -> u16 {
-    if (t % 128) > 64 {
-        32767
-    } else {
-        0
-    }
+    if (t % 128) > 64 { 32767 } else { 0 }
 }
 
 #[rtic::app(device = board, peripherals = false, dispatchers = [BOARD_SWTASK0])]

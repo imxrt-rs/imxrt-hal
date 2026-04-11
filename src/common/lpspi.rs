@@ -88,7 +88,7 @@ use crate::ral;
 /// Any LPSPI instance.
 type AnyInstance = crate::AnyInstance<ral::lpspi::RegisterBlock>;
 
-pub use eh02::spi::{Mode, Phase, Polarity, MODE_0, MODE_1, MODE_2, MODE_3};
+pub use eh02::spi::{MODE_0, MODE_1, MODE_2, MODE_3, Mode, Phase, Polarity};
 
 /// Data direction.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

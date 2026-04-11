@@ -12,11 +12,11 @@
 
 pub(crate) use super::ahb::{ahb_frequency, configure_ahb_ipg};
 use crate::{
+    RunMode,
     hal::ccm::{
-        analog, clock_gate, lpi2c_clk, lpspi_clk, perclk_clk, sai_clk, uart_clk, XTAL_OSCILLATOR_HZ,
+        XTAL_OSCILLATOR_HZ, analog, clock_gate, lpi2c_clk, lpspi_clk, perclk_clk, sai_clk, uart_clk,
     },
     ral::ccm::CCM,
-    RunMode,
 };
 
 pub(crate) const fn ipg_divider(run_mode: RunMode) -> u32 {

@@ -3,7 +3,7 @@
 //! It supports the 1060. It should also support the 1050.
 
 use crate::ral;
-use crate::{hal::ccm, RunMode};
+use crate::{RunMode, hal::ccm};
 
 /// Specify the PLL1 DIV_SEL for a given run mode.
 const fn div_sel(run_mode: RunMode) -> u32 {

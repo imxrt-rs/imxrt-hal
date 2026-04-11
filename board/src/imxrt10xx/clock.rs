@@ -6,7 +6,7 @@
 //! API, so we'll revisit this separation later.
 
 use super::clock_tree;
-use crate::{board_impl, hal, ral, GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE};
+use crate::{GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE, board_impl, hal, ral};
 
 /// Configure board clocks and power.
 ///
@@ -14,9 +14,9 @@ use crate::{board_impl, hal, ral, GPT1_DIVIDER, GPT2_DIVIDER, RUN_MODE};
 ///
 /// Pokes at MMIO. Should only be done once.
 pub(crate) unsafe fn configure() {
-    let mut ccm = ral::ccm::CCM::instance();
-    let mut ccm_analog = ral::ccm_analog::CCM_ANALOG::instance();
-    let mut dcdc = ral::dcdc::DCDC::instance();
+    let mut ccm = unsafe { ral::ccm::CCM::instance() };
+    let mut ccm_analog = unsafe { ral::ccm_analog::CCM_ANALOG::instance() };
+    let mut dcdc = unsafe { ral::dcdc::DCDC::instance() };
 
     hal::ccm::set_low_power_mode(&mut ccm, hal::ccm::LowPowerMode::RemainInRun);
     super::power::set_target_power(&mut dcdc, RUN_MODE);

@@ -1,4 +1,4 @@
-use crate::{hal::dcdc, ral, RunMode};
+use crate::{RunMode, hal::dcdc, ral};
 
 /// Set the target power for the provided `run_mode`.
 pub fn set_target_power(dcdc: &mut ral::dcdc::DCDC, run_mode: RunMode) {

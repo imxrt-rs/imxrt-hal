@@ -28,7 +28,7 @@
 //! # Some(()) }();
 //! ```
 
-use crate::iomuxc::adc::{prepare, Pin};
+use crate::iomuxc::adc::{Pin, prepare};
 use crate::ral;
 
 /// Any ADC instance.

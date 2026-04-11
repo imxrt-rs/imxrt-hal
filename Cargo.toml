@@ -118,7 +118,7 @@ repository = "https://github.com/imxrt-rs/imxrt-hal"
 keywords = ["imxrt", "nxp", "embedded", "no_std", "embedded-hal"]
 categories = ["embedded", "no-std"]
 license = "MIT OR Apache-2.0"
-edition = "2021"
+edition = "2024"
 
 [profile.dev]
 opt-level = 1

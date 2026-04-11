@@ -248,7 +248,7 @@ type Pit = crate::ral::pit::PIT1;
 #[allow(unused)]
 mod board_interrupts {
     pub type Vector = unsafe extern "C" fn();
-    extern "C" {
+    unsafe extern "C" {
         pub fn BOARD_CONSOLE();
         pub fn BOARD_BUTTON();
         pub fn BOARD_SPI();

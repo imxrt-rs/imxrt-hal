@@ -13,9 +13,9 @@
 //! See the 10xx documentation for an example.
 
 use crate::{
+    RunMode,
     hal::ccm::XTAL_OSCILLATOR_HZ,
     ral::{self, ccm::CCM},
-    RunMode,
 };
 
 /// A clock source.

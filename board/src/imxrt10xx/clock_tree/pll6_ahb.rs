@@ -6,7 +6,7 @@
 //! - if an ARM divider exists, it's set to 1.
 //! - if a PERIPH_CLK2 divider exists, it's set to 1.
 
-use crate::{hal::ccm, ral, RunMode};
+use crate::{RunMode, hal::ccm, ral};
 
 /// Specify the AHB divider for a given run mode.
 const fn ahb_divider(run_mode: RunMode) -> u32 {

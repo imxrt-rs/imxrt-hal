@@ -98,24 +98,22 @@ impl Backend {
         self.class.read_packet(&mut []).ok();
 
         // There's no need to wait if we were are newly configured.
-        if check_consumer {
-            if let Ok(grant) = self.consumer.read() {
-                let buf = grant.buf();
-                // Don't try to write more than we can fit in a single packet!
-                // See the usbd-serial documentation for this caveat. We didn't
-                // statically allocate enough space for anything larger.
-                if let Ok(written) = self
-                    .class
-                    .write_packet(&buf[..MAX_PACKET_SIZE.min(buf.len())])
-                {
-                    grant.release(written);
-                    // Log data is in the intermediate buffer, so it's OK to release the grant.
-                    //
-                    // If the I/O fails here, we'll try again on the next poll. There's no guarantee
-                    // we'll see a improvement though...
-                }
-            } // else, no data, or some error. Let those logs accumulate!
-        }
+        if check_consumer && let Ok(grant) = self.consumer.read() {
+            let buf = grant.buf();
+            // Don't try to write more than we can fit in a single packet!
+            // See the usbd-serial documentation for this caveat. We didn't
+            // statically allocate enough space for anything larger.
+            if let Ok(written) = self
+                .class
+                .write_packet(&buf[..MAX_PACKET_SIZE.min(buf.len())])
+            {
+                grant.release(written);
+                // Log data is in the intermediate buffer, so it's OK to release the grant.
+                //
+                // If the I/O fails here, we'll try again on the next poll. There's no guarantee
+                // we'll see a improvement though...
+            }
+        } // else, no data, or some error. Let those logs accumulate!
     }
 }
 
