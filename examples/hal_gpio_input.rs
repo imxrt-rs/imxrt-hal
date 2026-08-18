@@ -13,7 +13,7 @@
 #![no_std]
 #![no_main]
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (_, board::Specifics { button, led, .. }) = board::new();
     loop {

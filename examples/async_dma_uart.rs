@@ -7,7 +7,7 @@
 #![no_std]
 #![no_main]
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (
         board::Common { mut dma, .. },

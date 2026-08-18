@@ -26,7 +26,7 @@ const FUSE_VALUE_CAUTION_PERMANENT: u32 = 0;
 
 const DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (
         board::Common {

@@ -43,7 +43,7 @@ use imxrt_hal as hal;
 
 const PIT_CHANNEL: Channel = Channel::Chan2;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (
         board::Common {

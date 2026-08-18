@@ -15,7 +15,7 @@ const FRONTEND: board::logging::Frontend = board::logging::Frontend::Log;
 const BACKEND: board::logging::Backend = board::logging::BACKEND;
 const PIT_CHANNEL: Channel = Channel::Chan2;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (
         board::Common {

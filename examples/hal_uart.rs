@@ -18,7 +18,7 @@ use eh02::{
 /// blocking write of a buffer this size.
 const ECHO_RESPONSE_SIZE: usize = 0;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (
         _,

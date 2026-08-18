@@ -131,7 +131,6 @@ codegen-units = 256
 ######################################
 
 [dev-dependencies]
-imxrt-rt = { workspace = true }
 imxrt-usbd = { workspace = true }
 menu = "0.3.2"
 # Check out https://github.com/rust-embedded/cortex-m/issues/680

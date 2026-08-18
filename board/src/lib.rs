@@ -11,7 +11,21 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use imxrt_hal as hal;
 use imxrt_iomuxc as iomuxc;
 use imxrt_ral as ral;
+#[cfg(feature = "imxrt-rt")]
 use imxrt_rt as _;
+
+/// The entry point attribute for an example, from `cortex-m-rt`: this board is
+/// started by an external loader.
+#[cfg(all(not(feature = "imxrt-rt"), target_arch = "arm", target_os = "none"))]
+pub use cortex_m_rt::entry;
+/// The entry point attribute for an example, from `imxrt-rt`: this board boots
+/// itself.
+///
+/// It is `cortex_m_rt::entry` either way. Which crate supplies it is what
+/// decides whether the example links `imxrt-rt`'s runtime. Neither crate exports
+/// the attribute off-target, so neither does this.
+#[cfg(all(feature = "imxrt-rt", target_arch = "arm", target_os = "none"))]
+pub use imxrt_rt::entry;
 
 mod ral_shim;
 

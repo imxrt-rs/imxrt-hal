@@ -9,7 +9,7 @@ use imxrt_hal::pit::Channel;
 
 const DELAY_MS: u32 = board::PIT_FREQUENCY / 1_000 * 250;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, .. }) = board::new();
 

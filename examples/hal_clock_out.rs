@@ -196,7 +196,7 @@ fn set_clock(output: &str, sel: &str, console: &mut Writer, ccm: &mut CCM) -> fm
     Ok(())
 }
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (_, board::Specifics { led, console, .. }) = board::new();
     let mut ccm = unsafe { imxrt_ral::ccm::CCM::instance() };

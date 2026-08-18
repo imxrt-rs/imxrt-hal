@@ -70,7 +70,7 @@ where
 
 use imxrt_hal::pit::Channel;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, mut i2c, .. }) = board::new();
 

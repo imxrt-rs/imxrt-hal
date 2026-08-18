@@ -34,7 +34,7 @@ const BACKEND: board::logging::Backend = board::logging::BACKEND;
 use hal::snvs::srtc::EnabledState;
 use imxrt_hal as hal;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (
         board::Common {

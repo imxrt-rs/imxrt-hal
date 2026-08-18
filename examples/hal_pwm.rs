@@ -20,7 +20,7 @@ const SWITCHING_FREQ: i16 = (board::PWM_FREQUENCY / 1000) as i16;
 const PWM_A_DUTY: u32 = SWITCHING_FREQ as u32 / 2;
 const PWM_B_DUTY: u32 = PWM_A_DUTY / 2;
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (board::Common { mut pit, .. }, board::Specifics { led, mut pwm, .. }) = board::new();
     pit.set_load_timer_value(Channel::Chan0, PIT_DELAY_MS);

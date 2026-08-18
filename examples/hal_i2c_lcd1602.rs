@@ -59,7 +59,7 @@ impl eh02::blocking::delay::DelayMs<u16> for GptDelay {
     }
 }
 
-#[imxrt_rt::entry]
+#[board::entry]
 fn main() -> ! {
     let (board::Common { gpt1, .. }, board::Specifics { i2c, .. }) = board::new();
 

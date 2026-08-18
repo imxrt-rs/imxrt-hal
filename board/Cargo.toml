@@ -20,6 +20,7 @@ workspace = true
 
 [dependencies.imxrt-rt]
 workspace = true
+optional = true
 
 [build-dependencies.imxrt-rt]
 workspace = true
@@ -98,6 +99,7 @@ optional = true
 
 [features]
 imxrt1010evk = [
+    "imxrt-rt",
     "sai",
     "imxrt-iomuxc/imxrt1010",
     "imxrt-ral/imxrt1011",
@@ -108,6 +110,7 @@ imxrt1010evk = [
     "imxrt-log",
 ]
 imxrt1060evk = [
+    "imxrt-rt",
     "imxrt-iomuxc/imxrt1060",
     "imxrt-ral/imxrt1062",
     "imxrt-hal/imxrt1060",
@@ -117,6 +120,7 @@ imxrt1060evk = [
     "imxrt-log",
 ]
 teensy4 = [
+    "imxrt-rt",
     "sai",
     "imxrt-iomuxc/imxrt1060",
     "imxrt-ral/imxrt1062",
@@ -127,6 +131,7 @@ teensy4 = [
     "logging-defmt",
 ]
 imxrt1170evk-cm7 = [
+    "imxrt-rt",
     "imxrt-iomuxc/imxrt1170",
     "imxrt-ral/imxrt1176_cm7",
     "imxrt-hal/imxrt1170",
@@ -136,6 +141,7 @@ imxrt1170evk-cm7 = [
     "imxrt-log",
 ]
 imxrt1180evk-cm33 = [
+    "imxrt-rt",
     "imxrt-iomuxc/imxrt1180",
     "imxrt-ral/imxrt1189_cm33",
     "imxrt-hal/imxrt1180",
@@ -145,6 +151,7 @@ imxrt1180evk-cm33 = [
 ]
 
 vmu-rt1170-cm7 = [
+    "imxrt-rt",
     "imxrt-iomuxc/imxrt1170",
     "imxrt-ral/imxrt1176_cm7",
     "imxrt-hal/imxrt1170",
