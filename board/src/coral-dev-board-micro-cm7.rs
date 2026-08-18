@@ -527,3 +527,33 @@ pub mod interrupt {
 
 pub use interrupt as Interrupt;
 
+/// Helpers for the clock_out example.
+///
+/// The pads the EVKs bring out as `CCM_CLKO` test points are this board's
+/// console, so the configuration enables no functionality.
+pub mod clock_out {
+    use crate::hal::ccm::output_source::{clko1::Selection as Clko1, clko2::Selection as Clko2};
+
+    pub const CLKO1_SELECTIONS: [Clko1; 8] = [
+        Clko1::OscRc48MDiv2,
+        Clko1::Osc24M,
+        Clko1::OscRc400M,
+        Clko1::OscRc16M,
+        Clko1::SysPll2Pfd2,
+        Clko1::SysPll2CLK,
+        Clko1::SysPll3Pfd1,
+        Clko1::SysPll1Div5,
+    ];
+    pub const CLKO2_SELECTIONS: [Clko2; 8] = [
+        Clko2::OscRc48MDiv2,
+        Clko2::Osc24M,
+        Clko2::OscRc400M,
+        Clko2::OscRc16M,
+        Clko2::SysPll2Pfd3,
+        Clko2::OscRc400M,
+        Clko2::SysPll3Pfd1,
+        Clko2::AudioPllClk,
+    ];
+
+    pub const MAX_DIVIDER_VALUE: u32 = 256;
+}
