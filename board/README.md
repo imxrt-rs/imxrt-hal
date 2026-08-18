@@ -10,6 +10,8 @@ BSP.
 - the IMXRT1060EVK board with the `imxrt1060evk` feature.
 - the Cortex M7 on the IMXRT1170EVK board with the `imxrt1170evk-cm7` feature.
 - the Cortex M33 on the IMXRT1180EVK board with the `imxrt180evk-cm33` feature.
+- the Cortex M7 on the Coral Dev Board Micro with the `coral-dev-board-micro-cm7`
+  feature.
 
 A board may only support a subset of all examples. To understand which examples
 are supported by your board, consult the CI testing matrix.
@@ -112,6 +114,50 @@ Finally, load the HEX file onto your board using your preferred loader.
 [`cargo-binutils`]: https://github.com/rust-embedded/cargo-binutils
 [`teensy_loader_cli`]: https://github.com/PaulStoffregen/teensy_loader_cli
 [Teensy Loader Application]: https://www.pjrc.com/teensy/loader.html
+
+### Coral Dev Board Micro
+
+This board brings out no JTAG or SWD, and it does not boot the image you build:
+its flash holds Google's [`coralmicro`] `elf_loader`, and that is what the boot
+ROM starts. The loader receives an application ELF over USB, copies each
+`PT_LOAD` segment to its `p_paddr`, and calls `e_entry`.
+
+So the artifact you flash is the ELF itself, with no `objcopy`, no HEX and no
+boot header. Load it with `coralmicro`'s `flashtool.py`:
+
+```
+python3 coralmicro/scripts/flashtool.py --elf_path \
+    target/thumbv7em-none-eabihf/debug/examples/hal_led --ram
+```
+
+`--ram` loads over USB without writing flash, so a bad image is undone by
+replugging. Without it the ELF is written to the board's filesystem as
+`/default.elf` and runs on every boot.
+
+Everything is a RAM image, so `build.rs` emits a linker script for this board
+rather than calling `imxrt-rt`: vectors and text in ITCM from `0x00000800`, and
+data, bss and stack in the 256K of DTCM at `0x20000000`.
+
+An image that hangs stops servicing USB, and `flashtool.py` cannot ask it to
+reset, so get the loader back by holding the User button while pressing Reset,
+or while plugging in the USB cable. The board module's panic handler calls
+`reset_to_flash()` rather than leaving you to do that, and you should do the
+same at any other dead end; `take_panic_record()` says where the panic was.
+
+The board module configures the CM7 only. It does nothing with the CM4 or the
+Edge TPU.
+
+Log messages come out over USB CDC (`DEFAULT_LOGGING_BACKEND` is `Usbd`) rather
+than over a probe, so this board's feature enables neither `defmt-rtt` nor
+`panic-probe`.
+
+`hal_tempmon` and `hal_trng` do not build for this board, or for any other 1170
+board. `hal_tempmon` is a 10xx example: the 1176 has no `TEMPMON` block, and
+reaches its temperature sensor through the analog interface window in
+`ANADIG_MISC` instead. The 1176's TRNG is inside CAAM, which `imxrt-ral` does
+not model. The SAI examples are not supported either.
+
+[`coralmicro`]: https://github.com/google-coral/coralmicro
 
 ## Tips and tricks
 

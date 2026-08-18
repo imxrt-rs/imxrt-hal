@@ -108,6 +108,21 @@ jobs:
           --example=hal_i2c_mpu9250 --example=hal_i2c_lcd1602
           --example=hal_ocotp_fuse
           --example=rtic_usb_serial --example=rtic_usb_test_class --example=rtic_usb_keypress --example=rtic_usb_mouse
+        # The Coral Dev Board Micro. `--examples` can't be used: hal_tempmon and
+        # hal_trng are not supported on any 1170 board, and the SAI examples
+        # need a peripheral this board's feature does not enable.
+        - --features=board/coral-dev-board-micro-cm7,board/spi,board/lcd1602
+          --example=hal_led --example=hal_gpio_input --example=rtic_gpio_input
+          --example=hal_uart --example=rtic_uart --example=rtic_dma_uart --example=async_dma_uart
+          --example=hal_gpt --example=rtic_gpt
+          --example=hal_pit --example=rtic_pit
+          --example=hal_logging --example=rtic_logging --example=rtic_defmt_rtt
+          --example=hal_clock_out --example=hal_srtc --example=hal_ocotp_fuse
+          --example=hal_pwm --example=rtic_pwm
+          --example=hal_i2c_mpu9250 --example=hal_i2c_lcd1602
+          --example=async_dma_spi --example=rtic_spi
+          --example=rtic_spi_blocking --example=rtic_spi_controller --example=rtic_spi_peripheral
+          --example=rtic_usb_serial --example=rtic_usb_test_class --example=rtic_usb_keypress --example=rtic_usb_mouse
         # Some basic vmu rt1170 samples
         - --features=board/vmu-rt1170-cm7 --example=hal_led
           --example=rtic_defmt_rtt        

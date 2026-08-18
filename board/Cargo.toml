@@ -44,6 +44,12 @@ version = "0.7.3"
 optional = true
 features = ["set-sp", "set-vtor"]
 
+# For the Coral board's PMIC. imxrt-hal doesn't re-export it.
+[dependencies.eh1]
+package = "embedded-hal"
+version = "1.0"
+optional = true
+
 # Use existing FCB, instead of defining inline.
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.teensy4-fcb]
 optional = true
@@ -165,6 +171,18 @@ vmu-rt1170-cm7 = [
     "defmt-rtt",
     "panic-probe",
     "imxrt-log",
+]
+
+# Loader-booted, no debug probe: no FCB, no imxrt-rt, no rtt.
+coral-dev-board-micro-cm7 = [
+    "loader-boot",
+    "imxrt-iomuxc/imxrt1170",
+    "imxrt-ral/imxrt1176_cm7",
+    "imxrt-hal/imxrt1170",
+    "dep:eh1",
+    "imxrt-log",
+    # Carries the global_logger that defmt-rtt gives other boards.
+    "logging-defmt",
 ]
 
 # For a board an external loader starts. See loader_boot.rs.

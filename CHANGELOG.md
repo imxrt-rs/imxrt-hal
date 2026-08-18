@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+Add support for the Coral Dev Board Micro (`board/coral-dev-board-micro-cm7`), the
+first board here that an external loader starts rather than the boot ROM. Boards
+like that select the board package's new `loader-boot` feature, which replaces
+`imxrt-rt` with a `cortex-m-rt` linker script and an entry shim.
+
+Examples take their entry point attribute from `board::entry` rather than naming
+`imxrt_rt::entry`, so that `imxrt-rt` can be optional.
+
 ## 0.6.0 - 2026-07-26
 
 **BREAKING** Remove type states from the following drivers:

@@ -37,6 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "imxrt1060evk",
             "imxrt1180evk-cm33",
             "vmu-rt1170-cm7",
+            "coral-dev-board-micro-cm7",
         ],
     );
     emit_cfg_checks("chip", ["imxrt1010", "imxrt1060", "imxrt1170", "imxrt1180"]);
@@ -107,6 +108,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("cargo:rustc-cfg=board=\"vmu-rt1170-cm7\"");
                 println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
                 println!("cargo:rustc-cfg=family=\"imxrt11xx\"");
+            }
+            "coral_dev_board_micro_cm7" => {
+                // The map mirrors `coralmicro`'s own application linker script,
+                // libs/nxp/rt1176-sdk/MIMXRT1176xxxxx_cm7_ram.ld. Vectors and
+                // text go in ITCM from 0x800: coralmicro reserves the bottom of
+                // ITCM, and `cortex-m-rt` places the vector table at
+                // ORIGIN(FLASH). Data, bss and the stack go in the 256K of DTCM.
+                //
+                // Neither OCRAM2, which holds the loader, nor SDRAM, where the
+                // loader stages this image, is mapped.
+                loader_booted_runtime(
+                    &out_dir,
+                    Region {
+                        origin: 0x0000_0800,
+                        length: 0x0003_F800,
+                    },
+                    Region {
+                        origin: 0x2000_0000,
+                        length: 0x0004_0000,
+                    },
+                )?;
+                println!("cargo:rustc-cfg=board=\"coral-dev-board-micro-cm7\"");
+                println!("cargo:rustc-cfg=chip=\"imxrt1170\"");
             }
 
             _ => continue,

@@ -71,6 +71,10 @@ mod board_impl;
 #[path = "vmu-rt1170-cm7.rs"]
 mod board_impl;
 
+#[cfg(board = "coral-dev-board-micro-cm7")]
+#[path = "coral-dev-board-micro-cm7.rs"]
+mod board_impl;
+
 #[cfg(feature = "lcd1602")]
 pub use lcd_1602_i2c as lcd1602;
 
