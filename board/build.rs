@@ -116,6 +116,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Err("Board feature not associated to a runtime.".into())
 }
 
+/// A memory region for [`loader_booted_runtime`].
+struct Region {
+    origin: u32,
+    length: u32,
+}
+
+/// Emit a runtime for a board that an external loader starts.
+///
+/// `RuntimeBuilder` only produces self-booting XIP images, and a loader has done
+/// that work before it hands over. What's left is a plain RAM image linked for
+/// the addresses it runs at: `code` holds the vector table and `.text`, `data`
+/// holds `.data`, `.bss` and the stack.
+///
+/// `ENTRY` is stated on both sides of the `INCLUDE` because LLD keeps the first
+/// one it sees and GNU ld keeps the last.
+fn loader_booted_runtime(
+    out_dir: &std::path::Path,
+    code: Region,
+    data: Region,
+) -> Result<(), Box<dyn std::error::Error>> {
+    fs::write(
+        out_dir.join("memory.x"),
+        format!(
+            "MEMORY
+{{
+  FLASH (rx)  : ORIGIN = {:#010X}, LENGTH = {:#010X}
+  RAM   (rwx) : ORIGIN = {:#010X}, LENGTH = {:#010X}
+}}
+",
+            code.origin, code.length, data.origin, data.length
+        ),
+    )?;
+    fs::write(
+        out_dir.join("imxrt-link.x"),
+        r#"ENTRY(_loader_entry)
+EXTERN(_loader_entry)
+INCLUDE link.x
+ENTRY(_loader_entry)
+"#,
+    )?;
+    Ok(())
+}
+
 const DEVICE_X: &str = r#"
 PROVIDE(BOARD_CONSOLE = DefaultHandler);
 PROVIDE(BOARD_BUTTON = DefaultHandler);

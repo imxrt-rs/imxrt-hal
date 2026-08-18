@@ -38,6 +38,12 @@ features = ["defmt"]
 version = "0.7"
 features = ["critical-section-single-core"]
 
+# For loader-booted boards; features match imxrt-rt's.
+[dependencies.cortex-m-rt]
+version = "0.7.3"
+optional = true
+features = ["set-sp", "set-vtor"]
+
 # Use existing FCB, instead of defining inline.
 [target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies.teensy4-fcb]
 optional = true
@@ -160,6 +166,9 @@ vmu-rt1170-cm7 = [
     "panic-probe",
     "imxrt-log",
 ]
+
+# For a board an external loader starts. See loader_boot.rs.
+loader-boot = ["dep:cortex-m-rt"]
 
 logging-defmt = ["imxrt-log/defmt"]
 

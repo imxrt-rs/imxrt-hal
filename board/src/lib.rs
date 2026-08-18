@@ -29,6 +29,9 @@ pub use imxrt_rt::entry;
 
 mod ral_shim;
 
+#[cfg(all(feature = "loader-boot", target_arch = "arm", target_os = "none"))]
+pub mod loader_boot;
+
 /// SOC run mode.
 ///
 /// Each MCU specifies its own core clock speed
