@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+**BREAKING** Remove the `"imxrt1064"` feature, which does not build as of 0.6.0.
+To target this chip, use the `"imxrt1060"` feature with `"imxrt-ral/imxrt1064"`.
+
 ## 0.6.0 - 2026-07-26
 
 **BREAKING** Remove type states from the following drivers:

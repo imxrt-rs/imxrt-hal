@@ -18,7 +18,6 @@ fn features_10xx() -> HashSet<String> {
         "imxrt1020",
         "imxrt1050",
         "imxrt1060",
-        "imxrt1064",
     ]
     .iter()
     .map(ToString::to_string)

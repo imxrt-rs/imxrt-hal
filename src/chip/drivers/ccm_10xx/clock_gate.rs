@@ -170,7 +170,7 @@ fn clock_gate_register(ccm: &CCM, register: Register) -> &ral::RWRegister<u32> {
             // If we're compiling this code, it's because a chip feature
             // is activated.
             cfg_if::cfg_if! {
-                if #[cfg(any(chip = "imxrt1060", chip = "imxrt1064"))] {
+                if #[cfg(chip = "imxrt1060")] {
                     // Only certain i.MX RT 10xx chips have CCGR7.
                     &ccm.CCGR7
                 } else {
