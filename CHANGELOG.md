@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## 0.6.1 - 2026-11-08
+
 **BREAKING** Remove the `"imxrt1064"` feature, which does not build as of 0.6.0.
 To target this chip, use the `"imxrt1060"` feature with `"imxrt-ral/imxrt1064"`.
 
